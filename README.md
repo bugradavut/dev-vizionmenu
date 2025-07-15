@@ -1,5 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+**Last deployment fix: January 2025 - UI package TypeScript errors resolved**
+
 ## Getting Started
 
 First, run the development server:
