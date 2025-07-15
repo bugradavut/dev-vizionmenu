@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx:*)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(cp:*)",
+      "Bash(node:*)",
+      "Bash(npm:*)",
+      "Bash(pnpm:*)",
+      "Bash(rm:*)",
+      "Bash(find:*)",
+      "Bash(true)",
+      "Bash(export NVM_DIR=\"$HOME/.nvm\")",
+      "Bash([ -s \"$NVM_DIR/nvm.sh\" ])",
+      "Bash(. \"$NVM_DIR/nvm.sh\")",
+      "Bash([ -s \"$NVM_DIR/bash_completion\" ])",
+      "Bash(. \"$NVM_DIR/bash_completion\")",
+      "Bash(nvm install:*)",
+      "Bash(nvm use:*)",
+      "Bash(sudo rm:*)",
+      "Bash(ls:*)",
+      "Bash(echo $PATH)"
+    ],
+    "deny": []
+  }
+}

@@ -1,0 +1,48 @@
+
+> @vision-menu/ui@0.0.0 build C:\vision-menu\packages\ui
+> tsup src/index.ts --format esm,cjs --dts --external react
+
+[34mCLI[39m Building entry: src/index.ts
+[34mCLI[39m Using tsconfig: tsconfig.json
+[34mCLI[39m tsup v8.5.0
+[34mCLI[39m Target: es2022
+[34mESM[39m Build start
+[34mCJS[39m Build start
+[32mCJS[39m [1mdist\index.js [22m[32m36.42 KB[39m
+[32mCJS[39m ⚡️ Build success in 144ms
+[32mESM[39m [1mdist\index.mjs [22m[32m31.61 KB[39m
+[32mESM[39m ⚡️ Build success in 145ms
+[34mDTS[39m Build start
+src/card.tsx(1,13): error TS2300: Duplicate identifier 'React'.
+src/card.tsx(2,10): error TS2300: Duplicate identifier 'Slot'.
+src/card.tsx(3,10): error TS2300: Duplicate identifier 'cva'.
+src/card.tsx(3,20): error TS2300: Duplicate identifier 'VariantProps'.
+src/card.tsx(5,10): error TS2300: Duplicate identifier 'cn'.
+src/card.tsx(47,13): error TS2300: Duplicate identifier 'React'.
+src/card.tsx(48,10): error TS2300: Duplicate identifier 'Slot'.
+src/card.tsx(49,10): error TS2300: Duplicate identifier 'cva'.
+src/card.tsx(49,20): error TS2300: Duplicate identifier 'VariantProps'.
+src/card.tsx(51,10): error TS2300: Duplicate identifier 'cn'.
+src/card.tsx(106,13): error TS2300: Duplicate identifier 'React'.
+src/card.tsx(108,10): error TS2300: Duplicate identifier 'cn'.
+src/card.tsx(200,13): error TS2300: Duplicate identifier 'React'.
+src/card.tsx(202,10): error TS2300: Duplicate identifier 'XIcon'.
+src/card.tsx(204,10): error TS2300: Duplicate identifier 'cn'.
+src/card.tsx(341,13): error TS2300: Duplicate identifier 'React'.
+src/card.tsx(343,10): error TS2300: Duplicate identifier 'cn'.
+src/card.tsx(364,13): error TS2300: Duplicate identifier 'React'.
+src/card.tsx(367,10): error TS2300: Duplicate identifier 'cn'.
+src/card.tsx(388,13): error TS2300: Duplicate identifier 'React'.
+src/card.tsx(390,10): error TS2300: Duplicate identifier 'XIcon'.
+src/card.tsx(392,10): error TS2300: Duplicate identifier 'cn'.
+src/card.tsx(527,13): error TS2300: Duplicate identifier 'React'.
+src/card.tsx(529,10): error TS2300: Duplicate identifier 'cn'.
+
+[31mError: error occurred in dts build
+    at Worker.<anonymous> (C:\vision-menu\node_modules\.pnpm\tsup@8.5.0_jiti@1.21.7_post_4c3950e5587420beaa57aeef39fac93b\node_modules\tsup\dist\index.js:1545:26)
+    at Worker.emit (node:events:518:28)
+    at MessagePort.<anonymous> (node:internal/worker:268:53)
+    at [nodejs.internal.kHybridDispatch] (node:internal/event_target:827:20)
+    at MessagePort.<anonymous> (node:internal/per_context/messageport:23:28)[39m
+[31mDTS[39m [31mBuild error[39m
+ ELIFECYCLE  Command failed with exit code 1.
