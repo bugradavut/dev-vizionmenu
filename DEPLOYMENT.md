@@ -27,6 +27,8 @@ git push origin main
 
 Her push sonrası `dev-vizionmenu.vercel.app` otomatik güncellenir.
 
+**⚠️ ÖNEMLİ**: Vercel'de environment variables set edilmelidir:
+
 ### 2. Testing Phase
 
 - Vercel dev sitesinde tüm feature'ları test edin

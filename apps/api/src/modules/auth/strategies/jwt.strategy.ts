@@ -3,7 +3,6 @@ import { PassportStrategy } from "@nestjs/passport";
 import { ConfigService } from "@nestjs/config";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { DatabaseService } from "@/config/database.service";
-import { AuthTokenPayload } from "@vision-menu/types";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -14,60 +13,65 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>("jwt.secret"),
+      secretOrKey: configService.get<string>("supabase.serviceRoleKey") || configService.get<string>("jwt.secret"),
     });
   }
 
-  async validate(payload: AuthTokenPayload) {
+  async validate(payload: any) {
     try {
+      // Supabase JWT payload structure
+      const userId = payload.sub;
+      
+      if (!userId) {
+        throw new UnauthorizedException("Invalid token payload");
+      }
+
       const supabase = this.databaseService.getAdminClient();
 
-      // Get user details
-      const { data: user, error: userError } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", payload.sub)
-        .single();
-
-      if (userError || !user || !user.is_active) {
-        throw new UnauthorizedException("User not found or inactive");
+      // Get user from Supabase Auth
+      const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
+      
+      if (authError || !authUser?.user) {
+        throw new UnauthorizedException("User not found in auth system");
       }
 
-      // Get restaurant association
-      const { data: restaurantUser, error: restaurantError } = await supabase
+      // Get user profile from our custom table (if exists)
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+
+      // Get restaurant association (multi-tenant)
+      const { data: restaurantUser } = await supabase
         .from("restaurant_users")
-        .select(
-          `
+        .select(`
           *,
           restaurant:restaurants(*)
-        `,
-        )
-        .eq("user_id", payload.sub)
-        .eq("restaurant_id", payload.restaurant_id)
+        `)
+        .eq("user_id", userId)
         .single();
 
-      if (restaurantError || !restaurantUser) {
-        throw new UnauthorizedException("Restaurant association not found");
-      }
-
       return {
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        phone: user.phone,
-        avatar_url: user.avatar_url,
-        is_active: user.is_active,
-        email_verified: user.email_verified,
-        phone_verified: user.phone_verified,
-        last_login_at: user.last_login_at,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-        restaurant_id: restaurantUser.restaurant_id,
-        role: restaurantUser.role,
-        permissions: restaurantUser.permissions,
-        restaurant: restaurantUser.restaurant,
+        id: authUser.user.id,
+        email: authUser.user.email,
+        full_name: profile?.full_name || authUser.user.user_metadata?.full_name,
+        phone: profile?.phone || authUser.user.phone,
+        avatar_url: profile?.avatar_url || authUser.user.user_metadata?.avatar_url,
+        is_active: !authUser.user.banned_until,
+        email_verified: authUser.user.email_confirmed_at != null,
+        phone_verified: authUser.user.phone_confirmed_at != null,
+        last_login_at: authUser.user.last_sign_in_at,
+        created_at: authUser.user.created_at,
+        updated_at: authUser.user.updated_at,
+        // Multi-tenant support
+        restaurant_id: restaurantUser?.restaurant_id,
+        role: restaurantUser?.role || 'guest',
+        permissions: restaurantUser?.permissions || [],
+        restaurant: restaurantUser?.restaurant,
       };
     } catch (error) {
+      console.error('JWT validation error:', error);
       throw new UnauthorizedException("Invalid token");
     }
   }
