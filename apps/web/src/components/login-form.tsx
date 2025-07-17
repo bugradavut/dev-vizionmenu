@@ -29,7 +29,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
       
       if (error) {
         setError(error.message);
-      } else if (data.user) {
+      } else if (data?.user) {
         router.push("/dashboard"); // Redirect to dashboard after successful login
       }
     } catch {
