@@ -1,17 +1,34 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { User, Session } from '@supabase/supabase-js'
+import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+
+interface SignUpMetadata {
+  [key: string]: string | number | boolean
+}
+
+interface AuthResult {
+  data: {
+    user: User | null
+    session: Session | null
+  } | null
+  error: AuthError | null
+}
+
+interface ResetPasswordResult {
+  data: Record<string, unknown> | null
+  error: AuthError | null
+}
 
 interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
-  signUp: (email: string, password: string, metadata?: any) => Promise<any>
-  signIn: (email: string, password: string) => Promise<any>
+  signUp: (email: string, password: string, metadata?: SignUpMetadata) => Promise<AuthResult>
+  signIn: (email: string, password: string) => Promise<AuthResult>
   signOut: () => Promise<void>
-  resetPassword: (email: string) => Promise<any>
+  resetPassword: (email: string) => Promise<ResetPasswordResult>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -41,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  const signUp = async (email: string, password: string, metadata?: any) => {
+  const signUp = async (email: string, password: string, metadata?: SignUpMetadata): Promise<AuthResult> => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -52,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { data, error }
   }
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<AuthResult> => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -65,7 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error
   }
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = async (email: string): Promise<ResetPasswordResult> => {
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
     })

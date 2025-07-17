@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
       } else if (data.user) {
         router.push("/dashboard"); // Redirect to dashboard after successful login
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred");
     } finally {
       setIsSubmitting(false);
@@ -43,10 +44,16 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
         <CardContent className="grid p-0 md:grid-cols-2">
           <form className="p-6 md:p-8" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-6">
-              <div className="flex flex-col items-center text-center">
-                <h1 className="text-2xl font-bold">Welcome back</h1>
+              <div className="flex flex-col items-center text-center gap-3">
+                <Image
+                  src="https://cdn.prod.website-files.com/67b6f7ecc0b5b185628fc902/67b6fa305fe70f88ef38db30_logo.svg"
+                  alt="VizionMenu Logo"
+                  width={120}
+                  height={40}
+                  className="h-10 w-auto"
+                />
                 <p className="text-balance text-muted-foreground">
-                  Login to your Acme Inc account
+                  Login to your VizionMenu account
                 </p>
               </div>
               {error && (
@@ -59,7 +66,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
                 <Input 
                   id="email" 
                   type="email" 
-                  placeholder="m@example.com" 
+                  placeholder="test@example.com" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required 
@@ -82,7 +89,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
               </div>
               <Button 
                 type="submit" 
-                className="w-full" 
+                className="w-full hover:opacity-90" 
                 disabled={isSubmitting || loading}
               >
                 {isSubmitting ? (
@@ -134,11 +141,12 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
               </div>
             </div>
           </form>
-          <div className="relative hidden bg-muted md:block">
-            <img
+          <div className="relative hidden md:block">
+            <Image
               src="https://ui.shadcn.com/placeholder.svg"
               alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+              fill
+              className="object-cover"
             />
           </div>
         </CardContent>

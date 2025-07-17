@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, CheckCircle2, Clock, AlertCircle, Code2, Database, Server, Smartphone } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, AlertCircle, Code2, Database } from "lucide-react";
 
 export default function ProjectStatus() {
   const completedFeatures = [
