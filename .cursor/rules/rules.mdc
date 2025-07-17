@@ -1,0 +1,82 @@
+---
+alwaysApply: true
+---
+### Backend (apps/api)
+
+* **Framework**: NestJS (REST-first, monolith yapı)
+* **Routing**: Tüm endpoint'ler `/api/v1/*` formatında.
+* **Mimari**:
+
+  * `controllers/` → endpoint router'ları
+  * `services/` → iş mantığı
+  * `dto/` → tip güvenliği & class-validator
+  * `modules/` → domain bazlı separation
+  * `guards/`, `pipes/`, `filters/` global middleware yapısı
+* **Veritabanı**:
+
+  * Supabase (PostgreSQL + RLS aktif)
+  * DB erişimi için `@supabase/postgrest-js` veya `pg`
+* **Queue**:
+
+  * BullMQ + Upstash Redis
+  * `order-sync`, `webhook-retry`, `email-batch` queue’ları tanımlı
+* **Payments**:
+
+  * Stripe ile ödeme tokenization
+  * Kart verisi backend'de tutulmaz
+
+---
+
+### API & Test Kuralları
+
+* Yanıt standardı:
+
+```ts
+// Başarılı yanıt
+{ data: ..., meta: { ... } }
+// Hatalı yanıt (RFC 7807)
+{ type: "https://example.com/errors/unauthorized", title: "Unauthorized", status: 401, detail: "JWT token invalid" }
+```
+
+* NestJS: `Jest` + `Supertest` ile test
+* Global `ValidationPipe`, `LoggingInterceptor`, `ExceptionFilter` aktif
+
+---
+
+### Supabase Policy (multi-tenant RLS)
+
+```sql
+CREATE POLICY "tenant_isolation"
+ON orders
+FOR ALL
+USING ( restaurant_id = auth.jwt()->>'restaurant_id' );
+```
+
+---
+
+### Ortak Kurallar
+
+* `.env.example` dosyası zorunlu.
+
+* Ortak değişken adları:
+
+  ```
+  SUPABASE_URL=
+  SUPABASE_ANON_KEY=
+  DATABASE_URL=
+  STRIPE_SECRET_KEY=
+  UPSTASH_REDIS_REST_URL=
+  DOPPLER_TOKEN=
+  ```
+
+* Kod kalitesi:
+
+  * ESLint + Prettier
+  * Husky + lint-staged
+  * 90%+ test coverage hedefi
+
+* Deploy hedefi:
+
+  * `web`: Vercel (Preview Deploy)
+  * `api` + `worker`: Fly.io veya Railway
+  * Supabase migration: Supabase CLI (`supabase db push`)
