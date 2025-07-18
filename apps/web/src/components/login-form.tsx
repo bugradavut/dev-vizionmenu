@@ -14,10 +14,11 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/auth-context";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -35,6 +36,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
   const router = useRouter();
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -55,7 +57,13 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
       if (error) {
         setError(error.message);
       } else if (authData?.user) {
-        router.push("/dashboard");
+        // Show success alert
+        setShowSuccessAlert(true);
+        
+        // Redirect after a short delay to show the alert
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 1500);
       }
     } catch {
       setError("An unexpected error occurred");
@@ -64,8 +72,37 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
     }
   };
 
+  // Auto-hide success alert after 5 seconds
+  useEffect(() => {
+    if (showSuccessAlert) {
+      const timer = setTimeout(() => {
+        setShowSuccessAlert(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessAlert]);
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
+      {/* Success Alert - Fixed position top right */}
+      {showSuccessAlert && (
+        <div className="fixed top-4 right-4 z-50 max-w-md">
+          <Alert className="border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-100">
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <AlertTitle>Success!</AlertTitle>
+            <AlertDescription>
+              Login successful. Redirecting to dashboard...
+            </AlertDescription>
+            <button
+              onClick={() => setShowSuccessAlert(false)}
+              className="absolute top-2 right-2 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </Alert>
+        </div>
+      )}
+
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
           <div className="p-6 md:p-8">
