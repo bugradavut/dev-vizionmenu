@@ -25,14 +25,10 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import { useAuth } from "@/contexts/auth-context"
 
 // This is sample data.
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   teams: [
     {
       name: "Acme Inc",
@@ -120,7 +116,7 @@ const data = {
       items: [
         {
           title: "General",
-          url: "#",
+          url: "/settings/general",
         },
         {
           title: "Team",
@@ -157,6 +153,51 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { user } = useAuth()
+
+  // Parse user info from email
+  const getUserInfo = () => {
+    if (!user?.email) {
+      return {
+        name: "User",
+        email: "user@vizionmenu.com",
+        initials: "U"
+      }
+    }
+
+    const email = user.email
+    const emailPrefix = email.split('@')[0] // john.doe veya test
+    const nameParts = emailPrefix.split('.') // ['john', 'doe'] veya ['test']
+    
+    // Capitalize each part
+    const capitalizedParts = nameParts.map(part => 
+      part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+    )
+    
+    // Full name: "John Doe" veya "Test"
+    const fullName = capitalizedParts.join(' ')
+    
+    // Initials logic
+    let initials: string
+    if (nameParts.length === 1) {
+      // Tek kelime: test → "T", admin → "A"
+      initials = capitalizedParts[0]?.charAt(0) || 'U'
+    } else {
+      // Çoklu kelime: john.doe → "JD", jane.middle.smith → "JS"
+      const firstInitial = capitalizedParts[0]?.charAt(0) || 'U'
+      const lastInitial = capitalizedParts[capitalizedParts.length - 1]?.charAt(0) || ''
+      initials = firstInitial + lastInitial
+    }
+    
+    return {
+      name: fullName,
+      email: email,
+      initials: initials
+    }
+  }
+
+  const userInfo = getUserInfo()
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -167,7 +208,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={userInfo} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
