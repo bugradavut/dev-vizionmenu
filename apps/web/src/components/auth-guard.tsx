@@ -3,7 +3,7 @@
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { GenericSkeleton } from "@/components/skeletons/generic-skeleton"
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -41,28 +41,14 @@ export function AuthGuard({
     }
   }, [user, session, loading, isRemembered, hasRecentLogin, requireAuth, requireRememberOrRecent, router, redirectTo])
 
-  // Loading durumunda spinner göster
+  // Loading durumunda skeleton göster
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="text-lg">Loading...</span>
-        </div>
-      </div>
-    )
+    return <GenericSkeleton />
   }
 
-  // Yetkili değilse boş döndür (redirect zaten yapıldı)
+  // Yetkili değilse skeleton göster (redirect zaten yapıldı)
   if (!isAuthorized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="text-lg">Redirecting...</span>
-        </div>
-      </div>
-    )
+    return <GenericSkeleton />
   }
 
   return <>{children}</>

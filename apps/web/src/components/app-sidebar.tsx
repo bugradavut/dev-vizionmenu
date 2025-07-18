@@ -51,7 +51,7 @@ const data = {
       title: "Playground",
       url: "#",
       icon: SquareTerminal,
-      isActive: true,
+      isActive: false,
       items: [
         {
           title: "History",
@@ -111,7 +111,7 @@ const data = {
     },
     {
       title: "Settings",
-      url: "#",
+      url: "/settings",
       icon: Settings2,
       items: [
         {
@@ -119,16 +119,8 @@ const data = {
           url: "/settings/general",
         },
         {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
+          title: "User Management",
+          url: "/settings/users",
         },
       ],
     },
