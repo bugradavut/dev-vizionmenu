@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { DatabaseService } from "@/config/database.service";
-import { OrderMetrics } from "@vision-menu/types";
+import { OrderMetrics, OrderStatus, OrderType, OrderSource } from "@vision-menu/types";
 
 @Injectable()
 export class OrderService {
@@ -184,19 +184,19 @@ export class OrderService {
       const statusDistribution = orders.reduce((acc, order) => {
         acc[order.status] = (acc[order.status] || 0) + 1;
         return acc;
-      }, {});
+      }, {} as Record<OrderStatus, number>);
 
       // Type distribution
       const typeDistribution = orders.reduce((acc, order) => {
         acc[order.type] = (acc[order.type] || 0) + 1;
         return acc;
-      }, {});
+      }, {} as Record<OrderType, number>);
 
       // Source distribution
       const sourceDistribution = orders.reduce((acc, order) => {
         acc[order.source] = (acc[order.source] || 0) + 1;
         return acc;
-      }, {});
+      }, {} as Record<OrderSource, number>);
 
       // Peak hours
       const hourlyOrders = orders.reduce((acc, order) => {

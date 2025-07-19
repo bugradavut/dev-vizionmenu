@@ -32,7 +32,7 @@ export default function Page() {
               </Breadcrumb>
             </div>
           </header>
-          <div className="flex flex-1 flex-col gap-4 py-4 px-4 md:px-8 lg:px-12 pt-8">
+          <div className="flex flex-1 flex-col gap-6 py-4 px-4 md:px-8 lg:px-12 pt-8">
             <div className="max-w-6xl">
               <div className="mb-8">
                 <h2 className="text-2xl font-semibold tracking-tight">Dashboard Overview</h2>

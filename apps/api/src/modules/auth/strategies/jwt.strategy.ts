@@ -3,6 +3,7 @@ import { PassportStrategy } from "@nestjs/passport";
 import { ConfigService } from "@nestjs/config";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { DatabaseService } from "@/config/database.service";
+import { User } from "@vision-menu/types";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -58,7 +59,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         full_name: profile?.full_name || authUser.user.user_metadata?.full_name,
         phone: profile?.phone || authUser.user.phone,
         avatar_url: profile?.avatar_url || authUser.user.user_metadata?.avatar_url,
-        is_active: !authUser.user.banned_until,
+        is_active: true, // User is active if JWT is valid
         email_verified: authUser.user.email_confirmed_at != null,
         phone_verified: authUser.user.phone_confirmed_at != null,
         last_login_at: authUser.user.last_sign_in_at,

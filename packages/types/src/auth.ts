@@ -10,6 +10,11 @@ export interface User {
   last_login_at?: string;
   created_at: string;
   updated_at: string;
+  // Multi-tenant support
+  restaurant_id?: string;
+  role?: string;
+  permissions?: string[];
+  banned_until?: string;
 }
 
 export interface AuthSession {

@@ -1,3 +1,5 @@
+"use client"
+
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import {
@@ -15,9 +17,28 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { LanguageToggle, getLanguageLabel } from "@/components/language-toggle"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Palette } from "lucide-react"
+import { useTheme } from "@/contexts/theme-context"
+import { useLanguage } from "@/contexts/language-context"
 
 export default function GeneralSettingsPage() {
+  const { theme } = useTheme()
+  const { language } = useLanguage()
+
+  const getThemeLabel = (currentTheme: string) => {
+    switch (currentTheme) {
+      case "light":
+        return "Light"
+      case "dark":
+        return "Dark"
+      case "system":
+        return "System"
+      default:
+        return "System"
+    }
+  }
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
       <SidebarProvider>
@@ -48,36 +69,40 @@ export default function GeneralSettingsPage() {
               </Breadcrumb>
             </div>
           </header>
-          <div className="flex flex-1 flex-col gap-4 py-4 px-4 md:px-8 lg:px-12 pt-8">
-            <div className="max-w-4xl">
-              <div className="mb-8">
-                <h2 className="text-2xl font-semibold tracking-tight">General Settings</h2>
-                <p className="text-muted-foreground mt-2">
-                  Manage your general application preferences.
-                </p>
-              </div>
-              
-              <div className="grid gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Appearance</CardTitle>
-                    <CardDescription>
-                      Customize the appearance of your application.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <div className="text-sm font-medium">Theme</div>
-                        <div className="text-sm text-muted-foreground">
-                          Select your preferred theme or use system preference.
-                        </div>
-                      </div>
-                      <ThemeToggle />
+          <div className="flex flex-1 flex-col gap-6 py-4 px-4 md:px-8 lg:px-12 pt-8">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold tracking-tight">General Settings</h1>
+              <p className="text-muted-foreground">
+                Manage your application preferences and account settings.
+              </p>
+            </div>
+
+            <div className="max-w-md">
+              {/* Appearance Card */}
+              <Card className="group hover:shadow-lg transition-all duration-200">
+                <CardHeader className="pb-4 border-b mb-4">
+                  <div className="flex items-center gap-3">
+                    <Palette className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle className="text-lg">Appearance</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between pb-4 border-b border-border">
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium">Theme</div>
+                      <div className="text-xs text-muted-foreground">Currently using theme: {getThemeLabel(theme)}</div>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                    <ThemeToggle />
+                  </div>
+                  <div className="flex items-center justify-between pt-4">
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium">Language</div>
+                      <div className="text-xs text-muted-foreground">Currently selected language: {getLanguageLabel(language)}</div>
+                    </div>
+                    <LanguageToggle />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </SidebarInset>

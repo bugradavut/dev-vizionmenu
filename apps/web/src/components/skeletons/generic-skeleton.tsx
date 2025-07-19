@@ -28,7 +28,7 @@ export function GenericSkeleton() {
           </div>
         </header>
 
-        <div className="flex flex-1 flex-col gap-4 py-4 px-4 md:px-8 lg:px-12 pt-8 bg-background">
+        <div className="flex flex-1 flex-col gap-6 py-4 px-4 md:px-8 lg:px-12 pt-8 bg-background">
           {/* Page Header Skeleton - Debug */}
           <div className="max-w-6xl">
             <div className="mb-8">
