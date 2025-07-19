@@ -87,7 +87,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setTimeout(() => reject(new Error('Session check timeout')), 2000)
         )
         
-        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any
+        const result = await Promise.race([sessionPromise, timeoutPromise])
+        const { data: { session } } = result as { data: { session: Session | null } }
         
         if (session) {
           setSession(session)

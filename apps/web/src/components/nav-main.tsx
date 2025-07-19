@@ -46,7 +46,7 @@ export function NavMain({
     if (savedMenuStates) {
       try {
         initialStates = JSON.parse(savedMenuStates)
-      } catch (e) {
+      } catch {
         console.warn('Failed to parse saved menu states')
       }
     }
