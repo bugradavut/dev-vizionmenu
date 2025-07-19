@@ -25,9 +25,36 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const stored = localStorage.getItem('vizion-menu-theme') || 'system';
+                const isValidTheme = ['dark', 'light', 'system'].includes(stored);
+                const theme = isValidTheme ? stored : 'system';
+                
+                let resolvedTheme;
+                if (theme === 'system') {
+                  resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                } else {
+                  resolvedTheme = theme;
+                }
+                
+                document.documentElement.classList.add(resolvedTheme);
+                document.documentElement.style.setProperty('color-scheme', resolvedTheme);
+              } catch (e) {
+                // Fallback to light theme if localStorage is not available
+                document.documentElement.classList.add('light');
+                document.documentElement.style.setProperty('color-scheme', 'light');
+              }
+            `,
+          }}
+        />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         <ThemeProvider>
           <AuthProvider>

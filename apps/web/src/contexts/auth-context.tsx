@@ -47,6 +47,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isRemembered, setIsRemembered] = useState(false)
   const [hasRecentLogin, setHasRecentLogin] = useState(false)
 
+  // Quick sync check on mount - optimize initial loading
+  useEffect(() => {
+    const quickCheck = () => {
+      const rememberMe = localStorage.getItem(REMEMBER_ME_KEY) === 'true'
+      const recentLogin = sessionStorage.getItem(RECENT_LOGIN_KEY) === 'true'
+      
+      setIsRemembered(rememberMe)
+      setHasRecentLogin(recentLogin)
+      
+      // If no auth preferences, can skip heavy session check initially
+      if (!rememberMe && !recentLogin) {
+        setLoading(false)
+      }
+    }
+    
+    quickCheck()
+  }, [])
+
   useEffect(() => {
     // Check remember me and recent login status
     const checkAuthStatus = async () => {
@@ -57,22 +75,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsRemembered(rememberMe)
         setHasRecentLogin(recentLogin)
 
-        // Get initial session - ALWAYS try to get session, don't clear it
-        const { data: { session } } = await supabase.auth.getSession()
+        // Quick check: if no rememberMe and no recentLogin, skip session check for speed
+        if (!rememberMe && !recentLogin) {
+          setLoading(false)
+          return
+        }
+
+        // Get initial session with timeout for performance
+        const sessionPromise = supabase.auth.getSession()
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session check timeout')), 2000)
+        )
+        
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any
         
         if (session) {
           setSession(session)
           setUser(session.user)
         } else if (rememberMe) {
-          // Try to refresh session if remember me is enabled
-          const { data: { session: refreshedSession } } = await supabase.auth.refreshSession()
-          if (refreshedSession) {
-            setSession(refreshedSession)
-            setUser(refreshedSession.user)
+          // Only refresh if remember me is enabled and quick check failed
+          try {
+            const { data: { session: refreshedSession } } = await supabase.auth.refreshSession()
+            if (refreshedSession) {
+              setSession(refreshedSession)
+              setUser(refreshedSession.user)
+            }
+          } catch (refreshError) {
+            console.warn('Session refresh failed:', refreshError)
           }
         }
       } catch (error) {
-        console.error('Error checking auth status:', error)
+        console.warn('Auth check failed, continuing without session:', error)
       } finally {
         setLoading(false)
       }

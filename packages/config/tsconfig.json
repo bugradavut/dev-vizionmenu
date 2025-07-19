@@ -20,5 +20,6 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true
   },
+  "files": [],
   "exclude": ["node_modules", "dist", ".turbo"]
 }

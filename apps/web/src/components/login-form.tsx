@@ -87,17 +87,17 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
       {/* Success Alert - Fixed position top right */}
       {showSuccessAlert && (
         <div className="fixed top-4 right-4 z-50 max-w-md">
-          <Alert className="border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-100">
-            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+          <Alert className="border-primary/20 bg-primary text-white">
+            <CheckCircle className="h-4 w-4" style={{ color: 'white' }} />
             <AlertTitle>Success!</AlertTitle>
             <AlertDescription>
               Login successful. Redirecting to dashboard...
             </AlertDescription>
             <button
               onClick={() => setShowSuccessAlert(false)}
-              className="absolute top-2 right-2 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"
+              className="absolute top-2 right-2 opacity-80 hover:opacity-100"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4" style={{ color: 'white' }} />
             </button>
           </Alert>
         </div>
@@ -185,12 +185,17 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
                 <Button 
                   type="submit" 
                   className="w-full hover:opacity-90" 
-                  disabled={isSubmitting || loading}
+                  disabled={isSubmitting || loading || showSuccessAlert}
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Signing in...
+                    </>
+                  ) : showSuccessAlert ? (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Success! Redirecting...
                     </>
                   ) : (
                     "Login"

@@ -1,6 +1,9 @@
 "use client"
 
 import { ChevronRight, type LucideIcon } from "lucide-react"
+import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
+import Link from "next/link"
 
 import {
   Collapsible,
@@ -32,6 +35,50 @@ export function NavMain({
     }[]
   }[]
 }) {
+  const pathname = usePathname()
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({})
+
+  // Initialize menu states from localStorage and current path
+  useEffect(() => {
+    const savedMenuStates = localStorage.getItem('vizion-menu-sidebar-state')
+    let initialStates: Record<string, boolean> = {}
+
+    if (savedMenuStates) {
+      try {
+        initialStates = JSON.parse(savedMenuStates)
+      } catch (e) {
+        console.warn('Failed to parse saved menu states')
+      }
+    }
+
+    // Auto-open menu if current path matches any sub-item
+    items.forEach((item) => {
+      if (item.items) {
+        const hasActiveSubItem = item.items.some(subItem => pathname === subItem.url)
+        if (hasActiveSubItem) {
+          initialStates[item.title] = true
+        } else if (!(item.title in initialStates)) {
+          // Keep existing state or default to closed
+          initialStates[item.title] = item.isActive || false
+        }
+      }
+    })
+
+    setOpenMenus(initialStates)
+  }, [pathname, items])
+
+  // Save menu states to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('vizion-menu-sidebar-state', JSON.stringify(openMenus))
+  }, [openMenus])
+
+  const toggleMenu = (menuTitle: string) => {
+    setOpenMenus(prev => ({
+      ...prev,
+      [menuTitle]: !prev[menuTitle]
+    }))
+  }
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
@@ -40,12 +87,15 @@ export function NavMain({
           <Collapsible
             key={item.title}
             asChild
-            defaultOpen={item.isActive}
+            open={openMenus[item.title] || false}
             className="group/collapsible"
           >
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
-                <SidebarMenuButton tooltip={item.title}>
+                <SidebarMenuButton 
+                  tooltip={item.title}
+                  onClick={() => toggleMenu(item.title)}
+                >
                   {item.icon && <item.icon />}
                   <span>{item.title}</span>
                   <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -55,10 +105,13 @@ export function NavMain({
                 <SidebarMenuSub>
                   {item.items?.map((subItem) => (
                     <SidebarMenuSubItem key={subItem.title}>
-                      <SidebarMenuSubButton asChild>
-                        <a href={subItem.url}>
+                      <SidebarMenuSubButton 
+                        asChild
+                        isActive={pathname === subItem.url}
+                      >
+                        <Link href={subItem.url}>
                           <span>{subItem.title}</span>
-                        </a>
+                        </Link>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   ))}

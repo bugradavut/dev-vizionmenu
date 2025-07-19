@@ -17,19 +17,33 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [actualTheme, setActualTheme] = useState<'dark' | 'light'>('light')
 
   useEffect(() => {
-    // Get saved theme from localStorage
+    // Get saved theme from localStorage and sync with DOM
     const savedTheme = localStorage.getItem('vizion-menu-theme') as Theme
+    const root = window.document.documentElement
+    
     if (savedTheme && ['dark', 'light', 'system'].includes(savedTheme)) {
       setTheme(savedTheme)
+      // Sync actualTheme with what's already applied by the script
+      if (root.classList.contains('dark')) {
+        setActualTheme('dark')
+      } else {
+        setActualTheme('light')
+      }
+    } else {
+      // If no saved theme, sync with what the script already applied
+      if (root.classList.contains('dark')) {
+        setActualTheme('dark')
+        setTheme('dark')
+      } else {
+        setActualTheme('light')
+        setTheme('light')
+      }
     }
   }, [])
 
   useEffect(() => {
     const root = window.document.documentElement
     
-    // Remove previous theme classes
-    root.classList.remove('light', 'dark')
-
     let resolvedTheme: 'dark' | 'light'
 
     if (theme === 'system') {
@@ -41,8 +55,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       resolvedTheme = theme
     }
 
-    // Apply theme
-    root.classList.add(resolvedTheme)
+    // Only apply if different from current theme to prevent flashing
+    if (!root.classList.contains(resolvedTheme)) {
+      // Remove previous theme classes
+      root.classList.remove('light', 'dark')
+      // Apply new theme
+      root.classList.add(resolvedTheme)
+    }
+    
     setActualTheme(resolvedTheme)
 
     // Save to localStorage
