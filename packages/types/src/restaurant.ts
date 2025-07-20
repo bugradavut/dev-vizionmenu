@@ -1,28 +1,55 @@
-export interface Restaurant {
+// Restaurant Chain (Multi-brand support)
+export interface RestaurantChain {
   id: string;
   name: string;
   slug: string;
   description?: string;
-  logo?: string;
-  cover_image?: string;
-  phone?: string;
-  email?: string;
-  address?: RestaurantAddress;
-  business_hours?: BusinessHours[];
-  settings: RestaurantSettings;
+  logo_url?: string;
+  cover_image_url?: string;
+  settings: ChainSettings;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
+  branches?: Branch[];
 }
 
-export interface RestaurantAddress {
+// Individual Branch
+export interface Branch {
+  id: string;
+  chain_id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  phone?: string;
+  email?: string;
+  address?: BranchAddress;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+  business_hours?: BusinessHours[];
+  settings: BranchSettings;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  chain?: RestaurantChain;
+}
+
+// Legacy Restaurant interface (for backward compatibility)
+export interface Restaurant extends Branch {
+  // Deprecated: Use Branch instead
+}
+
+export interface BranchAddress {
   street: string;
   city: string;
   state: string;
   country: string;
   postal_code: string;
-  latitude?: number;
-  longitude?: number;
 }
+
+// Legacy alias
+export interface RestaurantAddress extends BranchAddress {}
 
 export interface BusinessHours {
   day:
@@ -38,7 +65,23 @@ export interface BusinessHours {
   is_closed: boolean;
 }
 
-export interface RestaurantSettings {
+export interface ChainSettings {
+  default_currency: string;
+  default_tax_rate: number;
+  default_service_fee: number;
+  branding: {
+    primary_color?: string;
+    secondary_color?: string;
+    font_family?: string;
+  };
+  features: {
+    multi_branch_reporting: boolean;
+    centralized_menu_management: boolean;
+    cross_branch_transfers: boolean;
+  };
+}
+
+export interface BranchSettings {
   currency: string;
   tax_rate: number;
   service_fee: number;
@@ -53,7 +96,10 @@ export interface RestaurantSettings {
   third_party_integration_enabled: boolean;
 }
 
-export interface RestaurantStats {
+// Legacy alias
+export interface RestaurantSettings extends BranchSettings {}
+
+export interface BranchStats {
   total_orders: number;
   total_revenue: number;
   avg_order_value: number;
@@ -62,6 +108,42 @@ export interface RestaurantStats {
   pending_orders: number;
 }
 
+export interface ChainStats {
+  total_branches: number;
+  active_branches: number;
+  total_orders: number;
+  total_revenue: number;
+  avg_order_value: number;
+  today_orders: number;
+  today_revenue: number;
+  pending_orders: number;
+  branch_stats: Record<string, BranchStats>; // branch_id -> stats
+}
+
+// Legacy alias
+export interface RestaurantStats extends BranchStats {}
+
+// Multi-branch user management
+export interface BranchUser {
+  id: string;
+  user_id: string;
+  branch_id: string;
+  role: 'chain_owner' | 'branch_manager' | 'branch_staff' | 'branch_cashier';
+  permissions: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  branch?: Branch;
+  user?: {
+    id: string;
+    email: string;
+    full_name?: string;
+    phone?: string;
+    avatar_url?: string;
+  };
+}
+
+// Legacy types (deprecated)
 export type RestaurantRole = "owner" | "manager" | "staff" | "viewer";
 
 export interface RestaurantUser {

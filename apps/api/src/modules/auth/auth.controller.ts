@@ -4,21 +4,25 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiBody,
 } from "@nestjs/swagger";
 import { AuthService } from "./auth.service";
 import { Public } from "@/common/decorators/public.decorator";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard";
 import {
-  LoginRequest,
-  RegisterRequest,
-  ForgotPasswordRequest,
-  ResetPasswordRequest,
-  ChangePasswordRequest,
   LoginResponse,
   RegisterResponse,
   User,
 } from "@vision-menu/types";
+import {
+  LoginDto,
+  RegisterDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  ChangePasswordDto,
+  SwitchBranchDto,
+} from "./dto";
 
 @ApiTags("auth")
 @Controller("auth")
@@ -30,7 +34,8 @@ export class AuthController {
   @ApiOperation({ summary: "Login user" })
   @ApiResponse({ status: 200, description: "User logged in successfully" })
   @ApiResponse({ status: 401, description: "Invalid credentials" })
-  async login(@Body() loginDto: LoginRequest): Promise<LoginResponse> {
+  @ApiBody({ type: LoginDto })
+  async login(@Body() loginDto: LoginDto): Promise<LoginResponse> {
     return this.authService.login(loginDto);
   }
 
@@ -39,8 +44,9 @@ export class AuthController {
   @ApiOperation({ summary: "Register new user" })
   @ApiResponse({ status: 201, description: "User registered successfully" })
   @ApiResponse({ status: 400, description: "Registration failed" })
+  @ApiBody({ type: RegisterDto })
   async register(
-    @Body() registerDto: RegisterRequest,
+    @Body() registerDto: RegisterDto,
   ): Promise<RegisterResponse> {
     return this.authService.register(registerDto);
   }
@@ -50,7 +56,7 @@ export class AuthController {
   @ApiOperation({ summary: "Send forgot password email" })
   @ApiResponse({ status: 200, description: "Reset email sent" })
   async forgotPassword(
-    @Body() forgotPasswordDto: ForgotPasswordRequest,
+    @Body() forgotPasswordDto: ForgotPasswordDto,
   ): Promise<{ message: string }> {
     return this.authService.forgotPassword(forgotPasswordDto);
   }
@@ -61,7 +67,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: "Password reset successfully" })
   @ApiResponse({ status: 400, description: "Invalid or expired token" })
   async resetPassword(
-    @Body() resetPasswordDto: ResetPasswordRequest,
+    @Body() resetPasswordDto: ResetPasswordDto,
   ): Promise<{ message: string }> {
     return this.authService.resetPassword(resetPasswordDto);
   }
@@ -74,7 +80,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: "Current password incorrect" })
   async changePassword(
     @CurrentUser() user: User,
-    @Body() changePasswordDto: ChangePasswordRequest,
+    @Body() changePasswordDto: ChangePasswordDto,
   ): Promise<{ message: string }> {
     return this.authService.changePassword(user.id, changePasswordDto);
   }
@@ -106,5 +112,18 @@ export class AuthController {
     @CurrentUser() user: User,
   ): Promise<{ access_token: string }> {
     return this.authService.refreshToken(user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post("switch-branch")
+  @ApiOperation({ summary: "Switch to different branch (chain_owner only)" })
+  @ApiResponse({ status: 200, description: "Branch switched successfully" })
+  @ApiResponse({ status: 403, description: "User not authorized for this branch" })
+  async switchBranch(
+    @CurrentUser() user: User,
+    @Body() switchBranchDto: SwitchBranchDto,
+  ): Promise<{ access_token: string; branch: any }> {
+    return this.authService.switchBranch(user.id, switchBranchDto.branch_id);
   }
 }

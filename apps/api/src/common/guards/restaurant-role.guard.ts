@@ -5,14 +5,14 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { RestaurantRole } from "@vision-menu/types";
+import { BranchRole } from "@vision-menu/types";
 
 @Injectable()
 export class RestaurantRoleGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.get<RestaurantRole[]>(
+    const requiredRoles = this.reflector.get<BranchRole[]>(
       "roles",
       context.getHandler(),
     );
@@ -28,16 +28,16 @@ export class RestaurantRoleGuard implements CanActivate {
       throw new ForbiddenException("User not authenticated");
     }
 
-    if (!user.restaurant_id) {
-      throw new ForbiddenException("User not associated with a restaurant");
+    if (!user.branch_id) {
+      throw new ForbiddenException("User not associated with a branch");
     }
 
     if (!user.role) {
       throw new ForbiddenException("User role not defined");
     }
 
-    // Owner has all permissions
-    if (user.role === "owner") {
+    // Chain owner has all permissions
+    if (user.role === "chain_owner") {
       return true;
     }
 

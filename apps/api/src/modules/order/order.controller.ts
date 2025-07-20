@@ -65,7 +65,7 @@ export class OrderController {
   @UseGuards(JwtAuthGuard, RestaurantRoleGuard)
   @ApiBearerAuth()
   @Patch(":orderId/status")
-  @Roles("owner", "manager", "staff")
+  @Roles("chain_owner", "branch_manager", "branch_staff")
   @ApiOperation({ summary: "Update order status" })
   @ApiResponse({ status: 200, description: "Order status updated" })
   async updateOrderStatus(
@@ -83,7 +83,7 @@ export class OrderController {
   @UseGuards(JwtAuthGuard, RestaurantRoleGuard)
   @ApiBearerAuth()
   @Get("stats/summary")
-  @Roles("owner", "manager")
+  @Roles("chain_owner", "branch_manager")
   @ApiOperation({ summary: "Get order statistics" })
   @ApiResponse({ status: 200, description: "Order statistics" })
   async getOrderStats(@CurrentUser() user: any) {

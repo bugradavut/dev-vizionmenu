@@ -8,16 +8,18 @@ import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcryptjs";
 import { DatabaseService } from "@/config/database.service";
 import {
-  LoginRequest,
-  RegisterRequest,
-  ForgotPasswordRequest,
-  ResetPasswordRequest,
-  ChangePasswordRequest,
   LoginResponse,
   RegisterResponse,
   User,
   AuthTokenPayload,
 } from "@vision-menu/types";
+import {
+  LoginDto,
+  RegisterDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  ChangePasswordDto,
+} from "./dto";
 
 @Injectable()
 export class AuthService {
@@ -27,8 +29,8 @@ export class AuthService {
     private readonly databaseService: DatabaseService,
   ) {}
 
-  async login(loginDto: LoginRequest): Promise<LoginResponse> {
-    const { email, password, restaurant_slug } = loginDto;
+  async login(loginDto: LoginDto): Promise<LoginResponse> {
+    const { email, password, chain_slug, branch_slug } = loginDto;
 
     try {
       // Get admin client for server-side operations
@@ -54,44 +56,49 @@ export class AuthService {
         throw new UnauthorizedException("Invalid credentials");
       }
 
-      // Get user's restaurant association
-      let restaurantQuery = supabase
-        .from("restaurant_users")
-        .select(
-          `
+      // Get user's branch association (multi-branch)
+      let branchQuery = supabase
+        .from("branch_users")
+        .select(`
           *,
-          restaurant:restaurants(id, name, slug)
-        `,
-        )
-        .eq("user_id", user.id);
+          branch:branches(
+            id, name, slug,
+            chain:restaurant_chains(id, name, slug)
+          )
+        `)
+        .eq("user_id", user.id)
+        .eq("is_active", true);
 
-      // Filter by restaurant slug if provided
-      if (restaurant_slug) {
-        restaurantQuery = restaurantQuery.eq(
-          "restaurant.slug",
-          restaurant_slug,
-        );
+      // Filter by chain and/or branch slug if provided
+      if (chain_slug) {
+        branchQuery = branchQuery.eq("branch.chain.slug", chain_slug);
+      }
+      if (branch_slug) {
+        branchQuery = branchQuery.eq("branch.slug", branch_slug);
       }
 
-      const { data: restaurantUsers, error: restaurantError } =
-        await restaurantQuery;
+      const { data: branchUsers, error: branchError } = await branchQuery;
 
-      if (restaurantError || !restaurantUsers?.length) {
+      if (branchError || !branchUsers?.length) {
         throw new UnauthorizedException(
-          "User not associated with any restaurant",
+          "User not associated with any branch",
         );
       }
 
-      // If multiple restaurants, take the first one or the one matching the slug
-      const restaurantUser = restaurantUsers[0];
+      // If multiple branches, take the first one or the one matching the slug
+      const branchUser = branchUsers[0];
+      const branch = branchUser.branch;
+      const chain = branch.chain;
 
       // Generate JWT token
       const payload: AuthTokenPayload = {
         sub: user.id,
         email: user.email,
-        restaurant_id: restaurantUser.restaurant_id,
-        role: restaurantUser.role,
-        permissions: restaurantUser.permissions,
+        chain_id: chain.id,
+        branch_id: branch.id,
+        branch_name: branch.name,
+        role: branchUser.role,
+        permissions: branchUser.permissions,
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days
       };
@@ -136,20 +143,35 @@ export class AuthService {
             created_at: user.created_at,
             updated_at: user.updated_at,
           },
-          restaurant_id: restaurantUser.restaurant_id,
-          role: restaurantUser.role,
-          permissions: restaurantUser.permissions,
+          chain_id: chain.id,
+          branch_id: branch.id,
+          branch_name: branch.name,
+          role: branchUser.role,
+          permissions: branchUser.permissions,
           access_token,
           refresh_token,
           expires_at: new Date(
             Date.now() + 7 * 24 * 60 * 60 * 1000,
           ).toISOString(),
         },
-        restaurant: {
-          id: restaurantUser.restaurant.id,
-          name: restaurantUser.restaurant.name,
-          slug: restaurantUser.restaurant.slug,
+        chain: {
+          id: chain.id,
+          name: chain.name,
+          slug: chain.slug,
         },
+        branch: {
+          id: branch.id,
+          name: branch.name,
+          slug: branch.slug,
+        },
+        // If chain_owner, show available branches
+        available_branches: branchUser.role === 'chain_owner' 
+          ? branchUsers.map(bu => ({
+              id: bu.branch.id,
+              name: bu.branch.name,
+              slug: bu.branch.slug,
+            }))
+          : undefined,
       };
     } catch (error) {
       if (error instanceof UnauthorizedException) {
@@ -159,69 +181,117 @@ export class AuthService {
     }
   }
 
-  async register(registerDto: RegisterRequest): Promise<RegisterResponse> {
+  async register(registerDto: RegisterDto): Promise<RegisterResponse> {
     const {
       email,
       password,
       full_name,
       phone,
-      restaurant_name,
-      restaurant_slug,
+      chain_name,
+      chain_slug,
+      first_branch_name,
+      first_branch_slug,
     } = registerDto;
 
     try {
       const supabase = this.databaseService.getAdminClient();
 
-      // Check if user already exists
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("email", email)
-        .single();
+      // Check if user already exists in auth system
+      const { data: existingAuthUser } = await supabase.auth.admin.listUsers();
+      const userExists = existingAuthUser?.users?.some((u: any) => u.email === email);
 
-      if (existingUser) {
+      if (userExists) {
         throw new BadRequestException("User already exists");
       }
 
-      // Check if restaurant slug is taken
-      const { data: existingRestaurant } = await supabase
-        .from("restaurants")
+      // Check if chain slug is taken
+      const { data: existingChain } = await supabase
+        .from("restaurant_chains")
         .select("id")
-        .eq("slug", restaurant_slug)
+        .eq("slug", chain_slug)
         .single();
 
-      if (existingRestaurant) {
-        throw new BadRequestException("Restaurant slug is already taken");
+      if (existingChain) {
+        throw new BadRequestException("Chain slug is already taken");
       }
 
-      // Hash password
-      const password_hash = await bcrypt.hash(password, 10);
-
-      // Create user
-      const { data: user, error: userError } = await supabase
-        .from("users")
-        .insert({
-          email,
-          password_hash,
+      // Create user in auth system
+      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
           full_name,
-          phone,
-          is_active: true,
-          email_verified: false,
-          phone_verified: false,
+        },
+      });
+
+      if (authError || !authUser?.user) {
+        console.error('Auth user creation error:', authError);
+        throw new BadRequestException(`Failed to create user: ${authError?.message}`);
+      }
+
+      // Get user profile (created automatically by trigger)
+      // Wait a bit for trigger to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const { data: user, error: profileError } = await supabase
+        .from("user_profiles")
+        .select()
+        .eq("user_id", authUser.user.id)
+        .single();
+
+      if (profileError || !user) {
+        console.error('Profile retrieval error:', profileError);
+        // Rollback auth user creation
+        await supabase.auth.admin.deleteUser(authUser.user.id);
+        throw new BadRequestException(`Failed to retrieve user profile: ${profileError?.message}`);
+      }
+
+      // Update profile with additional info if needed
+      if (phone) {
+        const { error: updateError } = await supabase
+          .from("user_profiles")
+          .update({ phone })
+          .eq("user_id", authUser.user.id);
+
+        if (updateError) {
+          console.error('Profile update error:', updateError);
+        }
+      }
+
+      // Create restaurant chain
+      const { data: chain, error: chainError } = await supabase
+        .from("restaurant_chains")
+        .insert({
+          name: chain_name,
+          slug: chain_slug,
+          settings: {
+            default_currency: "USD",
+            default_tax_rate: 0.1,
+            default_service_fee: 0.0,
+            branding: {},
+            features: {
+              multi_branch_reporting: true,
+              centralized_menu_management: false,
+              cross_branch_transfers: false,
+            },
+          },
         })
         .select()
         .single();
 
-      if (userError) {
-        throw new BadRequestException("Failed to create user");
+      if (chainError) {
+        console.error('Chain creation error:', chainError);
+        throw new BadRequestException(`Failed to create restaurant chain: ${chainError.message}`);
       }
 
-      // Create restaurant
-      const { data: restaurant, error: restaurantError } = await supabase
-        .from("restaurants")
+      // Create first branch
+      const { data: branch, error: branchError } = await supabase
+        .from("branches")
         .insert({
-          name: restaurant_name,
-          slug: restaurant_slug,
+          chain_id: chain.id,
+          name: first_branch_name,
+          slug: first_branch_slug,
           settings: {
             currency: "USD",
             tax_rate: 0.1,
@@ -240,23 +310,25 @@ export class AuthService {
         .select()
         .single();
 
-      if (restaurantError) {
-        throw new BadRequestException("Failed to create restaurant");
+      if (branchError) {
+        console.error('Branch creation error:', branchError);
+        throw new BadRequestException(`Failed to create branch: ${branchError.message}`);
       }
 
-      // Associate user with restaurant as owner
+      // Associate user with branch as chain_owner
       const { error: associationError } = await supabase
-        .from("restaurant_users")
+        .from("branch_users")
         .insert({
-          user_id: user.id,
-          restaurant_id: restaurant.id,
-          role: "owner",
+          user_id: authUser.user.id,
+          branch_id: branch.id,
+          role: "chain_owner",
           permissions: ["*"],
         });
 
       if (associationError) {
+        console.error('Association error:', associationError);
         throw new BadRequestException(
-          "Failed to associate user with restaurant",
+          `Failed to associate user with branch: ${associationError.message}`,
         );
       }
 
@@ -274,10 +346,15 @@ export class AuthService {
           created_at: user.created_at,
           updated_at: user.updated_at,
         },
-        restaurant: {
-          id: restaurant.id,
-          name: restaurant.name,
-          slug: restaurant.slug,
+        chain: {
+          id: chain.id,
+          name: chain.name,
+          slug: chain.slug,
+        },
+        branch: {
+          id: branch.id,
+          name: branch.name,
+          slug: branch.slug,
         },
         verification_required: true,
       };
@@ -290,7 +367,7 @@ export class AuthService {
   }
 
   async forgotPassword(
-    forgotPasswordDto: ForgotPasswordRequest,
+    forgotPasswordDto: ForgotPasswordDto,
   ): Promise<{ message: string }> {
     // Implementation for password reset email
     // This would typically send an email with reset link
@@ -298,7 +375,7 @@ export class AuthService {
   }
 
   async resetPassword(
-    resetPasswordDto: ResetPasswordRequest,
+    resetPasswordDto: ResetPasswordDto,
   ): Promise<{ message: string }> {
     // Implementation for password reset
     // This would verify the token and update the password
@@ -307,7 +384,7 @@ export class AuthService {
 
   async changePassword(
     userId: string,
-    changePasswordDto: ChangePasswordRequest,
+    changePasswordDto: ChangePasswordDto,
   ): Promise<{ message: string }> {
     const { current_password, new_password } = changePasswordDto;
 
@@ -401,29 +478,40 @@ export class AuthService {
     try {
       const supabase = this.databaseService.getAdminClient();
 
-      // Get user and restaurant association
-      const { data: restaurantUser, error } = await supabase
-        .from("restaurant_users")
-        .select(
-          `
+      // Get user and branch association
+      const { data: branchUser, error } = await supabase
+        .from("branch_users")
+        .select(`
           *,
-          user:users(*)
-        `,
-        )
+          branch:branches(
+            id, name, slug,
+            chain:restaurant_chains(id, name, slug)
+          )
+        `)
         .eq("user_id", userId)
+        .eq("is_active", true)
         .single();
 
-      if (error || !restaurantUser) {
+      if (error || !branchUser) {
         throw new UnauthorizedException("User not found");
       }
 
+      // Get user profile
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+
       // Generate new JWT token
       const payload: AuthTokenPayload = {
-        sub: restaurantUser.user.id,
-        email: restaurantUser.user.email,
-        restaurant_id: restaurantUser.restaurant_id,
-        role: restaurantUser.role,
-        permissions: restaurantUser.permissions,
+        sub: userId,
+        email: profile?.full_name || '',
+        chain_id: branchUser.branch.chain.id,
+        branch_id: branchUser.branch.id,
+        branch_name: branchUser.branch.name,
+        role: branchUser.role,
+        permissions: branchUser.permissions,
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days
       };
@@ -436,6 +524,67 @@ export class AuthService {
         throw error;
       }
       throw new BadRequestException("Failed to refresh token");
+    }
+  }
+
+  async switchBranch(userId: string, branchId: string): Promise<{ access_token: string; branch: any }> {
+    try {
+      const supabase = this.databaseService.getAdminClient();
+
+      // Get user's branch association for the requested branch
+      const { data: branchUser, error } = await supabase
+        .from("branch_users")
+        .select(`
+          *,
+          branch:branches(
+            id, name, slug,
+            chain:restaurant_chains(id, name, slug)
+          )
+        `)
+        .eq("user_id", userId)
+        .eq("branch_id", branchId)
+        .eq("is_active", true)
+        .single();
+
+      if (error || !branchUser) {
+        throw new UnauthorizedException("User not associated with this branch");
+      }
+
+      // Get user profile for email
+      const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+      
+      if (!authUser?.user) {
+        throw new UnauthorizedException("User not found");
+      }
+
+      // Generate new JWT token for the new branch
+      const payload: AuthTokenPayload = {
+        sub: userId,
+        email: authUser.user.email || '',
+        chain_id: branchUser.branch.chain.id,
+        branch_id: branchUser.branch.id,
+        branch_name: branchUser.branch.name,
+        role: branchUser.role,
+        permissions: branchUser.permissions,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days
+      };
+
+      const access_token = this.jwtService.sign(payload);
+
+      return {
+        access_token,
+        branch: {
+          id: branchUser.branch.id,
+          name: branchUser.branch.name,
+          slug: branchUser.branch.slug,
+        },
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new BadRequestException("Failed to switch branch");
     }
   }
 }

@@ -10,17 +10,21 @@ export interface User {
   last_login_at?: string;
   created_at: string;
   updated_at: string;
-  // Multi-tenant support
-  restaurant_id?: string;
-  role?: string;
+  // Multi-branch support
+  chain_id?: string;
+  branch_id?: string;
+  branch_name?: string;
+  role?: BranchRole;
   permissions?: string[];
   banned_until?: string;
 }
 
 export interface AuthSession {
   user: User;
-  restaurant_id: string;
-  role: RestaurantRole;
+  chain_id: string;
+  branch_id: string;
+  branch_name: string;
+  role: BranchRole;
   permissions: string[];
   access_token: string;
   refresh_token: string;
@@ -30,8 +34,10 @@ export interface AuthSession {
 export interface AuthTokenPayload {
   sub: string; // user_id
   email: string;
-  restaurant_id: string;
-  role: RestaurantRole;
+  chain_id: string;
+  branch_id: string;
+  branch_name: string;
+  role: BranchRole;
   permissions: string[];
   iat: number;
   exp: number;
@@ -40,17 +46,28 @@ export interface AuthTokenPayload {
 export interface LoginRequest {
   email: string;
   password: string;
-  restaurant_slug?: string;
+  chain_slug?: string;
+  branch_slug?: string;
 }
 
 export interface LoginResponse {
   user: User;
   session: AuthSession;
-  restaurant: {
+  chain: {
     id: string;
     name: string;
     slug: string;
   };
+  branch: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  available_branches?: {
+    id: string;
+    name: string;
+    slug: string;
+  }[];
 }
 
 export interface RegisterRequest {
@@ -58,13 +75,20 @@ export interface RegisterRequest {
   password: string;
   full_name: string;
   phone?: string;
-  restaurant_name: string;
-  restaurant_slug: string;
+  chain_name: string;
+  chain_slug: string;
+  first_branch_name: string;
+  first_branch_slug: string;
 }
 
 export interface RegisterResponse {
   user: User;
-  restaurant: {
+  chain: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  branch: {
     id: string;
     name: string;
     slug: string;
@@ -103,7 +127,8 @@ export interface VerifyPhoneRequest {
 
 export interface InviteUserRequest {
   email: string;
-  role: RestaurantRole;
+  branch_id: string;
+  role: BranchRole;
   permissions: string[];
 }
 
@@ -118,7 +143,8 @@ export interface AcceptInvitationRequest {
   password: string;
 }
 
-import { RestaurantRole } from "./restaurant";
+// Multi-branch role types
+export type BranchRole = 'chain_owner' | 'branch_manager' | 'branch_staff' | 'branch_cashier';
 
 export interface Permission {
   id: string;
@@ -129,25 +155,40 @@ export interface Permission {
 }
 
 export interface RolePermission {
-  role: RestaurantRole;
+  role: BranchRole;
   permissions: string[];
 }
 
-export const DEFAULT_PERMISSIONS: Record<RestaurantRole, string[]> = {
-  owner: ["*"], // All permissions
-  manager: [
+export const DEFAULT_PERMISSIONS: Record<BranchRole, string[]> = {
+  chain_owner: ["*"], // All permissions across all branches
+  branch_manager: [
+    "branch:read",
+    "branch:write",
     "menu:read",
     "menu:write",
     "orders:read",
     "orders:write",
     "reports:read",
-    "staff:read",
-    "staff:write",
+    "users:read",
+    "users:write",
     "settings:read",
     "settings:write",
   ],
-  staff: ["menu:read", "orders:read", "orders:write"],
-  viewer: ["menu:read", "orders:read", "reports:read"],
+  branch_staff: [
+    "branch:read",
+    "menu:read",
+    "orders:read",
+    "orders:write",
+    "reports:read",
+  ],
+  branch_cashier: [
+    "branch:read",
+    "menu:read",
+    "orders:read",
+    "orders:write",
+    "payments:read",
+    "payments:write",
+  ],
 };
 
 export interface AuthError {
@@ -164,7 +205,23 @@ export type AuthErrorCode =
   | "invalid_token"
   | "token_expired"
   | "permission_denied"
-  | "restaurant_not_found"
+  | "chain_not_found"
+  | "branch_not_found"
   | "invitation_not_found"
   | "invitation_expired"
-  | "invitation_already_used";
+  | "invitation_already_used"
+  | "cross_branch_access_denied";
+
+// Branch switching interface
+export interface SwitchBranchRequest {
+  branch_id: string;
+}
+
+export interface SwitchBranchResponse {
+  session: AuthSession;
+  branch: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+}
