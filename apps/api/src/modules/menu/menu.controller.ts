@@ -46,7 +46,7 @@ export class MenuController {
   @UseGuards(JwtAuthGuard, RestaurantRoleGuard)
   @ApiBearerAuth()
   @Post("categories")
-  @Roles("owner", "manager")
+  @Roles("chain_owner", "branch_manager")
   @ApiOperation({ summary: "Create menu category" })
   @ApiResponse({ status: 201, description: "Category created successfully" })
   async createCategory(@CurrentUser() user: any, @Body() categoryData: any) {
@@ -56,7 +56,7 @@ export class MenuController {
   @UseGuards(JwtAuthGuard, RestaurantRoleGuard)
   @ApiBearerAuth()
   @Post("items")
-  @Roles("owner", "manager")
+  @Roles("chain_owner", "branch_manager")
   @ApiOperation({ summary: "Create menu item" })
   @ApiResponse({ status: 201, description: "Item created successfully" })
   async createItem(@CurrentUser() user: any, @Body() itemData: any) {
@@ -66,7 +66,7 @@ export class MenuController {
   @UseGuards(JwtAuthGuard, RestaurantRoleGuard)
   @ApiBearerAuth()
   @Patch("items/:itemId")
-  @Roles("owner", "manager")
+  @Roles("chain_owner", "branch_manager")
   @ApiOperation({ summary: "Update menu item" })
   @ApiResponse({ status: 200, description: "Item updated successfully" })
   async updateItem(
@@ -80,7 +80,7 @@ export class MenuController {
   @UseGuards(JwtAuthGuard, RestaurantRoleGuard)
   @ApiBearerAuth()
   @Delete("items/:itemId")
-  @Roles("owner", "manager")
+  @Roles("chain_owner", "branch_manager")
   @ApiOperation({ summary: "Delete menu item" })
   @ApiResponse({ status: 200, description: "Item deleted successfully" })
   async deleteItem(@CurrentUser() user: any, @Param("itemId") itemId: string) {

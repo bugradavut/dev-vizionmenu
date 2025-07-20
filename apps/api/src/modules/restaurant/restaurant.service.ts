@@ -4,66 +4,73 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { DatabaseService } from "@/config/database.service";
-import { Restaurant, RestaurantStats } from "@vision-menu/types";
+import { Branch, BranchStats, BranchUser } from "@vision-menu/types";
 
 @Injectable()
 export class RestaurantService {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async getRestaurant(restaurantId: string): Promise<Restaurant> {
+  // Multi-branch methods
+  async getBranch(branchId: string): Promise<Branch> {
     try {
       const supabase = this.databaseService.getAdminClient();
 
-      const { data: restaurant, error } = await supabase
-        .from("restaurants")
-        .select("*")
-        .eq("id", restaurantId)
+      const { data: branch, error } = await supabase
+        .from("branches")
+        .select(`
+          *,
+          chain:restaurant_chains(*)
+        `)
+        .eq("id", branchId)
         .single();
 
-      if (error || !restaurant) {
-        throw new NotFoundException("Restaurant not found");
+      if (error || !branch) {
+        throw new NotFoundException("Branch not found");
       }
 
-      return restaurant;
+      return branch;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new BadRequestException("Failed to get restaurant");
+      throw new BadRequestException("Failed to get branch");
     }
   }
 
-  async updateRestaurant(
-    restaurantId: string,
-    updateData: Partial<Restaurant>,
-  ): Promise<Restaurant> {
+  async updateBranch(
+    branchId: string,
+    updateData: Partial<Branch>,
+  ): Promise<Branch> {
     try {
       const supabase = this.databaseService.getAdminClient();
 
-      const { data: restaurant, error } = await supabase
-        .from("restaurants")
+      const { data: branch, error } = await supabase
+        .from("branches")
         .update({
           ...updateData,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", restaurantId)
-        .select()
+        .eq("id", branchId)
+        .select(`
+          *,
+          chain:restaurant_chains(*)
+        `)
         .single();
 
       if (error) {
-        throw new BadRequestException("Failed to update restaurant");
+        throw new BadRequestException("Failed to update branch");
       }
 
-      return restaurant;
+      return branch;
     } catch (error) {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException("Failed to update restaurant");
+      throw new BadRequestException("Failed to update branch");
     }
   }
 
-  async getRestaurantStats(restaurantId: string): Promise<RestaurantStats> {
+  async getBranchStats(branchId: string): Promise<BranchStats> {
     try {
       const supabase = this.databaseService.getAdminClient();
 
@@ -71,7 +78,7 @@ export class RestaurantService {
       const { data: orders, error: ordersError } = await supabase
         .from("orders")
         .select("total_amount, status, created_at")
-        .eq("restaurant_id", restaurantId);
+        .eq("branch_id", branchId);
 
       if (ordersError) {
         throw new BadRequestException("Failed to get orders data");
@@ -111,79 +118,100 @@ export class RestaurantService {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException("Failed to get restaurant stats");
+      throw new BadRequestException("Failed to get branch stats");
     }
   }
 
-  async getRestaurantUsers(restaurantId: string) {
+  async getBranchUsers(branchId: string): Promise<BranchUser[]> {
     try {
       const supabase = this.databaseService.getAdminClient();
 
       const { data: users, error } = await supabase
-        .from("restaurant_users")
-        .select(
-          `
+        .from("branch_users")
+        .select(`
           *,
-          user:users(id, email, full_name, phone, avatar_url, is_active)
-        `,
-        )
-        .eq("restaurant_id", restaurantId);
+          user:user_profiles!inner(
+            user_id,
+            full_name,
+            phone,
+            avatar_url
+          )
+        `)
+        .eq("branch_id", branchId)
+        .eq("is_active", true);
 
       if (error) {
-        throw new BadRequestException("Failed to get restaurant users");
+        throw new BadRequestException("Failed to get branch users");
       }
 
-      return users;
+      // Get auth user emails
+      const { data: authUsers } = await supabase.auth.admin.listUsers();
+      
+      const authUserMap = new Map<string, { email: string; id: string }>();
+      if (authUsers?.users) {
+        authUsers.users.forEach((u: any) => {
+          authUserMap.set(u.id, { email: u.email || '', id: u.id });
+        });
+      }
+
+      return users.map(user => ({
+        ...user,
+        user: {
+          id: user.user_id,
+          email: authUserMap.get(user.user_id)?.email || '',
+          full_name: user.user?.full_name,
+          phone: user.user?.phone,
+          avatar_url: user.user?.avatar_url,
+        }
+      }));
     } catch (error) {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException("Failed to get restaurant users");
+      throw new BadRequestException("Failed to get branch users");
     }
   }
 
-  async inviteUser(
-    restaurantId: string,
+  async inviteUserToBranch(
+    branchId: string,
     inviteDto: { email: string; role: string; permissions: string[] },
   ) {
     try {
       const supabase = this.databaseService.getAdminClient();
 
-      // Check if user exists
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("email", inviteDto.email)
-        .single();
+      // Get auth user by email
+      const { data: authUsers } = await supabase.auth.admin.listUsers();
+      const existingAuthUser = authUsers?.users?.find((u: any) => u.email === inviteDto.email);
 
-      if (existingUser) {
-        // Check if user is already associated with restaurant
+      if (existingAuthUser) {
+        // Check if user is already associated with branch
         const { data: existingAssociation } = await supabase
-          .from("restaurant_users")
+          .from("branch_users")
           .select("id")
-          .eq("user_id", existingUser.id)
-          .eq("restaurant_id", restaurantId)
+          .eq("user_id", existingAuthUser.id)
+          .eq("branch_id", branchId)
           .single();
 
         if (existingAssociation) {
           throw new BadRequestException(
-            "User is already associated with this restaurant",
+            "User is already associated with this branch",
           );
         }
 
-        // Add user to restaurant
-        const { error } = await supabase.from("restaurant_users").insert({
-          user_id: existingUser.id,
-          restaurant_id: restaurantId,
+        // Add user to branch
+        const { error } = await supabase.from("branch_users").insert({
+          user_id: existingAuthUser.id,
+          branch_id: branchId,
           role: inviteDto.role,
           permissions: inviteDto.permissions,
+          is_active: true,
         });
 
         if (error) {
-          throw new BadRequestException("Failed to add user to restaurant");
+          throw new BadRequestException("Failed to add user to branch");
         }
 
-        return { message: "User added to restaurant successfully" };
+        return { message: "User added to branch successfully" };
       } else {
         // Create invitation (implementation would depend on your invitation system)
         // For now, return success message
@@ -197,21 +225,21 @@ export class RestaurantService {
     }
   }
 
-  async removeUser(restaurantId: string, userId: string) {
+  async removeUserFromBranch(branchId: string, userId: string) {
     try {
       const supabase = this.databaseService.getAdminClient();
 
       const { error } = await supabase
-        .from("restaurant_users")
+        .from("branch_users")
         .delete()
         .eq("user_id", userId)
-        .eq("restaurant_id", restaurantId);
+        .eq("branch_id", branchId);
 
       if (error) {
-        throw new BadRequestException("Failed to remove user from restaurant");
+        throw new BadRequestException("Failed to remove user from branch");
       }
 
-      return { message: "User removed from restaurant successfully" };
+      return { message: "User removed from branch successfully" };
     } catch (error) {
       if (error instanceof BadRequestException) {
         throw error;

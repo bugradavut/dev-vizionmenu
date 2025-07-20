@@ -21,7 +21,8 @@
       "Bash(nvm use:*)",
       "Bash(sudo rm:*)",
       "Bash(ls:*)",
-      "Bash(echo $PATH)"
+      "Bash(echo $PATH)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }
