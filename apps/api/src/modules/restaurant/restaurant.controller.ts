@@ -19,7 +19,7 @@ import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard";
 import { RolesGuard, CrossBranchGuard } from "../auth/guards";
 import { RequireRole } from "../auth/decorators/require-role.decorator";
 import { BranchContext } from "../auth/decorators/branch-context.decorator";
-import { Branch, BranchStats } from "../../types";
+import { Branch, BranchStats } from "../../../types";
 
 @ApiTags("restaurant")
 @Controller("restaurant")

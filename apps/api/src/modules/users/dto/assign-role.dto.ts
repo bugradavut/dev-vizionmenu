@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsArray, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { BranchRole } from '../../types';
+import { BranchRole } from '../../../types';
 
 export class AssignRoleDto {
   @ApiProperty({

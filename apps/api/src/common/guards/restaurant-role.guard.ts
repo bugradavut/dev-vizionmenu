@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { BranchRole } from "../../types";
+import { BranchRole } from "../../../types";
 
 @Injectable()
 export class RestaurantRoleGuard implements CanActivate {

@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { BranchRole } from '../../types';
+import { BranchRole } from '../../../types';
 import { ROLES_KEY } from '../decorators/require-role.decorator';
 
 @Injectable()

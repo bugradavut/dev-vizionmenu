@@ -12,7 +12,7 @@ import {
   RegisterResponse,
   User,
   AuthTokenPayload,
-} from "../../types";
+} from "../../../types";
 import {
   LoginDto,
   RegisterDto,
