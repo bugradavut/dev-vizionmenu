@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { User } from '../../../types/auth';
+import { User } from '@/types/auth';
 
 export interface ChainContext {
   chain_id: string;

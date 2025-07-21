@@ -14,7 +14,7 @@ import {
   LoginResponse,
   RegisterResponse,
   User,
-} from "../../../types/auth";
+} from "@/types/auth";
 import {
   LoginDto,
   RegisterDto,

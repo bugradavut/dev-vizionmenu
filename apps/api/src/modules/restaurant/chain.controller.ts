@@ -20,7 +20,7 @@ import { RolesGuard, ChainAccessGuard } from "../auth/guards";
 import { RequireRole } from "../auth/decorators/require-role.decorator";
 import { RequireChainAccess } from "../auth/guards/chain-access.guard";
 import { ChainContext } from "../auth/decorators/chain-context.decorator";
-import { RestaurantChain } from "../../../types/restaurant";
+import { RestaurantChain } from "@/types/restaurant";
 
 @ApiTags("chain")
 @Controller("chain")

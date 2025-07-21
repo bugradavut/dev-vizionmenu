@@ -4,8 +4,8 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { DatabaseService } from "@/config/database.service";
-import { Branch, BranchStats } from "../../../types/restaurant";
-import { BranchUser } from "../../../types/auth";
+import { Branch, BranchStats } from "@/types/restaurant";
+import { BranchUser } from "@/types/auth";
 
 @Injectable()
 export class RestaurantService {
