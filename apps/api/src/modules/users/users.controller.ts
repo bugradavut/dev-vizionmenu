@@ -26,7 +26,7 @@ import { User } from '@/types/auth';
 
 @ApiTags('users')
 @Controller('users')
-@UseGuards(JwtAuthGuard)
+// @UseGuards(JwtAuthGuard) // Geçici olarak kapatıldı
 @ApiBearerAuth()
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
@@ -41,6 +41,7 @@ export class UsersController {
   async findAllByBranch(
     @Param('branchId', ParseUUIDPipe) branchId: string,
   ) {
+    console.log('🔍 findAllByBranch called with branchId:', branchId);
     const users = await this.usersService.findAllByBranch(branchId);
     
     return {

@@ -38,8 +38,17 @@ export class ApiClientError extends Error {
 class ApiClient {
   private baseURL: string;
 
-  constructor(baseURL: string = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') {
-    this.baseURL = baseURL;
+  constructor(baseURL?: string) {
+    // Environment-based API URL selection
+    if (baseURL) {
+      this.baseURL = baseURL;
+    } else if (process.env.NODE_ENV === 'production') {
+      this.baseURL = 'https://api-dev-vizionmenu.vercel.app';
+    } else {
+      this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    }
+    
+    console.log('🌐 API Client initialized with baseURL:', this.baseURL);
   }
 
   private async getAuthToken(): Promise<string | null> {
