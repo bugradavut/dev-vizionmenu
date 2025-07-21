@@ -43,10 +43,7 @@ class ApiClient {
     if (baseURL) {
       this.baseURL = baseURL;
     } else {
-      this.baseURL = process.env.NEXT_PUBLIC_API_URL || 
-        (process.env.NODE_ENV === 'production' 
-          ? 'https://api-dev-vizionmenu-40anosz5t-bugras-projects-be34209c.vercel.app' 
-          : 'http://localhost:3001');
+      this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     }
     
     console.log('🌐 API Client initialized with baseURL:', this.baseURL);
