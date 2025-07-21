@@ -9,7 +9,7 @@ import { DatabaseService } from '@/config/database.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AssignRoleDto } from './dto/assign-role.dto';
-import { User, BranchUser } from '@vision-menu/types';
+import { User, BranchUser } from '../../types';
 
 @Injectable()
 export class UsersService {

@@ -23,7 +23,8 @@
       "@/*": ["src/*"],
       "@/common/*": ["src/common/*"],
       "@/modules/*": ["src/modules/*"],
-      "@/config/*": ["src/config/*"]
+      "@/config/*": ["src/config/*"],
+      "@/types/*": ["src/types/*"]
     }
   },
   "include": ["src/**/*"],

@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { DatabaseService } from "@/config/database.service";
-import { OrderMetrics, OrderStatus, OrderType, OrderSource } from "@vision-menu/types";
+import { OrderMetrics, OrderStatus, OrderType, OrderSource } from "@/types/order";
 
 @Injectable()
 export class OrderService {
