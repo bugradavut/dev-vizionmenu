@@ -18,7 +18,7 @@ export class UsersService {
   /**
    * Get all users for a specific branch
    */
-  async getUsersByBranch(params: GetUsersParams): Promise<GetUsersResponse> {
+  async getUsersByBranch(params: GetUsersParams): Promise<GetUsersResponse['data']> {
     const { branch_id, ...queryParams } = params;
     
     const response = await apiClient.get<GetUsersResponse>(
@@ -26,7 +26,7 @@ export class UsersService {
       queryParams
     );
     
-    return response.data;
+    return response.data.data;
   }
 
   /**
@@ -43,13 +43,13 @@ export class UsersService {
   /**
    * Create a new user in a branch
    */
-  async createUser(userData: CreateUserRequest): Promise<CreateUserResponse> {
+  async createUser(userData: CreateUserRequest): Promise<CreateUserResponse['data']> {
     const response = await apiClient.post<CreateUserResponse>(
       '/api/v1/users',
       userData
     );
     
-    return response.data;
+    return response.data.data;
   }
 
   /**

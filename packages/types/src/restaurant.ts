@@ -123,25 +123,7 @@ export interface ChainStats {
 // Legacy alias
 export interface RestaurantStats extends BranchStats {}
 
-// Multi-branch user management
-export interface BranchUser {
-  id: string;
-  user_id: string;
-  branch_id: string;
-  role: 'chain_owner' | 'branch_manager' | 'branch_staff' | 'branch_cashier';
-  permissions: string[];
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  branch?: Branch;
-  user?: {
-    id: string;
-    email: string;
-    full_name?: string;
-    phone?: string;
-    avatar_url?: string;
-  };
-}
+// Note: BranchUser type moved to auth.ts to avoid duplication
 
 // Legacy types (deprecated)
 export type RestaurantRole = "owner" | "manager" | "staff" | "viewer";

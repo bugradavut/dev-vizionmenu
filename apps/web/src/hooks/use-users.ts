@@ -34,10 +34,10 @@ interface UsersState {
   // API Actions
   fetchUsers: (params: GetUsersParams) => Promise<void>;
   fetchUserById: (userId: string, branchId: string) => Promise<void>;
-  createUser: (userData: CreateUserRequest) => Promise<BranchUser>;
+  createUser: (userData: CreateUserRequest) => Promise<boolean>;
   updateUser: (userId: string, branchId: string, userData: UpdateUserRequest) => Promise<BranchUser>;
   assignRole: (userId: string, branchId: string, roleData: AssignRoleRequest) => Promise<BranchUser>;
-  toggleUserStatus: (userId: string, branchId: string, isActive: boolean) => Promise<BranchUser>;
+  toggleUserStatus: (userId: string, branchId: string, isActive: boolean) => Promise<boolean>;
   removeUser: (userId: string, branchId: string) => Promise<void>;
   
   // Utility Actions

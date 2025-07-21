@@ -229,6 +229,7 @@ export interface SwitchBranchResponse {
 // User Management Types
 export interface CreateUserRequest {
   email: string;
+  password: string;
   full_name: string;
   phone?: string;
   branch_id: string;
@@ -238,9 +239,9 @@ export interface CreateUserRequest {
 }
 
 export interface CreateUserResponse {
-  user: User;
-  invitation_sent: boolean;
-  invitation_expires_at?: string;
+  data: {
+    user: BranchUser;
+  };
 }
 
 export interface UpdateUserRequest {
@@ -263,14 +264,27 @@ export interface BranchUser {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  user: User;
+  user: {
+    id: string;
+    email: string;
+    full_name?: string;
+    phone?: string;
+    avatar_url?: string;
+  };
+  branch?: {
+    id: string;
+    name: string;
+    slug: string;
+  };
 }
 
 export interface GetUsersResponse {
-  users: BranchUser[];
-  total: number;
-  page: number;
-  limit: number;
+  data: {
+    users: BranchUser[];
+    total: number;
+    page: number;
+    limit: number;
+  };
 }
 
 export interface GetUsersParams {
