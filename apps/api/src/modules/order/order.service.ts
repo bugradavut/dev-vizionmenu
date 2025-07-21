@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { DatabaseService } from "@/config/database.service";
-import { OrderMetrics, OrderStatus, OrderType, OrderSource } from "../../../types";
+import { OrderMetrics, OrderStatus, OrderType, OrderSource } from "../../../types/order";
 
 @Injectable()
 export class OrderService {
