@@ -12,7 +12,6 @@ import type {
   CreateUserRequest,
   UpdateUserRequest,
   AssignRoleRequest,
-  BranchRole,
 } from '@repo/types/auth';
 
 interface UsersState {
