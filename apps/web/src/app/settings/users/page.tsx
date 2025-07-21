@@ -21,7 +21,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui"
 import { UserCheck, Shield, Users } from "lucide-react"
 import { UserListTable, CreateUserModal } from "@/components/user-management"
 import { useUsers, useAuthApi } from "@/hooks"
-import type { BranchUser } from '@repo/types/auth'
 
 export default function UserManagementPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
