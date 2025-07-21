@@ -22,7 +22,7 @@ import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/modules/auth/guards/roles.guard';
 import { RequireRole } from '@/modules/auth/decorators/require-role.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
-import { User } from '@vision-menu/types';
+import { User } from '../../types';
 
 @ApiTags('users')
 @Controller('users')

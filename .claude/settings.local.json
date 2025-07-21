@@ -24,7 +24,9 @@
       "Bash(echo $PATH)",
       "Bash(git add:*)",
       "Bash(touch:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(mkdir:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

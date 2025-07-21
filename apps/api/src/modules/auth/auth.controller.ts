@@ -14,7 +14,7 @@ import {
   LoginResponse,
   RegisterResponse,
   User,
-} from "@vision-menu/types";
+} from "../../types";
 import {
   LoginDto,
   RegisterDto,

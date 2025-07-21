@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { User } from '@vision-menu/types';
+import { User } from '../../types';
 
 export interface BranchContext {
   chain_id: string;
