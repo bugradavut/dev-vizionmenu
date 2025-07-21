@@ -122,7 +122,7 @@ export function UserListTable({
     if (name) {
       return name.split(' ').map(n => n[0]).join('').toUpperCase();
     }
-    return email.substring(0, 2).toUpperCase();
+    return email?.substring(0, 2).toUpperCase() || 'U';
   };
 
   const canManageUsers = hasPermission('user_management') || true; // Always show for testing

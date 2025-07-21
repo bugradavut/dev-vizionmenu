@@ -26,7 +26,14 @@ export class UsersService {
       queryParams
     );
     
-    return response.data.data;
+    // Flexible response handling - try different formats
+    if (response.data?.data) {
+      return response.data.data;
+    } else if (response.data && 'users' in response.data) {
+      return response.data as unknown as GetUsersResponse;
+    } else {
+      return response.data as unknown as GetUsersResponse;
+    }
   }
 
   /**
