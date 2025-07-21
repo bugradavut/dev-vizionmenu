@@ -26,10 +26,11 @@ import { User } from '@vision-menu/types';
 
 @ApiTags('users')
 @Controller('users')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
+
 
   @Get('branch/:branchId')
   @ApiOperation({ summary: 'Get all users in a branch' })
@@ -40,7 +41,16 @@ export class UsersController {
   async findAllByBranch(
     @Param('branchId', ParseUUIDPipe) branchId: string,
   ) {
-    return this.usersService.findAllByBranch(branchId);
+    const users = await this.usersService.findAllByBranch(branchId);
+    
+    return {
+      data: {
+        users: users,
+        total: users.length,
+        page: 1,
+        limit: 50
+      }
+    };
   }
 
   @Get(':userId/branch/:branchId')
@@ -67,7 +77,13 @@ export class UsersController {
     @Body() createUserDto: CreateUserDto,
     @CurrentUser() user: User,
   ) {
-    return this.usersService.create(createUserDto, user.id);
+    const newUser = await this.usersService.create(createUserDto, user.id);
+    
+    return {
+      data: {
+        user: newUser
+      }
+    };
   }
 
   @Patch(':userId/branch/:branchId')
@@ -84,7 +100,11 @@ export class UsersController {
     @Body() updateUserDto: UpdateUserDto,
     @CurrentUser() user: User,
   ) {
-    return this.usersService.update(userId, branchId, updateUserDto, user.id);
+    await this.usersService.update(userId, branchId, updateUserDto, user.id);
+    
+    return {
+      data: { success: true }
+    };
   }
 
   @Post(':userId/branch/:branchId/assign-role')

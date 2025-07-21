@@ -22,7 +22,9 @@
       "Bash(sudo rm:*)",
       "Bash(ls:*)",
       "Bash(echo $PATH)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(touch:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }
