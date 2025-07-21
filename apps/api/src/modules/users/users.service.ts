@@ -42,7 +42,7 @@ export class UsersService {
         return [];
       }
 
-      // Get user profiles for all branch users
+      // Get user profiles and auth emails for all branch users
       const userIds = branchUsers.map(bu => bu.user_id);
       const { data: userProfiles, error: profilesError } = await supabase
         .from('user_profiles')
@@ -53,6 +53,19 @@ export class UsersService {
         this.logger.warn(`Could not get user profiles: ${profilesError.message}`);
       }
 
+      // Get auth user emails
+      const authEmails: Record<string, string> = {};
+      for (const userId of userIds) {
+        try {
+          const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+          if (authUser?.user?.email) {
+            authEmails[userId] = authUser.user.email;
+          }
+        } catch (error) {
+          this.logger.warn(`Could not get email for user ${userId}: ${error.message}`);
+        }
+      }
+
       // Combine data
       return branchUsers.map(branchUser => {
         const profile = userProfiles?.find(p => p.user_id === branchUser.user_id);
@@ -61,7 +74,7 @@ export class UsersService {
           ...branchUser,
           user: {
             id: branchUser.user_id,
-            email: 'test@example.com', // Temporary placeholder
+            email: authEmails[branchUser.user_id] || 'unknown@example.com',
             full_name: profile?.full_name || null,
             phone: profile?.phone || null,
             avatar_url: profile?.avatar_url || null,

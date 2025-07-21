@@ -26,7 +26,7 @@ import { User } from '@/types/auth';
 
 @ApiTags('users')
 @Controller('users')
-// @UseGuards(JwtAuthGuard) // Geçici olarak kapatıldı
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }

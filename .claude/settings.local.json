@@ -26,7 +26,8 @@
       "Bash(touch:*)",
       "Bash(curl:*)",
       "Bash(mkdir:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(vercel:*)"
     ],
     "deny": []
   }
