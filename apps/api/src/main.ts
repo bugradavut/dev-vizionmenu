@@ -18,9 +18,17 @@ async function bootstrap() {
   );
 
   // CORS configuration
+  const allowedOrigins = [
+    "http://localhost:3000", // Local development
+    "https://dev-vizionmenu.vercel.app", // Production frontend
+    process.env.FRONTEND_URL, // Custom frontend URL from env
+  ].filter(Boolean); // Remove undefined values
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: allowedOrigins,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
   // Global prefix for API routes
