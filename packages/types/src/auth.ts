@@ -225,3 +225,59 @@ export interface SwitchBranchResponse {
     slug: string;
   };
 }
+
+// User Management Types
+export interface CreateUserRequest {
+  email: string;
+  full_name: string;
+  phone?: string;
+  branch_id: string;
+  role: BranchRole;
+  permissions?: string[];
+  send_invitation?: boolean;
+}
+
+export interface CreateUserResponse {
+  user: User;
+  invitation_sent: boolean;
+  invitation_expires_at?: string;
+}
+
+export interface UpdateUserRequest {
+  full_name?: string;
+  phone?: string;
+  is_active?: boolean;
+}
+
+export interface AssignRoleRequest {
+  role: BranchRole;
+  permissions?: string[];
+}
+
+export interface BranchUser {
+  id: string;
+  user_id: string;
+  branch_id: string;
+  role: BranchRole;
+  permissions: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  user: User;
+}
+
+export interface GetUsersResponse {
+  users: BranchUser[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface GetUsersParams {
+  branch_id: string;
+  page?: number;
+  limit?: number;
+  search?: string;
+  role?: BranchRole;
+  is_active?: boolean;
+}

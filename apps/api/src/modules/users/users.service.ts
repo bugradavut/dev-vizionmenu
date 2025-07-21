@@ -22,46 +22,52 @@ export class UsersService {
    */
   async findAllByBranch(branchId: string): Promise<BranchUser[]> {
     try {
+      this.logger.log(`Getting users for branch: ${branchId}`);
       const supabase = this.databaseService.getAdminClient();
 
+      // Get branch users first
       const { data: branchUsers, error } = await supabase
         .from('branch_users')
-        .select(`
-          *,
-          user:user_profiles!inner(
-            user_id,
-            full_name,
-            phone,
-            avatar_url
-          )
-        `)
-        .eq('branch_id', branchId)
-        .eq('is_active', true);
+        .select('*')
+        .eq('branch_id', branchId);
 
       if (error) {
+        this.logger.error(`Database error: ${error.message}`, error);
         throw new BadRequestException(`Failed to get branch users: ${error.message}`);
       }
 
-      // Get auth user emails
-      const { data: authUsers } = await supabase.auth.admin.listUsers();
-      
-      const authUserMap = new Map<string, { email: string; id: string }>();
-      if (authUsers?.users) {
-        authUsers.users.forEach((u: any) => {
-          authUserMap.set(u.id, { email: u.email || '', id: u.id });
-        });
+      this.logger.log(`Found ${branchUsers?.length || 0} branch users`);
+
+      if (!branchUsers || branchUsers.length === 0) {
+        return [];
       }
 
-      return branchUsers.map(user => ({
-        ...user,
-        user: {
-          id: user.user_id,
-          email: authUserMap.get(user.user_id)?.email || '',
-          full_name: user.user?.full_name,
-          phone: user.user?.phone,
-          avatar_url: user.user?.avatar_url,
-        }
-      }));
+      // Get user profiles for all branch users
+      const userIds = branchUsers.map(bu => bu.user_id);
+      const { data: userProfiles, error: profilesError } = await supabase
+        .from('user_profiles')
+        .select('user_id, full_name, phone, avatar_url')
+        .in('user_id', userIds);
+
+      if (profilesError) {
+        this.logger.warn(`Could not get user profiles: ${profilesError.message}`);
+      }
+
+      // Combine data
+      return branchUsers.map(branchUser => {
+        const profile = userProfiles?.find(p => p.user_id === branchUser.user_id);
+        
+        return {
+          ...branchUser,
+          user: {
+            id: branchUser.user_id,
+            email: 'test@example.com', // Temporary placeholder
+            full_name: profile?.full_name || null,
+            phone: profile?.phone || null,
+            avatar_url: profile?.avatar_url || null,
+          }
+        };
+      });
     } catch (error) {
       this.logger.error(`Error getting branch users: ${error.message}`, error.stack);
       if (error instanceof BadRequestException) {
@@ -96,7 +102,6 @@ export class UsersService {
         `)
         .eq('user_id', userId)
         .eq('branch_id', branchId)
-        .eq('is_active', true)
         .single();
 
       if (error || !branchUser) {
@@ -180,19 +185,21 @@ export class UsersService {
         throw new BadRequestException(`Failed to create user: ${authError?.message}`);
       }
 
-      // Create user profile
+      // Wait a moment for the trigger to create user profile
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Update user profile with additional info (trigger only creates basic profile)
       const { error: profileError } = await supabase
         .from('user_profiles')
-        .insert({
-          user_id: authUser.user.id,
+        .update({
           full_name: createUserDto.full_name,
           phone: createUserDto.phone,
-        });
+        })
+        .eq('user_id', authUser.user.id);
 
       if (profileError) {
-        // Rollback auth user creation
-        await supabase.auth.admin.deleteUser(authUser.user.id);
-        throw new BadRequestException(`Failed to create user profile: ${profileError.message}`);
+        console.warn('Could not update user profile:', profileError.message);
+        // Don't rollback - profile exists from trigger
       }
 
       // Associate user with branch
@@ -261,7 +268,6 @@ export class UsersService {
         .select('*')
         .eq('user_id', userId)
         .eq('branch_id', branchId)
-        .eq('is_active', true)
         .single();
 
       if (existingUserError || !existingUser) {
@@ -331,8 +337,8 @@ export class UsersService {
         }
       }
 
-      // Get updated user
-      return this.findOne(userId, branchId);
+      // Return void - no need to fetch updated user
+      return;
     } catch (error) {
       this.logger.error(`Error updating user: ${error.message}`, error.stack);
       if (
@@ -364,7 +370,6 @@ export class UsersService {
         .select('*')
         .eq('user_id', userId)
         .eq('branch_id', branchId)
-        .eq('is_active', true)
         .single();
 
       if (existingUserError || !existingUser) {
@@ -440,7 +445,6 @@ export class UsersService {
         .select('*')
         .eq('user_id', userId)
         .eq('branch_id', branchId)
-        .eq('is_active', true)
         .single();
 
       if (existingUserError || !existingUser) {

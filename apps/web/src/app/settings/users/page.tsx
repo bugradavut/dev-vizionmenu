@@ -1,3 +1,6 @@
+"use client"
+
+import { useState } from 'react';
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import {
@@ -14,11 +17,36 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Plus, UserCheck, UserX, Shield } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui"
+import { UserCheck, Shield, Users } from "lucide-react"
+import { UserListTable, CreateUserModal } from "@/components/user-management"
+import { useUsers, usePermissions, useAuthApi } from "@/hooks"
+import type { BranchUser } from '@repo/types/auth'
 
 export default function UserManagementPage() {
+  const [selectedUser, setSelectedUser] = useState<BranchUser | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const { users, totalUsers } = useUsers();
+  const { isChainOwner } = usePermissions();
+  const { user } = useAuthApi();
+
+  // Get current branch ID from authenticated user
+  const currentBranchId = user?.branch_id || "550e8400-e29b-41d4-a716-446655440002";
+
+  const activeUsers = users.filter(user => user.is_active).length;
+  const adminUsers = users.filter(user => ['chain_owner', 'branch_manager'].includes(user.role)).length;
+
+  const handleCreateUser = () => {
+    setShowCreateModal(true);
+  };
+
+  const handleEditUser = (user: BranchUser) => {
+    setSelectedUser(user);
+    setShowEditModal(true);
+  };
+
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
       <SidebarProvider>
@@ -49,6 +77,7 @@ export default function UserManagementPage() {
               </Breadcrumb>
             </div>
           </header>
+          
           <div className="flex flex-1 flex-col gap-6 py-4 px-4 md:px-8 lg:px-12 pt-8">
             <div className="max-w-6xl">
               <div className="mb-8">
@@ -59,10 +88,6 @@ export default function UserManagementPage() {
                       Manage restaurant staff, roles, and permissions.
                     </p>
                   </div>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Invite User
-                  </Button>
                 </div>
               </div>
               
@@ -72,12 +97,12 @@ export default function UserManagementPage() {
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                      <UserCheck className="h-4 w-4 text-muted-foreground" />
+                      <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">3</div>
+                      <div className="text-2xl font-bold">{totalUsers}</div>
                       <p className="text-xs text-muted-foreground">
-                        +1 from last month
+                        Team members
                       </p>
                     </CardContent>
                   </Card>
@@ -88,9 +113,9 @@ export default function UserManagementPage() {
                       <UserCheck className="h-4 w-4 text-green-600" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">2</div>
+                      <div className="text-2xl font-bold">{activeUsers}</div>
                       <p className="text-xs text-muted-foreground">
-                        Currently online
+                        Currently active
                       </p>
                     </CardContent>
                   </Card>
@@ -101,7 +126,7 @@ export default function UserManagementPage() {
                       <Shield className="h-4 w-4 text-blue-600" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">1</div>
+                      <div className="text-2xl font-bold">{adminUsers}</div>
                       <p className="text-xs text-muted-foreground">
                         Admin access
                       </p>
@@ -110,28 +135,23 @@ export default function UserManagementPage() {
                 </div>
 
                 {/* User List Table */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Team Members</CardTitle>
-                    <CardDescription>
-                      Manage your restaurant staff and their permissions.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-8 text-muted-foreground">
-                      <UserX className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p className="text-lg font-medium">User management coming soon</p>
-                      <p className="text-sm">
-                        This feature will be available in the next update.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <UserListTable
+                  branchId={currentBranchId}
+                  onCreateUser={handleCreateUser}
+                  onEditUser={handleEditUser}
+                />
               </div>
             </div>
           </div>
         </SidebarInset>
       </SidebarProvider>
+
+      {/* Create User Modal */}
+      <CreateUserModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        branchId={currentBranchId}
+      />
     </AuthGuard>
   )
-} 
+}

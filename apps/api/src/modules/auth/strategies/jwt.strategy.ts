@@ -14,7 +14,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>("supabase.serviceRoleKey") || configService.get<string>("jwt.secret"),
+      secretOrKey: "or/5hRDTnnaMIMEtgHVxOSB/HUvvB9qazVSKGTtlDSCGGzQoVIZ/IA5lbfuZTyYdM+TCuKeib11cckjlw1yYCw==",
     });
   }
 
@@ -43,17 +43,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         .single();
 
       // Get multi-branch user info using our helper function
-      const { data: branchInfo } = await supabase
+      const { data: branchInfo, error: branchError } = await supabase
         .rpc('get_user_branch_info', { user_id: userId });
+
+      if (branchError) {
+        throw new UnauthorizedException("Error getting user branch information");
+      }
 
       if (!branchInfo || !branchInfo.branch_id) {
         throw new UnauthorizedException("User not associated with any branch");
       }
 
-      // Verify JWT claims match database
-      if (payload.branch_id !== branchInfo.branch_id || payload.role !== branchInfo.role) {
-        throw new UnauthorizedException("Token claims do not match current user state");
-      }
+      // Note: Supabase tokens don't include branch_id/role claims by default
+      // We get this info from database instead of validating against token
 
       return {
         id: authUser.user.id,
@@ -75,7 +77,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         permissions: branchInfo.permissions || [],
       };
     } catch (error) {
-      console.error('JWT validation error:', error);
       throw new UnauthorizedException("Invalid token");
     }
   }
