@@ -7,7 +7,7 @@
 
 import { supabase } from '@/lib/supabase';
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data: T;
   meta?: {
     total?: number;
@@ -115,7 +115,7 @@ class ApiClient {
     }
   }
 
-  async get<T>(endpoint: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
+  async get<T>(endpoint: string, params?: Record<string, unknown>): Promise<ApiResponse<T>> {
     const url = new URL(`${this.baseURL}${endpoint}`);
     
     if (params) {
@@ -131,14 +131,14 @@ class ApiClient {
     });
   }
 
-  async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+  async post<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
-  async patch<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+  async patch<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,

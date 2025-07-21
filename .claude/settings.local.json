@@ -24,7 +24,10 @@
       "Bash(echo $PATH)",
       "Bash(git add:*)",
       "Bash(touch:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }

@@ -12,7 +12,6 @@ import type {
   CreateUserRequest,
   UpdateUserRequest,
   AssignRoleRequest,
-  BranchRole,
 } from '@repo/types/auth';
 
 interface UsersState {
@@ -111,7 +110,7 @@ export const useUsersStore = create<UsersState>()(
       },
 
       createUser: async (userData) => {
-        const { setLoading, setError, users, setUsers, totalUsers, currentPage, pageLimit } = get();
+        const { setLoading, setError, fetchUsers } = get();
         
         try {
           setLoading(true);
@@ -120,7 +119,6 @@ export const useUsersStore = create<UsersState>()(
           await usersService.createUser(userData);
           
           // Refresh the user list to show the new user
-          const { fetchUsers } = get();
           await fetchUsers({ branch_id: userData.branch_id, page: 1, limit: 50 });
           
           return true;
