@@ -24,9 +24,12 @@ import { useUsers, usePermissions, useAuthApi } from "@/hooks"
 import type { BranchUser } from '@repo/types/auth'
 
 export default function UserManagementPage() {
+  const [selectedUser, setSelectedUser] = useState<BranchUser | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const { users, totalUsers } = useUsers();
+  const { isChainOwner } = usePermissions();
   const { user } = useAuthApi();
 
   // Get current branch ID from authenticated user
@@ -39,8 +42,9 @@ export default function UserManagementPage() {
     setShowCreateModal(true);
   };
 
-  const handleEditUser = (_user: BranchUser) => {
-    // TODO: Implement edit user functionality
+  const handleEditUser = (user: BranchUser) => {
+    setSelectedUser(user);
+    setShowEditModal(true);
   };
 
   return (

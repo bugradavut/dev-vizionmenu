@@ -3,11 +3,13 @@
  * Extends existing auth context with API integration
  */
 
+import { useEffect } from 'react';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { authService } from '@/services';
 import type {
   User,
+  AuthSession,
   LoginRequest,
   RegisterRequest,
   UpdateProfileRequest,

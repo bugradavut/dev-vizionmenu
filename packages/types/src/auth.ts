@@ -239,9 +239,7 @@ export interface CreateUserRequest {
 }
 
 export interface CreateUserResponse {
-  data: {
-    user: BranchUser;
-  };
+  user: BranchUser;
 }
 
 export interface UpdateUserRequest {
@@ -264,27 +262,14 @@ export interface BranchUser {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  user: {
-    id: string;
-    email: string;
-    full_name?: string;
-    phone?: string;
-    avatar_url?: string;
-  };
-  branch?: {
-    id: string;
-    name: string;
-    slug: string;
-  };
+  user: User;
 }
 
 export interface GetUsersResponse {
-  data: {
-    users: BranchUser[];
-    total: number;
-    page: number;
-    limit: number;
-  };
+  users: BranchUser[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export interface GetUsersParams {
