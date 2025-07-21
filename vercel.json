@@ -15,6 +15,6 @@
   "env": {
     "NODE_ENV": "production"
   },
-  "buildCommand": "cd apps/api && npm run build",
-  "installCommand": "cd apps/api && npm install"
+  "buildCommand": "cd apps/api && rm -f pnpm-lock.yaml && npm install && npm run build",
+  "installCommand": "cd apps/api && rm -f pnpm-lock.yaml && npm install"
 }
