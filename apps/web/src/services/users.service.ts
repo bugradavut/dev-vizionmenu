@@ -136,6 +136,13 @@ export class UsersService {
   ): Promise<BranchUser> {
     return this.updateUser(userId, branchId, { is_active: isActive });
   }
+
+  /**
+   * Remove user from branch (soft delete)
+   */
+  async removeUser(userId: string, branchId: string): Promise<void> {
+    await apiClient.delete(`/api/v1/users/${userId}/branch/${branchId}`);
+  }
 }
 
 // Export singleton instance
