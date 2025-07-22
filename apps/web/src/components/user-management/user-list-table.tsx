@@ -140,8 +140,19 @@ export function UserListTable({
     }
   ];
 
-  // Use mock data instead of API for now
+  // Use mock data for production, real API for development
   const displayUsers = process.env.NODE_ENV === 'production' ? mockUsers : users;
+
+  // Fetch users on component mount for development
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production' && branchId && branchId !== 'undefined') {
+      fetchUsers({
+        branch_id: branchId,
+        page: 1,
+        limit: 50
+      });
+    }
+  }, [branchId, fetchUsers]);
 
   const filteredUsers = displayUsers.filter(user => {
     const matchesSearch = !searchQuery || 
