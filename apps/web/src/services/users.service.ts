@@ -36,9 +36,9 @@ export class UsersService {
       let actualData = response.data;
       
       // If response is wrapped in a data property, unwrap it
-      if (actualData && actualData.data && 'users' in actualData.data) {
+      if (actualData && typeof actualData === 'object' && 'data' in actualData) {
         console.log('📦 Found wrapped response, unwrapping...');
-        actualData = actualData.data;
+        actualData = (actualData as any).data;
       }
       
       console.log('✅ Final data:', actualData);
