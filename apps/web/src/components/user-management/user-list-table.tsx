@@ -74,6 +74,14 @@ export function UserListTable({
 
   // Fetch users on mount and when filters change
   useEffect(() => {
+    // Don't fetch if branchId is not available yet
+    if (!branchId) {
+      console.log('⏸️ UserListTable: Skipping fetch - no branchId yet');
+      return;
+    }
+
+    console.log('🎯 UserListTable: Fetching users for branchId:', branchId);
+    
     const params = {
       branch_id: branchId,
       page: 1,
