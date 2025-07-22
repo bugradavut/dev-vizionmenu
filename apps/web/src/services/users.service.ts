@@ -22,6 +22,7 @@ export class UsersService {
     const { branch_id, ...queryParams } = params;
     
     console.log('🚀 SERVICE: Starting getUsersByBranch call for branch:', branch_id);
+    console.log('🚀 SERVICE: Call stack:', new Error().stack);
     
     try {
       const response = await apiClient.get<GetUsersResponse>(
