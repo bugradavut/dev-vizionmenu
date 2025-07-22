@@ -44,33 +44,36 @@ export class UsersService {
       );
       
       console.log('🔍 Response data keys:', Object.keys(response.data || {}));
+      console.log('🔍 Full response data:', JSON.stringify(response.data, null, 2));
       
-      // Handle API client wrapped response format: {message, data, success}
+      // Handle different response formats
       let actualData = response.data;
       
-      // If response is wrapped with data property, unwrap it
+      // Check if response is already in correct format (Express API)
+      if (actualData && typeof actualData === 'object' && 'users' in actualData && 'total' in actualData) {
+        console.log('✅ Direct Express API format detected');
+        const usersData = actualData as GetUsersResponse;
+        console.log('✅ Users count:', usersData.users?.length);
+        return usersData;
+      }
+      
+      // Handle NestJS wrapped response format: {message, data, success}
       if (actualData && typeof actualData === 'object' && 'data' in actualData) {
-        console.log('📦 Found wrapped response, unwrapping...');
+        console.log('📦 Found NestJS wrapped response, unwrapping...');
         const wrappedData = actualData as { data: GetUsersResponse };
         actualData = wrappedData.data;
         console.log('📦 Unwrapped data:', actualData);
         console.log('📦 Unwrapped data keys:', Object.keys(actualData || {}));
+        
+        if (actualData && typeof actualData === 'object' && 'users' in actualData) {
+          const usersData = actualData as GetUsersResponse;
+          console.log('✅ Users count:', usersData.users?.length);
+          return usersData;
+        }
       }
       
-      // Type-safe check for users property
-      const hasUsers = actualData && typeof actualData === 'object' && 'users' in actualData;
-      console.log('✅ Final data has users:', hasUsers);
-      
-      if (hasUsers) {
-        const usersData = actualData as GetUsersResponse;
-        console.log('✅ Users count:', usersData.users?.length);
-        console.log('🎉 Returning valid users data!');
-        return usersData;
-      } else {
-        console.error('❌ Final data structure:', actualData);
-        console.error('❌ No users property found');
-        throw new Error('Invalid response format from users API');
-      }
+      console.error('❌ Unrecognized response format:', actualData);
+      throw new Error('Invalid response format from users API');
     } catch (error) {
       console.error('❌ Users service error:', error);
       throw error;
