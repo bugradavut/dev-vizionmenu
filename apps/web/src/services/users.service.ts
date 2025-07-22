@@ -29,11 +29,24 @@ export class UsersService {
       
       console.log('🔍 Users API Response:', response);
       console.log('🔍 Response data:', response.data);
-      console.log('🔍 Users array:', response.data?.users);
+      console.log('🔍 Response data type:', typeof response.data);
+      console.log('🔍 Response data keys:', Object.keys(response.data || {}));
       
-      // Direct response handling for production API format
-      if (response.data && 'users' in response.data) {
-        return response.data;
+      // Handle wrapped response format
+      let actualData = response.data;
+      
+      // If response is wrapped in a data property, unwrap it
+      if (actualData && actualData.data && 'users' in actualData.data) {
+        console.log('📦 Found wrapped response, unwrapping...');
+        actualData = actualData.data;
+      }
+      
+      console.log('✅ Final data:', actualData);
+      console.log('✅ Users array exists:', !!actualData?.users);
+      console.log('✅ Users count:', actualData?.users?.length);
+      
+      if (actualData && 'users' in actualData) {
+        return actualData;
       } else {
         console.error('❌ Unexpected response format:', response);
         throw new Error('Invalid response format from users API');
