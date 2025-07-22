@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "installCommand": "cd ../.. && pnpm install",
-  "buildCommand": "pnpm build",
+  "installCommand": "npm install --ignore-engines",
+  "buildCommand": "npm run build",
   "framework": "nextjs",
   "outputDirectory": ".next"
 }

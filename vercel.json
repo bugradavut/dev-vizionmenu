@@ -1,20 +1,12 @@
 {
   "version": 2,
-  "builds": [
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "redirects": [
     {
-      "src": "apps/api/src/main.ts",
-      "use": "@vercel/node"
+      "source": "/",
+      "destination": "https://dev-vizionmenu.vercel.app",
+      "permanent": false
     }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "apps/api/src/main.ts"
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  },
-  "buildCommand": "cd apps/api && rm -f pnpm-lock.yaml && npm install && npm run build",
-  "installCommand": "cd apps/api && rm -f pnpm-lock.yaml && npm install"
+  ]
 }
