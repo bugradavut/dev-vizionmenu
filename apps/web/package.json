@@ -2,6 +2,7 @@
   "name": "web",
   "version": "0.1.0",
   "private": true,
+  "workspaces": false,
   "scripts": {
     "dev": "next dev",
     "build": "next build",

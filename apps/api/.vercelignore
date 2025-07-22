@@ -1,3 +1,7 @@
-../../pnpm-lock.yaml
-../../turbo.json
 ../../package.json
+../../pnpm-lock.yaml
+../../pnpm-workspace.yaml
+../../turbo.json
+../web
+../worker
+../../packages
