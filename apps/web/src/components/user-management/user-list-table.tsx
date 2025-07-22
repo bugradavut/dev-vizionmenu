@@ -342,8 +342,8 @@ export function UserListTable({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge className={ROLE_COLORS[user.role]}>
-                        {ROLE_LABELS[user.role]}
+                      <Badge className={ROLE_COLORS[user.role as BranchRole]}>
+                        {ROLE_LABELS[user.role as BranchRole]}
                       </Badge>
                     </TableCell>
                     <TableCell>
