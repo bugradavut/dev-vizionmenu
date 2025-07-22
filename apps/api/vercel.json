@@ -2,19 +2,17 @@
   "version": 2,
   "builds": [
     {
-      "src": "dist/main.js",
+      "src": "api/index.ts",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "dist/main.js"
+      "dest": "api/index.ts"
     }
   ],
   "env": {
     "NODE_ENV": "production"
-  },
-  "buildCommand": "npm install --ignore-engines && npm run build",
-  "installCommand": "npm install --ignore-engines"
+  }
 }
