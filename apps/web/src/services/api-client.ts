@@ -67,18 +67,16 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
-    // Temporarily disable auth token for Express API compatibility
-    // const token = await this.getAuthToken();
+    const token = await this.getAuthToken();
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
 
-    // Temporarily disabled - Express API doesn't need auth for users endpoint
-    // if (token) {
-    //   (headers as Record<string, string>).Authorization = `Bearer ${token}`;
-    // }
+    if (token) {
+      (headers as Record<string, string>).Authorization = `Bearer ${token}`;
+    }
     
     try {
       const response = await fetch(url, {
@@ -136,14 +134,10 @@ class ApiClient {
     }
 
     const fullUrl = url.pathname + url.search;
-    console.log('🌐 API Client making GET request to:', this.baseURL + fullUrl);
 
-    const result = await this.request<T>(fullUrl, {
+    return this.request<T>(fullUrl, {
       method: 'GET',
     });
-    
-    console.log('🌐 API Client response:', result);
-    return result;
   }
 
   async post<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {

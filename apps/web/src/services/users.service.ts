@@ -21,14 +21,8 @@ export class UsersService {
   async getUsersByBranch(params: GetUsersParams): Promise<GetUsersResponse> {
     const { branch_id, ...queryParams } = params;
     
-    console.log('🚀 SERVICE: Starting getUsersByBranch call for branch:', branch_id);
-    console.log('🚀 SERVICE: Full params:', params);
-    console.log('🚀 SERVICE: Query params:', queryParams);
-    
     // Validate branch_id before making API call
     if (!branch_id || branch_id === 'undefined' || branch_id === 'null') {
-      console.log('❌ SERVICE: Invalid branch_id provided:', branch_id);
-      console.log('❌ SERVICE: Returning empty response instead of API call');
       return {
         users: [],
         total: 0,
@@ -43,36 +37,26 @@ export class UsersService {
         queryParams
       );
       
-      console.log('🔍 Response data keys:', Object.keys(response.data || {}));
-      console.log('🔍 Full response data:', JSON.stringify(response.data, null, 2));
-      
       // Handle different response formats
       let actualData = response.data;
       
       // Check if response is already in correct format (Express API)
       if (actualData && typeof actualData === 'object' && 'users' in actualData && 'total' in actualData) {
-        console.log('✅ Direct Express API format detected');
         const usersData = actualData as GetUsersResponse;
-        console.log('✅ Users count:', usersData.users?.length);
         return usersData;
       }
       
       // Handle NestJS wrapped response format: {message, data, success}
       if (actualData && typeof actualData === 'object' && 'data' in actualData) {
-        console.log('📦 Found NestJS wrapped response, unwrapping...');
         const wrappedData = actualData as { data: GetUsersResponse };
         actualData = wrappedData.data;
-        console.log('📦 Unwrapped data:', actualData);
-        console.log('📦 Unwrapped data keys:', Object.keys(actualData || {}));
         
         if (actualData && typeof actualData === 'object' && 'users' in actualData) {
           const usersData = actualData as GetUsersResponse;
-          console.log('✅ Users count:', usersData.users?.length);
           return usersData;
         }
       }
       
-      console.error('❌ Unrecognized response format:', actualData);
       throw new Error('Invalid response format from users API');
     } catch (error) {
       console.error('❌ Users service error:', error);

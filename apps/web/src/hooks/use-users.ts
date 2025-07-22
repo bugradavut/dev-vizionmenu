@@ -81,34 +81,8 @@ export const useUsersStore = create<UsersState>()(
           setLoading(true);
           setError(null);
           
-          console.log('🔄 HOOK: Fetching users for params:', params);
           const response = await usersService.getUsersByBranch(params);
-          console.log('📥 Hook: Got response keys:', Object.keys(response || {}));
-          console.log('📥 Hook: Response.users exists:', !!response.users);
-          console.log('📥 Hook: Response.users type:', typeof response.users);
-          console.log('📥 Hook: Response.users length:', response.users?.length);
-          console.log('📥 Hook: Full response:', JSON.stringify(response, null, 2));
-          
-          console.log('🎯 Hook: About to call setUsers with:', {
-            users: response.users,
-            total: response.total,
-            page: response.page,
-            limit: response.limit
-          });
-          
           setUsers(response.users, response.total, response.page, response.limit);
-          
-          console.log('✅ Hook: setUsers called');
-          
-          // Check state after setting
-          setTimeout(() => {
-            const currentState = get();
-            console.log('🔍 Hook: State after setUsers:', {
-              users: currentState.users,
-              usersLength: currentState.users.length,
-              totalUsers: currentState.totalUsers
-            });
-          }, 100);
         } catch (error) {
           console.error('❌ Hook: Error fetching users:', error);
           const errorMessage = error instanceof Error ? error.message : 'Failed to fetch users';
