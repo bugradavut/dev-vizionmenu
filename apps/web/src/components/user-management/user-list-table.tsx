@@ -74,23 +74,25 @@ export function UserListTable({
 
   // Fetch users from API
   useEffect(() => {
-    console.log('🔥 useEffect branchId:', branchId);
-    console.log('🔥 useEffect branchId type:', typeof branchId);
-    console.log('🔥 useEffect condition:', branchId && branchId !== 'undefined');
-    
     if (branchId && branchId !== 'undefined') {
-      console.log('🔥 Calling fetchUsers with params:', {
-        branch_id: branchId,
-        page: 1,
-        limit: 50
-      });
+      console.log('🔥 Fetching users for branch:', branchId);
+      
+      // Direct API test to bypass hook
+      fetch(`https://dev-vizionmenu-web.vercel.app/api/v1/users/branch/${branchId}`)
+        .then(res => res.json())
+        .then(data => {
+          console.log('🎯 DIRECT API TEST:', data);
+          console.log('🎯 Users from direct API:', data.users);
+          console.log('🎯 Users length from direct API:', data.users?.length);
+        })
+        .catch(err => console.error('🎯 DIRECT API ERROR:', err));
+      
+      // Original hook call
       fetchUsers({
         branch_id: branchId,
         page: 1,
         limit: 50
       });
-    } else {
-      console.log('🔥 NOT calling fetchUsers - invalid branchId');
     }
   }, [branchId, fetchUsers]);
 
