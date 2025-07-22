@@ -33,6 +33,5 @@
     "@types/react-dom": "^19",
     "tsup": "^8.0.0",
     "typescript": "^5",
-    "@vision-menu/config": "workspace:*"
   }
 }
