@@ -118,11 +118,14 @@ app.get('/api/v1/users/branch/:branchId', async (req, res) => {
       };
     });
     
+    // Return in NestJS format that frontend expects: {data: {users, total, page, limit}}
     res.json({
-      users,
-      total: users.length,
-      page: parseInt(page),
-      limit: parseInt(limit)
+      data: {
+        users,
+        total: users.length,
+        page: parseInt(page),
+        limit: parseInt(limit)
+      }
     });
     
   } catch (error) {
