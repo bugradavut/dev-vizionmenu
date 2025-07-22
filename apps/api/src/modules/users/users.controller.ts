@@ -126,10 +126,10 @@ export class UsersController {
   }
 
   @Delete(':userId/branch/:branchId')
-  @ApiOperation({ summary: 'Remove a user from a branch' })
+  @ApiOperation({ summary: 'Delete a user from a branch (hard delete)' })
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiParam({ name: 'branchId', description: 'Branch ID' })
-  @ApiResponse({ status: 200, description: 'User removed successfully' })
+  @ApiResponse({ status: 200, description: 'User deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
   @RequireRole('chain_owner', 'branch_manager')
@@ -139,6 +139,10 @@ export class UsersController {
     @CurrentUser() user: User,
   ) {
     await this.usersService.remove(userId, branchId, user.id);
-    return { message: 'User removed successfully' };
+    return { 
+      data: { 
+        message: 'User deleted successfully' 
+      }
+    };
   }
 }

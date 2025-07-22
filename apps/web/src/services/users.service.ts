@@ -120,13 +120,6 @@ export class UsersService {
   }
 
   /**
-   * Remove user from branch (soft delete)
-   */
-  async removeUser(userId: string, branchId: string): Promise<void> {
-    await apiClient.delete(`/api/v1/users/${userId}/branch/${branchId}`);
-  }
-
-  /**
    * Toggle user active status
    */
   async toggleUserStatus(
@@ -138,7 +131,7 @@ export class UsersService {
   }
 
   /**
-   * Remove user from branch (soft delete)
+   * Delete user from branch (hard delete)
    */
   async removeUser(userId: string, branchId: string): Promise<void> {
     await apiClient.delete(`/api/v1/users/${userId}/branch/${branchId}`);

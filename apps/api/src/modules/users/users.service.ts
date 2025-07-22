@@ -446,7 +446,8 @@ export class UsersService {
   }
 
   /**
-   * Remove a user from a branch (soft delete)
+   * Delete a user from a branch (hard delete)
+   * If user has no other branches, completely delete from system
    */
   async remove(userId: string, branchId: string, currentUserId: string): Promise<void> {
     try {
@@ -488,15 +489,32 @@ export class UsersService {
         throw new ForbiddenException('You cannot remove yourself');
       }
 
-      // Soft delete user from branch
-      const { error: updateError } = await supabase
+      // Hard delete - remove user from branch completely
+      const { error: deleteError } = await supabase
         .from('branch_users')
-        .update({ is_active: false })
+        .delete()
         .eq('user_id', userId)
         .eq('branch_id', branchId);
 
-      if (updateError) {
-        throw new BadRequestException(`Failed to remove user: ${updateError.message}`);
+      if (deleteError) {
+        throw new BadRequestException(`Failed to delete user: ${deleteError.message}`);
+      }
+
+      // Also delete user profile if this was their only branch
+      const { data: otherBranches, error: checkError } = await supabase
+        .from('branch_users')
+        .select('id')
+        .eq('user_id', userId);
+
+      if (!checkError && (!otherBranches || otherBranches.length === 0)) {
+        // User has no other branches, delete completely
+        await supabase
+          .from('user_profiles')
+          .delete()
+          .eq('user_id', userId);
+        
+        // Delete from auth system
+        await supabase.auth.admin.deleteUser(userId);
       }
     } catch (error) {
       this.logger.error(`Error removing user: ${error.message}`, error.stack);

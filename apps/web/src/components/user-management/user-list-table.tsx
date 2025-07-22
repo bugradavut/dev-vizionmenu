@@ -106,15 +106,15 @@ export function UserListTable({
     }
   };
 
-  const handleRemoveUser = async (user: BranchUser) => {
-    if (!confirm(`Are you sure you want to remove ${user.user.full_name || user.user.email}?`)) {
+  const handleDeleteUser = async (user: BranchUser) => {
+    if (!confirm(`Are you sure you want to permanently delete ${user.user.full_name || user.user.email}? This action cannot be undone.`)) {
       return;
     }
 
     try {
       await removeUser(user.user_id, user.branch_id);
     } catch (error) {
-      console.error('Failed to remove user:', error);
+      console.error('Failed to delete user:', error);
     }
   };
 
@@ -324,9 +324,9 @@ export function UserListTable({
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
                                 className="text-destructive"
-                                onClick={() => handleRemoveUser(user)}
+                                onClick={() => handleDeleteUser(user)}
                               >
-                                Remove User
+                                Delete User
                               </DropdownMenuItem>
                             </>
                           )}
