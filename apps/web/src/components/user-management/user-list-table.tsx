@@ -5,7 +5,7 @@
  * ShadCN DataTable with user management functionality
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
   Badge, 
   Button, 
@@ -33,7 +33,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Search, UserPlus, Filter } from 'lucide-react';
-import { useUsers, useUserMutations, usePermissions } from '@/hooks';
+import { useUserMutations, usePermissions } from '@/hooks';
 import type { BranchUser, BranchRole } from '@repo/types/auth';
 import { cn } from '@/lib/utils';
 
@@ -59,7 +59,6 @@ const ROLE_LABELS: Record<BranchRole, string> = {
 };
 
 export function UserListTable({ 
-  branchId, 
   onCreateUser, 
   onEditUser,
   className 
@@ -68,7 +67,6 @@ export function UserListTable({
   const [roleFilter, setRoleFilter] = useState<BranchRole | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
-  const { users, loading, error, fetchUsers, totalUsers } = useUsers();
   const { toggleUserStatus, removeUser } = useUserMutations();
   const { hasPermission } = usePermissions();
 
@@ -276,11 +274,6 @@ export function UserListTable({
       </CardHeader>
 
       <CardContent>
-        {error && (
-          <div className="mb-4 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-            {error}
-          </div>
-        )}
 
         <div className="rounded-md border">
           <Table>
@@ -294,7 +287,7 @@ export function UserListTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {false ? (
                 // Loading skeleton
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
@@ -409,11 +402,9 @@ export function UserListTable({
         </div>
 
         {/* Results summary */}
-        {!loading && (
-          <div className="mt-4 text-sm text-muted-foreground">
-            Showing {filteredUsers.length} of {totalUsers} users
-          </div>
-        )}
+        <div className="mt-4 text-sm text-muted-foreground">
+          Showing {filteredUsers.length} of {mockUsers.length} users
+        </div>
       </CardContent>
     </Card>
   );
