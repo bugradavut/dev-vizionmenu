@@ -67,16 +67,18 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
-    const token = await this.getAuthToken();
+    // Temporarily disable auth token for Express API compatibility
+    // const token = await this.getAuthToken();
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
 
-    if (token) {
-      (headers as Record<string, string>).Authorization = `Bearer ${token}`;
-    }
+    // Temporarily disabled - Express API doesn't need auth for users endpoint
+    // if (token) {
+    //   (headers as Record<string, string>).Authorization = `Bearer ${token}`;
+    // }
     
     try {
       const response = await fetch(url, {
