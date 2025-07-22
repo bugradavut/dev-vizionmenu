@@ -26,9 +26,15 @@ export class UsersService {
     console.log('🚀 SERVICE: Query params:', queryParams);
     
     // Validate branch_id before making API call
-    if (!branch_id) {
-      console.log('❌ SERVICE: No branch_id provided, skipping API call');
-      throw new Error('Branch ID is required');
+    if (!branch_id || branch_id === 'undefined' || branch_id === 'null') {
+      console.log('❌ SERVICE: Invalid branch_id provided:', branch_id);
+      console.log('❌ SERVICE: Returning empty response instead of API call');
+      return {
+        users: [],
+        total: 0,
+        page: 1,
+        limit: 50
+      };
     }
     
     try {
