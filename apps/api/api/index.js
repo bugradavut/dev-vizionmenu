@@ -1,44 +1,71 @@
-// Vercel Serverless Function Entry Point for NestJS
-const { NestFactory } = require('@nestjs/core');
-const { AppModule } = require('../dist/main');
+// Vercel Serverless Function Entry Point
+const express = require('express');
 
-let app;
+const app = express();
+app.use(express.json());
 
-async function bootstrap() {
-  if (!app) {
-    app = await NestFactory.create(AppModule, {
-      logger: ['error', 'warn', 'log']
-    });
-    
-    // Enable CORS for frontend
-    app.enableCors({
-      origin: [
-        'https://dev-vizionmenu.vercel.app',
-        'http://localhost:3000'
-      ],
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    });
-    
-    // Global prefix for API routes
-    app.setGlobalPrefix('api/v1');
-    
-    await app.init();
+// CORS for frontend
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
   }
-  return app;
-}
+});
 
-module.exports = async (req, res) => {
-  try {
-    const nestApp = await bootstrap();
-    const expressApp = nestApp.getHttpAdapter().getInstance();
-    return expressApp(req, res);
-  } catch (error) {
-    console.error('Vercel serverless error:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: error.message
-    });
-  }
-};
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Vision Menu API is running! 🚀',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'production',
+    version: '1.0.0'
+  });
+});
+
+// Health endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'production',
+    version: '1.0.0',
+    message: 'Backend API is healthy'
+  });
+});
+
+// API v1 routes
+app.get('/api/v1/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    api: 'v1',
+    message: 'API v1 is working'
+  });
+});
+
+// Test endpoint
+app.get('/test', (req, res) => {
+  res.json({
+    message: 'Test endpoint working!',
+    method: req.method,
+    url: req.url,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Catch all other routes
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Route not found',
+    message: 'The requested endpoint does not exist',
+    availableRoutes: ['/', '/health', '/api/v1/health', '/test']
+  });
+});
+
+// Export for Vercel
+module.exports = app;
