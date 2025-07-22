@@ -48,6 +48,92 @@ app.get('/api/v1/health', (req, res) => {
   });
 });
 
+// Create user endpoint
+app.post('/api/v1/users', async (req, res) => {
+  try {
+    const { email, full_name, phone, branch_id, role, permissions } = req.body;
+    
+    // Import Supabase client
+    const { createClient } = require('@supabase/supabase-js');
+    
+    // Create Supabase client with service role key
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    
+    // Create user in Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: {
+        full_name,
+        phone
+      }
+    });
+    
+    if (authError) {
+      console.error('Auth user creation error:', authError);
+      return res.status(400).json({
+        error: 'Auth Error',
+        message: `Failed to create auth user: ${authError.message}`
+      });
+    }
+    
+    const userId = authData.user.id;
+    
+    // Create user profile
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        user_id: userId,
+        full_name,
+        phone
+      });
+    
+    if (profileError) {
+      console.error('Profile creation error:', profileError);
+    }
+    
+    // Add user to branch
+    const { data: branchUserData, error: branchError } = await supabase
+      .from('branch_users')
+      .insert({
+        user_id: userId,
+        branch_id,
+        role,
+        permissions,
+        is_active: true
+      })
+      .select()
+      .single();
+    
+    if (branchError) {
+      console.error('Branch user creation error:', branchError);
+      return res.status(400).json({
+        error: 'Database Error',
+        message: `Failed to add user to branch: ${branchError.message}`
+      });
+    }
+    
+    // Return success response in NestJS format
+    res.json({
+      data: {
+        message: 'User created successfully',
+        user_id: userId,
+        branch_user: branchUserData
+      }
+    });
+    
+  } catch (error) {
+    console.error('Create user endpoint error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error.message
+    });
+  }
+});
+
 // Toggle user status endpoint
 app.patch('/api/v1/users/:userId/branch/:branchId', async (req, res) => {
   try {
@@ -222,7 +308,7 @@ app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Route not found',
     message: 'The requested endpoint does not exist',
-    availableRoutes: ['/', '/health', '/api/v1/health', '/api/v1/users/branch/:branchId', '/api/v1/users/:userId/branch/:branchId', '/test']
+    availableRoutes: ['/', '/health', '/api/v1/health', 'GET /api/v1/users/branch/:branchId', 'POST /api/v1/users', 'PATCH /api/v1/users/:userId/branch/:branchId', '/test']
   });
 });
 
