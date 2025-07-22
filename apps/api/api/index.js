@@ -48,6 +48,92 @@ app.get('/api/v1/health', (req, res) => {
   });
 });
 
+// Users endpoint for production
+app.get('/api/v1/users/branch/:branchId', async (req, res) => {
+  try {
+    const { branchId } = req.params;
+    const { page = 1, limit = 50 } = req.query;
+    
+    // Import Supabase client
+    const { createClient } = require('@supabase/supabase-js');
+    
+    // Create Supabase client with service role key
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    
+    // Get branch users
+    const { data: branchUsers, error } = await supabase
+      .from('branch_users')
+      .select('*')
+      .eq('branch_id', branchId)
+      .eq('is_active', true);
+      
+    if (error) {
+      console.error('Supabase error:', error);
+      return res.status(400).json({
+        error: 'Database Error',
+        message: `Failed to get branch users: ${error.message}`
+      });
+    }
+    
+    if (!branchUsers || branchUsers.length === 0) {
+      return res.json({
+        users: [],
+        total: 0,
+        page: parseInt(page),
+        limit: parseInt(limit)
+      });
+    }
+    
+    // Get user IDs
+    const userIds = branchUsers.map(bu => bu.user_id);
+    
+    // Get user profiles
+    const { data: userProfiles } = await supabase
+      .from('user_profiles')
+      .select('user_id, full_name, phone, avatar_url')
+      .in('user_id', userIds);
+    
+    // Combine data
+    const users = branchUsers.map(branchUser => {
+      const profile = userProfiles?.find(p => p.user_id === branchUser.user_id);
+      
+      return {
+        user_id: branchUser.user_id,
+        branch_id: branchUser.branch_id,
+        role: branchUser.role,
+        permissions: branchUser.permissions,
+        is_active: branchUser.is_active,
+        created_at: branchUser.created_at,
+        updated_at: branchUser.updated_at,
+        user: {
+          user_id: branchUser.user_id,
+          email: `user${branchUser.user_id.substring(0,8)}@example.com`, // Mock email
+          full_name: profile?.full_name || 'Unknown User',
+          phone: profile?.phone || null,
+          avatar_url: profile?.avatar_url || null
+        }
+      };
+    });
+    
+    res.json({
+      users,
+      total: users.length,
+      page: parseInt(page),
+      limit: parseInt(limit)
+    });
+    
+  } catch (error) {
+    console.error('Users endpoint error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error.message
+    });
+  }
+});
+
 // Test endpoint
 app.get('/test', (req, res) => {
   res.json({
@@ -63,7 +149,7 @@ app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Route not found',
     message: 'The requested endpoint does not exist',
-    availableRoutes: ['/', '/health', '/api/v1/health', '/test']
+    availableRoutes: ['/', '/health', '/api/v1/health', '/api/v1/users/branch/:branchId', '/test']
   });
 });
 
