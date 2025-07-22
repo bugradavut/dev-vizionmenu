@@ -27,29 +27,29 @@ export class UsersService {
         queryParams
       );
       
-      console.log('🔍 Users API Response:', response);
-      console.log('🔍 Response data:', response.data);
-      console.log('🔍 Response data type:', typeof response.data);
       console.log('🔍 Response data keys:', Object.keys(response.data || {}));
       
-      // Handle wrapped response format
+      // Handle API client wrapped response format: {message, data, success}
       let actualData = response.data;
       
-      // If response is wrapped in a data property, unwrap it
+      // If response is wrapped with data property, unwrap it
       if (actualData && typeof actualData === 'object' && 'data' in actualData) {
         console.log('📦 Found wrapped response, unwrapping...');
         const wrappedData = actualData as { data: GetUsersResponse };
         actualData = wrappedData.data;
+        console.log('📦 Unwrapped data:', actualData);
+        console.log('📦 Unwrapped data keys:', Object.keys(actualData || {}));
       }
       
-      console.log('✅ Final data:', actualData);
-      console.log('✅ Users array exists:', !!actualData?.users);
+      console.log('✅ Final data has users:', !!actualData?.users);
       console.log('✅ Users count:', actualData?.users?.length);
       
-      if (actualData && 'users' in actualData) {
-        return actualData;
+      if (actualData && typeof actualData === 'object' && 'users' in actualData) {
+        console.log('🎉 Returning valid users data!');
+        return actualData as GetUsersResponse;
       } else {
-        console.error('❌ Unexpected response format:', response);
+        console.error('❌ Final data structure:', actualData);
+        console.error('❌ Expected users array, got:', typeof actualData?.users);
         throw new Error('Invalid response format from users API');
       }
     } catch (error) {
