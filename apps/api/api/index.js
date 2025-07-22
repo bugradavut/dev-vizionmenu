@@ -180,7 +180,7 @@ app.get('/api/v1/users/branch/:branchId', async (req, res) => {
         user: {
           user_id: branchUser.user_id,
           email: emailData?.email || `user${branchUser.user_id.substring(0,8)}@example.com`,
-          full_name: profile?.full_name || 'Unknown User',
+          full_name: profile?.full_name || 'No name',
           phone: profile?.phone || null,
           avatar_url: profile?.avatar_url || null
         }
