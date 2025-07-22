@@ -95,10 +95,17 @@ app.get('/api/v1/users/branch/:branchId', async (req, res) => {
       .from('user_profiles')
       .select('user_id, full_name, phone, avatar_url')
       .in('user_id', userIds);
+      
+    // Get user emails from auth.users
+    const { data: userEmails } = await supabase
+      .from('auth.users')  
+      .select('id, email')
+      .in('id', userIds);
     
     // Combine data
     const users = branchUsers.map(branchUser => {
       const profile = userProfiles?.find(p => p.user_id === branchUser.user_id);
+      const emailData = userEmails?.find(u => u.id === branchUser.user_id);
       
       return {
         user_id: branchUser.user_id,
@@ -110,7 +117,7 @@ app.get('/api/v1/users/branch/:branchId', async (req, res) => {
         updated_at: branchUser.updated_at,
         user: {
           user_id: branchUser.user_id,
-          email: `user${branchUser.user_id.substring(0,8)}@example.com`, // Mock email
+          email: emailData?.email || `user${branchUser.user_id.substring(0,8)}@example.com`,
           full_name: profile?.full_name || 'Unknown User',
           phone: profile?.phone || null,
           avatar_url: profile?.avatar_url || null
