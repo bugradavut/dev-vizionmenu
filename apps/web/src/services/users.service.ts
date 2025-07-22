@@ -21,6 +21,8 @@ export class UsersService {
   async getUsersByBranch(params: GetUsersParams): Promise<GetUsersResponse> {
     const { branch_id, ...queryParams } = params;
     
+    console.log('🚀 SERVICE: Starting getUsersByBranch call for branch:', branch_id);
+    
     try {
       const response = await apiClient.get<GetUsersResponse>(
         `/api/v1/users/branch/${branch_id}`,
