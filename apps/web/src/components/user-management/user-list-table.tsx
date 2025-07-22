@@ -326,7 +326,7 @@ export function UserListTable({
                     <TableCell>
                       <div className="flex items-center space-x-3">
                         <Avatar className="h-10 w-10">
-                          <AvatarImage src={user.user.avatar_url} />
+                          <AvatarImage src={user.user.avatar_url || undefined} />
                           <AvatarFallback>
                             {getInitials(user.user.full_name, user.user.email)}
                           </AvatarFallback>
