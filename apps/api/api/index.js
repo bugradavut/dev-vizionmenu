@@ -303,12 +303,89 @@ app.get('/test', (req, res) => {
   });
 });
 
+// Delete user endpoint (hard delete)
+app.delete('/api/v1/users/:userId/branch/:branchId', async (req, res) => {
+  try {
+    const { userId, branchId } = req.params;
+    
+    // Import Supabase client
+    const { createClient } = require('@supabase/supabase-js');
+    
+    // Create Supabase client with service role key
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    
+    // Check if user exists in this branch
+    const { data: existingUser, error: existingUserError } = await supabase
+      .from('branch_users')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('branch_id', branchId)
+      .single();
+
+    if (existingUserError || !existingUser) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: 'User not found in this branch'
+      });
+    }
+
+    // Hard delete - remove user from branch completely
+    const { error: deleteError } = await supabase
+      .from('branch_users')
+      .delete()
+      .eq('user_id', userId)
+      .eq('branch_id', branchId);
+
+    if (deleteError) {
+      console.error('Delete user error:', deleteError);
+      return res.status(400).json({
+        error: 'Database Error',
+        message: `Failed to delete user: ${deleteError.message}`
+      });
+    }
+
+    // Check if user has other branches
+    const { data: otherBranches, error: checkError } = await supabase
+      .from('branch_users')
+      .select('id')
+      .eq('user_id', userId);
+
+    if (!checkError && (!otherBranches || otherBranches.length === 0)) {
+      // User has no other branches, delete completely
+      await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('user_id', userId);
+      
+      // Delete from auth system
+      await supabase.auth.admin.deleteUser(userId);
+    }
+
+    // Return success response in NestJS format
+    res.json({
+      data: {
+        message: 'User deleted successfully'
+      }
+    });
+    
+  } catch (error) {
+    console.error('Delete user endpoint error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error.message
+    });
+  }
+});
+
 // Catch all other routes
 app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Route not found',
     message: 'The requested endpoint does not exist',
-    availableRoutes: ['/', '/health', '/api/v1/health', 'GET /api/v1/users/branch/:branchId', 'POST /api/v1/users', 'PATCH /api/v1/users/:userId/branch/:branchId', '/test']
+    availableRoutes: ['/', '/health', '/api/v1/health', 'GET /api/v1/users/branch/:branchId', 'POST /api/v1/users', 'PATCH /api/v1/users/:userId/branch/:branchId', 'DELETE /api/v1/users/:userId/branch/:branchId', '/test']
   });
 });
 
