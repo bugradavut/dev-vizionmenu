@@ -84,6 +84,12 @@ export function UserListTable({
   }, [branchId, fetchUsers]);
 
   const displayUsers = users;
+  
+  // Debug logging
+  console.log('🐛 DEBUG - Component users:', users);
+  console.log('🐛 DEBUG - Component users length:', users?.length);
+  console.log('🐛 DEBUG - Component loading:', loading);
+  console.log('🐛 DEBUG - Component error:', error);
 
 
   const filteredUsers = displayUsers.filter(user => {

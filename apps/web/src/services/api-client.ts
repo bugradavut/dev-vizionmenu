@@ -133,9 +133,15 @@ class ApiClient {
       });
     }
 
-    return this.request<T>(url.pathname + url.search, {
+    const fullUrl = url.pathname + url.search;
+    console.log('🌐 API Client making GET request to:', this.baseURL + fullUrl);
+
+    const result = await this.request<T>(fullUrl, {
       method: 'GET',
     });
+    
+    console.log('🌐 API Client response:', result);
+    return result;
   }
 
   async post<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {

@@ -31,7 +31,10 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(cat:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(git restore:*)",
+      "Bash(git pull:*)",
+      "WebFetch(domain:dev-vizionmenu-web.vercel.app)"
     ],
     "deny": []
   }
