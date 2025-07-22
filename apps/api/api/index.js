@@ -129,7 +129,8 @@ app.get('/api/v1/users/branch/:branchId', async (req, res) => {
     console.error('Users endpoint error:', error);
     res.status(500).json({
       error: 'Internal Server Error',
-      message: error.message
+      message: error.message,
+      stack: error.stack
     });
   }
 });
