@@ -83,9 +83,11 @@ export const useUsersStore = create<UsersState>()(
           
           console.log('🔄 HOOK: Fetching users for params:', params);
           const response = await usersService.getUsersByBranch(params);
-          console.log('📥 Hook: Got response:', response);
-          console.log('📥 Hook: Users array:', response.users);
-          console.log('📥 Hook: Setting users count:', response.users?.length);
+          console.log('📥 Hook: Got response keys:', Object.keys(response || {}));
+          console.log('📥 Hook: Response.users exists:', !!response.users);
+          console.log('📥 Hook: Response.users type:', typeof response.users);
+          console.log('📥 Hook: Response.users length:', response.users?.length);
+          console.log('📥 Hook: Full response:', JSON.stringify(response, null, 2));
           
           setUsers(response.users, response.total, response.page, response.limit);
           
