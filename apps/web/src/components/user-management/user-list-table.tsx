@@ -5,7 +5,7 @@
  * ShadCN DataTable with user management functionality
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Badge, 
   Button, 
@@ -33,7 +33,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Search, UserPlus, Filter } from 'lucide-react';
-import { useUserMutations, usePermissions } from '@/hooks';
+import { useUsers, useUserMutations, usePermissions } from '@/hooks';
 import type { BranchUser, BranchRole } from '@repo/types/auth';
 import { cn } from '@/lib/utils';
 
@@ -59,6 +59,7 @@ const ROLE_LABELS: Record<BranchRole, string> = {
 };
 
 export function UserListTable({ 
+  branchId, 
   onCreateUser, 
   onEditUser,
   className 
@@ -67,114 +68,23 @@ export function UserListTable({
   const [roleFilter, setRoleFilter] = useState<BranchRole | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
+  const { users, loading, error, fetchUsers, totalUsers } = useUsers();
   const { toggleUserStatus, removeUser } = useUserMutations();
   const { hasPermission } = usePermissions();
 
-  // Mock data for production
-  const mockUsers: BranchUser[] = [
-    {
-      id: "1",
-      user_id: "755c7f73-2595-47b4-b40c-a384ae585ad6",
-      branch_id: "550e8400-e29b-41d4-a716-446655440002",
-      role: "branch_manager" as BranchRole,
-      permissions: ["user_management", "menu_management", "order_management"],
-      is_active: true,
-      created_at: "2025-07-21T09:35:39.923704+00:00",
-      updated_at: "2025-07-21T09:35:39.923704+00:00",
-      user: {
-        id: "755c7f73-2595-47b4-b40c-a384ae585ad6",
-        email: "user755c7f73@example.com",
-        full_name: "Unknown User",
-        phone: undefined,
-        avatar_url: undefined,
-        is_active: true,
-        email_verified: true,
-        phone_verified: false,
-        created_at: "2025-07-21T09:35:39.923704+00:00",
-        updated_at: "2025-07-21T09:35:39.923704+00:00"
-      }
-    },
-    {
-      id: "2",
-      user_id: "83c17994-dfa8-41d5-9421-149dc509e199",
-      branch_id: "550e8400-e29b-41d4-a716-446655440002",
-      role: "branch_manager" as BranchRole,
-      permissions: ["user_management", "menu_management", "order_management"],
-      is_active: true,
-      created_at: "2025-07-21T15:08:49.842133+00:00",
-      updated_at: "2025-07-21T15:16:31.437797+00:00",
-      user: {
-        id: "83c17994-dfa8-41d5-9421-149dc509e199",
-        email: "user83c17994@example.com",
-        full_name: "Buğra Davut",
-        phone: "1233123",
-        avatar_url: undefined,
-        is_active: true,
-        email_verified: true,
-        phone_verified: true,
-        created_at: "2025-07-21T15:08:49.842133+00:00",
-        updated_at: "2025-07-21T15:16:31.437797+00:00"
-      }
-    },
-    {
-      id: "3",
-      user_id: "1a6ccb1f-7fdf-4991-9324-9026dcf811fe",
-      branch_id: "550e8400-e29b-41d4-a716-446655440002",
-      role: "branch_manager" as BranchRole,
-      permissions: ["user_management", "menu_management", "order_management"],
-      is_active: true,
-      created_at: "2025-07-21T15:11:07.435542+00:00",
-      updated_at: "2025-07-21T21:18:23.342296+00:00",
-      user: {
-        id: "1a6ccb1f-7fdf-4991-9324-9026dcf811fe",
-        email: "user1a6ccb1f@example.com",
-        full_name: "Test User",
-        phone: "12313231",
-        avatar_url: undefined,
-        is_active: true,
-        email_verified: true,
-        phone_verified: true,
-        created_at: "2025-07-21T15:11:07.435542+00:00",
-        updated_at: "2025-07-21T21:18:23.342296+00:00"
-      }
-    },
-    {
-      id: "4",
-      user_id: "1f7ed318-d4d0-4d7a-9f46-b2a0f6cad9fc",
-      branch_id: "550e8400-e29b-41d4-a716-446655440002",
-      role: "branch_cashier" as BranchRole,
-      permissions: ["order_management"],
-      is_active: true,
-      created_at: "2025-07-21T16:08:37.044072+00:00",
-      updated_at: "2025-07-22T08:15:57.589836+00:00",
-      user: {
-        id: "1f7ed318-d4d0-4d7a-9f46-b2a0f6cad9fc",
-        email: "user1f7ed318@example.com",
-        full_name: "Test User5",
-        phone: "123331231",
-        avatar_url: undefined,
-        is_active: true,
-        email_verified: true,
-        phone_verified: true,
-        created_at: "2025-07-21T16:08:37.044072+00:00",
-        updated_at: "2025-07-22T08:15:57.589836+00:00"
-      }
+  // Fetch users from API
+  useEffect(() => {
+    if (branchId && branchId !== 'undefined') {
+      fetchUsers({
+        branch_id: branchId,
+        page: 1,
+        limit: 50
+      });
     }
-  ];
+  }, [branchId, fetchUsers]);
 
-  // Use mock data for both production and development for now
-  const displayUsers = mockUsers;
+  const displayUsers = users;
 
-  // Temporarily disabled API fetch - using mock data
-  // useEffect(() => {
-  //   if (process.env.NODE_ENV !== 'production' && branchId && branchId !== 'undefined') {
-  //     fetchUsers({
-  //       branch_id: branchId,
-  //       page: 1,
-  //       limit: 50
-  //     });
-  //   }
-  // }, [branchId, fetchUsers]);
 
   const filteredUsers = displayUsers.filter(user => {
     const matchesSearch = !searchQuery || 
@@ -298,6 +208,11 @@ export function UserListTable({
       </CardHeader>
 
       <CardContent>
+        {error && (
+          <div className="mb-4 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
 
         <div className="rounded-md border">
           <Table>
@@ -311,7 +226,7 @@ export function UserListTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {false ? (
+              {loading ? (
                 // Loading skeleton
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
@@ -426,9 +341,11 @@ export function UserListTable({
         </div>
 
         {/* Results summary */}
-        <div className="mt-4 text-sm text-muted-foreground">
-          Showing {filteredUsers.length} of {mockUsers.length} users
-        </div>
+        {!loading && (
+          <div className="mt-4 text-sm text-muted-foreground">
+            Showing {filteredUsers.length} of {totalUsers} users
+          </div>
+        )}
       </CardContent>
     </Card>
   );
