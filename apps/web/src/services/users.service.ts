@@ -25,6 +25,12 @@ export class UsersService {
     console.log('🚀 SERVICE: Full params:', params);
     console.log('🚀 SERVICE: Query params:', queryParams);
     
+    // Validate branch_id before making API call
+    if (!branch_id) {
+      console.log('❌ SERVICE: No branch_id provided, skipping API call');
+      throw new Error('Branch ID is required');
+    }
+    
     try {
       const response = await apiClient.get<GetUsersResponse>(
         `/api/v1/users/branch/${branch_id}`,
