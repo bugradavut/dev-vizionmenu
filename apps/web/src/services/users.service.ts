@@ -41,15 +41,18 @@ export class UsersService {
         console.log('📦 Unwrapped data keys:', Object.keys(actualData || {}));
       }
       
-      console.log('✅ Final data has users:', !!actualData?.users);
-      console.log('✅ Users count:', actualData?.users?.length);
+      // Type-safe check for users property
+      const hasUsers = actualData && typeof actualData === 'object' && 'users' in actualData;
+      console.log('✅ Final data has users:', hasUsers);
       
-      if (actualData && typeof actualData === 'object' && 'users' in actualData) {
+      if (hasUsers) {
+        const usersData = actualData as GetUsersResponse;
+        console.log('✅ Users count:', usersData.users?.length);
         console.log('🎉 Returning valid users data!');
-        return actualData as GetUsersResponse;
+        return usersData;
       } else {
         console.error('❌ Final data structure:', actualData);
-        console.error('❌ Expected users array, got:', typeof actualData?.users);
+        console.error('❌ No users property found');
         throw new Error('Invalid response format from users API');
       }
     } catch (error) {
