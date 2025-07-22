@@ -81,9 +81,17 @@ export const useUsersStore = create<UsersState>()(
           setLoading(true);
           setError(null);
           
+          console.log('🔄 Hook: Fetching users...');
           const response = await usersService.getUsersByBranch(params);
+          console.log('📥 Hook: Got response:', response);
+          console.log('📥 Hook: Users array:', response.users);
+          console.log('📥 Hook: Setting users count:', response.users?.length);
+          
           setUsers(response.users, response.total, response.page, response.limit);
+          
+          console.log('✅ Hook: Users set successfully');
         } catch (error) {
+          console.error('❌ Hook: Error fetching users:', error);
           const errorMessage = error instanceof Error ? error.message : 'Failed to fetch users';
           setError(errorMessage);
         } finally {
