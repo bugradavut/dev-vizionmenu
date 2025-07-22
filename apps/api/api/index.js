@@ -96,11 +96,21 @@ app.get('/api/v1/users/branch/:branchId', async (req, res) => {
       .select('user_id, full_name, phone, avatar_url')
       .in('user_id', userIds);
       
-    // Get user emails from auth.users
-    const { data: userEmails } = await supabase
-      .from('auth.users')  
-      .select('id, email')
-      .in('id', userIds);
+    // Get user emails using Supabase Admin API
+    const userEmails = [];
+    for (const userId of userIds) {
+      try {
+        const { data: userData, error } = await supabase.auth.admin.getUserById(userId);
+        if (userData && userData.user) {
+          userEmails.push({
+            id: userData.user.id,
+            email: userData.user.email
+          });
+        }
+      } catch (err) {
+        console.error('Failed to get user email for:', userId, err);
+      }
+    }
     
     // Combine data
     const users = branchUsers.map(branchUser => {
