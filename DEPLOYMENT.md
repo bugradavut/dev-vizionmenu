@@ -14,6 +14,28 @@ Projede 2 farklı repository kullanıyoruz:
   - Production kodları
   - Sadece test edilmiş, stabil kodlar
 
+## 🏗️ Backend Architecture
+
+Projede **çift backend** yapısı kullanılmaktadır:
+
+### Local Development Backend
+- **Framework**: NestJS
+- **Port**: 3001
+- **Kullanım**: Feature geliştirme, debug, testing
+- **Avantajlar**: Modüler yapı, type safety, comprehensive tooling
+
+### Production Backend  
+- **Framework**: Express.js
+- **Platform**: Vercel Serverless Functions
+- **File**: `apps/api/api/index.js`
+- **Avantajlar**: Fast cold start, simple deployment, low cost
+
+### Backend Synchronization
+- Her iki backend de aynı API contract'ı implement eder
+- Response format'lar identical: `{data: ..., meta: ...}`
+- Aynı Supabase database kullanır
+- Production'da eksik endpoint'ler tespit edildiğinde Express'e eklenir
+
 ## 🔄 Development Workflow
 
 ### 1. Normal Development
@@ -25,7 +47,9 @@ git commit -m "feat: new authentication system"
 git push origin main
 ```
 
-Her push sonrası `dev-vizionmenu.vercel.app` otomatik güncellenir.
+Her push sonrası:
+- Frontend: `dev-vizionmenu.vercel.app` 
+- Backend: `dev-vizionmenu-web.vercel.app`
 
 **⚠️ ÖNEMLİ**: Vercel'de environment variables set edilmelidir:
 

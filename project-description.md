@@ -8,19 +8,23 @@ I'm a solo developer using the following stack:
 
 ## Tech Stack
 - **Frontend**: Next.js (App Router, Server Components), TailwindCSS, ShadCN UI, TypeScript
-- **Backend**: NestJS (REST API, modular structure), TypeScript
+- **Backend**: 
+  - **Local Development**: NestJS (REST API, modular structure), TypeScript
+  - **Production**: Express.js Serverless Functions (Vercel)
 - **Database**: Supabase (PostgreSQL) with Row-Level Security (RLS)
 - **Queue & Cache**: BullMQ + Upstash Redis
 - **Auth**: Supabase Auth (JWT with `restaurant_id` claim)
 - **Payments**: Stripe tokenization (no card storage)
-- **DevOps**: Monorepo (pnpm + Turborepo), Deployed on Vercel (web) and Fly.io (api/worker)
+- **DevOps**: Monorepo (pnpm + Turborepo), Deployed on Vercel (web & api)
 
 ## Folder Structure
 ```
 
 apps/
 web/        → Next.js (Client UI + Admin UI)
-api/        → NestJS API (controllers, services, modules)
+api/        → NestJS API (local dev) + Express.js (production serverless)
+  ├── src/  → NestJS modular structure (controllers, services, modules)
+  └── api/  → Express.js serverless functions for Vercel
 worker/     → 3rd-party order sync with Uber Eats / DoorDash
 
 packages/

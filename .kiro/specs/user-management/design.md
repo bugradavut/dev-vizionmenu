@@ -10,13 +10,35 @@ Bu design dokümanı, VizionMenu'nun multi-branch (çok şubeli) User Management
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Next.js Web   │    │   NestJS API    │    │   Supabase DB   │
+│   Next.js Web   │    │  Dual Backend   │    │   Supabase DB   │
 │                 │    │                 │    │                 │
-│ - User Mgmt UI  │◄──►│ - Auth Module   │◄──►│ - RLS Policies  │
-│ - Role Guards   │    │ - Users Module  │    │ - JWT Claims    │
-│ - Permissions   │    │ - Guards/Pipes  │    │ - Triggers      │
+│ - User Mgmt UI  │◄──►│ Local: NestJS   │◄──►│ - RLS Policies  │
+│ - Role Guards   │    │ Prod: Express   │    │ - JWT Claims    │
+│ - Permissions   │    │ - Same API      │    │ - Triggers      │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
+
+### Backend Architecture Strategy
+
+Projede **çift backend** yaklaşımı kullanılmaktadır:
+
+#### Local Development Backend
+- **Framework**: NestJS (modular, type-safe, comprehensive)
+- **Location**: `apps/api/src/`
+- **Usage**: Feature development, debugging, testing
+- **Benefits**: Full NestJS ecosystem, hot reload, detailed error handling
+
+#### Production Backend
+- **Framework**: Express.js Serverless Functions
+- **Location**: `apps/api/api/index.js`
+- **Platform**: Vercel Serverless
+- **Benefits**: Fast deployment, low cold start, cost effective
+
+#### API Contract Consistency
+- Both backends implement identical API endpoints
+- Same response format: `{data: ..., meta: ...}`
+- Same authentication and authorization patterns
+- Same Supabase database integration
 
 ### Database Layer Enhancements
 

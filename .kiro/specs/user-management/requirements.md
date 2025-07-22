@@ -23,14 +23,22 @@ Bu özellik, VizionMenu platformunda restaurant chain sahipleri ve yöneticileri
 
 **User Story:** Branch yöneticisi olarak, şubem kapsamında kullanıcıları CRUD işlemleri ile yönetebilmek istiyorum ki ekip üyelerimi etkili şekilde organize edebileyim.
 
+#### Technical Implementation Note
+API endpoints çift backend architecture ile implement edilmektedir:
+- **Local Development**: NestJS ile full-featured implementation
+- **Production**: Express.js serverless functions ile lightweight implementation  
+- **Consistency**: Her iki backend aynı response format ve API contract kullanır
+
 #### Acceptance Criteria
 
-1. WHEN GET /api/v1/branches/:branchId/users çağrıldığında THEN sadece o şubenin kullanıcıları dönmeli
+1. WHEN GET /api/v1/users/branch/:branchId çağrıldığında THEN sadece o şubenin kullanıcıları dönmeli
 2. WHEN GET /api/v1/chains/:chainId/users çağrıldığında THEN chain owner tüm şubelerin kullanıcılarını görebilmeli
-3. WHEN POST /api/v1/branches/:branchId/users ile yeni kullanıcı oluşturduğumda THEN kullanıcı otomatik olarak o şubeye atanmalı
-4. WHEN PUT /api/v1/users/:id ile kullanıcı güncellendiğinde THEN sadece aynı branch'taki kullanıcılar güncellenebilmeli
-5. WHEN DELETE /api/v1/users/:id çağrıldığında THEN kullanıcı sadece yetkili roller tarafından silinebilmeli
-6. WHEN POST /api/v1/users/:id/assign-role çağrıldığında THEN sadece chain_owner ve branch_manager rolleri rol atayabilmeli
+3. WHEN POST /api/v1/users ile yeni kullanıcı oluşturduğumda THEN kullanıcı belirtilen branch'a atanmalı
+4. WHEN PATCH /api/v1/users/:userId/branch/:branchId ile kullanıcı güncellendiğinde THEN sadece aynı branch'taki kullanıcılar güncellenebilmeli
+5. WHEN DELETE /api/v1/users/:userId/branch/:branchId çağrıldığında THEN kullanıcı sadece yetkili roller tarafından silinebilmeli
+6. WHEN POST /api/v1/users/:userId/branch/:branchId/assign-role çağrıldığında THEN sadece chain_owner ve branch_manager rolleri rol atayabilmeli
+7. BOTH local NestJS ve production Express backends aynı endpoint'leri implement etmeli
+8. Response format'ı her iki backend'de de {data: ..., meta: ...} olmalı
 
 ### Requirement 3: Multi-Branch Role-Based Access Control
 

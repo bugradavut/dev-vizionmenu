@@ -3,19 +3,25 @@ alwaysApply: true
 ---
 ### Backend (apps/api)
 
-* **Framework**: NestJS (REST-first, monolith yapı)
-* **Routing**: Tüm endpoint'ler `/api/v1/*` formatında.
-* **Mimari**:
-
+* **Local Development**: NestJS (REST-first, monolith yapı)
   * `controllers/` → endpoint router'ları
-  * `services/` → iş mantığı
+  * `services/` → iş mantığı  
   * `dto/` → tip güvenliği & class-validator
   * `modules/` → domain bazlı separation
   * `guards/`, `pipes/`, `filters/` global middleware yapısı
-* **Veritabanı**:
 
+* **Production**: Express.js Serverless (Vercel)
+  * Single file: `apps/api/api/index.js`
+  * Serverless function olarak deploy
+  * NestJS ile aynı response format'ı
+  * Core endpoint'ler: users CRUD, authentication
+
+* **Routing**: Tüm endpoint'ler `/api/v1/*` formatında (her iki ortamda aynı)
+
+* **Veritabanı**:
   * Supabase (PostgreSQL + RLS aktif)
-  * DB erişimi için `@supabase/postgrest-js` veya `pg`
+  * Local: `@supabase/postgrest-js` veya `pg`
+  * Production: `@supabase/supabase-js` with service role key
 * **Queue**:
 
   * BullMQ + Upstash Redis
@@ -77,6 +83,13 @@ USING ( restaurant_id = auth.jwt()->>'restaurant_id' );
 
 * Deploy hedefi:
 
-  * `web`: Vercel (Preview Deploy)
-  * `api` + `worker`: Fly.io veya Railway
+  * `web`: Vercel (Next.js)
+  * `api`: Vercel Serverless Function (Express.js)
+  * Local development: NestJS (port 3001)
   * Supabase migration: Supabase CLI (`supabase db push`)
+
+### Backend Architecture Notes
+
+* **Çift Backend Yaklaşımı**: Development kolaylığı için local'de NestJS, production simplicity için Vercel'de Express
+* **Response Format Consistency**: Her iki backend de aynı `{data: ..., meta: ...}` format'ını kullanır
+* **Environment Variables**: Local ve production farklı API URL'ler kullanır (`NEXT_PUBLIC_API_URL`)
