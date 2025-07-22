@@ -1,12 +1,1 @@
-{
-  "version": 2,
-  "cleanUrls": true,
-  "trailingSlash": false,
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "https://dev-vizionmenu.vercel.app",
-      "permanent": false
-    }
-  ]
-}
+{}
