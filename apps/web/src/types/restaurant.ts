@@ -36,9 +36,7 @@ export interface Branch {
 }
 
 // Legacy Restaurant interface (for backward compatibility)
-export interface Restaurant extends Branch {
-  // Deprecated: Use Branch instead
-}
+export type Restaurant = Branch;
 
 export interface BranchAddress {
   street: string;
@@ -49,7 +47,7 @@ export interface BranchAddress {
 }
 
 // Legacy alias
-export interface RestaurantAddress extends BranchAddress {}
+export type RestaurantAddress = BranchAddress;
 
 export interface BusinessHours {
   day:
@@ -97,7 +95,7 @@ export interface BranchSettings {
 }
 
 // Legacy alias
-export interface RestaurantSettings extends BranchSettings {}
+export type RestaurantSettings = BranchSettings;
 
 export interface BranchStats {
   total_orders: number;
@@ -121,7 +119,7 @@ export interface ChainStats {
 }
 
 // Legacy alias
-export interface RestaurantStats extends BranchStats {}
+export type RestaurantStats = BranchStats;
 
 // Note: BranchUser interface moved to auth.ts to avoid duplicate exports
 

@@ -11,14 +11,14 @@ export * from "./order";
 export * from "./auth";
 
 // Common Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data: T;
   success: boolean;
   message?: string;
   error?: string;
 }
 
-export interface PaginatedResponse<T = any> {
+export interface PaginatedResponse<T = unknown> {
   data: T[];
   pagination: {
     current_page: number;
@@ -35,7 +35,7 @@ export interface PaginatedResponse<T = any> {
 export interface ApiError {
   code: string;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   status_code: number;
 }
 
@@ -47,7 +47,7 @@ export interface SortOptions {
 }
 
 export interface FilterOptions {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface QueryOptions {
@@ -82,7 +82,7 @@ export type Status = "active" | "inactive" | "pending" | "archived";
 
 // File Upload Types
 export interface FileUpload {
-  file: any; // File type - will be File in browser environments
+  file: File; // File type for browser environments
   key: string;
   url?: string;
   progress?: number;

@@ -194,7 +194,7 @@ export const DEFAULT_PERMISSIONS: Record<BranchRole, string[]> = {
 export interface AuthError {
   code: string;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 export type AuthErrorCode =
