@@ -74,12 +74,23 @@ export function UserListTable({
 
   // Fetch users from API
   useEffect(() => {
+    console.log('🔥 useEffect branchId:', branchId);
+    console.log('🔥 useEffect branchId type:', typeof branchId);
+    console.log('🔥 useEffect condition:', branchId && branchId !== 'undefined');
+    
     if (branchId && branchId !== 'undefined') {
+      console.log('🔥 Calling fetchUsers with params:', {
+        branch_id: branchId,
+        page: 1,
+        limit: 50
+      });
       fetchUsers({
         branch_id: branchId,
         page: 1,
         limit: 50
       });
+    } else {
+      console.log('🔥 NOT calling fetchUsers - invalid branchId');
     }
   }, [branchId, fetchUsers]);
 
