@@ -48,6 +48,59 @@ app.get('/api/v1/health', (req, res) => {
   });
 });
 
+// Toggle user status endpoint
+app.patch('/api/v1/users/:userId/branch/:branchId', async (req, res) => {
+  try {
+    const { userId, branchId } = req.params;
+    const { is_active } = req.body;
+    
+    // Import Supabase client
+    const { createClient } = require('@supabase/supabase-js');
+    
+    // Create Supabase client with service role key
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    
+    // Update user status
+    const { data, error } = await supabase
+      .from('branch_users')
+      .update({ is_active })
+      .eq('user_id', userId)
+      .eq('branch_id', branchId)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Update user status error:', error);
+      return res.status(400).json({
+        error: 'Database Error',
+        message: `Failed to update user status: ${error.message}`
+      });
+    }
+    
+    if (!data) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: 'User not found in branch'
+      });
+    }
+    
+    // Return updated user (in NestJS format)
+    res.json({
+      data: data
+    });
+    
+  } catch (error) {
+    console.error('Toggle user status endpoint error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error.message
+    });
+  }
+});
+
 // Users endpoint for production
 app.get('/api/v1/users/branch/:branchId', async (req, res) => {
   try {
@@ -63,12 +116,11 @@ app.get('/api/v1/users/branch/:branchId', async (req, res) => {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
     
-    // Get branch users
+    // Get branch users (both active and inactive)
     const { data: branchUsers, error } = await supabase
       .from('branch_users')
       .select('*')
-      .eq('branch_id', branchId)
-      .eq('is_active', true);
+      .eq('branch_id', branchId);
       
     if (error) {
       console.error('Supabase error:', error);
@@ -170,7 +222,7 @@ app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Route not found',
     message: 'The requested endpoint does not exist',
-    availableRoutes: ['/', '/health', '/api/v1/health', '/api/v1/users/branch/:branchId', '/test']
+    availableRoutes: ['/', '/health', '/api/v1/health', '/api/v1/users/branch/:branchId', '/api/v1/users/:userId/branch/:branchId', '/test']
   });
 });
 
