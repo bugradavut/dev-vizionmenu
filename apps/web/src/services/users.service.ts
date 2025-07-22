@@ -21,18 +21,26 @@ export class UsersService {
   async getUsersByBranch(params: GetUsersParams): Promise<GetUsersResponse> {
     const { branch_id, ...queryParams } = params;
     
-    const response = await apiClient.get<{data: GetUsersResponse}>(
-      `/api/v1/users/branch/${branch_id}`,
-      queryParams
-    );
-    
-    // Flexible response handling - try different formats
-    if (response.data?.data) {
-      return response.data.data;
-    } else if (response.data && 'users' in response.data) {
-      return response.data as unknown as GetUsersResponse;
-    } else {
-      return response.data as unknown as GetUsersResponse;
+    try {
+      const response = await apiClient.get<GetUsersResponse>(
+        `/api/v1/users/branch/${branch_id}`,
+        queryParams
+      );
+      
+      console.log('🔍 Users API Response:', response);
+      console.log('🔍 Response data:', response.data);
+      console.log('🔍 Users array:', response.data?.users);
+      
+      // Direct response handling for production API format
+      if (response.data && 'users' in response.data) {
+        return response.data;
+      } else {
+        console.error('❌ Unexpected response format:', response);
+        throw new Error('Invalid response format from users API');
+      }
+    } catch (error) {
+      console.error('❌ Users service error:', error);
+      throw error;
     }
   }
 
