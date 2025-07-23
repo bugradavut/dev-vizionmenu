@@ -65,6 +65,7 @@ app.post('/api/v1/users', async (req, res) => {
     // Create user in Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
+      password, // ✅ FIX: Add missing password field
       email_confirm: true,
       user_metadata: {
         full_name,

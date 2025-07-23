@@ -34,7 +34,9 @@
       "Bash(mv:*)",
       "Bash(git restore:*)",
       "Bash(git pull:*)",
-      "WebFetch(domain:dev-vizionmenu-web.vercel.app)"
+      "WebFetch(domain:dev-vizionmenu-web.vercel.app)",
+      "Bash(claude --version)",
+      "Bash(claude doctor)"
     ],
     "deny": []
   }

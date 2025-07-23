@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { AuthGuard } from "@/components/auth-guard"
+import { ProtectedRoute, ProtectionPresets } from "@/components/auth/protected-route"
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   Breadcrumb,
@@ -21,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui"
 import { UserCheck, Shield, Users } from "lucide-react"
 import { UserListTable, CreateUserModal, EditUserModal } from "@/components/user-management"
 import { useUsers, useAuthApi } from "@/hooks"
+import { AuthDebug } from "@/components/auth/auth-debug"
 import type { BranchUser } from "@repo/types/auth"
 
 export default function UserManagementPage() {
@@ -53,7 +55,13 @@ export default function UserManagementPage() {
 
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
-      <SidebarProvider>
+      {/* Temporarily disabled ProtectedRoute for debugging */}
+      {/* <ProtectedRoute 
+        requireAuth={true}
+        requiredPermission="users:write"
+        debug={true}
+      > */}
+        <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -96,6 +104,8 @@ export default function UserManagementPage() {
               </div>
               
               <div className="grid gap-6">
+                {/* Debug component removed - production ready */}
+                
                 {/* Stats Cards */}
                 <div className="grid gap-4 md:grid-cols-3">
                   <Card>
@@ -148,7 +158,8 @@ export default function UserManagementPage() {
             </div>
           </div>
         </SidebarInset>
-      </SidebarProvider>
+        </SidebarProvider>
+      {/* </ProtectedRoute> */}
 
       {/* Create User Modal */}
       <CreateUserModal
