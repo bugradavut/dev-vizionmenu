@@ -24,10 +24,11 @@ Bu özellik, VizionMenu platformunda restaurant chain sahipleri ve yöneticileri
 **User Story:** Branch yöneticisi olarak, şubem kapsamında kullanıcıları CRUD işlemleri ile yönetebilmek istiyorum ki ekip üyelerimi etkili şekilde organize edebileyim.
 
 #### Technical Implementation Note
-API endpoints çift backend architecture ile implement edilmektedir:
-- **Local Development**: NestJS ile full-featured implementation
-- **Production**: Express.js serverless functions ile lightweight implementation  
-- **Consistency**: Her iki backend aynı response format ve API contract kullanır
+API endpoints unified Express.js architecture ile implement edilmektedir:
+- **Development & Production**: Express.js ile unified implementation
+- **Local**: `npm run dev` → `node api/index.js` (localhost:3001)
+- **Production**: Vercel Serverless Functions (same codebase)
+- **Benefits**: Production-dev parity, single codebase maintenance
 
 #### Acceptance Criteria
 
@@ -37,8 +38,8 @@ API endpoints çift backend architecture ile implement edilmektedir:
 4. WHEN PATCH /api/v1/users/:userId/branch/:branchId ile kullanıcı güncellendiğinde THEN sadece aynı branch'taki kullanıcılar güncellenebilmeli
 5. WHEN DELETE /api/v1/users/:userId/branch/:branchId çağrıldığında THEN kullanıcı sadece yetkili roller tarafından silinebilmeli
 6. WHEN POST /api/v1/users/:userId/branch/:branchId/assign-role çağrıldığında THEN sadece chain_owner ve branch_manager rolleri rol atayabilmeli
-7. BOTH local NestJS ve production Express backends aynı endpoint'leri implement etmeli
-8. Response format'ı her iki backend'de de {data: ..., meta: ...} olmalı
+7. Express.js backend hem local hem production'da aynı endpoint'leri implement etmeli
+8. Response format'ı {data: ..., meta: ...} consistent olmalı
 
 ### Requirement 3: Multi-Branch Role-Based Access Control
 

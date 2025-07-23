@@ -14,16 +14,16 @@
   - Test chain'ler, branch'ler ve user'lar oluştur
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6_
 
-- [x] 2. NestJS Multi-Branch Auth Module
+- [x] 2. Express.js Multi-Branch Auth Module
 
 
 
 
-  - JWT strategy'yi chain_id, branch_id ve role claims ile genişlet
+  - JWT token verification logic implement et
   - Multi-branch JwtPayload interface tanımla
-  - @CurrentUser() decorator oluştur
-  - @BranchContext() decorator oluştur
-  - @ChainContext() decorator oluştur
+  - Authentication middleware oluştur
+  - Branch context extraction logic ekle
+  - Chain context extraction logic ekle
   - Branch switching logic implement et
   - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.2, 3.6_
 
@@ -31,11 +31,11 @@
 
 
 
-  - @RequireRole() decorator implement et (chain_owner, branch_manager, etc.)
-  - Multi-branch RolesGuard oluştur ve test et
-  - AllExceptionsFilter ile RFC 7807 error handling ekle
-  - Cross-branch access prevention guard oluştur
-  - Chain owner multi-branch access guard oluştur
+  - Role-based middleware functions implement et (chain_owner, branch_manager, etc.)
+  - Multi-branch RolesGuard logic oluştur ve test et
+  - Structured error handling ekle
+  - Cross-branch access prevention logic oluştur
+  - Chain owner multi-branch access logic oluştur
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 5.1, 5.2_
 
 - [x] 4. Users Module CRUD Implementation
@@ -51,15 +51,15 @@
 
 - [x] 4.2 Multi-Branch Users Controller ve DTO'lar
 
-  **Dual Backend Implementation:**
-  - **NestJS (Local)**: Full modular implementation with DTOs and guards
-  - **Express (Production)**: Serverless functions with identical API contract
-  - GET /api/v1/users/branch/:branchId endpoint (branch-scoped) ✅ Both backends
-  - POST /api/v1/users endpoint (create user) ✅ Both backends  
-  - PATCH /api/v1/users/:userId/branch/:branchId endpoint (update user) ✅ Both backends
-  - DELETE /api/v1/users/:userId/branch/:branchId endpoint (delete user) ✅ Both backends
+  **Express.js Unified Implementation:**
+  - **Development & Production**: Express.js ile unified implementation
+  - GET /api/v1/users/branch/:branchId endpoint (branch-scoped) ✅ Express
+  - POST /api/v1/users endpoint (create user) ✅ Express  
+  - PATCH /api/v1/users/:userId/branch/:branchId endpoint (update user) ✅ Express
+  - DELETE /api/v1/users/:userId/branch/:branchId endpoint (delete user) ✅ Express
+  - GET /auth/profile endpoint (user profile with role/permissions) ✅ Express
   - POST /api/v1/users/:userId/branch/:branchId/assign-role (role assignment) ⏳ Express pending
-  - CreateUserDto, UpdateUserDto, AssignRoleDto oluştur ✅ NestJS
+  - Input validation ile request body checking
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
 - [x] 4.3 Multi-Branch Role Assignment
@@ -192,29 +192,31 @@
   - Deployment configuration updates
   - _Requirements: All requirements validation_
 
-## Implementation Status: Dual Backend Architecture
+## Implementation Status: Unified Express.js Architecture
 
 ### Current Status ✅ Working
-- **Local Development**: NestJS ile full-featured backend
-- **Production**: Express.js serverless functions
-- **API Contract**: Her iki backend aynı endpoint'leri implement ediyor
+- **Development & Production**: Unified Express.js backend
+- **Local Development**: `npm run dev` → `node api/index.js` (localhost:3001)
+- **Production**: Vercel Serverless Functions (same codebase)
 - **Response Format**: {data: ..., meta: ...} formatı consistent
 - **Database**: Aynı Supabase instance kullanıyor
 - **Authentication**: Supabase JWT ile consistent
 - **Hard Delete**: User deletion completely removes records from database
 
-### Production Express API Endpoints
+### Express API Endpoints ✅ Complete
+- ✅ GET /health (Health check with uptime info)
+- ✅ GET /auth/profile (User profile with role/permissions)
 - ✅ GET /api/v1/users/branch/:branchId (User listing)
 - ✅ POST /api/v1/users (User creation)  
-- ✅ PATCH /api/v1/users/:userId/branch/:branchId (Status toggle)
+- ✅ PATCH /api/v1/users/:userId/branch/:branchId (Status toggle & profile updates)
 - ✅ DELETE /api/v1/users/:userId/branch/:branchId (User deletion with hard delete)
 - ⏳ Role assignment endpoints - Next
 
-### Key Benefits of Dual Approach
-- **Development Speed**: NestJS ile hızlı geliştirme
-- **Production Simplicity**: Express serverless ile kolay deploy
-- **Cost Effective**: Serverless cold start optimization
-- **Consistency**: Aynı API contract ve response format
+### Key Benefits of Unified Approach
+- **Production-Dev Parity**: Aynı kod her yerde çalışır
+- **Simple Debugging**: Tek codebase maintain etmek
+- **Fast Deployment**: Zero-config Vercel deployment
+- **Consistency**: Development'ta test ettiğin production'a çıkar
 - **Complete CRUD**: Full user lifecycle management (create, read, update, delete)
 
 ### Recent Completions (Latest Session)
@@ -244,9 +246,9 @@
 ## 🎯 Next Steps (Priority Order)
 
 ### **Immediate Priorities (Core CRUD Complete)**
-1. **Role Assignment Express API** (4.3) - Production parity missing
+1. **Role Assignment Express API** (4.3) - Final API endpoint missing
    - POST `/api/v1/users/:userId/branch/:branchId/assign-role` endpoint
-   - Maintain API contract consistency between NestJS and Express
+   - Complete Express.js API functionality
    
 2. **RoleAssignmentDropdown Component** (6.4) - Quick UX improvement  
    - Inline role changes in UserListTable

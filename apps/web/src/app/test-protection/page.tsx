@@ -6,15 +6,12 @@
 "use client";
 
 import { ProtectedRoute, ProtectionPresets } from "@/components/auth/protected-route";
-import { AuthDebug } from "@/components/auth/auth-debug";
 
 export default function TestProtectionPage() {
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-6">Protection Test Page</h1>
       
-      {/* Auth Debug */}
-      <AuthDebug />
       
       <div className="mt-8 space-y-6">
         {/* Test 1: Chain Owner Only */}

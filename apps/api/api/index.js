@@ -1,4 +1,25 @@
 // Vercel Serverless Function Entry Point
+console.log('🚀 Starting Express API...');
+console.log('Node version:', process.version);
+console.log('Working directory:', process.cwd());
+
+// Load environment variables for local development
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    require('dotenv').config();
+  } catch (error) {
+    console.log('⚠️  dotenv not found, using environment variables directly');
+    // Fallback: set environment variables manually for local dev
+    if (!process.env.SUPABASE_URL) {
+      process.env.SUPABASE_URL = 'https://hfaqldkvnefjerosndxr.supabase.co';
+      process.env.SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmYXFsZGt2bmVmamVyb3NuZHhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjY2MTA5OSwiZXhwIjoyMDY4MjM3MDk5fQ.Y3mlDpcWtDkTqEXReCvJ5SbvcFobUsNoOzSJ4U8uR6A';
+      process.env.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmYXFsZGt2bmVmamVyb3NuZHhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2NjEwOTksImV4cCI6MjA2ODIzNzA5OX0.32vRT-l4LygkGdJXjIJyUwx2KZcFSG8TIJm95mNlMuQ';
+      process.env.SUPABASE_JWT_SECRET = 'or/5hRDTnnaMIMEtgHVxOSB/HUvvB9qazVSKGTtlDSCGGzQoVIZ/IA5lbfuZTyYdM+TCuKeib11cckjlw1yYCw==';
+      process.env.FRONTEND_URL = 'http://localhost:3000';
+    }
+  }
+}
+
 const express = require('express');
 
 const app = express();
@@ -46,6 +67,99 @@ app.get('/api/v1/health', (req, res) => {
     api: 'v1',
     message: 'API v1 is working'
   });
+});
+
+// Get user profile endpoint
+app.get('/auth/profile', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Missing or invalid authorization header'
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+    
+    // Import Supabase client
+    const { createClient } = require('@supabase/supabase-js');
+    
+    // Create Supabase client with service role key for database operations
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    // Simple JWT decode to get user_id (skip verification for now)
+    let userId;
+    try {
+      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+      userId = payload.sub;
+      
+      if (!userId) {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Invalid token - no user ID'
+        });
+      }
+    } catch (error) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid token format'
+      });
+    }
+
+    // Get user profile with role and permissions
+    const { data: branchUser, error: profileError } = await supabase
+      .from('branch_users')
+      .select(`
+        *,
+        user_profiles!inner(full_name, phone, avatar_url),
+        branches!inner(id, name, chain_id, restaurant_chains!inner(id, name))
+      `)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single();
+
+    if (profileError || !branchUser) {
+      return res.status(404).json({
+        error: 'Profile Not Found',
+        message: 'User profile not found or inactive'
+      });
+    }
+
+    // Get user email from auth.users
+    const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+    
+    // Format response to match frontend expectations
+    const userProfile = {
+      id: userId,
+      email: authUser?.user?.email || 'unknown@example.com',
+      full_name: branchUser.user_profiles.full_name,
+      phone: branchUser.user_profiles.phone,
+      avatar_url: branchUser.user_profiles.avatar_url,
+      chain_id: branchUser.branches.restaurant_chains.id,
+      branch_id: branchUser.branch_id,
+      branch_name: branchUser.branches.name,
+      role: branchUser.role,
+      permissions: branchUser.permissions,
+      is_active: branchUser.is_active,
+      created_at: branchUser.created_at,
+      updated_at: branchUser.updated_at
+    };
+
+    res.json({
+      data: userProfile
+    });
+
+  } catch (error) {
+    console.error('Profile fetch error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to fetch user profile'
+    });
+  }
 });
 
 // Create user endpoint
@@ -449,9 +563,22 @@ app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Route not found',
     message: 'The requested endpoint does not exist',
-    availableRoutes: ['/', '/health', '/api/v1/health', 'GET /api/v1/users/branch/:branchId', 'POST /api/v1/users', 'PATCH /api/v1/users/:userId/branch/:branchId', 'DELETE /api/v1/users/:userId/branch/:branchId', '/test']
+    availableRoutes: ['/', '/health', '/api/v1/health', 'GET /auth/profile', 'GET /api/v1/users/branch/:branchId', 'POST /api/v1/users', 'PATCH /api/v1/users/:userId/branch/:branchId', 'DELETE /api/v1/users/:userId/branch/:branchId', '/test']
   });
 });
+
+// Local development server
+if (require.main === module) {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`🚀 Express API running on http://localhost:${PORT}`);
+    console.log(`📋 Available endpoints:`);
+    console.log(`   GET  /health`);
+    console.log(`   GET  /auth/profile`);
+    console.log(`   POST /api/v1/users`);
+    console.log(`   GET  /api/v1/users/branch/:branchId`);
+  });
+}
 
 // Export for Vercel
 module.exports = app;

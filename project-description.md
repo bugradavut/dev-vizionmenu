@@ -8,9 +8,7 @@ I'm a solo developer using the following stack:
 
 ## Tech Stack
 - **Frontend**: Next.js (App Router, Server Components), TailwindCSS, ShadCN UI, TypeScript
-- **Backend**: 
-  - **Local Development**: NestJS (REST API, modular structure), TypeScript
-  - **Production**: Express.js Serverless Functions (Vercel)
+- **Backend**: Express.js (Unified for development & production), TypeScript
 - **Database**: Supabase (PostgreSQL) with Row-Level Security (RLS)
 - **Queue & Cache**: BullMQ + Upstash Redis
 - **Auth**: Supabase Auth (JWT with `restaurant_id` claim)
@@ -22,9 +20,9 @@ I'm a solo developer using the following stack:
 
 apps/
 web/        → Next.js (Client UI + Admin UI)
-api/        → NestJS API (local dev) + Express.js (production serverless)
-  ├── src/  → NestJS modular structure (controllers, services, modules)
-  └── api/  → Express.js serverless functions for Vercel
+api/        → Express.js API (unified development & production)
+  ├── api/  → Express.js main application (index.js)
+  └── src/  → Legacy NestJS files (archived)
 worker/     → 3rd-party order sync with Uber Eats / DoorDash
 
 packages/

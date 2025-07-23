@@ -16,25 +16,25 @@ Projede 2 farklı repository kullanıyoruz:
 
 ## 🏗️ Backend Architecture
 
-Projede **çift backend** yapısı kullanılmaktadır:
+Projede **unified Express.js backend** yapısı kullanılmaktadır:
 
-### Local Development Backend
-- **Framework**: NestJS
-- **Port**: 3001
-- **Kullanım**: Feature geliştirme, debug, testing
-- **Avantajlar**: Modüler yapı, type safety, comprehensive tooling
-
-### Production Backend  
+### Unified Development & Production Backend
 - **Framework**: Express.js
-- **Platform**: Vercel Serverless Functions
+- **Local Port**: 3001 
+- **Local Command**: `npm run dev` → `node api/index.js`
+- **Production Platform**: Vercel Serverless Functions (same codebase)
 - **File**: `apps/api/api/index.js`
-- **Avantajlar**: Fast cold start, simple deployment, low cost
+- **Avantajlar**: 
+  - Production-dev parity (aynı kod her yerde)
+  - Simple debugging ve maintenance
+  - Fast deployment, zero-config
+  - Single codebase to maintain
 
-### Backend Synchronization
-- Her iki backend de aynı API contract'ı implement eder
-- Response format'lar identical: `{data: ..., meta: ...}`
-- Aynı Supabase database kullanır
-- Production'da eksik endpoint'ler tespit edildiğinde Express'e eklenir
+### Architecture Benefits
+- **What you develop is what you deploy**: Local'de test ettiğin kod aynen production'a çıkar
+- **Consistent response format**: `{data: ..., meta: ...}` format'ı unified
+- **Same database**: Aynı Supabase instance kullanır
+- **No sync needed**: Tek codebase, tek endpoint set
 
 ## 🔄 Development Workflow
 

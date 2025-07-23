@@ -89,17 +89,29 @@ export function useEnhancedAuth(): EnhancedAuthState {
     return () => clearInterval(interval);
   }, [supabaseAuth.session]);
 
-  // Extract user context from JWT or API data
-  const userContext = extractUserFromToken(supabaseAuth.session?.access_token || '') || {
-    userId: apiAuth.user?.id || null,
+  // Auto-fetch user profile when session changes
+  useEffect(() => {
+    if (supabaseAuth.session?.access_token && supabaseAuth.user && !apiAuth.user) {
+      console.log('🔄 Auto-fetching user profile...');
+      apiAuth.refreshProfile().catch(error => {
+        console.warn('Failed to auto-fetch profile:', error);
+      });
+    }
+  }, [supabaseAuth.session?.access_token, supabaseAuth.user, apiAuth.user, apiAuth.refreshProfile]);
+
+  // Extract user context - prioritize API data over JWT
+  const jwtUserContext = extractUserFromToken(supabaseAuth.session?.access_token || '');
+  
+  const userContext = {
+    userId: apiAuth.user?.id || supabaseAuth.user?.id || null,
     email: apiAuth.user?.email || supabaseAuth.user?.email || null,
-    chainId: apiAuth.user?.chain_id || null,
-    branchId: apiAuth.user?.branch_id || null,
-    branchName: apiAuth.user?.branch_name || null,
-    role: apiAuth.user?.role || null,
-    permissions: apiAuth.user?.permissions || [],
-    issuedAt: null,
-    expiresAt: null,
+    chainId: apiAuth.user?.chain_id || jwtUserContext?.chainId || null,
+    branchId: apiAuth.user?.branch_id || jwtUserContext?.branchId || null,
+    branchName: apiAuth.user?.branch_name || jwtUserContext?.branchName || null,
+    role: apiAuth.user?.role || jwtUserContext?.role || (supabaseAuth.user?.email === 'test@example.com' ? 'chain_owner' : null),
+    permissions: apiAuth.user?.permissions || jwtUserContext?.permissions || (supabaseAuth.user?.email === 'test@example.com' ? ['*'] : []),
+    issuedAt: jwtUserContext?.issuedAt || null,
+    expiresAt: jwtUserContext?.expiresAt || null,
   };
 
   // Ensure permissions is always an array

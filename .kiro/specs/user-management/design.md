@@ -10,35 +10,39 @@ Bu design dokümanı, VizionMenu'nun multi-branch (çok şubeli) User Management
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Next.js Web   │    │  Dual Backend   │    │   Supabase DB   │
+│   Next.js Web   │    │  Express.js API │    │   Supabase DB   │
 │                 │    │                 │    │                 │
-│ - User Mgmt UI  │◄──►│ Local: NestJS   │◄──►│ - RLS Policies  │
-│ - Role Guards   │    │ Prod: Express   │    │ - JWT Claims    │
-│ - Permissions   │    │ - Same API      │    │ - Triggers      │
+│ - User Mgmt UI  │◄──►│ - REST API      │◄──►│ - RLS Policies  │
+│ - Role Guards   │    │ - JWT Auth      │    │ - JWT Claims    │
+│ - Permissions   │    │ - Serverless    │    │ - Triggers      │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
 ### Backend Architecture Strategy
 
-Projede **çift backend** yaklaşımı kullanılmaktadır:
+Projede **unified Express.js backend** yaklaşımı kullanılmaktadır:
 
-#### Local Development Backend
-- **Framework**: NestJS (modular, type-safe, comprehensive)
-- **Location**: `apps/api/src/`
-- **Usage**: Feature development, debugging, testing
-- **Benefits**: Full NestJS ecosystem, hot reload, detailed error handling
-
-#### Production Backend
-- **Framework**: Express.js Serverless Functions
+#### Development & Production Backend
+- **Framework**: Express.js (lightweight, fast, flexible)
 - **Location**: `apps/api/api/index.js`
-- **Platform**: Vercel Serverless
-- **Benefits**: Fast deployment, low cold start, cost effective
+- **Platform**: Vercel Serverless (Production) + Local Dev
+- **Benefits**: 
+  - Production-dev parity (aynı kod her yerde)
+  - Fast deployment, low cold start
+  - Simple debugging and maintenance
+  - Single codebase to maintain
 
-#### API Contract Consistency
-- Both backends implement identical API endpoints
-- Same response format: `{data: ..., meta: ...}`
-- Same authentication and authorization patterns
-- Same Supabase database integration
+#### Local Development
+- **Command**: `npm run dev` → `node api/index.js`
+- **Port**: `localhost:3001`
+- **Features**: Same endpoints as production
+- **Benefits**: What you develop is what you deploy
+
+#### Production Deployment
+- **Platform**: Vercel Serverless Functions
+- **Build**: `cp api/index.js index.js`
+- **URL**: `https://dev-vizionmenu-web.vercel.app`
+- **Benefits**: Zero-config deployment, auto-scaling
 
 ### Database Layer Enhancements
 
@@ -141,38 +145,41 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 ```
 
-### 2. NestJS Backend Architecture
+### 2. Express.js Backend Architecture
 
-#### Auth Module Structure
+#### File Structure
 ```
-apps/api/src/auth/
-├── auth.module.ts
-├── strategies/
-│   └── jwt.strategy.ts
-├── guards/
-│   ├── jwt-auth.guard.ts
-│   └── roles.guard.ts
-├── decorators/
-│   ├── current-user.decorator.ts
-│   ├── require-role.decorator.ts
-│   └── restaurant-context.decorator.ts
-└── interfaces/
-    └── jwt-payload.interface.ts
+apps/api/
+├── api/
+│   └── index.js          # Main Express app (unified for dev & prod)
+├── package.json          # Dependencies & scripts
+└── README.md
 ```
 
-#### Users Module Structure
+#### Main Express App Structure (`api/index.js`)
+```javascript
+// Core Components:
+// 1. Express app setup with CORS
+// 2. Supabase client integration
+// 3. JWT authentication middleware
+// 4. API endpoints:
+//    - GET  /health              # Health check
+//    - GET  /auth/profile        # Get user profile with roles
+//    - POST /api/v1/users        # Create user
+//    - GET  /api/v1/users/branch/:branchId  # List branch users
+//    - PATCH /api/v1/users/:userId/branch/:branchId  # Update user
+//    - DELETE /api/v1/users/:userId/branch/:branchId # Delete user
+// 5. Error handling & 404 routes
+// 6. Local dev server (port 3001)
+// 7. Vercel export
 ```
-apps/api/src/users/
-├── users.module.ts
-├── users.controller.ts
-├── users.service.ts
-├── dto/
-│   ├── create-user.dto.ts
-│   ├── update-user.dto.ts
-│   └── assign-role.dto.ts
-└── entities/
-    └── user.entity.ts
-```
+
+#### Key Functions
+- **Authentication**: JWT token verification via Supabase
+- **Authorization**: Role-based access control
+- **Database**: Direct Supabase client queries
+- **Error Handling**: Consistent error responses
+- **CORS**: Frontend integration support
 
 ### 3. Frontend Components Architecture
 
@@ -276,53 +283,61 @@ interface ApiError {
 
 ### Backend Error Handling
 
-#### Custom Exception Filters
-```typescript
-@Catch()
-export class AllExceptionsFilter implements ExceptionFilter {
-  catch(exception: unknown, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse();
-    
-    if (exception instanceof UnauthorizedException) {
-      return response.status(401).json({
-        type: 'https://vizionmenu.com/errors/unauthorized',
-        title: 'Unauthorized',
-        status: 401,
-        detail: 'JWT token invalid or missing'
-      });
-    }
-    
-    if (exception instanceof ForbiddenException) {
-      return response.status(403).json({
-        type: 'https://vizionmenu.com/errors/forbidden',
-        title: 'Forbidden',
-        status: 403,
-        detail: 'Insufficient permissions for this operation'
-      });
-    }
+#### Express.js Error Handling
+```javascript
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('API Error:', err);
+  
+  // JWT authentication errors
+  if (err.name === 'UnauthorizedError') {
+    return res.status(401).json({
+      error: 'Unauthorized',
+      message: 'JWT token invalid or missing'
+    });
   }
-}
+  
+  // Permission errors
+  if (err.name === 'ForbiddenError') {
+    return res.status(403).json({
+      error: 'Forbidden', 
+      message: 'Insufficient permissions for this operation'
+    });
+  }
+  
+  // Generic server error
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: err.message || 'An unexpected error occurred'
+  });
+});
 ```
 
-#### Role-Based Guards
-```typescript
-@Injectable()
-export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
-
-  canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
-      'roles',
-      [context.getHandler(), context.getClass()]
-    );
-
-    if (!requiredRoles) return true;
-
-    const { user } = context.switchToHttp().getRequest();
-    return requiredRoles.includes(user.role);
+#### Authentication Middleware
+```javascript
+// JWT verification middleware
+const authenticateToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Missing or invalid authorization header'
+    });
   }
-}
+
+  const token = authHeader.split(' ')[1];
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  
+  if (error || !user) {
+    return res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Invalid token'
+    });
+  }
+  
+  req.user = user;
+  next();
+};
 ```
 
 ### Frontend Error Handling
@@ -362,9 +377,10 @@ export class UserManagementErrorBoundary extends Component<
 ### Backend Testing
 
 #### Unit Tests
-- **Auth Module Tests**: JWT strategy, guards, decorators
-- **Users Service Tests**: CRUD operations, role assignments
-- **Guards Tests**: Role-based access control
+- **Authentication Tests**: JWT token verification
+- **API Endpoint Tests**: Individual route handlers  
+- **Database Query Tests**: Supabase integration
+- **Permission Tests**: Role-based access control
 
 #### Integration Tests
 - **API Endpoint Tests**: Full request/response cycle
@@ -443,17 +459,28 @@ interface EnvConfig {
 - **Performance**: Database query performance
 
 ### Health Checks
-```typescript
-@Controller('health')
-export class HealthController {
-  @Get()
-  async check(): Promise<HealthCheckResult> {
-    return {
-      status: 'ok',
-      database: await this.checkDatabase(),
-      redis: await this.checkRedis(),
-      auth: await this.checkAuth()
-    };
-  }
-}
+```javascript
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'production',
+    version: '1.0.0',
+    message: 'Backend API is healthy'
+  });
+});
+
+// Detailed health check (future enhancement)
+app.get('/health/detailed', async (req, res) => {
+  const checks = {
+    status: 'ok',
+    database: await checkSupabaseConnection(),
+    memory: process.memoryUsage(),
+    uptime: process.uptime()
+  };
+  
+  res.json(checks);
+});
 ```
