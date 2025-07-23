@@ -130,7 +130,7 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px]" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Edit User</DialogTitle>
           <DialogDescription>
@@ -150,6 +150,7 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               className={errors.email ? 'border-red-500' : ''}
               disabled={isSubmitting}
+              autoFocus={false}
               required
             />
             {errors.email && (

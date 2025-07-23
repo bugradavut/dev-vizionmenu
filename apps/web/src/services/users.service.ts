@@ -94,13 +94,13 @@ export class UsersService {
     userId: string,
     branchId: string,
     userData: UpdateUserRequest
-  ): Promise<BranchUser> {
-    const response = await apiClient.patch<BranchUser>(
+  ): Promise<void> {
+    await apiClient.patch<{data: {success: boolean}}>(
       `/api/v1/users/${userId}/branch/${branchId}`,
       userData
     );
     
-    return response.data;
+    // Backend returns {data: {success: true}} but we don't need to return anything
   }
 
   /**

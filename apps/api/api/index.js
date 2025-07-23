@@ -68,6 +68,7 @@ app.post('/api/v1/users', async (req, res) => {
       email_confirm: true,
       user_metadata: {
         full_name,
+        display_name: full_name,
         phone
       }
     });
@@ -134,11 +135,11 @@ app.post('/api/v1/users', async (req, res) => {
   }
 });
 
-// Toggle user status endpoint
+// Update user endpoint
 app.patch('/api/v1/users/:userId/branch/:branchId', async (req, res) => {
   try {
     const { userId, branchId } = req.params;
-    const { is_active } = req.body;
+    const { email, full_name, phone, is_active } = req.body;
     
     // Import Supabase client
     const { createClient } = require('@supabase/supabase-js');
@@ -149,37 +150,99 @@ app.patch('/api/v1/users/:userId/branch/:branchId', async (req, res) => {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
     
-    // Update user status
-    const { data, error } = await supabase
+    // Check if user exists in this branch
+    const { data: existingUser, error: existingUserError } = await supabase
       .from('branch_users')
-      .update({ is_active })
+      .select('*')
       .eq('user_id', userId)
       .eq('branch_id', branchId)
-      .select()
       .single();
-      
-    if (error) {
-      console.error('Update user status error:', error);
-      return res.status(400).json({
-        error: 'Database Error',
-        message: `Failed to update user status: ${error.message}`
-      });
-    }
-    
-    if (!data) {
+
+    if (existingUserError || !existingUser) {
       return res.status(404).json({
         error: 'Not Found',
-        message: 'User not found in branch'
+        message: 'User not found in this branch'
       });
     }
+
+    // Update user profile if profile fields provided
+    if (full_name || phone) {
+      const profileUpdate = {};
+      if (full_name) profileUpdate.full_name = full_name;
+      if (phone) profileUpdate.phone = phone;
+
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update(profileUpdate)
+        .eq('user_id', userId);
+
+      if (profileError) {
+        console.error('Profile update error:', profileError);
+        return res.status(400).json({
+          error: 'Database Error',
+          message: `Failed to update user profile: ${profileError.message}`
+        });
+      }
+
+      // Also update auth user metadata if full_name changed
+      if (full_name) {
+        const { error: authMetaError } = await supabase.auth.admin.updateUserById(
+          userId,
+          { 
+            user_metadata: { 
+              full_name: full_name,
+              display_name: full_name 
+            } 
+          }
+        );
+
+        if (authMetaError) {
+          // Don't return error - profile update succeeded, this is just for consistency
+          console.warn('Profile updated but auth metadata sync failed:', authMetaError);
+        }
+      }
+    }
+
+    // Update auth user email if provided
+    if (email) {
+      const { error: authError } = await supabase.auth.admin.updateUserById(
+        userId,
+        { email: email }
+      );
+
+      if (authError) {
+        console.error('Email update error:', authError);
+        return res.status(400).json({
+          error: 'Auth Error',
+          message: `Failed to update user email: ${authError.message}`
+        });
+      }
+    }
+
+    // Update branch user status if provided
+    if (is_active !== undefined) {
+      const { error: branchUserError } = await supabase
+        .from('branch_users')
+        .update({ is_active })
+        .eq('user_id', userId)
+        .eq('branch_id', branchId);
+
+      if (branchUserError) {
+        console.error('Branch user update error:', branchUserError);
+        return res.status(400).json({
+          error: 'Database Error',
+          message: `Failed to update user status: ${branchUserError.message}`
+        });
+      }
+    }
     
-    // Return updated user (in NestJS format)
+    // Return success response in NestJS format
     res.json({
-      data: data
+      data: { success: true }
     });
     
   } catch (error) {
-    console.error('Toggle user status endpoint error:', error);
+    console.error('Update user endpoint error:', error);
     res.status(500).json({
       error: 'Internal Server Error',
       message: error.message

@@ -133,20 +133,42 @@ export const useUsersStore = create<UsersState>()(
       },
 
       updateUser: async (userId, branchId, userData) => {
-        const { setLoading, setError, updateUserInList } = get();
+        const { setLoading, setError, users, setUsers, totalUsers, currentPage, pageLimit } = get();
         
         try {
           setLoading(true);
           setError(null);
           
-          const updatedUser = await usersService.updateUser(userId, branchId, userData);
-          updateUserInList(updatedUser);
+          // Make API call first (returns success only)
+          await usersService.updateUser(userId, branchId, userData);
           
-          return updatedUser;
+          // Only update local state if API call was successful
+          const updatedUsers = users.map(user => {
+            if (user.user_id === userId && user.branch_id === branchId) {
+              return {
+                ...user,
+                user: {
+                  ...user.user,
+                  ...(userData.email && { email: userData.email }),
+                  ...(userData.full_name && { full_name: userData.full_name }),
+                  ...(userData.phone !== undefined && { phone: userData.phone }),
+                },
+                ...(userData.is_active !== undefined && { is_active: userData.is_active }),
+              };
+            }
+            return user;
+          });
+          
+          setUsers(updatedUsers, totalUsers, currentPage, pageLimit);
+          
+          // Return the updated user for component use
+          const updatedUser = updatedUsers.find(u => u.user_id === userId && u.branch_id === branchId);
+          return updatedUser!;
         } catch (error) {
+          console.error('❌ Update user error:', error);
           const errorMessage = error instanceof Error ? error.message : 'Failed to update user';
           setError(errorMessage);
-          throw error;
+          throw error; // Re-throw so component can handle it
         } finally {
           setLoading(false);
         }

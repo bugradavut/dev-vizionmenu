@@ -191,6 +191,7 @@ export class UsersService {
         email_confirm: true,
         user_metadata: {
           full_name: createUserDto.full_name,
+          display_name: createUserDto.full_name,
         },
       });
 
@@ -271,7 +272,7 @@ export class UsersService {
     branchId: string,
     updateUserDto: UpdateUserDto,
     currentUserId: string,
-  ): Promise<BranchUser> {
+  ): Promise<void> {
     try {
       const supabase = this.databaseService.getAdminClient();
 
@@ -322,6 +323,24 @@ export class UsersService {
 
         if (profileError) {
           throw new BadRequestException(`Failed to update user profile: ${profileError.message}`);
+        }
+
+        // Also update auth user metadata if full_name changed
+        if (updateUserDto.full_name) {
+          const { error: authMetaError } = await supabase.auth.admin.updateUserById(
+            userId,
+            { 
+              user_metadata: { 
+                full_name: updateUserDto.full_name,
+                display_name: updateUserDto.full_name 
+              } 
+            }
+          );
+
+          if (authMetaError) {
+            // Don't throw error here - profile update succeeded, this is just for consistency
+            this.logger.warn(`Profile updated but auth metadata sync failed: ${authMetaError.message}`);
+          }
         }
       }
 

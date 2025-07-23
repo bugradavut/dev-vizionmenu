@@ -137,7 +137,7 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px]" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
           <DialogDescription>
@@ -157,6 +157,7 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               className={errors.email ? 'border-red-500' : ''}
               disabled={isSubmitting}
+              autoFocus={false}
               required
             />
             {errors.email && (
