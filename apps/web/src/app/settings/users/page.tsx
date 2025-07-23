@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui"
 import { UserCheck, Shield, Users } from "lucide-react"
 import { UserListTable, CreateUserModal, EditUserModal } from "@/components/user-management"
 import { useUsers, useAuthApi } from "@/hooks"
+import { AuthDebug } from "@/components/auth/auth-debug"
 import type { BranchUser } from "@repo/types/auth"
 
 export default function UserManagementPage() {
@@ -102,7 +103,8 @@ export default function UserManagementPage() {
               </div>
               
               <div className="grid gap-6">
-                {/* Debug component removed - production ready */}
+                {/* DEBUG: Check JWT token role */}
+                <AuthDebug />
                 
                 {/* Stats Cards */}
                 <div className="grid gap-4 md:grid-cols-3">
