@@ -36,7 +36,7 @@ interface UsersState {
   createUser: (userData: CreateUserRequest) => Promise<boolean>;
   updateUser: (userId: string, branchId: string, userData: UpdateUserRequest) => Promise<BranchUser>;
   assignRole: (userId: string, branchId: string, roleData: AssignRoleRequest) => Promise<BranchUser>;
-  toggleUserStatus: (userId: string, branchId: string, isActive: boolean) => Promise<BranchUser>;
+  toggleUserStatus: (userId: string, branchId: string, isActive: boolean) => Promise<boolean>;
   removeUser: (userId: string, branchId: string) => Promise<void>;
   
   // Utility Actions

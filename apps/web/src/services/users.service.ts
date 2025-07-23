@@ -126,8 +126,8 @@ export class UsersService {
     userId: string,
     branchId: string,
     isActive: boolean
-  ): Promise<BranchUser> {
-    return this.updateUser(userId, branchId, { is_active: isActive });
+  ): Promise<void> {
+    await this.updateUser(userId, branchId, { is_active: isActive });
   }
 
   /**
