@@ -3,7 +3,7 @@
  * Combines Supabase auth with JWT token parsing and enhanced permissions
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useAuthApi } from './use-auth';
 import { supabase } from '@/lib/supabase';
@@ -12,8 +12,8 @@ import type { BranchRole, AuthTokenPayload } from '@repo/types/auth';
 
 interface EnhancedAuthState {
   // Combined user data
-  user: any | null;
-  session: any | null;
+  user: unknown | null;
+  session: unknown | null;
   loading: boolean;
   
   // JWT-specific data
@@ -87,7 +87,7 @@ export function useEnhancedAuth(): EnhancedAuthState {
     // Check every minute
     const interval = setInterval(checkExpiration, 60 * 1000);
     return () => clearInterval(interval);
-  }, [supabaseAuth.session?.access_token]);
+  }, [supabaseAuth.session]);
 
   // Extract user context from JWT or API data
   const userContext = extractUserFromToken(supabaseAuth.session?.access_token || '') || {
@@ -103,7 +103,9 @@ export function useEnhancedAuth(): EnhancedAuthState {
   };
 
   // Ensure permissions is always an array
-  const safePermissions = Array.isArray(userContext.permissions) ? userContext.permissions : [];
+  const safePermissions = useMemo(() => {
+    return Array.isArray(userContext.permissions) ? userContext.permissions : [];
+  }, [userContext.permissions]);
 
   // Permission utilities
   const hasPermission = useCallback((permission: string): boolean => {
@@ -125,7 +127,7 @@ export function useEnhancedAuth(): EnhancedAuthState {
   // Token management
   const refreshToken = useCallback(async (): Promise<void> => {
     try {
-      const { data, error } = await supabase.auth.refreshSession();
+      const { error } = await supabase.auth.refreshSession();
       if (error) {
         console.error('Token refresh failed:', error);
         throw error;
@@ -158,7 +160,7 @@ export function useEnhancedAuth(): EnhancedAuthState {
     // Check every 5 minutes
     const interval = setInterval(checkAndRefresh, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [supabaseAuth.session?.access_token, isTokenExpiring, refreshToken]);
+  }, [supabaseAuth.session, isTokenExpiring, refreshToken]);
 
   return {
     // Combined auth state
