@@ -71,7 +71,6 @@ export function UserListTable({
 
   const { users, loading, error, fetchUsers, totalUsers } = useUsers();
   const { toggleUserStatus, removeUser } = useUserMutations();
-  const { hasPermission } = usePermissions();
 
   // Fetch users from API
   useEffect(() => {
