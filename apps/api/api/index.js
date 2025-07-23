@@ -51,7 +51,7 @@ app.get('/api/v1/health', (req, res) => {
 // Create user endpoint
 app.post('/api/v1/users', async (req, res) => {
   try {
-    const { email, full_name, phone, branch_id, role, permissions } = req.body;
+    const { email, password, full_name, phone, branch_id, role, permissions } = req.body;
     
     // Import Supabase client
     const { createClient } = require('@supabase/supabase-js');
