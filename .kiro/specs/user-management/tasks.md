@@ -57,7 +57,7 @@
   - GET /api/v1/users/branch/:branchId endpoint (branch-scoped) ✅ Both backends
   - POST /api/v1/users endpoint (create user) ✅ Both backends  
   - PATCH /api/v1/users/:userId/branch/:branchId endpoint (update user) ✅ Both backends
-  - DELETE /api/v1/users/:userId/branch/:branchId endpoint (delete user) ⏳ Express pending
+  - DELETE /api/v1/users/:userId/branch/:branchId endpoint (delete user) ✅ Both backends
   - POST /api/v1/users/:userId/branch/:branchId/assign-role (role assignment) ⏳ Express pending
   - CreateUserDto, UpdateUserDto, AssignRoleDto oluştur ✅ NestJS
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
@@ -79,13 +79,15 @@
   - Token refresh logic ekle
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 5.5, 5.6_
 
-- [ ] 6. User Management Page Components
-- [ ] 6.1 Multi-Branch UserListTable Component
-  - ShadCN DataTable ile branch-scoped user listesi oluştur
-  - Branch selector dropdown (chain owner için)
-  - Sorting, filtering, pagination ekle
-  - Role-based action buttons (edit, delete, transfer)
-  - Real-time updates için React Query kullan
+- [x] 6. User Management Page Components
+- [x] 6.1 Multi-Branch UserListTable Component
+  - ✅ ShadCN DataTable ile branch-scoped user listesi oluştur
+  - ✅ Sorting, filtering, pagination ekle
+  - ✅ Role-based action buttons (edit, delete, toggle status)
+  - ✅ Hard delete functionality with confirmation dialog
+  - ✅ UI text changed from "Remove User" to "Delete User"
+  - ✅ Real-time updates için Zustand store kullan
+  - ⏳ Branch selector dropdown (chain owner için) - Future feature
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 6.2_
 
 - [ ] 6.2 Multi-Branch CreateUserModal Component
@@ -185,12 +187,13 @@
 - **Response Format**: {data: ..., meta: ...} formatı consistent
 - **Database**: Aynı Supabase instance kullanıyor
 - **Authentication**: Supabase JWT ile consistent
+- **Hard Delete**: User deletion completely removes records from database
 
 ### Production Express API Endpoints
 - ✅ GET /api/v1/users/branch/:branchId (User listing)
 - ✅ POST /api/v1/users (User creation)  
 - ✅ PATCH /api/v1/users/:userId/branch/:branchId (Status toggle)
-- ⏳ DELETE /api/v1/users/:userId/branch/:branchId (User deletion) - Next
+- ✅ DELETE /api/v1/users/:userId/branch/:branchId (User deletion with hard delete)
 - ⏳ Role assignment endpoints - Next
 
 ### Key Benefits of Dual Approach
@@ -198,3 +201,13 @@
 - **Production Simplicity**: Express serverless ile kolay deploy
 - **Cost Effective**: Serverless cold start optimization
 - **Consistency**: Aynı API contract ve response format
+- **Complete CRUD**: Full user lifecycle management (create, read, update, delete)
+
+### Recent Completions (Latest Session)
+- ✅ **Hard Delete Implementation**: Changed from soft delete (is_active: false) to hard delete
+- ✅ **UI Text Update**: Changed "Remove User" to "Delete User" for clarity
+- ✅ **Confirmation Dialog**: Added permanent deletion warning
+- ✅ **Cascade Delete Logic**: Removes user from branch_users, user_profiles, and auth system
+- ✅ **Express API Parity**: DELETE endpoint implemented in production backend
+- ✅ **Frontend State Management**: Proper user removal from Zustand store
+- ✅ **Database Cleanup**: Complete user removal when no other branches exist

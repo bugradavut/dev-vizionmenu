@@ -19,11 +19,14 @@ import {
 } from "@/components/ui/sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui"
 import { UserCheck, Shield, Users } from "lucide-react"
-import { UserListTable, CreateUserModal } from "@/components/user-management"
+import { UserListTable, CreateUserModal, EditUserModal } from "@/components/user-management"
 import { useUsers, useAuthApi } from "@/hooks"
+import type { BranchUser } from "@repo/types/auth"
 
 export default function UserManagementPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<BranchUser | null>(null);
 
   const { users, totalUsers } = useUsers();
   const { user } = useAuthApi();
@@ -38,8 +41,14 @@ export default function UserManagementPage() {
     setShowCreateModal(true);
   };
 
-  const handleEditUser = () => {
-    // TODO: Implement edit user functionality
+  const handleEditUser = (user: BranchUser) => {
+    setSelectedUser(user);
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setSelectedUser(null);
   };
 
   return (
@@ -146,6 +155,13 @@ export default function UserManagementPage() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         branchId={currentBranchId}
+      />
+
+      {/* Edit User Modal */}
+      <EditUserModal
+        isOpen={showEditModal}
+        onClose={handleCloseEditModal}
+        user={selectedUser}
       />
     </AuthGuard>
   )
