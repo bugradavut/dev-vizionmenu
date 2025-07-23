@@ -33,7 +33,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Search, UserPlus, Filter } from 'lucide-react';
-import { useUsers, useUserMutations, usePermissions } from '@/hooks';
+import { useUsers, useUserMutations } from '@/hooks';
+import { usePermissions } from '@/hooks/use-enhanced-auth';
 import type { BranchUser, BranchRole } from '@repo/types/auth';
 import { cn } from '@/lib/utils';
 
@@ -125,8 +126,10 @@ export function UserListTable({
     return email?.substring(0, 2).toUpperCase() || 'U';
   };
 
-  const canManageUsers = hasPermission('user_management') || true; // Always show for testing
-  const canDeleteUsers = hasPermission('user_management') || true;
+  // Real permission checks using enhanced auth
+  const permissions = usePermissions();
+  const canManageUsers = permissions.canManageUsers;
+  const canDeleteUsers = permissions.canDeleteUsers;
 
   return (
     <Card className={cn('w-full', className)}>
