@@ -243,6 +243,7 @@ export interface CreateUserResponse {
 }
 
 export interface UpdateUserRequest {
+  email?: string;
   full_name?: string;
   phone?: string;
   is_active?: boolean;
