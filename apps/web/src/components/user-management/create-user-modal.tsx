@@ -31,13 +31,38 @@ const ROLE_OPTIONS: { value: BranchRole; label: string }[] = [
   { value: 'branch_staff', label: 'Branch Staff' },
   { value: 'branch_cashier', label: 'Branch Cashier' },
   { value: 'branch_manager', label: 'Branch Manager' },
+  { value: 'chain_owner', label: 'Chain Owner' },
 ];
 
 const DEFAULT_PERMISSIONS: Record<BranchRole, string[]> = {
-  chain_owner: ['user_management', 'menu_management', 'order_management', 'reports'],
-  branch_manager: ['user_management', 'menu_management', 'order_management'],
-  branch_staff: ['order_management'],
-  branch_cashier: ['order_management'],
+  chain_owner: [
+    "users:read", "users:write", "users:delete",
+    "menu:read", "menu:write",
+    "orders:read", "orders:write",
+    "reports:read",
+    "settings:read", "settings:write",
+    "branch:read", "branch:write"
+  ],
+  branch_manager: [
+    "branch:read", "branch:write",
+    "menu:read", "menu:write",
+    "orders:read", "orders:write",
+    "reports:read",
+    "users:read", "users:write",
+    "settings:read", "settings:write"
+  ],
+  branch_staff: [
+    "branch:read",
+    "menu:read",
+    "orders:read", "orders:write",
+    "reports:read"
+  ],
+  branch_cashier: [
+    "branch:read",
+    "menu:read",
+    "orders:read", "orders:write",
+    "payments:read", "payments:write"
+  ]
 };
 
 export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalProps) {

@@ -160,7 +160,20 @@ export interface RolePermission {
 }
 
 export const DEFAULT_PERMISSIONS: Record<BranchRole, string[]> = {
-  chain_owner: ["*"], // All permissions across all branches
+  chain_owner: [
+    "users:read",
+    "users:write", 
+    "users:delete",
+    "menu:read",
+    "menu:write",
+    "orders:read", 
+    "orders:write",
+    "reports:read",
+    "settings:read",
+    "settings:write",
+    "branch:read",
+    "branch:write"
+  ], // Chain-level permissions (super_admin will have ["*"] in future)
   branch_manager: [
     "branch:read",
     "branch:write",

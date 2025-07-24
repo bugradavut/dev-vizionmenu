@@ -92,7 +92,6 @@ export function useEnhancedAuth(): EnhancedAuthState {
   // Auto-fetch user profile when session changes
   useEffect(() => {
     if (supabaseAuth.session?.access_token && supabaseAuth.user && !apiAuth.user) {
-      console.log('🔄 Auto-fetching user profile...');
       apiAuth.refreshProfile().catch(error => {
         console.warn('Failed to auto-fetch profile:', error);
       });
@@ -101,6 +100,7 @@ export function useEnhancedAuth(): EnhancedAuthState {
 
   // Extract user context - prioritize API data over JWT
   const jwtUserContext = extractUserFromToken(supabaseAuth.session?.access_token || '');
+
   
   const userContext = {
     userId: apiAuth.user?.id || supabaseAuth.user?.id || null,
@@ -108,11 +108,12 @@ export function useEnhancedAuth(): EnhancedAuthState {
     chainId: apiAuth.user?.chain_id || jwtUserContext?.chainId || null,
     branchId: apiAuth.user?.branch_id || jwtUserContext?.branchId || null,
     branchName: apiAuth.user?.branch_name || jwtUserContext?.branchName || null,
-    role: apiAuth.user?.role || jwtUserContext?.role || (supabaseAuth.user?.email === 'test@example.com' ? 'chain_owner' : null),
-    permissions: apiAuth.user?.permissions || jwtUserContext?.permissions || (supabaseAuth.user?.email === 'test@example.com' ? ['*'] : []),
+    role: apiAuth.user?.role || jwtUserContext?.role || null,
+    permissions: apiAuth.user?.permissions || jwtUserContext?.permissions || [],
     issuedAt: jwtUserContext?.issuedAt || null,
     expiresAt: jwtUserContext?.expiresAt || null,
   };
+
 
   // Ensure permissions is always an array
   const safePermissions = useMemo(() => {
@@ -121,7 +122,7 @@ export function useEnhancedAuth(): EnhancedAuthState {
 
   // Permission utilities
   const hasPermission = useCallback((permission: string): boolean => {
-    // Chain owners have all permissions
+    // Super admin (future) will have wildcard permissions
     if (safePermissions.includes('*')) return true;
     
     return safePermissions.includes(permission);
@@ -225,7 +226,7 @@ export function usePermissions() {
     isBranchManager,
     
     // Common permission checks
-    canManageUsers: hasPermission('users:write') || isChainOwner,
+    canManageUsers: isChainOwner, // Only chain owners can add users
     canDeleteUsers: hasPermission('users:delete') || isChainOwner,
     canManageMenu: hasPermission('menu:write') || isChainOwner || isBranchManager,
     canViewReports: hasPermission('reports:read') || isChainOwner || isBranchManager,

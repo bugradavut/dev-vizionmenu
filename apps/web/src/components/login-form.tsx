@@ -136,7 +136,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
                       <FormControl>
                         <Input
                           type="email"
-                          placeholder="test@example.com"
+                          placeholder="your@email.com"
                           {...field}
                         />
                       </FormControl>

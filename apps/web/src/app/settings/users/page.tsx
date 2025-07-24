@@ -30,6 +30,7 @@ export default function UserManagementPage() {
 
   const { users, totalUsers } = useUsers();
   const { user } = useAuthApi();
+  
 
   // Get current branch ID from authenticated user
   const currentBranchId = user?.branch_id || "550e8400-e29b-41d4-a716-446655440002";
@@ -57,7 +58,6 @@ export default function UserManagementPage() {
       {/* <ProtectedRoute 
         requireAuth={true}
         requiredPermission="users:write"
-        debug={true}
       > */}
         <SidebarProvider>
         <AppSidebar />
@@ -146,6 +146,7 @@ export default function UserManagementPage() {
 
                 {/* User List Table */}
                 <UserListTable
+                  key={`user-table-${user?.role}-${user?.id}`} // Force re-mount when user/role changes
                   branchId={currentBranchId}
                   onCreateUser={handleCreateUser}
                   onEditUser={handleEditUser}

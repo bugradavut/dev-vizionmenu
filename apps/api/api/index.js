@@ -110,38 +110,48 @@ app.get('/auth/profile', async (req, res) => {
       });
     }
 
-    // Get user profile with role and permissions
-    const { data: branchUser, error: profileError } = await supabase
+    // Get user profile with role and permissions (step by step)
+    const { data: branchUser, error: branchError } = await supabase
       .from('branch_users')
-      .select(`
-        *,
-        user_profiles!inner(full_name, phone, avatar_url),
-        branches!inner(id, name, chain_id, restaurant_chains!inner(id, name))
-      `)
+      .select('*')
       .eq('user_id', userId)
       .eq('is_active', true)
       .single();
 
-    if (profileError || !branchUser) {
+    if (branchError || !branchUser) {
       return res.status(404).json({
         error: 'Profile Not Found',
-        message: 'User profile not found or inactive'
+        message: 'User not found in branch_users table'
       });
     }
+
+    // Get user profile
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('full_name, phone, avatar_url')
+      .eq('user_id', userId)
+      .single();
+
+    // Get branch info
+    const { data: branchInfo, error: branchInfoError } = await supabase
+      .from('branches')
+      .select('id, name, chain_id, restaurant_chains(id, name)')
+      .eq('id', branchUser.branch_id)
+      .single();
 
     // Get user email from auth.users
     const { data: authUser } = await supabase.auth.admin.getUserById(userId);
     
     // Format response to match frontend expectations
-    const userProfile = {
+    const userProfileResponse = {
       id: userId,
       email: authUser?.user?.email || 'unknown@example.com',
-      full_name: branchUser.user_profiles.full_name,
-      phone: branchUser.user_profiles.phone,
-      avatar_url: branchUser.user_profiles.avatar_url,
-      chain_id: branchUser.branches.restaurant_chains.id,
+      full_name: userProfile?.full_name || 'No name',
+      phone: userProfile?.phone || null,
+      avatar_url: userProfile?.avatar_url || null,
+      chain_id: branchInfo?.restaurant_chains?.id || null,
       branch_id: branchUser.branch_id,
-      branch_name: branchUser.branches.name,
+      branch_name: branchInfo?.name || 'Unknown branch',
       role: branchUser.role,
       permissions: branchUser.permissions,
       is_active: branchUser.is_active,
@@ -150,7 +160,7 @@ app.get('/auth/profile', async (req, res) => {
     };
 
     res.json({
-      data: userProfile
+      data: userProfileResponse
     });
 
   } catch (error) {
@@ -471,15 +481,120 @@ app.get('/api/v1/users/branch/:branchId', async (req, res) => {
   }
 });
 
-// Test endpoint
-app.get('/test', (req, res) => {
-  res.json({
-    message: 'Test endpoint working!',
-    method: req.method,
-    url: req.url,
-    timestamp: new Date().toISOString()
-  });
+// Role assignment endpoint
+app.post('/api/v1/users/:userId/branch/:branchId/assign-role', async (req, res) => {
+  try {
+    const { userId, branchId } = req.params;
+    const { role } = req.body;
+    
+    // Validate role
+    const validRoles = ['chain_owner', 'branch_manager', 'branch_staff', 'branch_cashier'];
+    if (!role || !validRoles.includes(role)) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: `Invalid role. Must be one of: ${validRoles.join(', ')}`
+      });
+    }
+    
+    // Import Supabase client
+    const { createClient } = require('@supabase/supabase-js');
+    
+    // Create Supabase client with service role key
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    
+    // Check if user exists in this branch
+    const { data: existingUser, error: existingUserError } = await supabase
+      .from('branch_users')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('branch_id', branchId)
+      .single();
+
+    if (existingUserError || !existingUser) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: 'User not found in this branch'
+      });
+    }
+
+    // Get default permissions for the new role
+    const DEFAULT_PERMISSIONS = {
+      chain_owner: [
+        "users:read", "users:write", "users:delete",
+        "menu:read", "menu:write",
+        "orders:read", "orders:write",
+        "reports:read",
+        "settings:read", "settings:write",
+        "branch:read", "branch:write"
+      ],
+      branch_manager: [
+        "branch:read", "branch:write",
+        "menu:read", "menu:write",
+        "orders:read", "orders:write",
+        "reports:read",
+        "users:read", "users:write",
+        "settings:read", "settings:write"
+      ],
+      branch_staff: [
+        "branch:read",
+        "menu:read",
+        "orders:read", "orders:write",
+        "reports:read"
+      ],
+      branch_cashier: [
+        "branch:read",
+        "menu:read",
+        "orders:read", "orders:write",
+        "payments:read", "payments:write"
+      ]
+    };
+
+    const newPermissions = DEFAULT_PERMISSIONS[role] || [];
+
+    // Update user role AND permissions
+    const { data: updatedUser, error: updateError } = await supabase
+      .from('branch_users')
+      .update({ 
+        role: role,
+        permissions: newPermissions,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .eq('branch_id', branchId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Role assignment error:', updateError);
+      return res.status(400).json({
+        error: 'Database Error',
+        message: `Failed to assign role: ${updateError.message}`
+      });
+    }
+
+    // Return success response in NestJS format
+    res.json({
+      data: {
+        message: 'Role assigned successfully',
+        user_id: userId,
+        branch_id: branchId,
+        new_role: role,
+        updated_user: updatedUser
+      }
+    });
+    
+  } catch (error) {
+    console.error('Assign role endpoint error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error.message
+    });
+  }
 });
+
 
 // Delete user endpoint (hard delete)
 app.delete('/api/v1/users/:userId/branch/:branchId', async (req, res) => {
@@ -558,12 +673,13 @@ app.delete('/api/v1/users/:userId/branch/:branchId', async (req, res) => {
   }
 });
 
+
 // Catch all other routes
 app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Route not found',
     message: 'The requested endpoint does not exist',
-    availableRoutes: ['/', '/health', '/api/v1/health', 'GET /auth/profile', 'GET /api/v1/users/branch/:branchId', 'POST /api/v1/users', 'PATCH /api/v1/users/:userId/branch/:branchId', 'DELETE /api/v1/users/:userId/branch/:branchId', '/test']
+    availableRoutes: ['/', '/health', '/api/v1/health', 'GET /auth/profile', 'GET /api/v1/users/branch/:branchId', 'POST /api/v1/users', 'PATCH /api/v1/users/:userId/branch/:branchId', 'POST /api/v1/users/:userId/branch/:branchId/assign-role', 'DELETE /api/v1/users/:userId/branch/:branchId']
   });
 });
 
@@ -577,6 +693,7 @@ if (require.main === module) {
     console.log(`   GET  /auth/profile`);
     console.log(`   POST /api/v1/users`);
     console.log(`   GET  /api/v1/users/branch/:branchId`);
+    console.log(`   POST /api/v1/users/:userId/branch/:branchId/assign-role`);
   });
 }
 

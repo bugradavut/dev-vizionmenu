@@ -59,7 +59,7 @@ export class UsersService {
       
       throw new Error('Invalid response format from users API');
     } catch (error) {
-      console.error('❌ Users service error:', error);
+      console.error('Users service error:', error);
       throw error;
     }
   }

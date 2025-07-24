@@ -17,7 +17,7 @@ export default function TestProtectionPage() {
         {/* Test 1: Chain Owner Only */}
         <ProtectedRoute 
           requiredRole="chain_owner"
-          debug={true}
+          debug={false}
           unauthorizedComponent={
             <div className="p-4 bg-red-100 border border-red-300 rounded">
               ❌ Chain Owner Only Section - Access Denied
@@ -32,7 +32,7 @@ export default function TestProtectionPage() {
         {/* Test 2: Branch Manager Only */}
         <ProtectedRoute 
           requiredRole="branch_manager"
-          debug={true}
+          debug={false}
           unauthorizedComponent={
             <div className="p-4 bg-red-100 border border-red-300 rounded">
               ❌ Branch Manager Only Section - Access Denied
@@ -47,7 +47,7 @@ export default function TestProtectionPage() {
         {/* Test 3: Management Roles */}
         <ProtectedRoute 
           {...ProtectionPresets.managementOnly}
-          debug={true}
+          debug={false}
           unauthorizedComponent={
             <div className="p-4 bg-red-100 border border-red-300 rounded">
               ❌ Management Only Section - Access Denied
@@ -62,7 +62,7 @@ export default function TestProtectionPage() {
         {/* Test 4: Specific Permission */}
         <ProtectedRoute 
           requiredPermission="reports:read"
-          debug={true}
+          debug={false}
           unauthorizedComponent={
             <div className="p-4 bg-red-100 border border-red-300 rounded">
               ❌ Reports Read Permission - Access Denied
@@ -77,7 +77,7 @@ export default function TestProtectionPage() {
         {/* Test 5: Non-existent Permission */}
         <ProtectedRoute 
           requiredPermission="super_admin:access"
-          debug={true}
+          debug={false}
           unauthorizedComponent={
             <div className="p-4 bg-red-100 border border-red-300 rounded">
               ❌ Super Admin Permission - Access Denied (as expected)

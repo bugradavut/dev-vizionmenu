@@ -41,7 +41,6 @@ export class UsersController {
   async findAllByBranch(
     @Param('branchId', ParseUUIDPipe) branchId: string,
   ) {
-    console.log('🔍 findAllByBranch called with branchId:', branchId);
     const users = await this.usersService.findAllByBranch(branchId);
     
     return {

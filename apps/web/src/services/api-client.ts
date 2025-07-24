@@ -45,8 +45,6 @@ class ApiClient {
     } else {
       this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     }
-    
-    console.log('🌐 API Client initialized with baseURL:', this.baseURL);
   }
 
   private async getAuthToken(): Promise<string | null> {

@@ -5,7 +5,7 @@
  * ShadCN DataTable with user management functionality
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Badge, 
   Button, 
@@ -127,8 +127,15 @@ export function UserListTable({
 
   // Real permission checks using enhanced auth
   const permissions = usePermissions();
-  const canManageUsers = permissions.canManageUsers;
-  const canDeleteUsers = permissions.canDeleteUsers;
+  
+  // Memoize permission values to ensure fresh calculations
+  const canManageUsers = useMemo(() => permissions.canManageUsers, [permissions.canManageUsers, permissions.role]);
+  const canDeleteUsers = useMemo(() => permissions.canDeleteUsers, [permissions.canDeleteUsers, permissions.role]);
+  
+  // Force re-render when permissions change
+  useEffect(() => {
+    // This effect will trigger when permissions change
+  }, [permissions.role, permissions.isChainOwner, canManageUsers]);
 
   return (
     <Card className={cn('w-full', className)}>

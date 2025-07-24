@@ -64,7 +64,6 @@ export function ProtectedRoute({
 
       // Basic auth check
       if (requireAuth && !auth.user) {
-        if (debug) console.log('ProtectedRoute: No authenticated user');
         setIsAuthorized(false);
         router.push(redirectTo);
         return;
@@ -78,20 +77,17 @@ export function ProtectedRoute({
 
       // Role-based checks
       if (requiredRole && !auth.hasRole(requiredRole)) {
-        if (debug) console.log(`ProtectedRoute: Required role ${requiredRole}, user has ${auth.role}`);
         setIsAuthorized(false);
         return;
       }
 
       if (requiredRoles && !auth.hasAnyRole(requiredRoles)) {
-        if (debug) console.log(`ProtectedRoute: Required roles ${requiredRoles.join(',')}, user has ${auth.role}`);
         setIsAuthorized(false);
         return;
       }
 
       // Permission-based checks
       if (requiredPermission && !auth.hasPermission(requiredPermission)) {
-        if (debug) console.log(`ProtectedRoute: Required permission ${requiredPermission}, user permissions: ${auth.permissions.join(',')}`);
         setIsAuthorized(false);
         return;
       }
@@ -101,7 +97,6 @@ export function ProtectedRoute({
           auth.hasPermission(permission)
         );
         if (!hasAllPermissions) {
-          if (debug) console.log(`ProtectedRoute: Required permissions ${requiredPermissions.join(',')}, user permissions: ${auth.permissions.join(',')}`);
           setIsAuthorized(false);
           return;
         }
@@ -109,13 +104,11 @@ export function ProtectedRoute({
 
       // Custom authorization check
       if (customCheck && !customCheck(auth)) {
-        if (debug) console.log('ProtectedRoute: Custom check failed');
         setIsAuthorized(false);
         return;
       }
 
       // All checks passed
-      if (debug) console.log('ProtectedRoute: Authorization successful');
       setIsAuthorized(true);
     };
 

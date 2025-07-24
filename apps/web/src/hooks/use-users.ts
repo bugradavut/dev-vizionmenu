@@ -84,7 +84,7 @@ export const useUsersStore = create<UsersState>()(
           const response = await usersService.getUsersByBranch(params);
           setUsers(response.users, response.total, response.page, response.limit);
         } catch (error) {
-          console.error('❌ Hook: Error fetching users:', error);
+          console.error('Hook: Error fetching users:', error);
           const errorMessage = error instanceof Error ? error.message : 'Failed to fetch users';
           setError(errorMessage);
         } finally {
@@ -165,7 +165,7 @@ export const useUsersStore = create<UsersState>()(
           const updatedUser = updatedUsers.find(u => u.user_id === userId && u.branch_id === branchId);
           return updatedUser!;
         } catch (error) {
-          console.error('❌ Update user error:', error);
+          console.error('Update user error:', error);
           const errorMessage = error instanceof Error ? error.message : 'Failed to update user';
           setError(errorMessage);
           throw error; // Re-throw so component can handle it

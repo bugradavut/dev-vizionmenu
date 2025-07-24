@@ -18,6 +18,9 @@ import {
   Label
 } from '@repo/ui';
 import { useUserMutations } from '@/hooks';
+import { useUsersStore } from '@/hooks/use-users';
+import { usePermissions } from '@/hooks/use-enhanced-auth';
+import { apiClient } from '@/services/api-client';
 import type { BranchRole, BranchUser, UpdateUserRequest } from '@repo/types/auth';
 
 interface EditUserModalProps {
@@ -30,6 +33,7 @@ const ROLE_OPTIONS: { value: BranchRole; label: string }[] = [
   { value: 'branch_staff', label: 'Branch Staff' },
   { value: 'branch_cashier', label: 'Branch Cashier' },
   { value: 'branch_manager', label: 'Branch Manager' },
+  { value: 'chain_owner', label: 'Chain Owner' },
 ];
 
 export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
@@ -44,6 +48,12 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { updateUser } = useUserMutations();
+  const { updateUserInList } = useUsersStore();
+  const permissions = usePermissions();
+
+  // Only chain owners and branch managers can assign roles
+  const canAssignRoles = permissions.isChainOwner || permissions.hasRole('branch_manager');
+
 
   // Populate form when user changes
   useEffect(() => {
@@ -83,7 +93,9 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    if (!user) return;
+    if (!user) {
+      return;
+    }
     
     if (!validateForm()) {
       return;
@@ -102,13 +114,43 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
 
       // Only include fields that have actually changed
       const hasChanges = Object.values(updateData).some(value => value !== undefined);
+      const roleChanged = formData.role !== user.role;
       
-      if (!hasChanges) {
+      if (!hasChanges && !roleChanged) {
         onClose();
         return;
       }
 
       await updateUser(user.user_id, user.branch_id, updateData);
+
+      // Handle role assignment separately if role has changed and user has permission
+      if (canAssignRoles && formData.role !== user.role) {
+        try {
+          await apiClient.post(`/api/v1/users/${user.user_id}/branch/${user.branch_id}/assign-role`, {
+            role: formData.role
+          });
+          
+          // Update the user in local state to reflect role change
+          const updatedUser: BranchUser = {
+            ...user,
+            role: formData.role,
+            user: {
+              ...user.user,
+              ...(formData.email.trim() !== user.user.email && { email: formData.email.trim() }),
+              ...(formData.full_name.trim() !== user.user.full_name && { full_name: formData.full_name.trim() }),
+              ...(formData.phone.trim() !== (user.user.phone || '') && { phone: formData.phone.trim() || undefined }),
+            },
+            ...(formData.is_active !== user.is_active && { is_active: formData.is_active }),
+          };
+          
+          updateUserInList(updatedUser);
+        } catch (roleError) {
+          console.error('Role assignment failed:', roleError);
+          // Still close modal since profile update succeeded
+          // Could show a toast notification here
+        }
+      }
+
       onClose();
     } catch (error) {
       setErrors({
@@ -193,15 +235,15 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
             )}
           </div>
 
-          {/* Role - Display only for now, role changes handled separately */}
+          {/* Role */}
           <div className="space-y-2">
             <Label htmlFor="role">Role</Label>
             <select
               id="role"
               value={formData.role}
               onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as BranchRole }))}
-              disabled={true} // Disable for now - role changes should be handled by role assignment feature
-              className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!canAssignRoles}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {ROLE_OPTIONS.map((role) => (
                 <option key={role.value} value={role.value}>
@@ -209,9 +251,6 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-muted-foreground">
-              Role changes are handled through the role assignment feature
-            </p>
           </div>
 
           {/* Status */}
