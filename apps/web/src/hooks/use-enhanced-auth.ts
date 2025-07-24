@@ -96,7 +96,12 @@ export function useEnhancedAuth(): EnhancedAuthState {
         console.warn('Failed to auto-fetch profile:', error);
       });
     }
-  }, [supabaseAuth.session?.access_token, supabaseAuth.user, apiAuth.user, apiAuth.refreshProfile]);
+    
+    // Clear API user when session is lost (logout)
+    if (!supabaseAuth.session && apiAuth.user) {
+      apiAuth.reset();
+    }
+  }, [supabaseAuth.session?.access_token, supabaseAuth.user, apiAuth.user, apiAuth.refreshProfile, supabaseAuth.session, apiAuth.reset]);
 
   // Extract user context - prioritize API data over JWT
   const jwtUserContext = extractUserFromToken(supabaseAuth.session?.access_token || '');
