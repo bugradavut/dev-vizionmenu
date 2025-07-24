@@ -5,7 +5,7 @@
  * ShadCN DataTable with user management functionality
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Badge, 
   Button, 
