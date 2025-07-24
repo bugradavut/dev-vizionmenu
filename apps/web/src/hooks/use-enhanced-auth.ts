@@ -214,9 +214,10 @@ export function useEnhancedAuth(): EnhancedAuthState {
  * Hook for permission-only checks (lighter weight)
  */
 export function usePermissions() {
-  const { hasPermission, hasRole, hasAnyRole, permissions, role, isChainOwner, isBranchManager } = useEnhancedAuth();
+  const { hasPermission, hasRole, hasAnyRole, permissions, role, isChainOwner, isBranchManager, userId } = useEnhancedAuth();
   
-  return {
+  // Force re-calculation when user changes with useMemo
+  const calculatedPermissions = useMemo(() => ({
     hasPermission,
     hasRole,
     hasAnyRole,
@@ -234,5 +235,7 @@ export function usePermissions() {
     canManageSettings: hasPermission('settings:write') || isChainOwner,
     canManageOrders: hasPermission('orders:write') || isChainOwner || isBranchManager,
     canProcessPayments: hasPermission('payments:write') || hasRole('branch_cashier') || isChainOwner,
-  };
+  }), [userId, role, permissions, isChainOwner, isBranchManager, hasPermission, hasRole, hasAnyRole]);
+  
+  return calculatedPermissions;
 }

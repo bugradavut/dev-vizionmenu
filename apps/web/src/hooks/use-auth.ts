@@ -153,6 +153,12 @@ export const useAuthApiStore = create<AuthApiState>()(
           setProfileError(null);
           
           const user = await authService.getProfile();
+          
+          // Check if user is active
+          if (!user.is_active) {
+            throw new Error('Your account has been deactivated. Please contact an administrator.');
+          }
+          
           setApiUser(user);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to fetch profile';

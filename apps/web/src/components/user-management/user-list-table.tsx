@@ -127,15 +127,6 @@ export function UserListTable({
 
   // Real permission checks using enhanced auth
   const permissions = usePermissions();
-  
-  // Memoize permission values to ensure fresh calculations
-  const canManageUsers = useMemo(() => permissions.canManageUsers, [permissions.canManageUsers, permissions.role]);
-  const canDeleteUsers = useMemo(() => permissions.canDeleteUsers, [permissions.canDeleteUsers, permissions.role]);
-  
-  // Force re-render when permissions change
-  useEffect(() => {
-    // This effect will trigger when permissions change
-  }, [permissions.role, permissions.isChainOwner, canManageUsers]);
 
   return (
     <Card className={cn('w-full', className)}>
@@ -148,7 +139,7 @@ export function UserListTable({
             </p>
           </div>
           
-          {canManageUsers && onCreateUser && (
+          {permissions.canManageUsers && onCreateUser && (
             <Button onClick={onCreateUser} className="w-full sm:w-auto">
               <UserPlus className="mr-2 h-4 w-4" />
               Add User
@@ -259,7 +250,7 @@ export function UserListTable({
                   <TableCell colSpan={5} className="h-24 text-center">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <p className="text-muted-foreground">No users found</p>
-                      {canManageUsers && onCreateUser && (
+                      {permissions.canManageUsers && onCreateUser && (
                         <Button variant="outline" size="sm" onClick={onCreateUser}>
                           <UserPlus className="mr-2 h-4 w-4" />
                           Add First User
@@ -322,13 +313,13 @@ export function UserListTable({
                             </DropdownMenuItem>
                           )}
                           
-                          {canManageUsers && (
+                          {permissions.canManageUsers && (
                             <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
                               {user.is_active ? 'Deactivate' : 'Activate'}
                             </DropdownMenuItem>
                           )}
                           
-                          {canDeleteUsers && user.role !== 'chain_owner' && (
+                          {permissions.canDeleteUsers && user.role !== 'chain_owner' && (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
