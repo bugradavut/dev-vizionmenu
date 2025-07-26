@@ -144,7 +144,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
         </div>
       )}
 
-      <Card className="overflow-hidden p-0 w-full max-w-[611px] mx-auto">
+      <Card className="overflow-hidden p-0 w-full max-w-[611px] sm:min-w-[611px] mx-auto">
         <CardContent className="grid p-0 md:grid-cols-2">
           <div className="p-6 md:p-8">
             <Form {...form}>
@@ -157,7 +157,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
                     height={40}
                     className="h-10 w-auto"
                   />
-                  <p className="text-balance text-muted-foreground text-sm">
+                  <p className="text-muted-foreground whitespace-nowrap">
                     Login to your VizionMenu account
                   </p>
                 </div>
