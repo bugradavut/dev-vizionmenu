@@ -17,7 +17,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui"
+import { Card, CardContent } from "@repo/ui"
 import { UserCheck, Shield, Users } from "lucide-react"
 import { UserListTable, CreateUserModal, EditUserModal } from "@/components/user-management"
 import { useUsers, useAuthApi } from "@/hooks"

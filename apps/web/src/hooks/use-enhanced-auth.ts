@@ -108,7 +108,7 @@ export function useEnhancedAuth(): EnhancedAuthState {
     if (!supabaseAuth.session && apiAuth.user) {
       apiAuth.reset();
     }
-  }, [supabaseAuth.session?.access_token, supabaseAuth.user, apiAuth.user, apiAuth.refreshProfile, supabaseAuth.session, apiAuth.reset]);
+  }, [supabaseAuth.session?.access_token, supabaseAuth.user, apiAuth.user, apiAuth.refreshProfile, supabaseAuth.session, apiAuth.reset, apiAuth]);
 
   // Extract user context - prioritize API data over JWT
   const jwtUserContext = extractUserFromToken(supabaseAuth.session?.access_token || '');
@@ -277,7 +277,7 @@ export function usePermissions() {
       const targetLevel = ROLE_HIERARCHY[targetRole as keyof typeof ROLE_HIERARCHY] ?? -1;
       return currentLevel > targetLevel;
     },
-  }), [userId, role, permissions, isChainOwner, isBranchManager, hasPermission, hasRole, hasAnyRole]);
+  }), [role, permissions, isChainOwner, isBranchManager, hasPermission, hasRole, hasAnyRole]);
   
   return calculatedPermissions;
 }
