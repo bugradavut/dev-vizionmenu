@@ -37,7 +37,8 @@
       "WebFetch(domain:dev-vizionmenu-web.vercel.app)",
       "Bash(claude --version)",
       "Bash(claude doctor)",
-      "WebFetch(domain:localhost)"
+      "WebFetch(domain:localhost)",
+      "WebFetch(domain:prnt.sc)"
     ],
     "deny": []
   }
