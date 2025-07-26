@@ -108,7 +108,8 @@ export function useEnhancedAuth(): EnhancedAuthState {
     if (!supabaseAuth.session && apiAuth.user) {
       apiAuth.reset();
     }
-  }, [supabaseAuth.session?.access_token, supabaseAuth.user, apiAuth.user, apiAuth.refreshProfile, supabaseAuth.session, apiAuth.reset, apiAuth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabaseAuth.session?.access_token, supabaseAuth.user, apiAuth.user, apiAuth.refreshProfile, supabaseAuth.session, apiAuth.reset]);
 
   // Extract user context - prioritize API data over JWT
   const jwtUserContext = extractUserFromToken(supabaseAuth.session?.access_token || '');
