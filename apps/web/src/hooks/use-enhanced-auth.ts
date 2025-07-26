@@ -247,7 +247,7 @@ function canEditUserRole(currentUserRole: string | null, targetUserRole: string 
  * Hook for permission-only checks (lighter weight)
  */
 export function usePermissions() {
-  const { hasPermission, hasRole, hasAnyRole, permissions, role, isChainOwner, isBranchManager, userId } = useEnhancedAuth();
+  const { hasPermission, hasRole, hasAnyRole, permissions, role, isChainOwner, isBranchManager } = useEnhancedAuth();
   
   // Force re-calculation when user changes with useMemo
   const calculatedPermissions = useMemo(() => ({
