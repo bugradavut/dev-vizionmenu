@@ -88,69 +88,75 @@ export default function UserManagementPage() {
             </div>
           </header>
           
-          <div className="flex flex-1 flex-col gap-6 py-4 px-4 md:px-8 lg:px-12 pt-8">
-            <div className="max-w-6xl">
-              <div className="mb-8">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-semibold tracking-tight">User Management</h2>
-                    <p className="text-muted-foreground mt-2">
-                      Manage restaurant staff, roles, and permissions.
-                    </p>
-                  </div>
+          <div className="flex flex-1 flex-col px-3 sm:px-4 lg:px-6">
+            {/* Header Section */}
+            <div className="px-3 py-6 sm:px-4 lg:px-6 bg-background">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-8">
+                  <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+                  <p className="text-muted-foreground mt-2 text-lg">
+                    Manage restaurant staff, roles, and permissions.
+                  </p>
+                </div>
+                <div className="lg:col-span-4 flex items-center justify-end">
+                  {/* Header actions can go here if needed */}
                 </div>
               </div>
-              
-              <div className="grid gap-6">
-                {/* Stats Cards */}
-                <div className="grid gap-4 md:grid-cols-3">
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{totalUsers}</div>
-                      <p className="text-xs text-muted-foreground">
-                        Team members
-                      </p>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-                      <UserCheck className="h-4 w-4 text-green-600" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{activeUsers}</div>
-                      <p className="text-xs text-muted-foreground">
-                        Currently active
-                      </p>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Administrators</CardTitle>
-                      <Shield className="h-4 w-4 text-blue-600" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{adminUsers}</div>
-                      <p className="text-xs text-muted-foreground">
-                        Admin access
-                      </p>
-                    </CardContent>
-                  </Card>
+            </div>
+
+            {/* Main Content */}
+            <div className="flex-1 px-3 py-8 sm:px-4 lg:px-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Stats Cards - Full width on mobile, 8 columns on desktop */}
+                <div className="lg:col-span-12">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    <Card className="border">
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Total Users</p>
+                            <p className="text-xl font-bold">{totalUsers}</p>
+                          </div>
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="border">
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Active Users</p>
+                            <p className="text-xl font-bold">{activeUsers}</p>
+                          </div>
+                          <UserCheck className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="border">
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Administrators</p>
+                            <p className="text-xl font-bold">{adminUsers}</p>
+                          </div>
+                          <Shield className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
 
-                {/* User List Table */}
-                <UserListTable
-                  key={`user-table-${user?.role}-${user?.id}`} // Force re-mount when user/role changes
-                  branchId={currentBranchId}
-                  onCreateUser={handleCreateUser}
-                  onEditUser={handleEditUser}
-                />
+                {/* User List Table - Full width */}
+                <div className="lg:col-span-12">
+                  <UserListTable
+                    key={`user-table-${user?.role}-${user?.id}`}
+                    branchId={currentBranchId}
+                    onCreateUser={handleCreateUser}
+                    onEditUser={handleEditUser}
+                  />
+                </div>
               </div>
             </div>
           </div>

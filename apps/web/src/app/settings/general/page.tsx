@@ -69,15 +69,27 @@ export default function GeneralSettingsPage() {
               </Breadcrumb>
             </div>
           </header>
-          <div className="flex flex-1 flex-col gap-6 py-4 px-4 md:px-8 lg:px-12 pt-8">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tight">General Settings</h1>
-              <p className="text-muted-foreground">
-                Manage your application preferences and account settings.
-              </p>
+          <div className="flex flex-1 flex-col px-3 sm:px-4 lg:px-6">
+            {/* Header Section */}
+            <div className="px-3 py-6 sm:px-4 lg:px-6 bg-background">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-8">
+                  <h1 className="text-3xl font-bold tracking-tight">General Settings</h1>
+                  <p className="text-muted-foreground mt-2 text-lg">
+                    Manage your application preferences and account settings.
+                  </p>
+                </div>
+                <div className="lg:col-span-4 flex items-center justify-end">
+                  {/* Header actions can go here if needed */}
+                </div>
+              </div>
             </div>
 
-            <div className="max-w-md">
+            {/* Main Content */}
+            <div className="flex-1 px-3 py-8 sm:px-4 lg:px-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="lg:col-span-12">
+                  <div className="max-w-md">
               {/* Appearance Card */}
               <Card className="group hover:shadow-lg transition-all duration-200">
                 <CardHeader className="pb-4 border-b mb-4">
@@ -103,6 +115,9 @@ export default function GeneralSettingsPage() {
                   </div>
                 </CardContent>
               </Card>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </SidebarInset>
