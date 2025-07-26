@@ -1,6 +1,7 @@
 const createTailwindConfig = (contentPaths = []) => {
   return {
     content: contentPaths,
+    darkMode: ["class"],
     theme: {
       extend: {
         colors: {
@@ -54,7 +55,7 @@ const createTailwindConfig = (contentPaths = []) => {
           sm: "calc(var(--radius) - 4px)",
         },
         fontFamily: {
-          sans: ["var(--font-geist-sans)"],
+          sans: ["Euclid Circular A", "system-ui", "sans-serif"],
           mono: ["var(--font-geist-mono)"],
         },
       },
