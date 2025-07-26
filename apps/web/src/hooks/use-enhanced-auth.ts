@@ -93,7 +93,14 @@ export function useEnhancedAuth(): EnhancedAuthState {
   useEffect(() => {
     if (supabaseAuth.session?.access_token && supabaseAuth.user && !apiAuth.user) {
       apiAuth.refreshProfile().catch(error => {
-        console.warn('Failed to auto-fetch profile:', error);
+        console.error('Failed to auto-fetch profile:', error);
+        
+        // If user is inactive, force logout
+        if (error.message?.includes('deactivated') || error.message?.includes('Account Inactive')) {
+          console.log('User account is inactive, forcing logout...');
+          supabase.auth.signOut();
+          return;
+        }
       });
     }
     

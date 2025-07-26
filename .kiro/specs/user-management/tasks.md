@@ -243,7 +243,42 @@
 - ✅ **Auth Debug Tools**: Comprehensive auth state debugging (temporary)
 - ✅ **Security Foundation**: Base infrastructure for permission-based UI controls
 
+### **LATEST: Critical Bug Fixes & Security Implementation (Jan 26, 2025)**
+- ✅ **Bug 1 FIXED - Inactive User Login Prevention**: CRITICAL SECURITY ISSUE RESOLVED
+  - Problem: Inactive users (is_active: false) could still login to dashboard
+  - Root cause: Authentication only checked Supabase auth, not database user status
+  - Solution: **Login-time validation** - API call to `/auth/profile` after successful login
+  - Implementation Details:
+    - Modified API `/auth/profile` endpoint to return 403 for inactive users
+    - Added post-login validation in `login-form.tsx` that calls API and checks response
+    - 403/404 response → sign out user and show "account deactivated" error
+    - 200 response → proceed to dashboard normally
+  - Result: **Database-enforced security** - inactive users cannot bypass this check
+  - Files modified: `apps/api/api/index.js`, `apps/web/src/components/login-form.tsx`
+
+- ✅ **UI Bug Fixes**: Login form improvements
+  - Fixed form width expansion when long error messages displayed (max-width: 611px)
+  - Added proper text wrapping with `break-words` class
+  - Reduced "Login to your VizionMenu account" text size
+  - Environment setup: Added NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY to web app
+
+- ✅ **Bug 2 FIXED**: Add User button cache persistence issue resolved (previous session)
+  - Problem: After logout/login with different user, Add User button would persist for users without permissions
+  - Root cause: API user cache in Zustand store wasn't clearing on session loss
+  - Solution: Added session-based cache clearing mechanism in useEnhancedAuth hook
+  - Result: Memory cache now properly clears on logout, UI permissions update correctly
+
 ## 🎯 Next Steps (Priority Order)
+
+### **PRIORITY BUG TO FIX (Next Session)**
+1. **Permission Hierarchy Bug: Branch Manager vs Chain Owner** - SECURITY
+   - Problem: Branch Managers can edit Chain Owner accounts (should be restricted)
+   - Solution needed: Add role hierarchy validation in edit operations
+   - Implementation: Prevent lower-tier roles from editing higher-tier roles
+   - Rules: branch_manager cannot edit chain_owner, branch_staff cannot edit branch_manager/chain_owner, etc.
+   - Backend: Add role hierarchy checks in PATCH/DELETE endpoints
+   - Frontend: Hide/disable edit buttons based on role hierarchy
+   - Files to modify: `apps/api/api/index.js`, user management components
 
 ### **Immediate Priorities (Core CRUD Complete)**
 1. **Role Assignment Express API** (4.3) - Final API endpoint missing

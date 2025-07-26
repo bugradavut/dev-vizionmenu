@@ -32,7 +32,7 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
-  const { signIn, loading } = useAuth();
+  const { signIn, signOut, loading } = useAuth();
   const router = useRouter();
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,13 +57,54 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
       if (error) {
         setError(error.message);
       } else if (authData?.user) {
-        // Show success alert
-        setShowSuccessAlert(true);
-        
-        // Redirect after a short delay to show the alert
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 1500);
+        // Check if user is active by calling our API
+        try {
+          const token = authData.session?.access_token;
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          console.log('Profile check response:', response.status, response.statusText);
+
+          if (response.status === 403) {
+            // User is inactive
+            console.log('User is inactive - blocking login');
+            await signOut();
+            setError("Your account has been deactivated. Please contact an administrator.");
+            return;
+          }
+
+          if (response.status === 404) {
+            // Profile not found - probably inactive
+            console.log('Profile not found - blocking login');
+            await signOut();
+            setError("Your account has been deactivated. Please contact an administrator.");
+            return;
+          }
+
+          if (!response.ok) {
+            console.warn('Profile check failed, but allowing login');
+          }
+
+          console.log('User is active - allowing login');
+          // User is active, proceed with success
+          setShowSuccessAlert(true);
+          
+          // Redirect after a short delay to show the alert
+          setTimeout(() => {
+            router.push("/dashboard");
+          }, 1500);
+        } catch (checkError) {
+          console.error('Error checking user status:', checkError);
+          // On error, still allow login (network issues, etc.)
+          setShowSuccessAlert(true);
+          setTimeout(() => {
+            router.push("/dashboard");
+          }, 1500);
+        }
       }
     } catch {
       setError("An unexpected error occurred");
@@ -103,7 +144,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
         </div>
       )}
 
-      <Card className="overflow-hidden p-0">
+      <Card className="overflow-hidden p-0 w-full max-w-[611px] mx-auto">
         <CardContent className="grid p-0 md:grid-cols-2">
           <div className="p-6 md:p-8">
             <Form {...form}>
@@ -116,13 +157,13 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
                     height={40}
                     className="h-10 w-auto"
                   />
-                  <p className="text-balance text-muted-foreground">
+                  <p className="text-balance text-muted-foreground text-sm">
                     Login to your VizionMenu account
                   </p>
                 </div>
 
                 {error && (
-                  <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                  <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md break-words">
                     {error}
                   </div>
                 )}

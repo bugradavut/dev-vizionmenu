@@ -125,6 +125,14 @@ app.get('/auth/profile', async (req, res) => {
       });
     }
 
+    // Additional security check: Ensure user is active
+    if (!branchUser.is_active) {
+      return res.status(403).json({
+        error: 'Account Inactive',
+        message: 'Your account has been deactivated. Please contact an administrator.'
+      });
+    }
+
     // Get user profile
     const { data: userProfile, error: profileError } = await supabase
       .from('user_profiles')
