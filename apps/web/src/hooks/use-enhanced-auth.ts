@@ -236,11 +236,22 @@ const ROLE_HIERARCHY = {
 function canEditUserRole(currentUserRole: string | null, targetUserRole: string | null): boolean {
   if (!currentUserRole || !targetUserRole) return false;
   
-  const currentLevel = ROLE_HIERARCHY[currentUserRole as keyof typeof ROLE_HIERARCHY] ?? -1;
-  const targetLevel = ROLE_HIERARCHY[targetUserRole as keyof typeof ROLE_HIERARCHY] ?? -1;
+  // Chain Owner can edit everyone (branch_manager, branch_staff, branch_cashier)
+  if (currentUserRole === 'chain_owner') {
+    return targetUserRole !== 'chain_owner'; // Cannot edit other chain owners
+  }
   
-  // Can only edit users with equal or lower role level
-  return currentLevel >= targetLevel;
+  // Branch Manager can edit staff and cashiers, but NOT chain owners or other branch managers
+  if (currentUserRole === 'branch_manager') {
+    return targetUserRole === 'branch_staff' || targetUserRole === 'branch_cashier';
+  }
+  
+  // Staff and Cashier cannot edit anyone
+  if (currentUserRole === 'branch_staff' || currentUserRole === 'branch_cashier') {
+    return false;
+  }
+  
+  return false;
 }
 
 /**
@@ -260,7 +271,7 @@ export function usePermissions() {
     isBranchManager,
     
     // Common permission checks
-    canManageUsers: isChainOwner, // Only chain owners can add users
+    canManageUsers: isChainOwner || isBranchManager, // Chain owners and branch managers can add users
     canDeleteUsers: hasPermission('users:delete') || isChainOwner,
     canManageMenu: hasPermission('menu:write') || isChainOwner || isBranchManager,
     canViewReports: hasPermission('reports:read') || isChainOwner || isBranchManager,
