@@ -22,6 +22,7 @@ interface RoleAssignmentDropdownProps {
   userId: string;
   branchId: string;
   currentRole: BranchRole;
+  targetUserRole: BranchRole; // Add target user role for hierarchy check
   onRoleChange?: (newRole: BranchRole) => void;
 }
 
@@ -42,15 +43,16 @@ const ROLE_COLORS: Record<BranchRole, string> = {
 export function RoleAssignmentDropdown({ 
   userId, 
   branchId, 
-  currentRole, 
+  currentRole,
+  targetUserRole, 
   onRoleChange 
 }: RoleAssignmentDropdownProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<BranchRole>(currentRole);
   const permissions = usePermissions();
 
-  // Only chain owners and branch managers can assign roles
-  const canAssignRoles = permissions.isChainOwner || permissions.hasRole('branch_manager');
+  // Can assign roles if user has permission to edit target user
+  const canAssignRoles = permissions.canEditUser(targetUserRole);
 
   const handleRoleChange = async (newRole: BranchRole) => {
     if (newRole === selectedRole || isLoading) return;
@@ -106,17 +108,24 @@ export function RoleAssignmentDropdown({
       </DropdownMenuTrigger>
       
       <DropdownMenuContent align="end" className="w-40">
-        {Object.entries(ROLE_LABELS).map(([role, label]) => (
-          <DropdownMenuItem
-            key={role}
-            onClick={() => handleRoleChange(role as BranchRole)}
-            className="flex items-center justify-between text-sm"
-            disabled={isLoading}
-          >
-            <span>{label}</span>
-            {selectedRole === role && <Check className="h-4 w-4" />}
-          </DropdownMenuItem>
-        ))}
+        {Object.entries(ROLE_LABELS).map(([role, label]) => {
+          // Only show roles that current user can assign
+          const canAssignThisRole = permissions.canAssignRole(role as BranchRole);
+          
+          if (!canAssignThisRole) return null;
+          
+          return (
+            <DropdownMenuItem
+              key={role}
+              onClick={() => handleRoleChange(role as BranchRole)}
+              className="flex items-center justify-between text-sm"
+              disabled={isLoading}
+            >
+              <span>{label}</span>
+              {selectedRole === role && <Check className="h-4 w-4" />}
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );

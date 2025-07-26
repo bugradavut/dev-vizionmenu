@@ -22,6 +22,24 @@ if (process.env.NODE_ENV !== 'production') {
 
 const express = require('express');
 
+// Role hierarchy constants for permission checks
+const ROLE_HIERARCHY = {
+  'super_admin': 4,      // Future super admin role
+  'chain_owner': 3,      // Highest current role
+  'branch_manager': 2,   // Can manage staff and cashiers
+  'branch_staff': 1,     // Can only view
+  'branch_cashier': 0    // Lowest permission level
+};
+
+// Helper function to check if user can edit target user based on role hierarchy
+function canEditUser(currentUserRole, targetUserRole) {
+  const currentLevel = ROLE_HIERARCHY[currentUserRole] || -1;
+  const targetLevel = ROLE_HIERARCHY[targetUserRole] || -1;
+  
+  // Can only edit users with equal or lower role level
+  return currentLevel >= targetLevel;
+}
+
 const app = express();
 app.use(express.json());
 
@@ -298,6 +316,50 @@ app.patch('/api/v1/users/:userId/branch/:branchId', async (req, res) => {
       });
     }
 
+    // Get current user's role for permission check
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Missing or invalid authorization header'
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let currentUserId;
+    try {
+      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+      currentUserId = payload.sub;
+    } catch (error) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid token format'
+      });
+    }
+
+    // Get current user's role
+    const { data: currentUser, error: currentUserError } = await supabase
+      .from('branch_users')
+      .select('role')
+      .eq('user_id', currentUserId)
+      .eq('branch_id', branchId)
+      .single();
+
+    if (currentUserError || !currentUser) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to perform this action'
+      });
+    }
+
+    // Check role hierarchy - current user must have equal or higher role level than target user
+    if (!canEditUser(currentUser.role, existingUser.role)) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: `Cannot edit user with role '${existingUser.role}'. Insufficient permissions.`
+      });
+    }
+
     // Update user profile if profile fields provided
     if (full_name || phone) {
       const profileUpdate = {};
@@ -495,8 +557,8 @@ app.post('/api/v1/users/:userId/branch/:branchId/assign-role', async (req, res) 
     const { userId, branchId } = req.params;
     const { role } = req.body;
     
-    // Validate role
-    const validRoles = ['chain_owner', 'branch_manager', 'branch_staff', 'branch_cashier'];
+    // Validate role using hierarchy
+    const validRoles = Object.keys(ROLE_HIERARCHY).filter(r => r !== 'super_admin'); // Exclude super_admin for now
     if (!role || !validRoles.includes(role)) {
       return res.status(400).json({
         error: 'Validation Error',
@@ -525,6 +587,58 @@ app.post('/api/v1/users/:userId/branch/:branchId/assign-role', async (req, res) 
       return res.status(404).json({
         error: 'Not Found',
         message: 'User not found in this branch'
+      });
+    }
+
+    // Get current user's role for permission check
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Missing or invalid authorization header'
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let currentUserId;
+    try {
+      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+      currentUserId = payload.sub;
+    } catch (error) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid token format'
+      });
+    }
+
+    // Get current user's role
+    const { data: currentUser, error: currentUserError } = await supabase
+      .from('branch_users')
+      .select('role')
+      .eq('user_id', currentUserId)
+      .eq('branch_id', branchId)
+      .single();
+
+    if (currentUserError || !currentUser) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to perform this action'
+      });
+    }
+
+    // Check role hierarchy - current user must have permission to edit target user AND assign the new role
+    if (!canEditUser(currentUser.role, existingUser.role)) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: `Cannot edit user with role '${existingUser.role}'. Insufficient permissions.`
+      });
+    }
+
+    // Also check if current user can assign the new role (must be equal or higher level than target role)
+    if (!canEditUser(currentUser.role, role)) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: `Cannot assign role '${role}'. You can only assign roles equal to or lower than your own role level.`
       });
     }
 
@@ -630,6 +744,50 @@ app.delete('/api/v1/users/:userId/branch/:branchId', async (req, res) => {
       return res.status(404).json({
         error: 'Not Found',
         message: 'User not found in this branch'
+      });
+    }
+
+    // Get current user's role for permission check
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Missing or invalid authorization header'
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let currentUserId;
+    try {
+      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+      currentUserId = payload.sub;
+    } catch (error) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid token format'
+      });
+    }
+
+    // Get current user's role
+    const { data: currentUser, error: currentUserError } = await supabase
+      .from('branch_users')
+      .select('role')
+      .eq('user_id', currentUserId)
+      .eq('branch_id', branchId)
+      .single();
+
+    if (currentUserError || !currentUser) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You do not have permission to perform this action'
+      });
+    }
+
+    // Check role hierarchy - current user must have equal or higher role level than target user
+    if (!canEditUser(currentUser.role, existingUser.role)) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: `Cannot delete user with role '${existingUser.role}'. Insufficient permissions.`
       });
     }
 

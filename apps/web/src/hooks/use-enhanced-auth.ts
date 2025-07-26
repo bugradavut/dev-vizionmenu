@@ -222,6 +222,26 @@ export function useEnhancedAuth(): EnhancedAuthState {
   };
 }
 
+// Role hierarchy constants (matching backend)
+const ROLE_HIERARCHY = {
+  'super_admin': 4,      // Future super admin role
+  'chain_owner': 3,      // Highest current role
+  'branch_manager': 2,   // Can manage staff and cashiers
+  'branch_staff': 1,     // Can only view
+  'branch_cashier': 0    // Lowest permission level
+} as const;
+
+// Helper function to check if user can edit target user based on role hierarchy
+function canEditUserRole(currentUserRole: string | null, targetUserRole: string | null): boolean {
+  if (!currentUserRole || !targetUserRole) return false;
+  
+  const currentLevel = ROLE_HIERARCHY[currentUserRole as keyof typeof ROLE_HIERARCHY] ?? -1;
+  const targetLevel = ROLE_HIERARCHY[targetUserRole as keyof typeof ROLE_HIERARCHY] ?? -1;
+  
+  // Can only edit users with equal or lower role level
+  return currentLevel >= targetLevel;
+}
+
 /**
  * Hook for permission-only checks (lighter weight)
  */
@@ -247,6 +267,16 @@ export function usePermissions() {
     canManageSettings: hasPermission('settings:write') || isChainOwner,
     canManageOrders: hasPermission('orders:write') || isChainOwner || isBranchManager,
     canProcessPayments: hasPermission('payments:write') || hasRole('branch_cashier') || isChainOwner,
+    
+    // Role hierarchy utilities
+    canEditUser: (targetUserRole: string | null) => canEditUserRole(role, targetUserRole),
+    canAssignRole: (targetRole: string | null) => canEditUserRole(role, targetRole),
+    getRoleLevel: (checkRole: string | null) => ROLE_HIERARCHY[checkRole as keyof typeof ROLE_HIERARCHY] ?? -1,
+    isHigherRoleThan: (targetRole: string | null) => {
+      const currentLevel = ROLE_HIERARCHY[role as keyof typeof ROLE_HIERARCHY] ?? -1;
+      const targetLevel = ROLE_HIERARCHY[targetRole as keyof typeof ROLE_HIERARCHY] ?? -1;
+      return currentLevel > targetLevel;
+    },
   }), [userId, role, permissions, isChainOwner, isBranchManager, hasPermission, hasRole, hasAnyRole]);
   
   return calculatedPermissions;

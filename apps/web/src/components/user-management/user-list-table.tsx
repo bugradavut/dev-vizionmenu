@@ -297,29 +297,41 @@ export function UserListTable({
                       {new Date(user.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
+                      {(() => {
+                        // Check if any actions are available for this user
+                        const canEdit = onEditUser && permissions.canEditUser(user.role);
+                        const canToggleStatus = permissions.canManageUsers && permissions.canEditUser(user.role);
+                        const canDelete = permissions.canDeleteUsers && permissions.canEditUser(user.role);
+                        const hasAnyActions = canEdit || canToggleStatus || canDelete;
+
+                        return (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                className="h-8 w-8 p-0" 
+                                disabled={!hasAnyActions}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           
-                          {onEditUser && (
+                          {onEditUser && permissions.canEditUser(user.role) && (
                             <DropdownMenuItem onClick={() => onEditUser(user)}>
                               Edit User
                             </DropdownMenuItem>
                           )}
                           
-                          {permissions.canManageUsers && (
+                          {permissions.canManageUsers && permissions.canEditUser(user.role) && (
                             <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
                               {user.is_active ? 'Deactivate' : 'Activate'}
                             </DropdownMenuItem>
                           )}
                           
-                          {permissions.canDeleteUsers && user.role !== 'chain_owner' && (
+                          {permissions.canDeleteUsers && permissions.canEditUser(user.role) && (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
@@ -330,8 +342,10 @@ export function UserListTable({
                               </DropdownMenuItem>
                             </>
                           )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        );
+                      })()}
                     </TableCell>
                   </TableRow>
                 ))
