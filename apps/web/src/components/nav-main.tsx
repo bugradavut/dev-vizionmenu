@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/collapsible"
 import {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -58,8 +57,8 @@ export function NavMain({
         if (hasActiveSubItem) {
           initialStates[item.title] = true
         } else if (!(item.title in initialStates)) {
-          // Keep existing state or default to closed
-          initialStates[item.title] = item.isActive || false
+          // Keep existing state or default to closed  
+          initialStates[item.title] = false
         }
       }
     })
@@ -81,7 +80,6 @@ export function NavMain({
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <Collapsible

@@ -2,20 +2,13 @@
 
 import * as React from "react"
 import {
-  AudioWaveform,
   BookOpen,
-  Bot,
-  Command,
-  Frame,
-  GalleryVerticalEnd,
-  Map,
   PieChart,
   Settings2,
   SquareTerminal,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
 import {
@@ -27,85 +20,59 @@ import {
 } from "@/components/ui/sidebar"
 import { useAuth } from "@/contexts/auth-context"
 
-// This is sample data.
+// Navigation data
 const data = {
-  teams: [
-    {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
   navMain: [
     {
-      title: "Playground",
-      url: "#",
-      icon: SquareTerminal,
-      isActive: false,
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: PieChart,
       items: [
         {
-          title: "History",
-          url: "#",
+          title: "Overview",
+          url: "/dashboard",
         },
         {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
+          title: "Analytics",
+          url: "/dashboard/analytics",
         },
       ],
     },
     {
-      title: "Models",
-      url: "#",
-      icon: Bot,
-      items: [
-        {
-          title: "Genesis",
-          url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Documentation",
-      url: "#",
+      title: "Menu Management",
+      url: "/menu",
       icon: BookOpen,
       items: [
         {
-          title: "Introduction",
-          url: "#",
+          title: "Categories",
+          url: "/menu/categories",
         },
         {
-          title: "Get Started",
-          url: "#",
+          title: "Items",
+          url: "/menu/items",
         },
         {
-          title: "Tutorials",
-          url: "#",
+          title: "Pricing",
+          url: "/menu/pricing",
+        },
+      ],
+    },
+    {
+      title: "Orders",
+      url: "/orders",
+      icon: SquareTerminal,
+      items: [
+        {
+          title: "Live Orders",
+          url: "/orders/live",
         },
         {
-          title: "Changelog",
-          url: "#",
+          title: "Order History",
+          url: "/orders/history",
+        },
+        {
+          title: "Kitchen Display",
+          url: "/orders/kitchen",
         },
       ],
     },
@@ -122,24 +89,11 @@ const data = {
           title: "User Management",
           url: "/settings/users",
         },
+        {
+          title: "Branch Settings",
+          url: "/settings/branch",
+        },
       ],
-    },
-  ],
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
     },
   ],
 }
@@ -193,11 +147,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher />
       </SidebarHeader>
+      <div className="border-b border-sidebar-border mx-4"></div>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={userInfo} />
