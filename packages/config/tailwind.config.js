@@ -1,7 +1,6 @@
 const createTailwindConfig = (contentPaths = []) => {
   return {
     content: contentPaths,
-    darkMode: ["class"],
     theme: {
       extend: {
         colors: {

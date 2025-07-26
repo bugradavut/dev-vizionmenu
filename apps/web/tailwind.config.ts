@@ -10,7 +10,8 @@ const config: Config = createTailwindConfig([
   "../../packages/ui/src/**/*.{js,ts,jsx,tsx,mdx}",
 ]);
 
-// Ensure the animate plugin is added
+// Add dark mode and animate plugin
+config.darkMode = "class";
 config.plugins = [...(config.plugins ?? []), animatePlugin];
 
 export default config;
