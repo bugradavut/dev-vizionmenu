@@ -248,15 +248,6 @@ export default function LiveOrdersPage() {
     </div>
   )
 
-  const getStatusBorderColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'border-l-orange-400'
-      case 'preparing': return 'border-l-blue-400'
-      case 'ready': return 'border-l-green-400'
-      case 'completed': return 'border-l-gray-400'
-      default: return 'border-l-gray-400'
-    }
-  }
 
   const renderCardView = () => (
     <div className="space-y-4">
