@@ -42,7 +42,7 @@ import Link from "next/link"
 
 // Mock data for testing - completed and cancelled orders with various dates
 const mockOrders = [
-  // Today's orders
+  // Today's orders (30 July 2025)
   {
     id: "1",
     orderNumber: "ORDER-001",
@@ -51,8 +51,8 @@ const mockOrders = [
     source: "qr_code",
     status: "completed",
     total: 125.50,
-    createdAt: "2025-01-30T10:30:00Z",
-    completedAt: "2025-01-30T11:15:00Z"
+    createdAt: "2025-07-30T10:30:00Z",
+    completedAt: "2025-07-30T11:15:00Z"
   },
   {
     id: "2", 
@@ -62,11 +62,11 @@ const mockOrders = [
     source: "uber_eats",
     status: "completed",
     total: 89.75,
-    createdAt: "2025-01-30T08:15:00Z",
-    completedAt: "2025-01-30T09:00:00Z"
+    createdAt: "2025-07-30T08:15:00Z",
+    completedAt: "2025-07-30T09:00:00Z"
   },
   
-  // Yesterday's orders
+  // Yesterday's orders (29 July)
   {
     id: "3",
     orderNumber: "ORDER-003", 
@@ -75,8 +75,8 @@ const mockOrders = [
     source: "phone",
     status: "cancelled",
     total: 156.25,
-    createdAt: "2025-01-29T19:45:00Z",
-    cancelledAt: "2025-01-29T19:50:00Z"
+    createdAt: "2025-07-29T19:45:00Z",
+    cancelledAt: "2025-07-29T19:50:00Z"
   },
   {
     id: "4",
@@ -86,11 +86,11 @@ const mockOrders = [
     source: "web",
     status: "completed",
     total: 78.90,
-    createdAt: "2025-01-29T12:30:00Z",
-    completedAt: "2025-01-29T13:15:00Z"
+    createdAt: "2025-07-29T12:30:00Z",
+    completedAt: "2025-07-29T13:15:00Z"
   },
   
-  // Last week (7 days ago)
+  // 2 days ago (28 July)
   {
     id: "5",
     orderNumber: "ORDER-005", 
@@ -99,8 +99,8 @@ const mockOrders = [
     source: "doordash",
     status: "completed",
     total: 203.75,
-    createdAt: "2025-01-23T16:20:00Z",
-    completedAt: "2025-01-23T17:05:00Z"
+    createdAt: "2025-07-28T16:20:00Z",
+    completedAt: "2025-07-28T17:05:00Z"
   },
   {
     id: "6",
@@ -110,11 +110,11 @@ const mockOrders = [
     source: "qr_code",
     status: "cancelled",
     total: 95.40,
-    createdAt: "2025-01-22T14:20:00Z",
-    cancelledAt: "2025-01-22T14:25:00Z"
+    createdAt: "2025-07-28T14:20:00Z",
+    cancelledAt: "2025-07-28T14:25:00Z"
   },
   
-  // 15 days ago
+  // 3 days ago (27 July)
   {
     id: "7",
     orderNumber: "ORDER-007", 
@@ -123,8 +123,8 @@ const mockOrders = [
     source: "uber_eats",
     status: "completed",
     total: 167.25,
-    createdAt: "2025-01-15T11:30:00Z",
-    completedAt: "2025-01-15T12:15:00Z"
+    createdAt: "2025-07-27T11:30:00Z",
+    completedAt: "2025-07-27T12:15:00Z"
   },
   {
     id: "8",
@@ -134,11 +134,11 @@ const mockOrders = [
     source: "web",
     status: "completed",
     total: 142.80,
-    createdAt: "2025-01-14T18:45:00Z",
-    completedAt: "2025-01-14T19:30:00Z"
+    createdAt: "2025-07-27T18:45:00Z",
+    completedAt: "2025-07-27T19:30:00Z"
   },
   
-  // 30 days ago
+  // 4 days ago (26 July)
   {
     id: "9",
     orderNumber: "ORDER-009", 
@@ -147,8 +147,8 @@ const mockOrders = [
     source: "phone",
     status: "completed",
     total: 88.50,
-    createdAt: "2024-12-31T20:15:00Z",
-    completedAt: "2024-12-31T21:00:00Z"
+    createdAt: "2025-07-26T20:15:00Z",
+    completedAt: "2025-07-26T21:00:00Z"
   },
   {
     id: "10",
@@ -158,8 +158,8 @@ const mockOrders = [
     source: "doordash",
     status: "cancelled",
     total: 234.90,
-    createdAt: "2024-12-30T13:20:00Z",
-    cancelledAt: "2024-12-30T13:25:00Z"
+    createdAt: "2025-07-26T13:20:00Z",
+    cancelledAt: "2025-07-26T13:25:00Z"
   },
   
   // Last month (December 2024)
