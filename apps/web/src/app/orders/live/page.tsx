@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { getSourceIcon } from "@/assets/images"
 import Image from "next/image"
+import Link from "next/link"
 
 // Mock data for testing
 const mockOrders = [
@@ -236,9 +237,11 @@ export default function LiveOrdersPage() {
                 })}
               </TableCell>
               <TableCell className="text-center">
-                <button className="p-2 bg-orange-50 hover:bg-orange-100 rounded-md border border-orange-200 transition-colors">
-                  <ArrowRight className="h-4 w-4 text-orange-600" />
-                </button>
+                <Link href={`/orders/${order.orderNumber}?context=live`}>
+                  <button className="p-2 bg-orange-50 hover:bg-orange-100 rounded-md border border-orange-200 transition-colors">
+                    <ArrowRight className="h-4 w-4 text-orange-600" />
+                  </button>
+                </Link>
               </TableCell>
             </TableRow>
           ))}
@@ -288,9 +291,11 @@ export default function LiveOrdersPage() {
                 <div className="text-xl font-bold text-foreground">
                   ${order.total.toFixed(2)}
                 </div>
-                <button className="px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors text-sm font-medium text-gray-700">
-                  View Details
-                </button>
+                <Link href={`/orders/${order.orderNumber}?context=live`}>
+                  <button className="px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors text-sm font-medium text-gray-700">
+                    View Details
+                  </button>
+                </Link>
               </div>
             </CardContent>
           </Card>

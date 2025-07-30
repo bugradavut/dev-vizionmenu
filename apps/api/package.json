@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node api/index.js",
-    "build": "cp api/index.js index.js"
+    "build": "copy api\\index.js index.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.5",

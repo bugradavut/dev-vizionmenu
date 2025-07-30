@@ -88,9 +88,9 @@ export default function UserManagementPage() {
             </div>
           </header>
           
-          <div className="flex flex-1 flex-col px-3 sm:px-4 lg:px-6">
+          <div className="flex flex-1 flex-col px-2 sm:px-4 lg:px-6">
             {/* Header Section */}
-            <div className="px-3 py-6 sm:px-4 lg:px-6 bg-background">
+            <div className="px-2 py-6 sm:px-4 lg:px-6 bg-background">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8">
                   <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
@@ -105,7 +105,7 @@ export default function UserManagementPage() {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 px-3 py-8 sm:px-4 lg:px-6">
+            <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Stats Cards - Full width on mobile, 8 columns on desktop */}
                 <div className="lg:col-span-12">

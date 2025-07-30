@@ -7,7 +7,7 @@
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "clean": "rm -rf dist"
+    "clean": "rmdir /s /q dist 2>nul || echo \"Directory already clean\""
   },
   "dependencies": {
     "bullmq": "^5.13.2",

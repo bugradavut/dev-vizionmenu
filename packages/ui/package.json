@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --external react",
     "dev": "tsup src/index.ts --format esm,cjs --dts --external react --watch",
-    "lint": "eslint src/",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "type-check": "tsc --noEmit"
   },
   "files": [
@@ -31,6 +31,11 @@
   "devDependencies": {
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@typescript-eslint/eslint-plugin": "^8",
+    "@typescript-eslint/parser": "^8",
+    "eslint": "^9",
+    "eslint-plugin-react": "^7",
+    "eslint-plugin-react-hooks": "^5",
     "tsup": "^8.0.0",
     "typescript": "^5"
   }

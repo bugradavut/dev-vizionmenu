@@ -38,7 +38,9 @@
       "Bash(claude --version)",
       "Bash(claude doctor)",
       "WebFetch(domain:localhost)",
-      "WebFetch(domain:prnt.sc)"
+      "WebFetch(domain:prnt.sc)",
+      "Bash(NODE_ENV=production npx next build --no-lint)",
+      "Bash(export NODE_ENV=production)"
     ],
     "deny": []
   }
