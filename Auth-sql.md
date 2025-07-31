@@ -1,6 +1,23 @@
 -- =====================================================
--- VIZION MENU - COMPLETE DATABASE SETUP (SUPABASE COMPATIBLE)
+-- VISION MENU - COMPLETE DATABASE SETUP (SUPABASE SQL EDITOR)
 -- Multi-Tenant Restaurant Ordering System
+-- =====================================================
+-- 
+-- IMPORTANT: Execute ALL commands in Supabase Dashboard → SQL Editor
+-- 
+-- This file contains the complete database schema and setup for Vision Menu.
+-- All SQL commands must be executed in the Supabase SQL Editor to:
+-- 1. Create tables and relationships
+-- 2. Set up Row-Level Security (RLS) policies  
+-- 3. Create triggers and functions
+-- 4. Insert test data
+-- 
+-- Usage:
+-- 1. Open Supabase Dashboard
+-- 2. Go to SQL Editor
+-- 3. Copy and paste sections of this file
+-- 4. Execute each section in order
+-- 
 -- =====================================================
 
 -- Enable necessary extensions

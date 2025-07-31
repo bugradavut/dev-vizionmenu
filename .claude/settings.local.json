@@ -40,7 +40,10 @@
       "WebFetch(domain:localhost)",
       "WebFetch(domain:prnt.sc)",
       "Bash(NODE_ENV=production npx next build --no-lint)",
-      "Bash(export NODE_ENV=production)"
+      "Bash(export NODE_ENV=production)",
+      "Bash(claude doctor:*)",
+      "Bash(timeout:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }

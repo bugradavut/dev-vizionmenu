@@ -1,14 +1,17 @@
-# VizionMenu API Endpoints - Mobile Developer Reference
+# Vision Menu API Endpoints - Complete Reference
 
 ## **API Base Configuration**
 
 ```
 Development: http://localhost:3001
-Production: [TBD - Vercel deployment URL]
+Production: https://dev-vizionmenu-web.vercel.app (Vercel deployment)
 ```
 
-**Authentication:** Bearer JWT Token from Supabase
-```
+**Architecture:** Unified Express.js backend (same code for dev + production)
+**Database:** Supabase PostgreSQL with Row-Level Security (RLS)
+**Authentication:** Bearer JWT Token from Supabase with custom claims
+
+```javascript
 Headers: {
   "Authorization": "Bearer <jwt_token>",
   "Content-Type": "application/json"
@@ -65,61 +68,102 @@ Headers: {
 ## **👥 User Management Endpoints**
 
 ### `POST /api/v1/users`
-- **Status:** ✅ **READY**
-- **Purpose:** Create new user
-- **Auth Required:** Yes (Manager+ role)
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Create new user with role assignment
+- **Auth Required:** Yes (Manager+ role with hierarchy validation)
+- **Implementation:** Express.js endpoint with Supabase Auth integration
 - **Request Body:**
 ```json
 {
   "email": "newuser@restaurant.com",
+  "password": "secure_password",
+  "full_name": "Jane Smith",
+  "phone": "+1 416 555 1234",
+  "branch_id": "uuid",
   "role": "branch_staff",
-  "branchId": "uuid",
-  "firstName": "Jane",
-  "lastName": "Smith",
-  "phone": "+1 416 555 1234"
+  "permissions": ["orders:read", "orders:write"]
 }
 ```
-- **Response:** User object with generated ID
+- **Response:** 
+```json
+{
+  "data": {
+    "message": "User created successfully",
+    "user_id": "uuid",
+    "branch_user": {
+      "user_id": "uuid",
+      "branch_id": "uuid", 
+      "role": "branch_staff",
+      "permissions": ["orders:read", "orders:write"],
+      "is_active": true
+    }
+  }
+}
+```
 
 ### `GET /api/v1/users/branch/:branchId`
-- **Status:** ✅ **READY** 
-- **Purpose:** List all users in a branch
-- **Auth Required:** Yes (Manager+ role)
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** List all users in a branch with complete profile data
+- **Auth Required:** Yes (Any authenticated user in same branch)
+- **Implementation:** Express.js with Supabase Admin API integration
 - **Query Parameters:**
-  - `page=1` (pagination)
-  - `limit=10` (items per page)
-  - `search=john` (name/email search)
+  - `page=1` (pagination - supported)
+  - `limit=50` (default limit, configurable)
 - **Response:**
 ```json
 {
-  "data": [...users],
-  "meta": {
+  "data": {
+    "users": [
+      {
+        "user_id": "uuid",
+        "branch_id": "uuid",
+        "role": "branch_manager",
+        "permissions": ["users:read", "users:write", "orders:read"],
+        "is_active": true,
+        "created_at": "2025-01-15T10:30:00Z",
+        "updated_at": "2025-01-15T10:30:00Z",
+        "user": {
+          "user_id": "uuid",
+          "email": "manager@restaurant.com",
+          "full_name": "John Manager",
+          "phone": "+1 416 555 0100",
+          "avatar_url": null
+        }
+      }
+    ],
     "total": 25,
     "page": 1,
-    "limit": 10,
-    "totalPages": 3
+    "limit": 50
   }
 }
 ```
 
 ### `PATCH /api/v1/users/:userId/branch/:branchId`
-- **Status:** ✅ **READY**
-- **Purpose:** Update user information
-- **Auth Required:** Yes (Manager+ role, hierarchy respected)
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Update user profile information and status
+- **Auth Required:** Yes (Manager+ role with hierarchy validation)
+- **Implementation:** Role hierarchy enforcement with cross-branch protection
 - **Request Body:**
 ```json
 {
-  "firstName": "Updated Name",
-  "lastName": "Updated Surname", 
+  "email": "updated@restaurant.com",
+  "full_name": "Updated Name",
   "phone": "+1 416 555 9999",
-  "role": "branch_manager"
+  "is_active": true
+}
+```
+- **Response:**
+```json
+{
+  "data": { "success": true }
 }
 ```
 
 ### `POST /api/v1/users/:userId/branch/:branchId/assign-role`
-- **Status:** ✅ **READY**
-- **Purpose:** Assign new role to user
-- **Auth Required:** Yes (Chain Owner or Manager)
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Assign new role with automatic permission management
+- **Auth Required:** Yes (Manager+ role, can only assign equal/lower roles)
+- **Implementation:** Automatic permission assignment based on role
 - **Request Body:**
 ```json
 {
@@ -127,12 +171,36 @@ Headers: {
 }
 ```
 - **Role Options:** `chain_owner`, `branch_manager`, `branch_staff`, `branch_cashier`
+- **Response:**
+```json
+{
+  "data": {
+    "message": "Role assigned successfully",
+    "user_id": "uuid",
+    "branch_id": "uuid",
+    "new_role": "branch_manager",
+    "updated_user": {
+      "role": "branch_manager",
+      "permissions": ["users:read", "users:write", "menu:read", "menu:write"],
+      "updated_at": "2025-01-15T10:30:00Z"
+    }
+  }
+}
+```
 
 ### `DELETE /api/v1/users/:userId/branch/:branchId`
-- **Status:** ✅ **READY**
-- **Purpose:** Permanently delete user
-- **Auth Required:** Yes (Manager+ role, hierarchy respected)
-- **Response:** Success confirmation
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Permanently delete user with cascade handling
+- **Auth Required:** Yes (Manager+ role with hierarchy validation)
+- **Implementation:** Smart deletion - removes from branch, deletes completely if no other branches
+- **Response:**
+```json
+{
+  "data": {
+    "message": "User deleted successfully"
+  }
+}
+```
 
 ---
 
@@ -320,8 +388,108 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 
 ## **📞 Contact & Support**
 
-**API Status Updates:** Check this document for real-time endpoint status
-**Backend Team:** Ready to prioritize mobile-critical endpoints
-**Timeline:** Order management endpoints target completion: This week
+---
 
-**Note:** All ✅ READY endpoints are production-ready and tested. Mobile development can begin with user management features while order management endpoints are being completed.
+## **🚀 Implementation Status Overview**
+
+### **✅ Completed & Production Ready**
+- **User Management System**: Complete CRUD with role-based hierarchy
+- **Authentication**: Multi-tenant auth with Supabase integration
+- **Authorization**: Role-based access control with cross-branch protection
+- **API Architecture**: Unified Express.js backend deployed on Vercel
+- **Database**: Supabase with Row-Level Security policies
+- **Frontend**: Next.js 15 application with real-time order dashboard
+
+### **🔄 In Active Development**
+- **Order Management Endpoints**: Core CRUD operations for orders
+- **Menu Management System**: Category and item management
+- **Analytics Dashboard**: Order statistics and reporting
+- **Real-time Features**: WebSocket integration for live updates
+
+### **📋 Planned Features**
+- **Third-party Integrations**: Uber Eats, DoorDash API sync
+- **Background Jobs**: Email notifications, webhook processing
+- **Mobile API**: Enhanced endpoints for mobile applications
+- **Advanced Analytics**: Performance metrics and insights
+
+---
+
+## **🏗️ Backend Architecture Notes**
+
+### **Unified Express.js Implementation**
+- **Development**: `apps/api/api/index.js` - Express.js server
+- **Production**: Same Express.js code deployed as Vercel serverless function
+- **Legacy**: `apps/api/src/` contains archived NestJS implementation
+- **Benefits**: Simple deployment, consistent behavior, easy debugging
+
+### **Multi-Tenant Security**
+```javascript
+// Role hierarchy for permission checking
+const ROLE_HIERARCHY = {
+  'chain_owner': 3,      // Highest level - full access
+  'branch_manager': 2,   // Branch management
+  'branch_staff': 1,     // Limited operations
+  'branch_cashier': 0    // Payment focused
+};
+
+// Permission validation
+function canEditUser(currentUserRole, targetUserRole) {
+  const currentLevel = ROLE_HIERARCHY[currentUserRole] || -1;
+  const targetLevel = ROLE_HIERARCHY[targetUserRole] || -1;
+  return currentLevel >= targetLevel;
+}
+```
+
+### **Database Integration**
+- **Supabase Client**: Service role for admin operations
+- **RLS Policies**: Branch-level data isolation
+- **JWT Claims**: Custom user context with branch information
+- **Admin API**: User management with Supabase Auth admin functions
+
+---
+
+## **🔧 Development & Testing**
+
+### **Local Development Setup**
+```bash
+# Start backend API
+cd apps/api
+npm run dev  # Runs on http://localhost:3001
+
+# Test endpoints
+curl -H "Authorization: Bearer <jwt_token>" \
+     http://localhost:3001/auth/profile
+```
+
+### **Environment Variables**
+```bash
+# Required for API functionality
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_JWT_SECRET=your-jwt-secret
+FRONTEND_URL=http://localhost:3000
+```
+
+### **Production Deployment**
+- **Frontend**: `dev-vizionmenu.vercel.app`
+- **Backend**: `dev-vizionmenu-web.vercel.app`
+- **Database**: Production Supabase instance
+- **Environment**: Vercel environment variables
+
+---
+
+## **📞 API Support & Updates**
+
+**Current Status**: User management system fully implemented and production-ready
+**Next Priority**: Order management endpoints (CRUD operations)
+**Architecture**: Scalable Express.js backend with Supabase integration
+**Documentation**: This document reflects current implementation status
+
+**Development Notes**:
+- All ✅ READY endpoints are tested and production-deployed
+- Error handling includes proper HTTP status codes and structured responses
+- Authentication uses Supabase JWT tokens with custom branch context
+- Authorization enforces role hierarchy and cross-branch protection
+
+**Last Updated**: January 2025 | **Version**: 1.0.0
