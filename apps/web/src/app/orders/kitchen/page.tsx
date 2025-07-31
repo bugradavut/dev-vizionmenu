@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import Masonry from "react-masonry-css"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -91,12 +91,20 @@ const mockKitchenOrders: KitchenOrder[] = [
     isPreOrder: false,
     scheduledFor: null,
     items: [
-      { id: "6", name: "Grilled Chicken", quantity: 1, isCompleted: true },
-      { id: "7", name: "Rice Pilaf", quantity: 1, isCompleted: true },
-      { id: "8", name: "Mixed Vegetables", quantity: 1, isCompleted: true },
-      { id: "9", name: "Lemonade", quantity: 1, isCompleted: true }
+      { id: "6", name: "Grilled Chicken", quantity: 2, isCompleted: true, specialInstructions: "Medium well, no spices" },
+      { id: "7", name: "Rice Pilaf", quantity: 2, isCompleted: true },
+      { id: "8", name: "Mixed Vegetables", quantity: 2, isCompleted: true },
+      { id: "9", name: "Caesar Salad", quantity: 1, isCompleted: true, specialInstructions: "Dressing on the side" },
+      { id: "10a", name: "Garlic Bread", quantity: 4, isCompleted: true },
+      { id: "11a", name: "Chicken Wings", quantity: 8, isCompleted: true, specialInstructions: "Extra hot sauce" },
+      { id: "12a", name: "Mozzarella Sticks", quantity: 6, isCompleted: true },
+      { id: "13a", name: "Onion Rings", quantity: 1, isCompleted: true },
+      { id: "14a", name: "Sweet Potato Fries", quantity: 2, isCompleted: true },
+      { id: "15a", name: "Coca Cola", quantity: 3, isCompleted: true },
+      { id: "16a", name: "Lemonade", quantity: 2, isCompleted: true },
+      { id: "17a", name: "Iced Tea", quantity: 1, isCompleted: true }
     ],
-    total: 32.25,
+    total: 78.90,
     createdAt: "2025-01-31T12:20:00Z"
   },
   {
@@ -471,7 +479,7 @@ const mockKitchenOrders: KitchenOrder[] = [
 export default function KitchenDisplayPage() {
   const [orders, setOrders] = useState<KitchenOrder[]>(mockKitchenOrders)
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set())
-  const [displayedOrders, setDisplayedOrders] = useState<KitchenOrder[]>([])
+  const [displayedOrderIds, setDisplayedOrderIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [activeTab, setActiveTab] = useState<'active' | 'scheduled'>('active')
@@ -487,18 +495,34 @@ export default function KitchenDisplayPage() {
   // Infinite scroll configuration (for regular orders only)
   const ordersPerLoad = 12 // Load 12 orders at a time
 
-  // Initialize with first batch based on active tab
-  useEffect(() => {
+  // Separate pre-orders from regular orders - memoized to prevent re-creation
+  const preOrders = useMemo(() => orders.filter(order => order.isPreOrder), [orders])
+  const regularOrders = useMemo(() => orders.filter(order => !order.isPreOrder), [orders])
+  
+  // Current orders based on active tab - memoized to prevent unnecessary re-calculations
+  const sortedCurrentOrders = useMemo(() => {
     const currentOrdersForDisplay = activeTab === 'active' ? regularOrders : preOrders
-    const sortedCurrentOrders = currentOrdersForDisplay.sort((a, b) => {
+    return currentOrdersForDisplay.sort((a, b) => {
       const aNum = parseInt(a.orderNumber.split('-')[1]) || 0
       const bNum = parseInt(b.orderNumber.split('-')[1]) || 0
       return aNum - bNum
     })
+  }, [activeTab, regularOrders, preOrders])
+  
+  // Also store currentOrdersForDisplay for length reference
+  const currentOrdersForDisplay = activeTab === 'active' ? regularOrders : preOrders
+  
+  // Get displayed orders by finding them in the current sorted list
+  const displayedOrders = useMemo(() => {
+    return displayedOrderIds.map(id => sortedCurrentOrders.find(order => order.id === id)).filter(Boolean) as KitchenOrder[]
+  }, [displayedOrderIds, sortedCurrentOrders])
+
+  // Initialize with first batch based on active tab
+  useEffect(() => {
     const initialOrders = sortedCurrentOrders.slice(0, ordersPerLoad)
-    setDisplayedOrders(initialOrders)
+    setDisplayedOrderIds(initialOrders.map(order => order.id))
     setHasMore(sortedCurrentOrders.length > ordersPerLoad)
-  }, [activeTab, orders, ordersPerLoad]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeTab, ordersPerLoad]) // sortedCurrentOrders is accessed directly
 
   // Load more orders function
   const loadMoreOrders = useCallback(() => {
@@ -508,17 +532,11 @@ export default function KitchenDisplayPage() {
     
     // Simulate API delay (remove in real implementation)
     setTimeout(() => {
-      const currentOrdersForDisplay = activeTab === 'active' ? regularOrders : preOrders
-      const sortedCurrentOrders = currentOrdersForDisplay.sort((a, b) => {
-        const aNum = parseInt(a.orderNumber.split('-')[1]) || 0
-        const bNum = parseInt(b.orderNumber.split('-')[1]) || 0
-        return aNum - bNum
-      })
-      const currentLength = displayedOrders.length
+      const currentLength = displayedOrderIds.length
       const nextOrders = sortedCurrentOrders.slice(currentLength, currentLength + ordersPerLoad)
       
       if (nextOrders.length > 0) {
-        setDisplayedOrders(prev => [...prev, ...nextOrders])
+        setDisplayedOrderIds(prev => [...prev, ...nextOrders.map(order => order.id)])
         setHasMore(currentLength + nextOrders.length < sortedCurrentOrders.length)
       } else {
         setHasMore(false)
@@ -526,7 +544,7 @@ export default function KitchenDisplayPage() {
       
       setLoading(false)
     }, 500) // 500ms delay for smooth UX
-  }, [loading, hasMore, displayedOrders.length, activeTab, orders, ordersPerLoad]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loading, hasMore, displayedOrderIds.length, ordersPerLoad]) // sortedCurrentOrders is accessed directly inside setTimeout
 
   // Infinite scroll detection
   useEffect(() => {
@@ -573,9 +591,8 @@ export default function KitchenDisplayPage() {
           }
         : order
 
-    // Update both orders and displayedOrders
+    // Update orders (displayedOrders will update automatically via useMemo)
     setOrders(prevOrders => prevOrders.map(updateOrder))
-    setDisplayedOrders(prevDisplayed => prevDisplayed.map(updateOrder))
   }
 
   // Change order status
@@ -583,13 +600,13 @@ export default function KitchenDisplayPage() {
     if (newStatus === 'completed') {
       // Remove completed orders from kitchen display
       setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId))
-      setDisplayedOrders(prevDisplayed => prevDisplayed.filter(order => order.id !== orderId))
+      setDisplayedOrderIds(prevIds => prevIds.filter(id => id !== orderId))
     } else {
       const updateOrder = (order: KitchenOrder) =>
         order.id === orderId ? { ...order, status: newStatus } : order
       
       setOrders(prevOrders => prevOrders.map(updateOrder))
-      setDisplayedOrders(prevDisplayed => prevDisplayed.map(updateOrder))
+      // displayedOrders will update automatically via useMemo
     }
   }
 
@@ -684,14 +701,6 @@ export default function KitchenDisplayPage() {
         return null
     }
   }
-
-  // Separate pre-orders from regular orders
-  const preOrders = orders.filter(order => order.isPreOrder)
-  const regularOrders = orders.filter(order => !order.isPreOrder)
-  
-  // Current orders based on active tab
-  const currentOrdersForDisplay = activeTab === 'active' ? regularOrders : preOrders
-  
 
   // Filter displayed orders by status (for overview cards)
   const acceptedOrders = displayedOrders.filter(order => order.status === 'accepted')
@@ -868,12 +877,17 @@ export default function KitchenDisplayPage() {
                                       <Checkbox
                                         id={`item-${item.id}`}
                                         checked={item.isCompleted}
+                                        disabled={order.status === 'accepted' || order.status === 'ready'}
                                         onCheckedChange={() => toggleItemCompletion(order.id, item.id)}
                                         className="mt-0.5 data-[state=checked]:bg-green-600"
                                       />
                                       <label 
                                         htmlFor={`item-${item.id}`}
-                                        className={`flex-1 text-sm cursor-pointer ${
+                                        className={`flex-1 text-sm ${
+                                          order.status === 'accepted' || order.status === 'ready' 
+                                            ? 'cursor-not-allowed opacity-50' 
+                                            : 'cursor-pointer'
+                                        } ${
                                           item.isCompleted ? 'line-through text-muted-foreground' : ''
                                         }`}
                                       >
