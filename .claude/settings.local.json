@@ -43,7 +43,8 @@
       "Bash(export NODE_ENV=production)",
       "Bash(claude doctor:*)",
       "Bash(timeout:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "WebFetch(domain:www.shadcn-ui-blocks.com)"
     ],
     "deny": []
   }

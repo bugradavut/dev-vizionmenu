@@ -334,13 +334,13 @@ export default function OrderHistoryPage() {
   }
 
   const renderFilterButtons = () => (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col md:flex-row lg:items-center md:justify-between gap-4 mb-6">
+      <div className="flex flex-wrap items-center gap-2 min-w-0">
         <Button
           variant={statusFilter === 'all' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setStatusFilter('all')}
-          className="h-9 text-sm"
+          className="h-9 text-sm flex-shrink-0"
         >
           All
         </Button>
@@ -348,7 +348,7 @@ export default function OrderHistoryPage() {
           variant={statusFilter === 'completed' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setStatusFilter('completed')}
-          className="h-9 text-sm"
+          className="h-9 text-sm flex-shrink-0"
         >
           Completed
         </Button>
@@ -356,93 +356,92 @@ export default function OrderHistoryPage() {
           variant={statusFilter === 'cancelled' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setStatusFilter('cancelled')}
-          className="h-9 text-sm"
+          className="h-9 text-sm flex-shrink-0"
         >
           Cancelled
         </Button>
       </div>
       
       {/* Sort & Date Range */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 min-w-0 md:justify-end sm:justify-start">
         <Button 
           variant="outline" 
           size="sm" 
-          className="gap-2 h-9 text-sm"
+          className="gap-2 h-9 text-sm flex-shrink-0"
           onClick={() => setSortOrder(sortOrder === 'newest' ? 'oldest' : 'newest')}
         >
           <ArrowUpDown className="h-4 w-4" />
-          <span className="hidden sm:inline">{sortOrder === 'newest' ? 'Newest First' : 'Oldest First'}</span>
-          <span className="sm:hidden">{sortOrder === 'newest' ? 'Newest' : 'Oldest'}</span>
+          <span className="hidden lg:inline">{sortOrder === 'newest' ? 'Newest First' : 'Oldest First'}</span>
+          <span className="lg:hidden">{sortOrder === 'newest' ? 'Newest' : 'Oldest'}</span>
         </Button>
         
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2 h-9 text-sm font-medium min-w-[140px] justify-between">
+            <Button variant="outline" size="sm" className="gap-2 h-9 text-sm font-medium min-w-[140px] justify-between flex-shrink-0">
               {formatDateRange()}
               <CalendarIcon className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="end">
           <div className="flex flex-col">
-            <div className="flex">
+            <div className="flex h-[300px]">
               {/* Quick Date Buttons */}
-              <div className="flex flex-col gap-1 p-3">
+              <div className="flex flex-col justify-between p-3 h-full">
+                <div className="flex flex-col gap-1">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="justify-start text-xs h-8"
+                    onClick={() => setQuickDateRange(1)}
+                  >
+                    Yesterday
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="justify-start text-xs h-8"
+                    onClick={() => setQuickDateRange(7)}
+                  >
+                    Last 7 Days
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="justify-start text-xs h-8"
+                    onClick={() => setQuickDateRange(15)}
+                  >
+                    Last 15 Days
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="justify-start text-xs h-8"
+                    onClick={() => setQuickDateRange(30)}
+                  >
+                    Last 30 Days
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="justify-start text-xs h-8"
+                    onClick={setLastMonth}
+                  >
+                    Last Month
+                  </Button>
+                </div>
+                
                 <Button 
-                  variant="ghost" 
+                  variant="outline" 
                   size="sm" 
-                  className="justify-start text-xs h-8"
-                  onClick={() => setQuickDateRange(1)}
+                  className="justify-start text-xs h-8 text-red-600 border-red-300 hover:text-red-700 hover:bg-red-50 hover:border-red-400 mt-4"
+                  onClick={() => setDateRange(undefined)}
                 >
-                  Yesterday
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="justify-start text-xs h-8"
-                  onClick={() => setQuickDateRange(7)}
-                >
-                  Last 7 Days
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="justify-start text-xs h-8"
-                  onClick={() => setQuickDateRange(15)}
-                >
-                  Last 15 Days
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="justify-start text-xs h-8"
-                  onClick={() => setQuickDateRange(30)}
-                >
-                  Last 30 Days
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="justify-start text-xs h-8"
-                  onClick={setLastMonth}
-                >
-                  Last Month
+                  Reset Range
                 </Button>
               </div>
               
               {/* Calendar */}
               <Calendar04 selected={dateRange} onSelect={setDateRange} />
-            </div>
-            
-            {/* Reset Range Button - Bottom */}
-            <div className="border-t border-gray-200 p-3">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-center text-xs h-8 text-red-600 border-red-300 hover:text-red-700 hover:bg-red-50 hover:border-red-400"
-                onClick={() => setDateRange(undefined)}
-              >
-                Reset Range
-              </Button>
             </div>
           </div>
         </PopoverContent>
