@@ -498,7 +498,7 @@ export default function KitchenDisplayPage() {
     const initialOrders = sortedCurrentOrders.slice(0, ordersPerLoad)
     setDisplayedOrders(initialOrders)
     setHasMore(sortedCurrentOrders.length > ordersPerLoad)
-  }, [activeTab, orders, ordersPerLoad]) // regularOrders and preOrders are derived from orders
+  }, [activeTab, orders, ordersPerLoad]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load more orders function
   const loadMoreOrders = useCallback(() => {
@@ -526,7 +526,7 @@ export default function KitchenDisplayPage() {
       
       setLoading(false)
     }, 500) // 500ms delay for smooth UX
-  }, [loading, hasMore, displayedOrders.length, activeTab, orders, ordersPerLoad]) // regularOrders and preOrders are derived from orders
+  }, [loading, hasMore, displayedOrders.length, activeTab, orders, ordersPerLoad]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Infinite scroll detection
   useEffect(() => {
@@ -692,12 +692,6 @@ export default function KitchenDisplayPage() {
   // Current orders based on active tab
   const currentOrdersForDisplay = activeTab === 'active' ? regularOrders : preOrders
   
-  // Sort orders for display
-  const sortedCurrentOrders = currentOrdersForDisplay.sort((a, b) => {
-    const aNum = parseInt(a.orderNumber.split('-')[1]) || 0
-    const bNum = parseInt(b.orderNumber.split('-')[1]) || 0
-    return aNum - bNum
-  })
 
   // Filter displayed orders by status (for overview cards)
   const acceptedOrders = displayedOrders.filter(order => order.status === 'accepted')
