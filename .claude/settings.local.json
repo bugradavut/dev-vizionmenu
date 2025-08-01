@@ -44,7 +44,8 @@
       "Bash(claude doctor:*)",
       "Bash(timeout:*)",
       "Bash(pkill:*)",
-      "WebFetch(domain:www.shadcn-ui-blocks.com)"
+      "WebFetch(domain:www.shadcn-ui-blocks.com)",
+      "Bash(git checkout:*)"
     ],
     "deny": []
   }

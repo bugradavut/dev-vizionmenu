@@ -260,7 +260,7 @@ export default function LiveOrdersPage() {
           <Card key={order.id} className="hover:shadow-lg transition-all duration-200">
             <CardContent className="p-5">
               {/* Header - Channel and Status */}
-              <div className="flex items-start justify-between mb-4 pb-4 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
                 <div className="flex items-center gap-2">
                   {renderSourceIcon(order.source)}
                 </div>
