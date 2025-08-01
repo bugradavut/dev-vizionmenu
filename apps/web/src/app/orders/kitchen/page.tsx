@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Clock, ChefHat, CheckCircle2, ChevronDown, ChevronUp, Grid3X3, Columns, LayoutGrid, List, Table, FileText, AlertCircle } from "lucide-react"
+import { Clock, ChefHat, CheckCircle2, ChevronDown, ChevronUp, Grid3X3, Columns, LayoutGrid, List, Table, AlertCircle } from "lucide-react"
 
 interface OrderItem {
   id: string
@@ -218,7 +218,7 @@ export default function KitchenDisplayPage() {
     const initialOrders = sortedCurrentOrders.slice(0, ordersPerLoad)
     setDisplayedOrderIds(initialOrders.map(order => order.id))
     setHasMore(sortedCurrentOrders.length > ordersPerLoad)
-  }, [ordersPerLoad]) // sortedCurrentOrders is accessed directly
+  }, [ordersPerLoad, sortedCurrentOrders])
 
   // Load more orders function
   const loadMoreOrders = useCallback(() => {
@@ -240,7 +240,7 @@ export default function KitchenDisplayPage() {
       
       setLoading(false)
     }, 500) // 500ms delay for smooth UX
-  }, [loading, hasMore, displayedOrderIds.length, ordersPerLoad]) // sortedCurrentOrders is accessed directly inside setTimeout
+  }, [loading, hasMore, displayedOrderIds.length, ordersPerLoad, sortedCurrentOrders])
 
   // Infinite scroll detection
   useEffect(() => {
@@ -306,10 +306,6 @@ export default function KitchenDisplayPage() {
     }
   }
 
-  // Handle ready for pickup - marks order as completed and removes from display
-  const handleReadyForPickup = (orderId: string) => {
-    changeOrderStatus(orderId, 'completed')
-  }
 
   // Toggle expanded state for orders
   const toggleOrderExpansion = (orderId: string) => {
