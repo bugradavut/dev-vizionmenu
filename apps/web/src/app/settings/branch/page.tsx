@@ -387,7 +387,7 @@ export default function BranchSettingsPage() {
                                   )}
                                 </div>
                                 <div className="flex-1">
-                                  <h4 className="font-medium">Allow Manual "Ready" Button</h4>
+                                  <h4 className="font-medium">Allow Manual &quot;Ready&quot; Button</h4>
                                   <p className="text-xs text-muted-foreground">
                                     Staff can mark orders ready before auto-timer expires
                                   </p>
