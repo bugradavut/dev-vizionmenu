@@ -198,8 +198,6 @@ export default function KitchenDisplayPage() {
     })
   }, [regularOrders, preOrders])
   
-  // All orders for display
-  const currentOrdersForDisplay = [...regularOrders, ...preOrders]
   
   // Get displayed orders by finding them in the current sorted list
   const displayedOrders = useMemo(() => {
