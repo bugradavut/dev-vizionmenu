@@ -18,7 +18,8 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { Table2, LayoutGrid, ArrowRight } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Table2, LayoutGrid, ArrowRight, Search, X } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -92,6 +93,7 @@ type ViewMode = 'table' | 'card'
 export default function LiveOrdersPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState("")
 
   // Load saved view mode from localStorage on component mount
   useEffect(() => {
@@ -158,44 +160,82 @@ export default function LiveOrdersPage() {
   }
 
   const getFilteredOrders = () => {
-    if (statusFilter === 'all') return mockOrders
-    return mockOrders.filter(order => order.status === statusFilter)
+    let orders = mockOrders
+    
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      orders = orders.filter(order => order.status === statusFilter)
+    }
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      orders = orders.filter(order => 
+        order.orderNumber.toLowerCase().includes(query) ||
+        order.customerName.toLowerCase().includes(query) ||
+        order.customerPhone.toLowerCase().includes(query)
+      )
+    }
+    
+    return orders
   }
 
   const renderFilterButtons = () => (
-    <div className="flex items-center gap-2 mb-6">
-      <Button
-        variant={statusFilter === 'all' ? 'default' : 'outline'}
-        size="sm"
-        onClick={() => setStatusFilter('all')}
-        className="h-9 text-sm"
-      >
-        All
-      </Button>
-      <Button
-        variant={statusFilter === 'pending' ? 'default' : 'outline'}
-        size="sm"
-        onClick={() => setStatusFilter('pending')}
-        className="h-9 text-sm"
-      >
-        New Orders
-      </Button>
-      <Button
-        variant={statusFilter === 'preparing' ? 'default' : 'outline'}
-        size="sm"
-        onClick={() => setStatusFilter('preparing')}
-        className="h-9 text-sm"
-      >
-        Preparing
-      </Button>
-      <Button
-        variant={statusFilter === 'ready' ? 'default' : 'outline'}
-        size="sm"
-        onClick={() => setStatusFilter('ready')}
-        className="h-9 text-sm"
-      >
-        Ready
-      </Button>
+    <div className="flex items-center justify-between mb-6">
+      {/* Filter Buttons - Left Side */}
+      <div className="flex items-center gap-2">
+        <Button
+          variant={statusFilter === 'all' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setStatusFilter('all')}
+          className="h-9 text-sm"
+        >
+          All
+        </Button>
+        <Button
+          variant={statusFilter === 'pending' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setStatusFilter('pending')}
+          className="h-9 text-sm"
+        >
+          New Orders
+        </Button>
+        <Button
+          variant={statusFilter === 'preparing' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setStatusFilter('preparing')}
+          className="h-9 text-sm"
+        >
+          Preparing
+        </Button>
+        <Button
+          variant={statusFilter === 'ready' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setStatusFilter('ready')}
+          className="h-9 text-sm"
+        >
+          Ready
+        </Button>
+      </div>
+      
+      {/* Search Bar - Right Side */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search orders, customer, phone"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10 pr-10 w-80"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
     </div>
   )
 
@@ -337,6 +377,7 @@ export default function LiveOrdersPage() {
                   </p>
                 </div>
                 <div className="lg:col-span-4 flex items-center justify-end">
+                  {/* View Toggle */}
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">View:</span>
                     <Button

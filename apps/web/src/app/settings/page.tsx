@@ -22,7 +22,8 @@ import {
   Bell, 
   Plug, 
   CreditCard,
-  ChevronRight 
+  ChevronRight,
+  Building2
 } from "lucide-react"
 import Link from "next/link"
 
@@ -32,6 +33,13 @@ const settingsCategories = [
     description: "Manage your general application preferences and theme settings.",
     icon: Settings2,
     href: "/settings/general",
+    available: true
+  },
+  {
+    title: "Branch Settings",
+    description: "Configure order flow, timing, and branch-specific workflows.",
+    icon: Building2,
+    href: "/settings/branch",
     available: true
   },
   {

@@ -19,7 +19,8 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { Table2, LayoutGrid, ArrowRight, CalendarIcon, ArrowUpDown } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Table2, LayoutGrid, ArrowRight, CalendarIcon, ArrowUpDown, Search, X } from "lucide-react"
 import {
   Popover,
   PopoverContent,
@@ -194,6 +195,7 @@ export default function OrderHistoryPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest')
+  const [searchQuery, setSearchQuery] = useState("")
 
   // Load saved view mode from localStorage on component mount
   useEffect(() => {
@@ -281,6 +283,16 @@ export default function OrderHistoryPage() {
       })
     }
 
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filtered = filtered.filter(order => 
+        order.orderNumber.toLowerCase().includes(query) ||
+        order.customerName.toLowerCase().includes(query) ||
+        order.customerPhone.toLowerCase().includes(query)
+      )
+    }
+
     // Sort by date
     filtered.sort((a, b) => {
       const dateA = new Date(a.createdAt)
@@ -362,8 +374,26 @@ export default function OrderHistoryPage() {
         </Button>
       </div>
       
-      {/* Sort & Date Range */}
+      {/* Search Bar & Sort & Date Range */}
       <div className="flex flex-wrap items-center gap-2 min-w-0 md:justify-end sm:justify-start">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search orders, customer"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-10 w-64 h-9"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
         <Button 
           variant="outline" 
           size="sm" 
@@ -625,6 +655,7 @@ export default function OrderHistoryPage() {
                   </p>
                 </div>
                 <div className="lg:col-span-4 flex items-center justify-end">
+                  {/* View Toggle */}
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">View:</span>
                     <Button

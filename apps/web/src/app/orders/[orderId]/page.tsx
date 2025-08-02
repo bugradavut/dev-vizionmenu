@@ -1,6 +1,6 @@
 "use client"
 
-import { use } from "react"
+import { use, useState } from "react"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import {
@@ -22,7 +22,9 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Progress } from "@/components/ui/progress"
-import { ArrowLeft, Clock, MapPin, User, CheckCircle, Circle, AlertCircle, Package, Receipt } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@repo/ui"
+import { ArrowLeft, Clock, MapPin, User, CheckCircle, Circle, AlertCircle, Package, Receipt, RefreshCw } from "lucide-react"
 import { getSourceIcon } from "@/assets/images"
 import Image from "next/image"
 import Link from "next/link"
@@ -49,7 +51,7 @@ const mockOrderData = {
     postalCode: "M5H 2M9"
   },
   source: "qr_code",
-  status: "preparing",
+  status: "completed",
   total: 125.50,
   subtotal: 112.50,
   tax: 13.00,
@@ -114,9 +116,9 @@ const mockOrderData = {
     },
     {
       status: "completed",
-      timestamp: null,
+      timestamp: "2025-01-28T11:15:00Z",
       message: "Order delivered/completed",
-      completed: false
+      completed: true
     }
   ],
   staff: {
@@ -144,10 +146,57 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   const { orderId } = use(params)
   const { context = 'live' } = use(searchParams)
   
+  // Partial refund state
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
+  const [refundSuccess, setRefundSuccess] = useState(false)
+  const [showRefundDialog, setShowRefundDialog] = useState(false)
+  
   // For now, using mock data regardless of orderId
   // TODO: Fetch order data using orderId
   const order = mockOrderData
   console.log('Order ID:', orderId) // Temporary usage to avoid ESLint error
+
+  // Partial refund handlers
+  const handleItemSelect = (itemId: string, checked: boolean) => {
+    const newSelected = new Set(selectedItems)
+    if (checked) {
+      newSelected.add(itemId)
+    } else {
+      newSelected.delete(itemId)
+    }
+    setSelectedItems(newSelected)
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allItemIds = new Set(order.items.map(item => item.id))
+      setSelectedItems(allItemIds)
+    } else {
+      setSelectedItems(new Set())
+    }
+  }
+
+  const getSelectedAmount = () => {
+    return order.items
+      .filter(item => selectedItems.has(item.id))
+      .reduce((total, item) => total + (item.price * item.quantity), 0)
+  }
+
+  const handleRefundClick = () => {
+    setShowRefundDialog(true)
+  }
+
+  const handleConfirmRefund = () => {
+    // Mock refund action
+    setRefundSuccess(true)
+    setSelectedItems(new Set())
+    setShowRefundDialog(false)
+    
+    // Hide success message after 3 seconds
+    setTimeout(() => {
+      setRefundSuccess(false)
+    }, 3000)
+  }
 
   const getSourceLabel = (source: string) => {
     switch (source) {
@@ -332,9 +381,137 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         <AccordionContent className="px-0 pb-0">
                           <Separator />
                           <CardContent className="p-6">
+                            {/* Partial Refund Controls */}
+                            {(order.status === 'completed' || order.status === 'cancelled') && (
+                              <div className="mb-4">
+                                {selectedItems.size === 0 ? (
+                                  <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-md">
+                                    <div className="flex items-center gap-2">
+                                      <RefreshCw className="h-4 w-4 text-gray-600" />
+                                      <span className="text-sm text-gray-700">Select items below to refund</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Checkbox
+                                        id="select-all"
+                                        checked={false}
+                                        onCheckedChange={handleSelectAll}
+                                      />
+                                      <label htmlFor="select-all" className="text-xs text-gray-600 cursor-pointer">
+                                        Select All
+                                      </label>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                    <div className="flex items-center gap-4">
+                                      <span className="text-sm text-blue-700">
+                                        {selectedItems.size} item(s) selected
+                                      </span>
+                                      <span className="font-medium text-blue-900">
+                                        Refund: ${getSelectedAmount().toFixed(2)}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-3">
+                                      <div className="flex items-center gap-2">
+                                        <Checkbox
+                                          id="select-all-active"
+                                          checked={selectedItems.size === order.items.length && order.items.length > 0}
+                                          onCheckedChange={handleSelectAll}
+                                        />
+                                        <label htmlFor="select-all-active" className="text-xs text-blue-600 cursor-pointer">
+                                          Select All
+                                        </label>
+                                      </div>
+                                      
+                                      <Dialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>
+                                        <DialogTrigger asChild>
+                                          <Button 
+                                            size="sm" 
+                                            onClick={handleRefundClick}
+                                            className="bg-blue-600 hover:bg-blue-700"
+                                          >
+                                            Refund Selected
+                                          </Button>
+                                        </DialogTrigger>
+                                        
+                                        <DialogContent className="max-w-md">
+                                          <DialogHeader>
+                                            <DialogTitle className="flex items-center gap-2">
+                                              <AlertCircle className="h-5 w-5 text-red-600" />
+                                              Confirm Partial Refund
+                                            </DialogTitle>
+                                            <DialogDescription>
+                                              You are about to refund {selectedItems.size} item(s) for a total amount of ${getSelectedAmount().toFixed(2)}.
+                                              This action cannot be undone.
+                                            </DialogDescription>
+                                          </DialogHeader>
+                                          
+                                          <div className="py-4">
+                                            <div className="space-y-2">
+                                              <h4 className="font-medium text-sm">Items to be refunded:</h4>
+                                              <div className="space-y-1 max-h-40 overflow-y-auto border rounded-md p-2 bg-gray-50">
+                                                {order.items
+                                                  .filter(item => selectedItems.has(item.id))
+                                                  .map(item => (
+                                                    <div key={item.id} className="flex justify-between text-sm bg-white p-2 rounded border">
+                                                      <span>{item.name} x{item.quantity}</span>
+                                                      <span className="font-medium">${(item.price * item.quantity).toFixed(2)}</span>
+                                                    </div>
+                                                  ))}
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          <DialogFooter>
+                                            <Button 
+                                              variant="outline" 
+                                              onClick={() => setShowRefundDialog(false)}
+                                            >
+                                              Cancel
+                                            </Button>
+                                            <Button 
+                                              onClick={handleConfirmRefund}
+                                              className="bg-red-600 hover:bg-red-700"
+                                            >
+                                              Confirm Refund ${getSelectedAmount().toFixed(2)}
+                                            </Button>
+                                          </DialogFooter>
+                                        </DialogContent>
+                                      </Dialog>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Success Message */}
+                            {refundSuccess && (
+                              <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-md">
+                                    <div className="flex items-center gap-2">
+                                      <CheckCircle className="h-4 w-4 text-green-600" />
+                                      <span className="text-sm font-medium text-green-800">
+                                        Refund processed successfully! Funds will be returned within 3-5 business days.
+                                      </span>
+                                    </div>
+                              </div>
+                            )}
+
                             <div className="space-y-4">
                               {order.items.map((item, index) => (
-                                <div key={item.id} className={`flex justify-between items-start pb-4 ${index < order.items.length - 1 || order.specialInstructions ? 'border-b border-border/40' : ''}`}>
+                                <div key={item.id} className={`flex items-start gap-3 pb-4 ${index < order.items.length - 1 || order.specialInstructions ? 'border-b border-border/40' : ''}`}>
+                                  {/* Checkbox for refund selection */}
+                                  {(order.status === 'completed' || order.status === 'cancelled') && (
+                                    <div className="pt-1">
+                                      <Checkbox
+                                        id={`item-${item.id}`}
+                                        checked={selectedItems.has(item.id)}
+                                        onCheckedChange={(checked) => handleItemSelect(item.id, checked as boolean)}
+                                      />
+                                    </div>
+                                  )}
+                                  
+                                  {/* Item Details */}
                                   <div className="flex-1 space-y-1">
                                     <div className="flex items-center gap-2">
                                       <span className="font-medium">{item.name}</span>
@@ -353,6 +530,8 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                       <p className="text-sm text-muted-foreground">{item.notes}</p>
                                     )}
                                   </div>
+                                  
+                                  {/* Price */}
                                   <div className="text-right">
                                     <div className="font-medium">${(item.price * item.quantity).toFixed(2)}</div>
                                     {item.quantity > 1 && (

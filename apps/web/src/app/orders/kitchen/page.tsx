@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
-import Masonry from "react-masonry-css"
+import React, { useState, useEffect, useCallback, useMemo } from "react"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import {
@@ -22,7 +21,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Clock, ChefHat, CheckCircle2, ChevronDown, ChevronUp, Grid3X3, Columns, LayoutGrid, List, Table, AlertCircle } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Clock, ChefHat, CheckCircle2, ChevronDown, ChevronUp, Columns, Table, AlertCircle, Search, X } from "lucide-react"
 
 interface OrderItem {
   id: string
@@ -171,16 +171,9 @@ export default function KitchenDisplayPage() {
   const [displayedOrderIds, setDisplayedOrderIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
-  const [viewType, setViewType] = useState<'card' | 'kanban' | 'grid' | 'list' | 'table'>('card')
+  const [viewType, setViewType] = useState<'kanban' | 'table'>('kanban')
+  const [searchQuery, setSearchQuery] = useState("")
   // Removed activeTab - now showing unified view of all orders
-  
-  // Masonry breakpoint configuration
-  const breakpointColumnsObj = {
-    default: 4,
-    1100: 3,
-    768: 2,
-    500: 1
-  }
 
   // Infinite scroll configuration (for regular orders only)
   const ordersPerLoad = 12 // Load 12 orders at a time
@@ -210,8 +203,21 @@ export default function KitchenDisplayPage() {
   
   // Get displayed orders by finding them in the current sorted list
   const displayedOrders = useMemo(() => {
-    return displayedOrderIds.map(id => sortedCurrentOrders.find(order => order.id === id)).filter(Boolean) as KitchenOrder[]
-  }, [displayedOrderIds, sortedCurrentOrders])
+    let orders = displayedOrderIds.map(id => sortedCurrentOrders.find(order => order.id === id)).filter(Boolean) as KitchenOrder[]
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      orders = orders.filter(order => 
+        (order.id && order.id.toLowerCase().includes(query)) ||
+        (order.orderNumber && order.orderNumber.toLowerCase().includes(query)) ||
+        (order.customerName && order.customerName.toLowerCase().includes(query)) ||
+        (order.customerPhone && order.customerPhone.toLowerCase().includes(query))
+      )
+    }
+    
+    return orders
+  }, [displayedOrderIds, sortedCurrentOrders, searchQuery])
 
   // Initialize with first batch based on unified view
   useEffect(() => {
@@ -442,127 +448,110 @@ export default function KitchenDisplayPage() {
                     Monitor and manage orders for kitchen preparation
                   </p>
                 </div>
-                <div className="lg:col-span-4">
-                  {/* Order Counter */}
-                  <div className="flex items-center justify-end">
-                    <div className="text-sm text-muted-foreground">
-                      Showing {displayedOrders.length} of {currentOrdersForDisplay.length} orders
-                      {loading && " • Loading..."}
-                    </div>
+                <div className="lg:col-span-4 flex items-center justify-end">
+                  {/* View Toggle */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">View:</span>
+                    <Button
+                      variant={viewType === 'kanban' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setViewType('kanban')}
+                      className="flex items-center gap-2"
+                    >
+                      <Columns className="h-4 w-4" />
+                    </Button>
+                    
+                    <Button
+                      variant={viewType === 'table' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setViewType('table')}
+                      className="flex items-center gap-2"
+                    >
+                      <Table className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </div>
+              
             </div>
 
-            {/* View Toggle Buttons */}
+            {/* Search Bar - Above Status Cards */}
             <div className="px-2 pb-4 sm:px-4 lg:px-6">
-              <div className="flex flex-wrap gap-2 justify-center">
-                <Button
-                  variant={viewType === 'card' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewType('card')}
-                  className="flex items-center gap-2"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                  Masonry View
-                </Button>
-                
-                <Button
-                  variant={viewType === 'kanban' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewType('kanban')}
-                  className="flex items-center gap-2"
-                >
-                  <Columns className="h-4 w-4" />
-                  Kanban View
-                </Button>
-                
-                <Button
-                  variant={viewType === 'grid' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewType('grid')}
-                  className="flex items-center gap-2"
-                >
-                  <Grid3X3 className="h-4 w-4" />
-                  Grid View
-                </Button>
-                
-                <Button
-                  variant={viewType === 'list' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewType('list')}
-                  className="flex items-center gap-2"
-                >
-                  <List className="h-4 w-4" />
-                  List View
-                </Button>
-                
-                <Button
-                  variant={viewType === 'table' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewType('table')}
-                  className="flex items-center gap-2"
-                >
-                  <Table className="h-4 w-4" />
-                  Table View
-                </Button>
+              <div className="flex justify-end">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search orders, customer"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 pr-10 w-80"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Status Overview Cards */}
             <div className="px-2 pb-6 sm:px-4 lg:px-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <Card className="hover:shadow-md transition-all duration-200 border-l-4 border-l-blue-500">
-                  <CardContent className="p-4">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="text-2xl font-bold text-blue-600">{acceptedOrders.length}</div>
-                        <div className="text-sm text-muted-foreground">To Prepare</div>
+                        <div className="text-xl sm:text-2xl font-bold text-blue-600">{acceptedOrders.length}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">To Prepare</div>
                       </div>
-                      <div className="bg-blue-100 p-2 rounded-full">
-                        <ChefHat className="h-5 w-5 text-blue-600" />
+                      <div className="bg-blue-100 p-1.5 sm:p-2 rounded-full">
+                        <ChefHat className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
                 
                 <Card className="hover:shadow-md transition-all duration-200 border-l-4 border-l-orange-500">
-                  <CardContent className="p-4">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="text-2xl font-bold text-orange-600">{preparingOrders.length}</div>
-                        <div className="text-sm text-muted-foreground">In Progress</div>
+                        <div className="text-xl sm:text-2xl font-bold text-orange-600">{preparingOrders.length}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">In Progress</div>
                       </div>
-                      <div className="bg-orange-100 p-2 rounded-full">
-                        <Clock className="h-5 w-5 text-orange-600" />
+                      <div className="bg-orange-100 p-1.5 sm:p-2 rounded-full">
+                        <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
                 
                 <Card className="hover:shadow-md transition-all duration-200 border-l-4 border-l-green-500">
-                  <CardContent className="p-4">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="text-2xl font-bold text-green-600">{readyOrders.length}</div>
-                        <div className="text-sm text-muted-foreground">Ready</div>
+                        <div className="text-xl sm:text-2xl font-bold text-green-600">{readyOrders.length}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">Ready</div>
                       </div>
-                      <div className="bg-green-100 p-2 rounded-full">
-                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <div className="bg-green-100 p-1.5 sm:p-2 rounded-full">
+                        <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
                 
                 <Card className="hover:shadow-md transition-all duration-200 border-l-4 border-l-yellow-500">
-                  <CardContent className="p-4">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="text-2xl font-bold text-yellow-600">{preOrders.length}</div>
-                        <div className="text-sm text-muted-foreground">Pre-Orders</div>
+                        <div className="text-xl sm:text-2xl font-bold text-yellow-600">{preOrders.length}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">Pre-Orders</div>
                       </div>
-                      <div className="bg-yellow-100 p-2 rounded-full">
-                        <Clock className="h-5 w-5 text-yellow-600" />
+                      <div className="bg-yellow-100 p-1.5 sm:p-2 rounded-full">
+                        <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
                       </div>
                     </div>
                   </CardContent>
@@ -570,121 +559,8 @@ export default function KitchenDisplayPage() {
               </div>
             </div>
 
-            {/* Orders Layout - Dynamic based on viewType */}
+            {/* Orders Layout - Kanban and Table Views Only */}
             <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6">
-              {viewType === 'card' && (
-                <Masonry
-                  breakpointCols={breakpointColumnsObj}
-                  className="flex w-auto -ml-6"
-                  columnClassName="pl-6 bg-clip-padding"
-                >
-                  {displayedOrders.map((order) => (
-                    <div key={order.id} className="mb-6">
-                    <Card className={`hover:shadow-lg transition-all duration-200 ${
-                      order.isPreOrder 
-                        ? 'bg-yellow-50 border-yellow-200 border-2' 
-                        : ''
-                    }`}>
-                      <CardContent className="p-5">
-                        {/* Header - Order Info and Status */}
-                        <div className="flex items-start justify-between mb-4 pb-4 border-b border-gray-200">
-                          <div>
-                            <div className="text-sm font-bold text-foreground">{order.orderNumber}</div>
-                            <div className="text-xs text-muted-foreground">{order.orderTime} - {order.customerName}</div>
-                          </div>
-                          {getStatusBadge(order.status, order.isPreOrder)}
-                        </div>
-                        
-                        {/* Pre-order timing */}
-                        {order.isPreOrder && order.scheduledFor && (
-                          <div className="mb-4 pb-4 border-b border-gray-200">
-                            <div className="text-sm text-yellow-700 bg-yellow-100 px-2 py-1 rounded flex items-center">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {getRemainingTime(order.scheduledFor)}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Order Items with Checkboxes */}
-                        <div className="mb-4 pb-4 border-b border-gray-200">
-                          <div className="space-y-2">
-                            {(() => {
-                              const isExpanded = expandedOrders.has(order.id)
-                              const maxVisibleItems = 3
-                              const visibleItems = isExpanded ? order.items : order.items.slice(0, maxVisibleItems)
-                              const hiddenItemsCount = order.items.length - maxVisibleItems
-                              
-                              return (
-                                <>
-                                  {visibleItems.map((item) => (
-                                    <div key={item.id} className="flex items-start space-x-3">
-                                      <Checkbox
-                                        id={`item-${item.id}`}
-                                        checked={item.isCompleted}
-                                        disabled={order.status === 'accepted' || order.status === 'ready'}
-                                        onCheckedChange={() => toggleItemCompletion(order.id, item.id)}
-                                        className="mt-0.5 data-[state=checked]:bg-green-600"
-                                      />
-                                      <label 
-                                        htmlFor={`item-${item.id}`}
-                                        className={`flex-1 text-sm ${
-                                          order.status === 'accepted' || order.status === 'ready' 
-                                            ? 'cursor-not-allowed opacity-50' 
-                                            : 'cursor-pointer'
-                                        } ${
-                                          item.isCompleted ? 'line-through text-muted-foreground' : ''
-                                        }`}
-                                      >
-                                        {item.quantity}x {item.name}
-                                        {item.specialInstructions && (
-                                          <div className="text-xs text-orange-600 mt-1">
-                                            ⚠️ {item.specialInstructions}
-                                          </div>
-                                        )}
-                                      </label>
-                                    </div>
-                                  ))}
-                                  
-                                  {order.items.length > maxVisibleItems && (
-                                    <button
-                                      onClick={() => toggleOrderExpansion(order.id)}
-                                      className="flex items-center justify-center w-full py-2 text-xs text-muted-foreground hover:text-foreground transition-colors border border-dashed border-gray-300 rounded-md hover:border-gray-400"
-                                    >
-                                      {isExpanded ? (
-                                        <>
-                                          <ChevronUp className="h-3 w-3 mr-1" />
-                                          Show Less
-                                        </>
-                                      ) : (
-                                        <>
-                                          <ChevronDown className="h-3 w-3 mr-1" />
-                                          Show {hiddenItemsCount} More Items
-                                        </>
-                                      )}
-                                    </button>
-                                  )}
-                                </>
-                              )
-                            })()}
-                          </div>
-                        </div>
-                        
-                        {/* Total and Action */}
-                        <div className="flex items-center justify-between gap-3 flex-wrap">
-                          <div className="text-xl font-bold text-foreground">
-                            ${order.total.toFixed(2)}
-                          </div>
-                          <div className="flex justify-center min-w-0 flex-shrink-0">
-                            {getActionButton(order)}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                  ))}
-                </Masonry>
-              )}
-
               {viewType === 'kanban' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {/* To Prepare Column */}
@@ -995,234 +871,26 @@ export default function KitchenDisplayPage() {
                 </div>
               )}
 
-              {viewType === 'grid' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {displayedOrders.map((order) => (
-                    <Card key={order.id} className={`hover:shadow-lg transition-all duration-200 h-fit ${
-                      order.isPreOrder 
-                        ? 'bg-yellow-50 border-yellow-200 border-2' 
-                        : ''
-                    }`}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
-                          <div>
-                            <div className="text-sm font-bold">{order.orderNumber}</div>
-                            <div className="text-xs text-muted-foreground">{order.orderTime} - {order.customerName}</div>
-                          </div>
-                          {getStatusBadge(order.status, order.isPreOrder)}
-                        </div>
-                        
-                        {order.isPreOrder && order.scheduledFor && (
-                          <div className="mb-3 pb-3 border-b border-gray-200">
-                            <div className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded flex items-center">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {getRemainingTime(order.scheduledFor)}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Order Items with Checkboxes */}
-                        <div className="mb-3 pb-3 border-b border-gray-200">
-                          <div className="space-y-2">
-                            {(() => {
-                              const isExpanded = expandedOrders.has(order.id)
-                              const maxVisibleItems = 3
-                              const visibleItems = isExpanded ? order.items : order.items.slice(0, maxVisibleItems)
-                              const hiddenItemsCount = order.items.length - maxVisibleItems
-                              
-                              return (
-                                <>
-                                  {visibleItems.map((item) => (
-                                    <div key={item.id} className="flex items-start space-x-2">
-                                      <Checkbox
-                                        id={`grid-item-${item.id}`}
-                                        checked={item.isCompleted}
-                                        disabled={order.status === 'accepted' || order.status === 'ready'}
-                                        onCheckedChange={() => toggleItemCompletion(order.id, item.id)}
-                                        className="mt-0.5 data-[state=checked]:bg-green-600"
-                                      />
-                                      <label 
-                                        htmlFor={`grid-item-${item.id}`}
-                                        className={`flex-1 text-xs ${
-                                          order.status === 'accepted' || order.status === 'ready' 
-                                            ? 'cursor-not-allowed opacity-50' 
-                                            : 'cursor-pointer'
-                                        } ${
-                                          item.isCompleted ? 'line-through text-muted-foreground' : ''
-                                        }`}
-                                      >
-                                        {item.quantity}x {item.name}
-                                        {item.specialInstructions && (
-                                          <div className="text-xs text-orange-600 mt-1">
-                                            ⚠️ {item.specialInstructions}
-                                          </div>
-                                        )}
-                                      </label>
-                                    </div>
-                                  ))}
-                                  
-                                  {order.items.length > maxVisibleItems && (
-                                    <button
-                                      onClick={() => toggleOrderExpansion(order.id)}
-                                      className="flex items-center justify-center w-full py-1 text-xs text-muted-foreground hover:text-foreground transition-colors border border-dashed border-gray-300 rounded-md hover:border-gray-400"
-                                    >
-                                      {isExpanded ? (
-                                        <>
-                                          <ChevronUp className="h-3 w-3 mr-1" />
-                                          Show Less
-                                        </>
-                                      ) : (
-                                        <>
-                                          <ChevronDown className="h-3 w-3 mr-1" />
-                                          +{hiddenItemsCount} More
-                                        </>
-                                      )}
-                                    </button>
-                                  )}
-                                </>
-                              )
-                            })()}
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="text-lg font-bold">${order.total.toFixed(2)}</div>
-                          {getActionButton(order)}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-
-              {viewType === 'list' && (
-                <div className="space-y-4">
-                  {displayedOrders.map((order) => (
-                    <Card key={order.id} className={`hover:shadow-lg transition-all duration-200 ${
-                      order.isPreOrder 
-                        ? 'bg-yellow-50 border-yellow-200 border-2' 
-                        : ''
-                    }`}>
-                      <CardContent className="p-4">
-                        {/* Header Row */}
-                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
-                          <div className="flex items-center gap-4">
-                            <div className={`w-3 h-3 rounded-full ${
-                              order.status === 'accepted' ? 'bg-blue-500' :
-                              order.status === 'preparing' ? 'bg-orange-500' :
-                              'bg-green-500'
-                            }`} />
-                            
-                            <div>
-                              <div className="font-bold text-sm">{order.orderNumber}</div>
-                              <div className="text-xs text-muted-foreground">{order.orderTime} - {order.customerName}</div>
-                            </div>
-                            
-                            {order.isPreOrder && order.scheduledFor && (
-                              <div className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
-                                <Clock className="h-3 w-3 mr-1 inline" />
-                                {getRemainingTime(order.scheduledFor)}
-                              </div>
-                            )}
-                          </div>
-                          
-                          {getStatusBadge(order.status, order.isPreOrder)}
-                        </div>
-
-                        {/* Order Items with Checkboxes */}
-                        <div className="mb-3 pb-3 border-b border-gray-200">
-                          <div className="space-y-2">
-                            {(() => {
-                              const isExpanded = expandedOrders.has(order.id)
-                              const maxVisibleItems = 3
-                              const visibleItems = isExpanded ? order.items : order.items.slice(0, maxVisibleItems)
-                              const hiddenItemsCount = order.items.length - maxVisibleItems
-                              
-                              return (
-                                <>
-                                  {visibleItems.map((item) => (
-                                    <div key={item.id} className="flex items-start space-x-3">
-                                      <Checkbox
-                                        id={`list-item-${item.id}`}
-                                        checked={item.isCompleted}
-                                        disabled={order.status === 'accepted' || order.status === 'ready'}
-                                        onCheckedChange={() => toggleItemCompletion(order.id, item.id)}
-                                        className="mt-0.5 data-[state=checked]:bg-green-600"
-                                      />
-                                      <label 
-                                        htmlFor={`list-item-${item.id}`}
-                                        className={`flex-1 text-sm ${
-                                          order.status === 'accepted' || order.status === 'ready' 
-                                            ? 'cursor-not-allowed opacity-50' 
-                                            : 'cursor-pointer'
-                                        } ${
-                                          item.isCompleted ? 'line-through text-muted-foreground' : ''
-                                        }`}
-                                      >
-                                        {item.quantity}x {item.name}
-                                        {item.specialInstructions && (
-                                          <div className="text-xs text-orange-600 mt-1">
-                                            ⚠️ {item.specialInstructions}
-                                          </div>
-                                        )}
-                                      </label>
-                                    </div>
-                                  ))}
-                                  
-                                  {order.items.length > maxVisibleItems && (
-                                    <button
-                                      onClick={() => toggleOrderExpansion(order.id)}
-                                      className="flex items-center justify-center w-full py-2 text-xs text-muted-foreground hover:text-foreground transition-colors border border-dashed border-gray-300 rounded-md hover:border-gray-400"
-                                    >
-                                      {isExpanded ? (
-                                        <>
-                                          <ChevronUp className="h-3 w-3 mr-1" />
-                                          Show Less
-                                        </>
-                                      ) : (
-                                        <>
-                                          <ChevronDown className="h-3 w-3 mr-1" />
-                                          Show {hiddenItemsCount} More Items
-                                        </>
-                                      )}
-                                    </button>
-                                  )}
-                                </>
-                              )
-                            })()}
-                          </div>
-                        </div>
-                        
-                        {/* Total and Action */}
-                        <div className="flex items-center justify-between">
-                          <div className="text-lg font-bold">${order.total.toFixed(2)}</div>
-                          {getActionButton(order)}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-
               {viewType === 'table' && (
-                <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
+                <div className="w-full max-w-full">
+                  <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse" style={{ minWidth: '800px' }}>
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
-                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
-                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Order</th>
-                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Customer</th>
-                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Time</th>
-                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Items</th>
-                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Total</th>
-                          <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide">Action</th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-28">Status</th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-32">Order</th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-40">Customer</th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-20">Time</th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-24">Items</th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-24">Total</th>
+                          <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide w-32">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
                         {displayedOrders.map((order) => (
-                          <>
-                            <tr key={order.id} className={`transition-colors duration-150 hover:bg-gray-50 ${
+                          <React.Fragment key={order.id}>
+                            <tr className={`transition-colors duration-150 hover:bg-gray-50 ${
                               order.isPreOrder ? 'bg-yellow-50 hover:bg-yellow-100' : ''
                             }`}>
                               <td className="px-4 py-4 whitespace-nowrap">
@@ -1285,7 +953,7 @@ export default function KitchenDisplayPage() {
                             
                             {/* Expanded row with items */}
                             {expandedOrders.has(order.id) && (
-                              <tr className={`border-t-0 ${order.isPreOrder ? 'bg-yellow-50/50' : 'bg-gray-50/50'}`}>
+                              <tr key={`${order.id}-expanded`} className={`border-t-0 ${order.isPreOrder ? 'bg-yellow-50/50' : 'bg-gray-50/50'}`}>
                                 <td colSpan={7} className="px-6 py-6">
                                   <div className="space-y-4">
                                     <div className="flex items-center justify-between mb-4">
@@ -1355,20 +1023,10 @@ export default function KitchenDisplayPage() {
                                 </td>
                               </tr>
                             )}
-                          </>
+                          </React.Fragment>
                         ))}
                       </tbody>
-                    </table>
-                  </div>
-                  <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 rounded-b-lg">
-                    <div className="flex items-center justify-between text-sm text-gray-600">
-                      <span>Showing {displayedOrders.length} orders</span>
-                      <div className="flex items-center gap-4">
-                        <span>{displayedOrders.filter(o => o.status === 'accepted').length} to prepare</span>
-                        <span>{displayedOrders.filter(o => o.status === 'preparing').length} in progress</span>
-                        <span>{displayedOrders.filter(o => o.status === 'ready').length} ready</span>
-                        <span>{displayedOrders.filter(o => o.isPreOrder).length} pre-orders</span>
-                      </div>
+                      </table>
                     </div>
                   </div>
                 </div>
