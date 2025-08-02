@@ -417,7 +417,7 @@ export default function KitchenDisplayPage() {
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="overflow-x-hidden">
           <header className="flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" />
@@ -436,7 +436,7 @@ export default function KitchenDisplayPage() {
             </div>
           </header>
           
-          <div className="flex flex-1 flex-col px-2 sm:px-4 lg:px-6">
+          <div className="flex flex-1 flex-col px-2 sm:px-4 lg:px-6 overflow-x-hidden min-w-0">
             {/* Header Section */}
             <div className="px-2 py-6 sm:px-4 lg:px-6 bg-background">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -476,13 +476,13 @@ export default function KitchenDisplayPage() {
             {/* Search Bar - Above Status Cards */}
             <div className="px-2 pb-4 sm:px-4 lg:px-6">
               <div className="flex justify-end">
-                <div className="relative">
+                <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search orders, customer"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-10 w-80"
+                    className="pl-10 pr-10 w-full"
                   />
                   {searchQuery && (
                     <button
@@ -498,7 +498,7 @@ export default function KitchenDisplayPage() {
 
             {/* Status Overview Cards */}
             <div className="px-2 pb-6 sm:px-4 lg:px-6">
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <Card className="hover:shadow-md transition-all duration-200 border-l-4 border-l-blue-500">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
@@ -558,7 +558,7 @@ export default function KitchenDisplayPage() {
             </div>
 
             {/* Orders Layout - Kanban and Table Views Only */}
-            <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6">
+            <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6 min-w-0 overflow-x-hidden">
               {viewType === 'kanban' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {/* To Prepare Column */}
@@ -870,10 +870,9 @@ export default function KitchenDisplayPage() {
               )}
 
               {viewType === 'table' && (
-                <div className="w-full max-w-full">
-                  <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse" style={{ minWidth: '800px' }}>
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-28">Status</th>
@@ -1026,7 +1025,6 @@ export default function KitchenDisplayPage() {
                       </tbody>
                       </table>
                     </div>
-                  </div>
                 </div>
               )}
 

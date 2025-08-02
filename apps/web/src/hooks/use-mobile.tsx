@@ -5,7 +5,7 @@ export function useIsMobile() {
 
   useEffect(() => {
     const checkDevice = () => {
-      setIsMobile(window.innerWidth < 768)
+      setIsMobile(document.documentElement.clientWidth < 720)
     }
 
     checkDevice()

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { type DateRange } from "react-day-picker"
+import { format } from "date-fns"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import {
@@ -303,25 +304,6 @@ export default function OrderHistoryPage() {
     return filtered
   }
 
-  const formatDateRange = () => {
-    if (!dateRange?.from) return "Date Range"
-    
-    const fromDate = dateRange.from.toLocaleDateString('en-CA', { 
-      month: 'short', 
-      day: 'numeric' 
-    })
-    
-    if (!dateRange.to) {
-      return `${fromDate} - ...`
-    }
-    
-    const toDate = dateRange.to.toLocaleDateString('en-CA', { 
-      month: 'short', 
-      day: 'numeric' 
-    })
-    
-    return `${fromDate} - ${toDate}`
-  }
 
   const setQuickDateRange = (days: number) => {
     const today = new Date()
@@ -331,6 +313,17 @@ export default function OrderHistoryPage() {
     setDateRange({
       from: startDate,
       to: today
+    })
+  }
+
+  const setThisMonth = () => {
+    const today = new Date()
+    const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+    const lastDayThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    
+    setDateRange({
+      from: firstDayThisMonth,
+      to: lastDayThisMonth
     })
   }
 
@@ -346,8 +339,9 @@ export default function OrderHistoryPage() {
   }
 
   const renderFilterButtons = () => (
-    <div className="flex flex-col md:flex-row lg:items-center md:justify-between gap-4 mb-6">
-      <div className="flex flex-wrap items-center gap-2 min-w-0">
+    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+      {/* Status Filter Buttons */}
+      <div className="flex items-center gap-2">
         <Button
           variant={statusFilter === 'all' ? 'default' : 'outline'}
           size="sm"
@@ -374,16 +368,102 @@ export default function OrderHistoryPage() {
         </Button>
       </div>
       
-      {/* Search Bar & Sort & Date Range */}
-      <div className="flex flex-wrap items-center gap-2 min-w-0 md:justify-end sm:justify-start">
+      {/* Sort & Date Range & Search - Right side on desktop, separate rows on mobile/tablet */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-2">
+        {/* Sort & Date Range */}
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-2 h-9 text-sm flex-shrink-0"
+            onClick={() => setSortOrder(sortOrder === 'newest' ? 'oldest' : 'newest')}
+          >
+            <ArrowUpDown className="h-4 w-4" />
+            <span className="hidden lg:inline">{sortOrder === 'newest' ? 'Newest First' : 'Oldest First'}</span>
+            <span className="lg:hidden">{sortOrder === 'newest' ? 'Newest' : 'Oldest'}</span>
+          </Button>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 h-9 text-sm font-medium min-w-[140px] justify-between flex-shrink-0">
+                {formatDateRange()}
+                <CalendarIcon className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <div className="flex flex-col">
+                <div className="flex h-[300px]">
+                  {/* Quick Date Buttons */}
+                  <div className="flex flex-col justify-between p-3 h-full">
+                    <div className="flex flex-col gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="justify-start text-xs h-8"
+                        onClick={() => setQuickDateRange(1)}
+                      >
+                        Yesterday
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="justify-start text-xs h-8"
+                        onClick={() => setQuickDateRange(7)}
+                      >
+                        Last 7 Days
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="justify-start text-xs h-8"
+                        onClick={() => setQuickDateRange(15)}
+                      >
+                        Last 15 Days
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="justify-start text-xs h-8"
+                        onClick={() => setQuickDateRange(30)}
+                      >
+                        Last 30 Days
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="justify-start text-xs h-8"
+                        onClick={setLastMonth}
+                      >
+                        Last Month
+                      </Button>
+                    </div>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="justify-start text-xs h-8 text-red-600 border-red-300 hover:text-red-700 hover:bg-red-50 hover:border-red-400 mt-4"
+                      onClick={() => setDateRange(undefined)}
+                    >
+                      Reset Range
+                    </Button>
+                  </div>
+                  
+                  {/* Calendar */}
+                  <Calendar04 selected={dateRange} onSelect={setDateRange} />
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+        
         {/* Search Bar */}
-        <div className="relative">
+        <div className="relative flex-1 min-w-0 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search orders, customer"
+            placeholder="Search orders, customer, phone"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-10 w-64 h-9"
+            className="pl-10 pr-10 w-full h-9"
           />
           {searchQuery && (
             <button
@@ -394,91 +474,18 @@ export default function OrderHistoryPage() {
             </button>
           )}
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="gap-2 h-9 text-sm flex-shrink-0"
-          onClick={() => setSortOrder(sortOrder === 'newest' ? 'oldest' : 'newest')}
-        >
-          <ArrowUpDown className="h-4 w-4" />
-          <span className="hidden lg:inline">{sortOrder === 'newest' ? 'Newest First' : 'Oldest First'}</span>
-          <span className="lg:hidden">{sortOrder === 'newest' ? 'Newest' : 'Oldest'}</span>
-        </Button>
-        
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2 h-9 text-sm font-medium min-w-[140px] justify-between flex-shrink-0">
-              {formatDateRange()}
-              <CalendarIcon className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="end">
-          <div className="flex flex-col">
-            <div className="flex h-[300px]">
-              {/* Quick Date Buttons */}
-              <div className="flex flex-col justify-between p-3 h-full">
-                <div className="flex flex-col gap-1">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="justify-start text-xs h-8"
-                    onClick={() => setQuickDateRange(1)}
-                  >
-                    Yesterday
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="justify-start text-xs h-8"
-                    onClick={() => setQuickDateRange(7)}
-                  >
-                    Last 7 Days
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="justify-start text-xs h-8"
-                    onClick={() => setQuickDateRange(15)}
-                  >
-                    Last 15 Days
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="justify-start text-xs h-8"
-                    onClick={() => setQuickDateRange(30)}
-                  >
-                    Last 30 Days
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="justify-start text-xs h-8"
-                    onClick={setLastMonth}
-                  >
-                    Last Month
-                  </Button>
-                </div>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="justify-start text-xs h-8 text-red-600 border-red-300 hover:text-red-700 hover:bg-red-50 hover:border-red-400 mt-4"
-                  onClick={() => setDateRange(undefined)}
-                >
-                  Reset Range
-                </Button>
-              </div>
-              
-              {/* Calendar */}
-              <Calendar04 selected={dateRange} onSelect={setDateRange} />
-            </div>
-          </div>
-        </PopoverContent>
-        </Popover>
       </div>
     </div>
   )
+
+  const formatDateRange = () => {
+    if (!dateRange?.from) return "Date Range"
+    if (!dateRange.to) return format(dateRange.from, "MMM dd")
+    if (dateRange.from.getTime() === dateRange.to.getTime()) {
+      return format(dateRange.from, "MMM dd")
+    }
+    return `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
+  }
 
   const renderTableView = () => {
     const filteredOrders = getFilteredOrders()

@@ -181,7 +181,7 @@ export default function LiveOrdersPage() {
   }
 
   const renderFilterButtons = () => (
-    <div className="flex items-center justify-between mb-6">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
       {/* Filter Buttons - Left Side */}
       <div className="flex items-center gap-2">
         <Button
@@ -219,13 +219,13 @@ export default function LiveOrdersPage() {
       </div>
       
       {/* Search Bar - Right Side */}
-      <div className="relative">
+      <div className="relative flex-1 min-w-0 max-w-md">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search orders, customer, phone"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 pr-10 w-80"
+          className="pl-10 pr-10 w-full"
         />
         {searchQuery && (
           <button
