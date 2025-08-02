@@ -316,16 +316,6 @@ export default function OrderHistoryPage() {
     })
   }
 
-  const setThisMonth = () => {
-    const today = new Date()
-    const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-    const lastDayThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-    
-    setDateRange({
-      from: firstDayThisMonth,
-      to: lastDayThisMonth
-    })
-  }
 
   const setLastMonth = () => {
     const today = new Date()
