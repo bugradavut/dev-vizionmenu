@@ -130,10 +130,20 @@ interface AccordionContentProps {
 }
 
 const AccordionContent = React.forwardRef<HTMLDivElement, AccordionContentProps>(
-  ({ children, className, ...props }) => {
+  ({ children, className, ...props }, ref) => {
     const context = React.useContext(AccordionContext)
     const parentValue = React.useContext(AccordionItemContext)
     const contentRef = React.useRef<HTMLDivElement>(null)
+    
+    // Combine internal ref with forwarded ref
+    const combinedRef = React.useCallback((node: HTMLDivElement) => {
+      contentRef.current = node
+      if (typeof ref === 'function') {
+        ref(node)
+      } else if (ref) {
+        ref.current = node
+      }
+    }, [ref])
     
     if (!context || !parentValue) {
       throw new Error("AccordionContent must be used within AccordionItem")
@@ -146,44 +156,47 @@ const AccordionContent = React.forwardRef<HTMLDivElement, AccordionContentProps>
       if (!content) return
 
       if (isOpen) {
-        content.style.height = "0px"
-        content.style.opacity = "0"
+        // Remove transition temporarily
+        content.style.transition = 'none'
+        content.style.height = '0px'
+        content.style.opacity = '0'
         
         // Force reflow
         void content.offsetHeight
         
-        content.style.height = content.scrollHeight + "px"
-        content.style.opacity = "1"
+        // Re-enable transition and animate
+        content.style.transition = 'all 300ms ease-in-out'
+        content.style.height = content.scrollHeight + 'px'
+        content.style.opacity = '1'
         
         const timer = setTimeout(() => {
-          content.style.height = "auto"
-        }, 200)
+          content.style.height = 'auto'
+        }, 300)
         
         return () => clearTimeout(timer)
       } else {
-        content.style.height = content.scrollHeight + "px"
-        content.style.opacity = "1"
+        // Ensure we start from current height
+        content.style.transition = 'none'
+        content.style.height = content.scrollHeight + 'px'
+        content.style.opacity = '1'
         
         // Force reflow
         void content.offsetHeight
         
-        content.style.height = "0px"
-        content.style.opacity = "0"
+        // Re-enable transition and animate to closed
+        content.style.transition = 'all 300ms ease-in-out'
+        content.style.height = '0px'
+        content.style.opacity = '0'
       }
     }, [isOpen])
 
     return (
       <div
-        ref={contentRef}
+        ref={combinedRef}
         className={cn(
-          "overflow-hidden transition-all duration-200 ease-out",
-          !isOpen && "h-0 opacity-0",
+          "overflow-hidden",
           className
         )}
-        style={{
-          height: isOpen ? "auto" : "0px",
-          opacity: isOpen ? "1" : "0"
-        }}
         {...props}
       >
         <div className="pt-0">{children}</div>

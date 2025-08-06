@@ -21,23 +21,97 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowRight, CheckCircle, Settings, Clock, Timer, Plus, Minus } from "lucide-react"
+import { ArrowRight, CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw } from "lucide-react"
+import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
+import { useBranchSettings } from "@/hooks/use-branch-settings"
 
 export default function BranchSettingsPage() {
-  const [orderFlow, setOrderFlow] = useState<'standard' | 'simplified'>('standard')
-  const [saved, setSaved] = useState(false)
-  
-  // Timing settings state
-  const [baseDelay, setBaseDelay] = useState(20)
-  const [temporaryBaseDelay, setTemporaryBaseDelay] = useState(0)
-  const [deliveryDelay, setDeliveryDelay] = useState(15)
-  const [temporaryDeliveryDelay, setTemporaryDeliveryDelay] = useState(0)
-  const [manualReadyOption, setManualReadyOption] = useState(true)
+  const { branchId } = useEnhancedAuth()
+  const {
+    settings,
+    loading,
+    saving,
+    error,
+    loadSettings,
+    saveSettings,
+    updateSettings,
+    clearError,
+    isDirty,
+    canSave
+  } = useBranchSettings({ branchId: branchId || undefined })
 
-  const handleSave = () => {
-    // Mock save action
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+  const [saved, setSaved] = useState(false)
+
+  // Handle save
+  const handleSave = async () => {
+    const success = await saveSettings(settings)
+    if (success) {
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    }
+  }
+
+  // Handle order flow change
+  const handleOrderFlowChange = (newFlow: 'standard' | 'simplified') => {
+    updateSettings({ orderFlow: newFlow })
+  }
+
+  // Handle timing settings changes
+  const handleTimingChange = (key: keyof typeof settings.timingSettings, value: number | boolean) => {
+    updateSettings({
+      timingSettings: {
+        ...settings.timingSettings,
+        [key]: value
+      }
+    })
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset>
+            <div className="flex items-center justify-center h-screen">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span>Loading branch settings...</span>
+              </div>
+            </div>
+          </SidebarInset>
+        </SidebarProvider>
+      </AuthGuard>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset>
+            <div className="flex flex-col items-center justify-center h-screen gap-4">
+              <AlertCircle className="h-12 w-12 text-red-500" />
+              <div className="text-center">
+                <h2 className="text-lg font-semibold">Failed to load settings</h2>
+                <p className="text-muted-foreground">{error}</p>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={loadSettings} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+                <Button onClick={clearError} variant="ghost">
+                  Dismiss
+                </Button>
+              </div>
+            </div>
+          </SidebarInset>
+        </SidebarProvider>
+      </AuthGuard>
+    )
   }
 
   return (
@@ -107,19 +181,19 @@ export default function BranchSettingsPage() {
                         {/* Standard Flow Option */}
                         <div 
                           className={`p-4 rounded-lg border cursor-pointer transition-colors ${
-                            orderFlow === 'standard' 
+                            settings.orderFlow === 'standard' 
                               ? 'border-primary bg-primary/5' 
                               : 'border-border hover:bg-muted/50'
                           }`}
-                          onClick={() => setOrderFlow('standard')}
+                          onClick={() => handleOrderFlowChange('standard')}
                         >
                           <div className="flex items-start gap-3">
                             <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-1 ${
-                              orderFlow === 'standard' 
+                              settings.orderFlow === 'standard' 
                                 ? 'border-primary bg-primary' 
                                 : 'border-muted-foreground/30'
                             }`}>
-                              {orderFlow === 'standard' && (
+                              {settings.orderFlow === 'standard' && (
                                 <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
                               )}
                             </div>
@@ -146,19 +220,19 @@ export default function BranchSettingsPage() {
                         {/* Simplified Flow Option */}
                         <div 
                           className={`p-4 rounded-lg border cursor-pointer transition-colors ${
-                            orderFlow === 'simplified' 
+                            settings.orderFlow === 'simplified' 
                               ? 'border-primary bg-primary/5' 
                               : 'border-border hover:bg-muted/50'
                           }`}
-                          onClick={() => setOrderFlow('simplified')}
+                          onClick={() => handleOrderFlowChange('simplified')}
                         >
                           <div className="flex items-start gap-3">
                             <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-1 ${
-                              orderFlow === 'simplified' 
+                              settings.orderFlow === 'simplified' 
                                 ? 'border-primary bg-primary' 
                                 : 'border-muted-foreground/30'
                             }`}>
-                              {orderFlow === 'simplified' && (
+                              {settings.orderFlow === 'simplified' && (
                                 <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
                               )}
                             </div>
@@ -193,11 +267,16 @@ export default function BranchSettingsPage() {
                         <div className="flex items-center justify-between pt-4">
                           <div className="text-sm text-muted-foreground">
                             Currently using: <span className="font-medium">
-                              {orderFlow === 'standard' ? 'Standard Flow' : 'Simplified Flow'}
+                              {settings.orderFlow === 'standard' ? 'Standard Flow' : 'Simplified Flow'}
                             </span>
+                            {isDirty && <span className="text-orange-600 ml-2">(unsaved changes)</span>}
                           </div>
-                          <Button onClick={handleSave}>
-                            Save Changes
+                          <Button 
+                            onClick={handleSave} 
+                            disabled={!canSave}
+                            className={saving ? "animate-pulse" : ""}
+                          >
+                            {saving ? "Saving..." : "Save Changes"}
                           </Button>
                         </div>
 
@@ -210,7 +289,7 @@ export default function BranchSettingsPage() {
                 <div className="xl:col-span-6">
                   {/* Timing Settings Card */}
                   <Card className={`group transition-all duration-200 ${
-                    orderFlow === 'simplified' 
+                    settings.orderFlow === 'simplified' 
                       ? 'hover:shadow-lg opacity-100' 
                       : 'opacity-60 pointer-events-none'
                   }`}>
@@ -220,7 +299,7 @@ export default function BranchSettingsPage() {
                           <CardTitle className="text-lg">Preparation & Delivery Timing</CardTitle>
                         </div>
                         <p className="text-sm text-muted-foreground mt-2">
-                          {orderFlow === 'standard' ? 'Available only with Simplified Flow' : 'Configure general preparation times and delivery delays'}
+                          {settings.orderFlow === 'standard' ? 'Available only with Simplified Flow' : 'Configure general preparation times and delivery delays'}
                         </p>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -238,8 +317,8 @@ export default function BranchSettingsPage() {
                               <Input
                                 id="base-initial"
                                 type="number"
-                                value={baseDelay}
-                                onChange={(e) => setBaseDelay(Number(e.target.value))}
+                                value={settings.timingSettings.baseDelay}
+                                onChange={(e) => handleTimingChange('baseDelay', Number(e.target.value))}
                                 className="h-9"
                                 min="0"
                                 max="120"
@@ -252,7 +331,7 @@ export default function BranchSettingsPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setTemporaryBaseDelay(Math.max(-60, temporaryBaseDelay - 5))}
+                                  onClick={() => handleTimingChange('temporaryBaseDelay', Math.max(-60, settings.timingSettings.temporaryBaseDelay - 5))}
                                   className="h-8 w-8 p-0"
                                 >
                                   <Minus className="h-3 w-3" />
@@ -260,8 +339,8 @@ export default function BranchSettingsPage() {
                                 <Input
                                   id="base-temporary"
                                   type="number"
-                                  value={temporaryBaseDelay}
-                                  onChange={(e) => setTemporaryBaseDelay(Number(e.target.value))}
+                                  value={settings.timingSettings.temporaryBaseDelay}
+                                  onChange={(e) => handleTimingChange('temporaryBaseDelay', Number(e.target.value))}
                                   className="h-8 text-center text-sm"
                                   min="-60"
                                   max="60"
@@ -269,7 +348,7 @@ export default function BranchSettingsPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setTemporaryBaseDelay(Math.min(60, temporaryBaseDelay + 5))}
+                                  onClick={() => handleTimingChange('temporaryBaseDelay', Math.min(60, settings.timingSettings.temporaryBaseDelay + 5))}
                                   className="h-8 w-8 p-0"
                                 >
                                   <Plus className="h-3 w-3" />
@@ -281,7 +360,7 @@ export default function BranchSettingsPage() {
                           <div className="bg-primary/5 p-2 rounded text-sm">
                             <div className="flex items-center justify-between">
                               <span className="text-muted-foreground">Total:</span>
-                              <span className="font-medium text-primary">{baseDelay + temporaryBaseDelay} min</span>
+                              <span className="font-medium text-primary">{settings.timingSettings.baseDelay + settings.timingSettings.temporaryBaseDelay} min</span>
                             </div>
                           </div>
                         </div>
@@ -301,8 +380,8 @@ export default function BranchSettingsPage() {
                               <Input
                                 id="delivery-initial"
                                 type="number"
-                                value={deliveryDelay}
-                                onChange={(e) => setDeliveryDelay(Number(e.target.value))}
+                                value={settings.timingSettings.deliveryDelay}
+                                onChange={(e) => handleTimingChange('deliveryDelay', Number(e.target.value))}
                                 className="h-9"
                                 min="0"
                                 max="120"
@@ -315,7 +394,7 @@ export default function BranchSettingsPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setTemporaryDeliveryDelay(Math.max(-60, temporaryDeliveryDelay - 5))}
+                                  onClick={() => handleTimingChange('temporaryDeliveryDelay', Math.max(-60, settings.timingSettings.temporaryDeliveryDelay - 5))}
                                   className="h-8 w-8 p-0"
                                 >
                                   <Minus className="h-3 w-3" />
@@ -323,8 +402,8 @@ export default function BranchSettingsPage() {
                                 <Input
                                   id="delivery-temporary"
                                   type="number"
-                                  value={temporaryDeliveryDelay}
-                                  onChange={(e) => setTemporaryDeliveryDelay(Number(e.target.value))}
+                                  value={settings.timingSettings.temporaryDeliveryDelay}
+                                  onChange={(e) => handleTimingChange('temporaryDeliveryDelay', Number(e.target.value))}
                                   className="h-8 text-center text-sm"
                                   min="-60"
                                   max="60"
@@ -332,7 +411,7 @@ export default function BranchSettingsPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setTemporaryDeliveryDelay(Math.min(60, temporaryDeliveryDelay + 5))}
+                                  onClick={() => handleTimingChange('temporaryDeliveryDelay', Math.min(60, settings.timingSettings.temporaryDeliveryDelay + 5))}
                                   className="h-8 w-8 p-0"
                                 >
                                   <Plus className="h-3 w-3" />
@@ -344,7 +423,7 @@ export default function BranchSettingsPage() {
                           <div className="bg-primary/5 p-2 rounded text-sm">
                             <div className="flex items-center justify-between">
                               <span className="text-muted-foreground">Total:</span>
-                              <span className="font-medium text-primary">{Math.max(0, deliveryDelay + temporaryDeliveryDelay)} min</span>
+                              <span className="font-medium text-primary">{Math.max(0, settings.timingSettings.deliveryDelay + settings.timingSettings.temporaryDeliveryDelay)} min</span>
                             </div>
                           </div>
                         </div>
@@ -359,30 +438,30 @@ export default function BranchSettingsPage() {
                               <h3 className="font-medium text-primary">Expected Total Time</h3>
                             </div>
                             <p className="text-xl font-bold text-primary">
-                              {Math.max(0, baseDelay + temporaryBaseDelay + deliveryDelay + temporaryDeliveryDelay)} MIN
+                              {Math.max(0, settings.timingSettings.baseDelay + settings.timingSettings.temporaryBaseDelay + settings.timingSettings.deliveryDelay + settings.timingSettings.temporaryDeliveryDelay)} MIN
                             </p>
                           </div>
                         </div>
 
                         {/* Manual Ready Option for Simplified Flow */}
-                        {orderFlow === 'simplified' && (
+                        {settings.orderFlow === 'simplified' && (
                           <>
                             <Separator />
                             <div 
                               className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                                manualReadyOption 
+                                settings.timingSettings.manualReadyOption 
                                   ? 'border-primary bg-primary/5' 
                                   : 'border-border hover:bg-muted/50'
                               }`}
-                              onClick={() => setManualReadyOption(!manualReadyOption)}
+                              onClick={() => handleTimingChange('manualReadyOption', !settings.timingSettings.manualReadyOption)}
                             >
                               <div className="flex items-center gap-3">
                                 <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
-                                  manualReadyOption 
+                                  settings.timingSettings.manualReadyOption 
                                     ? 'border-primary bg-primary' 
                                     : 'border-muted-foreground/30'
                                 }`}>
-                                  {manualReadyOption && (
+                                  {settings.timingSettings.manualReadyOption && (
                                     <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
                                   )}
                                 </div>

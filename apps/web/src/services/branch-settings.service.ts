@@ -1,0 +1,128 @@
+/**
+ * Branch Settings Service
+ * Handles API calls for branch order flow settings
+ */
+
+// Types
+export interface TimingSettings {
+  baseDelay: number;
+  temporaryBaseDelay: number;
+  deliveryDelay: number;
+  temporaryDeliveryDelay: number;
+  manualReadyOption: boolean;
+}
+
+export interface BranchSettings {
+  orderFlow: 'standard' | 'simplified';
+  timingSettings: TimingSettings;
+}
+
+export interface BranchSettingsResponse {
+  branchId: string;
+  branchName: string;
+  settings: BranchSettings;
+}
+
+export interface ApiResponse<T> {
+  data: T;
+  message?: string;
+}
+
+export interface ApiError {
+  error: {
+    code: string;
+    message: string;
+    details?: string;
+  };
+}
+
+/**
+ * Get branch settings from API
+ */
+export const getBranchSettings = async (branchId: string): Promise<BranchSettingsResponse> => {
+  try {
+    // Get session from Supabase client
+    const { data: { session } } = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
+    if (!session?.access_token) {
+      throw new Error('Authentication token not found');
+    }
+    const token = session.access_token;
+
+    // Use Express.js API URL
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const response = await fetch(`${apiUrl}/api/v1/branch/${branchId}/settings`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData: ApiError = await response.json();
+      throw new Error(errorData.error.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result: ApiResponse<BranchSettingsResponse> = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error('Failed to get branch settings:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update branch settings via API
+ */
+export const updateBranchSettings = async (
+  branchId: string, 
+  settings: BranchSettings
+): Promise<BranchSettingsResponse> => {
+  try {
+    // Get session from Supabase client
+    const { data: { session } } = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
+    if (!session?.access_token) {
+      throw new Error('Authentication token not found');
+    }
+    const token = session.access_token;
+
+    // Use Express.js API URL
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const response = await fetch(`${apiUrl}/api/v1/branch/${branchId}/settings`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        orderFlow: settings.orderFlow,
+        timingSettings: settings.timingSettings,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData: ApiError = await response.json();
+      throw new Error(errorData.error.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result: ApiResponse<BranchSettingsResponse> = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error('Failed to update branch settings:', error);
+    throw error;
+  }
+};
+
+/**
+ * Default settings for new branches or fallback
+ */
+export const getDefaultSettings = (): BranchSettings => ({
+  orderFlow: 'standard',
+  timingSettings: {
+    baseDelay: 20,
+    temporaryBaseDelay: 0,
+    deliveryDelay: 15,
+    temporaryDeliveryDelay: 0,
+    manualReadyOption: true,
+  },
+});
