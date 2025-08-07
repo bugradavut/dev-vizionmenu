@@ -116,8 +116,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     const total = order.pricing?.total?.toFixed(2) || '0.00';
     
     toast.custom((t) => (
-      <div className="bg-white dark:bg-gray-900 p-0 w-80 overflow-hidden" 
+      <div className="bg-white dark:bg-gray-900 p-0 overflow-hidden" 
            style={{
+             width: '320px',
+             maxWidth: '320px',
+             minWidth: '320px',
              borderRadius: '20px',
              border: '1px solid rgba(0, 0, 0, 0.08)',
              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 10px 25px -5px rgba(0, 0, 0, 0.1)'
