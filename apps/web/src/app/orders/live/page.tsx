@@ -14,9 +14,9 @@ import {
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
-  SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { DashboardLayout } from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table2, LayoutGrid, ArrowRight, Search, X, RefreshCw, AlertCircle } from "lucide-react"
@@ -72,6 +72,7 @@ export default function LiveOrdersPage() {
     runManualCheck,
     clearError: clearTimerError
   } = useOrderTimer()
+
 
   // Load saved view mode from localStorage on component mount
   useEffect(() => {
@@ -476,7 +477,7 @@ export default function LiveOrdersPage() {
 
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
-      <SidebarProvider>
+      <DashboardLayout>
         <AppSidebar />
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -553,7 +554,7 @@ export default function LiveOrdersPage() {
             </div>
           </div>
         </SidebarInset>
-      </SidebarProvider>
+      </DashboardLayout>
     </AuthGuard>
   )
 }

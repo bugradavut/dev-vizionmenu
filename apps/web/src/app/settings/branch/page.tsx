@@ -14,7 +14,6 @@ import {
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
-  SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,6 +23,7 @@ import { Label } from "@/components/ui/label"
 import { ArrowRight, CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw } from "lucide-react"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
+import { DashboardLayout } from "@/components/dashboard-layout"
 
 export default function BranchSettingsPage() {
   const { branchId } = useEnhancedAuth()
@@ -70,7 +70,7 @@ export default function BranchSettingsPage() {
   if (loading) {
     return (
       <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
-        <SidebarProvider>
+        <DashboardLayout>
           <AppSidebar />
           <SidebarInset>
             <div className="flex items-center justify-center h-screen">
@@ -80,7 +80,7 @@ export default function BranchSettingsPage() {
               </div>
             </div>
           </SidebarInset>
-        </SidebarProvider>
+        </DashboardLayout>
       </AuthGuard>
     )
   }
@@ -89,7 +89,7 @@ export default function BranchSettingsPage() {
   if (error) {
     return (
       <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
-        <SidebarProvider>
+        <DashboardLayout>
           <AppSidebar />
           <SidebarInset>
             <div className="flex flex-col items-center justify-center h-screen gap-4">
@@ -109,14 +109,14 @@ export default function BranchSettingsPage() {
               </div>
             </div>
           </SidebarInset>
-        </SidebarProvider>
+        </DashboardLayout>
       </AuthGuard>
     )
   }
 
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
-      <SidebarProvider>
+      <DashboardLayout>
         <AppSidebar />
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collibible=icon]]/sidebar-wrapper:h-12">
@@ -443,38 +443,6 @@ export default function BranchSettingsPage() {
                           </div>
                         </div>
 
-                        {/* Manual Ready Option for Simplified Flow */}
-                        {settings.orderFlow === 'simplified' && (
-                          <>
-                            <Separator />
-                            <div 
-                              className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                                settings.timingSettings.manualReadyOption 
-                                  ? 'border-primary bg-primary/5' 
-                                  : 'border-border hover:bg-muted/50'
-                              }`}
-                              onClick={() => handleTimingChange('manualReadyOption', !settings.timingSettings.manualReadyOption)}
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
-                                  settings.timingSettings.manualReadyOption 
-                                    ? 'border-primary bg-primary' 
-                                    : 'border-muted-foreground/30'
-                                }`}>
-                                  {settings.timingSettings.manualReadyOption && (
-                                    <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
-                                  )}
-                                </div>
-                                <div className="flex-1">
-                                  <h4 className="font-medium">Allow Manual &quot;Ready&quot; Button</h4>
-                                  <p className="text-xs text-muted-foreground">
-                                    Staff can mark orders ready before auto-timer expires
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </>
-                        )}
 
                       </CardContent>
                     </Card>
@@ -509,7 +477,7 @@ export default function BranchSettingsPage() {
           )}
           
         </SidebarInset>
-      </SidebarProvider>
+      </DashboardLayout>
     </AuthGuard>
   )
 }

@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ordersService, type Order, type OrderListParams, type OrderStatusUpdateRequest } from '@/services/orders.service';
 import { ApiClientError } from '@/services/api-client';
+import { useSmartPolling } from '@/hooks/use-smart-polling';
 // import { supabase } from '@/lib/supabase'; // TODO: Will be used for real-time updates"
 
 interface UseOrdersState {
@@ -130,38 +131,35 @@ export function useOrders(initialParams?: OrderListParams): UseOrdersReturn {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run on mount - ignoring deps intentionally
 
-  // Smart polling for live orders (Production-ready approach)
-  useEffect(() => {
-    // Set as "connected" for UI purposes
-    setState(prev => ({ ...prev, realtimeConnected: true }));
-    
-    // Smart polling every 15 seconds for live orders
-    const interval = setInterval(async () => {
-      if (lastParams) {
-        // Silent refetch (don't show loading)
-        try {
-          const response = await ordersService.getOrders(lastParams);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const transformedData = ordersService.transformOrdersResponse(response as any);
-          
-          setState(prev => ({
-            ...prev,
-            orders: transformedData.orders,
-            total: transformedData.total,
-            page: transformedData.page,
-            limit: transformedData.limit,
-          }));
-        } catch (err) {
-          // Silent refresh failed - no action needed
-          console.debug('Silent refresh failed:', err);
-        }
+  // Smart polling for real-time updates (tab-aware)
+  const silentRefresh = useCallback(async () => {
+    if (lastParams) {
+      try {
+        const response = await ordersService.getOrders(lastParams);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const transformedData = ordersService.transformOrdersResponse(response as any);
+        
+        setState(prev => ({
+          ...prev,
+          orders: transformedData.orders,
+          total: transformedData.total,
+          page: transformedData.page,
+          limit: transformedData.limit,
+          realtimeConnected: true, // Set as "connected" for UI purposes
+        }));
+      } catch (err) {
+        console.debug('Silent refresh failed:', err);
+        setState(prev => ({ ...prev, realtimeConnected: false }));
       }
-    }, 15000); // 15 seconds - good balance for live orders
+    }
+  }, [lastParams]);
 
-    return () => {
-      clearInterval(interval);
-    };
-  }, [lastParams]); // Re-setup when params change
+  // Use smart polling that respects tab visibility
+  useSmartPolling(silentRefresh, {
+    interval: 15000, // 15 seconds - good balance for live orders
+    enabled: !!lastParams, // Only enable if we have params
+    fetchOnMount: false // Don't fetch on mount (already fetched in initial useEffect)
+  });
 
   return {
     ...state,
@@ -289,6 +287,32 @@ export function useOrderDetail(orderId?: string): UseOrderDetailReturn {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run on mount - ignoring deps intentionally
+
+  // Smart polling for order detail real-time updates
+  const silentRefreshDetail = useCallback(async () => {
+    if (currentOrderId && !state.loading) {
+      try {
+        // Silent refetch without showing loading state
+        const response = await ordersService.getOrderById(currentOrderId.includes('ORDER-') ? currentOrderId : `ORDER-${currentOrderId}`);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const transformedOrder = ordersService.transformOrder(response.data as any);
+        
+        setState(prev => ({
+          ...prev,
+          order: transformedOrder,
+        }));
+      } catch (err) {
+        console.debug('Silent order detail refresh failed:', err);
+      }
+    }
+  }, [currentOrderId, state.loading]);
+
+  // Use smart polling for order detail updates
+  useSmartPolling(silentRefreshDetail, {
+    interval: 10000, // 10 seconds for order details (more frequent)
+    enabled: !!currentOrderId, // Only enable if we have an order ID
+    fetchOnMount: false // Don't fetch on mount (already fetched in initial useEffect)
+  });
 
   return {
     ...state,

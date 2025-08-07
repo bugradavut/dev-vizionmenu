@@ -9,7 +9,6 @@ export interface TimingSettings {
   temporaryBaseDelay: number;
   deliveryDelay: number;
   temporaryDeliveryDelay: number;
-  manualReadyOption: boolean;
 }
 
 export interface BranchSettings {
@@ -123,6 +122,5 @@ export const getDefaultSettings = (): BranchSettings => ({
     temporaryBaseDelay: 0,
     deliveryDelay: 15,
     temporaryDeliveryDelay: 0,
-    manualReadyOption: true,
   },
 });

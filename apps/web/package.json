@@ -34,6 +34,7 @@
     "react-day-picker": "^9.8.1",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.60.0",
+    "react-hot-toast": "^2.5.2",
     "react-masonry-css": "^1.0.16",
     "stripe": "^18.3.0",
     "tailwind-merge": "^3.3.1",

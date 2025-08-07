@@ -13,7 +13,6 @@ import {
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
-  SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -22,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Palette } from "lucide-react"
 import { useTheme } from "@/contexts/theme-context"
 import { useLanguage } from "@/contexts/language-context"
+import { DashboardLayout } from "@/components/dashboard-layout"
 
 export default function GeneralSettingsPage() {
   const { theme } = useTheme()
@@ -41,7 +41,7 @@ export default function GeneralSettingsPage() {
   }
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
-      <SidebarProvider>
+      <DashboardLayout>
         <AppSidebar />
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -121,7 +121,7 @@ export default function GeneralSettingsPage() {
             </div>
           </div>
         </SidebarInset>
-      </SidebarProvider>
+      </DashboardLayout>
     </AuthGuard>
   )
 } 

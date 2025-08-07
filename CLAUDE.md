@@ -691,6 +691,96 @@ interface UserListTableProps {
 
 ---
 
+## 🔮 FUTURE DEVELOPMENT ROADMAP
+
+### **Backend Refactoring Plan (Target: 6 months)**
+
+**TRIGGER CONDITIONS**: When backend reaches 5,000+ lines or team grows to 2+ developers
+
+**Current Status**: Backend ~2,300 lines (monolithic) - manageable with AI assistance
+
+#### **Kademeli Refactoring Stratejisi:**
+
+**Phase 1: Helper Extraction (Week 1)**
+```javascript
+apps/api/api/
+├── helpers/
+│   ├── auth.js           // getUserBranchContext, JWT decode
+│   ├── permissions.js    // canEditUser, ROLE_HIERARCHY
+│   └── validation.js     // Input validation helpers
+└── index.js             // Import helpers, reduce code size
+```
+
+**Phase 2: Service Layer (Week 2-3)**
+```javascript
+apps/api/api/
+├── services/
+│   ├── users.service.js     // User CRUD operations
+│   ├── orders.service.js    // Order management business logic
+│   ├── branches.service.js  // Branch settings and operations
+│   └── auth.service.js      // Authentication logic
+├── helpers/
+└── index.js                 // Import services, focus on routing
+```
+
+**Phase 3: Controller Layer (Week 4)**
+```javascript
+apps/api/api/
+├── controllers/
+│   ├── users.controller.js     // Route handlers only
+│   ├── orders.controller.js    // Route handlers only
+│   ├── branches.controller.js  // Route handlers only
+│   └── auth.controller.js      // Route handlers only
+├── services/
+├── helpers/
+└── index.js                    // Route definitions only (~200 lines)
+```
+
+#### **Critical Refactoring Rules:**
+
+**🟢 ZERO IMPACT GUARANTEE:**
+- **Frontend**: No changes required - API endpoints remain identical
+- **Vercel**: No config changes - entry point stays `apps/api/api/index.js`
+- **Database**: No schema changes
+- **Authentication**: JWT system unchanged
+- **Environment**: Same variables, same deployment process
+
+**🔄 REFACTORING SAFETY CHECKLIST:**
+```bash
+# Before refactoring:
+npm run build  # ✅ Must pass
+npm run lint   # ✅ Must pass
+
+# During each phase:
+git checkout -b refactor-phase-1
+# Make changes
+npm run build && npm run lint  # ✅ Must pass
+# Deploy to staging first
+# Test all endpoints
+git merge to main
+
+# After refactoring:
+# Same API responses
+# Same performance
+# Better maintainability
+```
+
+#### **Benefits After Refactoring:**
+- **New Developer Onboarding**: 2 hours instead of 2 days
+- **Bug Fix Speed**: Isolated to specific service/controller
+- **Feature Development**: Clear separation of concerns
+- **Unit Testing**: Each service testable independently
+- **Code Reusability**: Services can be shared across controllers
+
+#### **Timeline:**
+- **Month 1-5**: Continue feature development (business priority)
+- **Month 6**: Execute refactoring plan
+- **Month 7+**: Maintain modular structure
+
+**Note**: Refactoring should happen when business logic stabilizes, not during active feature development.
+
+---
+
 *This document serves as the comprehensive guide for all development work on Vision Menu. Following these rules ensures consistency, quality, and maintainability of the platform.*
 
-**Last Updated**: January 3, 2025 | **Version**: 1.0.0
+**Last Updated**: January 6, 2025 | **Version**: 1.1.0

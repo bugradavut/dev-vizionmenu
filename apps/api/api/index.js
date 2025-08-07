@@ -1161,7 +1161,6 @@ app.get('/api/v1/orders/:orderId', async (req, res) => {
         branch_id: '550e8400-e29b-41d4-a716-446655440002', // Downtown Branch
         role: 'branch_manager'
       };
-      console.log('🧪 DEV MODE: Using test authentication for order detail');
     } else {
       // Production auth
       if (!authHeader?.startsWith('Bearer ')) {
@@ -1469,7 +1468,6 @@ app.patch('/api/v1/orders/:orderId/status', async (req, res) => {
       // Auto-accept logic for Simplified Flow
       if (orderFlow === 'simplified' && existingOrder.order_status === 'pending' && status === 'preparing') {
         shouldAutoAccept = true;
-        console.log(`🤖 AUTO-ACCEPT: Order ${orderId} auto-accepting due to Simplified Flow`);
       }
     }
 
@@ -1629,7 +1627,6 @@ app.post('/api/v1/orders/auto-accept-check', async (req, res) => {
         });
       }
 
-      console.log(`🤖 AUTO-ACCEPT: Order ${orderId} (${branchData.name}) auto-accepted to preparing status`);
       
       return res.json({
         data: {
@@ -1700,7 +1697,6 @@ app.post('/api/v1/orders', async (req, res) => {
     if (process.env.NODE_ENV === 'development' && (!authHeader || authHeader === 'Bearer null')) {
       // Development mode: Use test branch
       branchId = '550e8400-e29b-41d4-a716-446655440002'; // Downtown Branch
-      console.log('🧪 DEV MODE: Using test branch for order creation');
     } else {
       // Production auth
       if (!authHeader?.startsWith('Bearer ')) {
@@ -1797,7 +1793,6 @@ app.post('/api/v1/orders', async (req, res) => {
       });
     }
 
-    console.log(`📝 ORDER CREATED: ${createdOrder.id} (${source}) - Branch: ${branchId}`);
 
     // Trigger auto-accept check for Simplified Flow
     let autoAcceptResult = null;
@@ -1818,7 +1813,6 @@ app.post('/api/v1/orders', async (req, res) => {
       if (autoAcceptResponse.ok) {
         const result = await autoAcceptResponse.json();
         autoAcceptResult = result.data;
-        console.log(`🤖 AUTO-ACCEPT CHECK: Order ${createdOrder.id} - ${autoAcceptResult.message}`);
       }
     } catch (error) {
       console.error('Auto-accept check failed:', error);
@@ -1905,7 +1899,6 @@ app.post('/api/v1/orders/timer-check', async (req, res) => {
       temporaryBaseDelay: 0,
       deliveryDelay: 15,
       temporaryDeliveryDelay: 0,
-      manualReadyOption: true
     };
 
     // Calculate total preparation time in minutes
@@ -2081,8 +2074,7 @@ app.get('/api/v1/branch/:branchId/settings', async (req, res) => {
         baseDelay: 20,
         temporaryBaseDelay: 0,
         deliveryDelay: 15,
-        temporaryDeliveryDelay: 0,
-        manualReadyOption: true
+        temporaryDeliveryDelay: 0
       }
     };
 
@@ -2135,7 +2127,7 @@ app.put('/api/v1/branch/:branchId/settings', async (req, res) => {
         });
       }
       
-      const { baseDelay, temporaryBaseDelay, deliveryDelay, temporaryDeliveryDelay, manualReadyOption } = timingSettings;
+      const { baseDelay, temporaryBaseDelay, deliveryDelay, temporaryDeliveryDelay } = timingSettings;
       
       if (typeof baseDelay !== 'number' || baseDelay < 0 || baseDelay > 120) {
         return res.status(400).json({
@@ -2158,12 +2150,6 @@ app.put('/api/v1/branch/:branchId/settings', async (req, res) => {
       if (typeof temporaryDeliveryDelay !== 'number' || temporaryDeliveryDelay < -60 || temporaryDeliveryDelay > 60) {
         return res.status(400).json({
           error: { code: 'INVALID_TEMPORARY_DELIVERY_DELAY', message: 'temporaryDeliveryDelay must be a number between -60 and 60' }
-        });
-      }
-      
-      if (typeof manualReadyOption !== 'boolean') {
-        return res.status(400).json({
-          error: { code: 'INVALID_MANUAL_READY_OPTION', message: 'manualReadyOption must be a boolean' }
         });
       }
     }
@@ -2230,8 +2216,7 @@ app.put('/api/v1/branch/:branchId/settings', async (req, res) => {
         temporaryBaseDelay: 0,
         deliveryDelay: 15,
         temporaryDeliveryDelay: 0,
-        manualReadyOption: true
-      }
+        }
     };
 
     // Update branch settings in database

@@ -90,3 +90,34 @@
     text-rendering: optimizeLegibility;
   }
 }
+
+/* Toast notification animations */
+@keyframes shrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+@keyframes slide-in-from-right-2 {
+  from {
+    transform: translateX(calc(100% + 8px));
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation-duration: 0.3s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+}
+
+.slide-in-from-right-2 {
+  animation-name: slide-in-from-right-2;
+}

@@ -14,7 +14,6 @@ import {
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
-  SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
@@ -29,6 +28,7 @@ import { getSourceIcon } from "@/assets/images"
 import Image from "next/image"
 import Link from "next/link"
 import { useOrderDetail } from "@/hooks/use-orders"
+import { DashboardLayout } from "@/components/dashboard-layout"
 
 // Types - Clean and simple interface definitions
 
@@ -59,6 +59,9 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
   const [refundSuccess, setRefundSuccess] = useState(false)
   const [showRefundDialog, setShowRefundDialog] = useState(false)
+  
+  // Status update loading state
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
 
   // Partial refund handlers
   const handleItemSelect = (itemId: string, checked: boolean) => {
@@ -105,6 +108,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
 
   // Handle order status updates
   const handleStatusUpdate = async (newStatus: 'preparing' | 'ready' | 'completed' | 'cancelled') => {
+    setUpdatingStatus(newStatus)
     try {
       const success = await updateStatus({ status: newStatus });
       if (success) {
@@ -113,6 +117,8 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
       }
     } catch (error) {
       console.error('Failed to update order status:', error);
+    } finally {
+      setUpdatingStatus(null)
     }
   }
 
@@ -239,7 +245,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   if (loading) {
     return (
       <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
-        <SidebarProvider>
+        <DashboardLayout>
           <AppSidebar />
           <SidebarInset>
             <div className="flex items-center justify-center h-screen">
@@ -249,7 +255,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
               </div>
             </div>
           </SidebarInset>
-        </SidebarProvider>
+        </DashboardLayout>
       </AuthGuard>
     )
   }
@@ -257,7 +263,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   if (error) {
     return (
       <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
-        <SidebarProvider>
+        <DashboardLayout>
           <AppSidebar />
           <SidebarInset>
             <div className="flex flex-col items-center justify-center h-screen gap-4">
@@ -277,7 +283,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
               </div>
             </div>
           </SidebarInset>
-        </SidebarProvider>
+        </DashboardLayout>
       </AuthGuard>
     )
   }
@@ -285,7 +291,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   if (!order) {
     return (
       <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
-        <SidebarProvider>
+        <DashboardLayout>
           <AppSidebar />
           <SidebarInset>
             <div className="flex flex-col items-center justify-center h-screen gap-4">
@@ -299,14 +305,14 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
               </Button>
             </div>
           </SidebarInset>
-        </SidebarProvider>
+        </DashboardLayout>
       </AuthGuard>
     )
   }
 
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
-      <SidebarProvider>
+      <DashboardLayout>
         <AppSidebar />
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -740,16 +746,32 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         <div className="space-y-3">
                           <Button 
                             onClick={() => handleStatusUpdate('preparing')}
+                            disabled={updatingStatus !== null}
                             className="w-full bg-orange-600 hover:bg-orange-700 text-white font-medium py-3 rounded-lg transition-colors"
                           >
-                            Accept Order
+                            {updatingStatus === 'preparing' ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                                Accepting...
+                              </>
+                            ) : (
+                              'Accept Order'
+                            )}
                           </Button>
                           <Button 
                             onClick={() => handleStatusUpdate('cancelled')}
+                            disabled={updatingStatus !== null}
                             variant="outline" 
                             className="w-full border-red-300 text-red-700 hover:bg-red-50 py-2.5 rounded-lg transition-colors"
                           >
-                            Reject Order
+                            {updatingStatus === 'cancelled' ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                                Rejecting...
+                              </>
+                            ) : (
+                              'Reject Order'
+                            )}
                           </Button>
                         </div>
                       )}
@@ -767,10 +789,18 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                           </div>
                           <Button 
                             onClick={() => handleStatusUpdate('cancelled')}
+                            disabled={updatingStatus !== null}
                             variant="outline" 
                             className="w-full border-red-300 text-red-700 hover:bg-red-50 py-2.5 rounded-lg transition-colors"
                           >
-                            Cancel Order
+                            {updatingStatus === 'cancelled' ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                                Cancelling...
+                              </>
+                            ) : (
+                              'Cancel Order'
+                            )}
                           </Button>
                         </div>
                       )}
@@ -779,16 +809,32 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         <div className="space-y-3">
                           <Button 
                             onClick={() => handleStatusUpdate('completed')}
+                            disabled={updatingStatus !== null}
                             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 rounded-lg transition-colors"
                           >
-                            Mark as Completed
+                            {updatingStatus === 'completed' ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                                Completing...
+                              </>
+                            ) : (
+                              'Mark as Completed'
+                            )}
                           </Button>
                           <Button 
                             onClick={() => handleStatusUpdate('cancelled')}
+                            disabled={updatingStatus !== null}
                             variant="outline" 
                             className="w-full border-red-300 text-red-700 hover:bg-red-50 py-2.5 rounded-lg transition-colors"
                           >
-                            Cancel Order
+                            {updatingStatus === 'cancelled' ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                                Cancelling...
+                              </>
+                            ) : (
+                              'Cancel Order'
+                            )}
                           </Button>
                         </div>
                       )}
@@ -816,7 +862,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
             </div>
           </div>
         </SidebarInset>
-      </SidebarProvider>
+      </DashboardLayout>
     </AuthGuard>
   )
 }

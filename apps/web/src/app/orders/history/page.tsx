@@ -16,7 +16,6 @@ import {
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
-  SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
@@ -43,6 +42,7 @@ import { getSourceIcon } from "@/assets/images"
 import Image from "next/image"
 import Link from "next/link"
 import { useOrders } from "@/hooks/use-orders"
+import { DashboardLayout } from "@/components/dashboard-layout"
 // Order type imported but used in future implementations
 
 
@@ -562,7 +562,7 @@ export default function OrderHistoryPage() {
 
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
-      <SidebarProvider>
+      <DashboardLayout>
         <AppSidebar />
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -627,7 +627,7 @@ export default function OrderHistoryPage() {
             </div>
           </div>
         </SidebarInset>
-      </SidebarProvider>
+      </DashboardLayout>
     </AuthGuard>
   )
 }

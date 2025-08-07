@@ -14,9 +14,9 @@ import {
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
-  SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { DashboardLayout } from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -104,6 +104,7 @@ export default function KitchenDisplayPage() {
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set())
   const [viewType, setViewType] = useState<'kanban' | 'table'>('kanban')
   const [searchQuery, setSearchQuery] = useState("")
+  const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set())
 
   // Local storage utilities for kitchen item completion state
   const getCompletedItems = useCallback((orderId: string): string[] => {
@@ -331,31 +332,45 @@ export default function KitchenDisplayPage() {
 
   // Change order status with API integration
   const changeOrderStatus = async (orderId: string, newStatus: 'accepted' | 'preparing' | 'ready' | 'completed') => {
-    // Map kitchen status to API status
-    const apiStatus = mapKitchenStatusToApiStatus(newStatus)
+    // Add to updating orders set
+    setUpdatingOrders(prev => new Set(prev).add(orderId))
     
-    if (newStatus === 'completed') {
-      const success = await updateOrderStatus(orderId, { status: apiStatus })
-      if (success) {
-        // Clear local storage for completed order
-        clearOrderItems(orderId)
-        // Remove completed orders from kitchen display
-        setKitchenOrders(prevOrders => prevOrders.filter(order => order.id !== orderId))
-      }
-    } else {
-      const success = await updateOrderStatus(orderId, { status: apiStatus })
-      if (success) {
-        // Clear local storage when order moves to ready (kitchen done)
-        if (newStatus === 'ready') {
+    try {
+      // Map kitchen status to API status
+      const apiStatus = mapKitchenStatusToApiStatus(newStatus)
+      
+      if (newStatus === 'completed') {
+        const success = await updateOrderStatus(orderId, { status: apiStatus })
+        if (success) {
+          // Clear local storage for completed order
           clearOrderItems(orderId)
+          // Remove completed orders from kitchen display
+          setKitchenOrders(prevOrders => prevOrders.filter(order => order.id !== orderId))
         }
-        // Update local kitchen order status
-        setKitchenOrders(prevOrders => 
-          prevOrders.map(order =>
-            order.id === orderId ? { ...order, status: newStatus } : order
+      } else {
+        const success = await updateOrderStatus(orderId, { status: apiStatus })
+        if (success) {
+          // Clear local storage when order moves to ready (kitchen done)
+          if (newStatus === 'ready') {
+            clearOrderItems(orderId)
+          }
+          // Update local kitchen order status
+          setKitchenOrders(prevOrders => 
+            prevOrders.map(order =>
+              order.id === orderId ? { ...order, status: newStatus } : order
+            )
           )
-        )
+        }
       }
+    } catch (error) {
+      console.error('Failed to update order status:', error)
+    } finally {
+      // Remove from updating orders set
+      setUpdatingOrders(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(orderId)
+        return newSet
+      })
     }
   }
 
@@ -450,13 +465,21 @@ export default function KitchenDisplayPage() {
       case 'preparing':
         // Order is already being prepared, show Mark Ready button
         const allItemsCompleted = order.items.every(item => item.isCompleted)
+        const isUpdating = updatingOrders.has(order.id)
         return (
           <Button 
             onClick={() => changeOrderStatus(order.id, 'ready')} 
-            disabled={!allItemsCompleted}
+            disabled={!allItemsCompleted || isUpdating}
             className={`${baseClasses} bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed disabled:shadow-none`}
           >
-            Mark Ready
+            {isUpdating ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                Marking Ready...
+              </>
+            ) : (
+              'Mark Ready'
+            )}
           </Button>
         )
       case 'ready':
@@ -480,7 +503,7 @@ export default function KitchenDisplayPage() {
 
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
-      <SidebarProvider>
+      <DashboardLayout>
         <AppSidebar />
         <SidebarInset className="overflow-x-hidden">
           <header className="flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -731,8 +754,10 @@ export default function KitchenDisplayPage() {
                                       {timerData.isOverdue && (
                                         <Button 
                                           size="sm" 
+                                          disabled={updatingOrders.has(order.id)}
                                           className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                                           onClick={async () => {
+                                            setUpdatingOrders(prev => new Set(prev).add(order.id))
                                             try {
                                               const success = await updateOrderStatus(order.id, { status: 'ready' })
                                               if (success) {
@@ -742,11 +767,26 @@ export default function KitchenDisplayPage() {
                                               await runManualCheck() // Update timer results
                                             } catch (error) {
                                               console.error('Failed to mark order ready:', error)
+                                            } finally {
+                                              setUpdatingOrders(prev => {
+                                                const newSet = new Set(prev)
+                                                newSet.delete(order.id)
+                                                return newSet
+                                              })
                                             }
                                           }}
                                         >
-                                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                                          Mark Ready Now
+                                          {updatingOrders.has(order.id) ? (
+                                            <>
+                                              <RefreshCw className="h-3 w-3 animate-spin mr-1" />
+                                              Marking Ready...
+                                            </>
+                                          ) : (
+                                            <>
+                                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                                              Mark Ready Now
+                                            </>
+                                          )}
                                         </Button>
                                       )}
                                     </div>
@@ -1205,7 +1245,7 @@ export default function KitchenDisplayPage() {
             </div>
           </div>
         </SidebarInset>
-      </SidebarProvider>
+      </DashboardLayout>
     </AuthGuard>
   )
 }

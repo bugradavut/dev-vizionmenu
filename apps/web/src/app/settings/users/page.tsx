@@ -14,7 +14,6 @@ import {
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
-  SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Card, CardContent } from "@repo/ui"
@@ -22,6 +21,7 @@ import { UserCheck, Shield, Users } from "lucide-react"
 import { UserListTable, CreateUserModal, EditUserModal } from "@/components/user-management"
 import { useUsers, useAuthApi } from "@/hooks"
 import type { BranchUser } from "@repo/types/auth"
+import { DashboardLayout } from "@/components/dashboard-layout"
 
 export default function UserManagementPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -59,7 +59,7 @@ export default function UserManagementPage() {
         requireAuth={true}
         requiredPermission="users:write"
       > */}
-        <SidebarProvider>
+        <DashboardLayout>
         <AppSidebar />
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -161,7 +161,7 @@ export default function UserManagementPage() {
             </div>
           </div>
         </SidebarInset>
-        </SidebarProvider>
+        </DashboardLayout>
       {/* </ProtectedRoute> */}
 
       {/* Create User Modal */}

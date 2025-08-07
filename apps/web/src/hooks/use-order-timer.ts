@@ -154,7 +154,7 @@ export const useOrderTimer = (): UseOrderTimerReturn => {
       performTimerCheck();
     }, TIMER_INTERVAL);
     
-    console.log(`⏰ Timer service started for branch ${branchId} (checking every ${TIMER_INTERVAL / 1000}s)`);
+    // Timer service started silently
   }, [branchId, performTimerCheck]);
 
   /**
@@ -167,7 +167,7 @@ export const useOrderTimer = (): UseOrderTimerReturn => {
     }
     
     setIsRunning(false);
-    console.log('⏸️  Timer service stopped');
+    // Timer service stopped silently
   }, []);
 
   /**
