@@ -142,8 +142,9 @@ export default function OrderPage() {
         }
       }
 
-      // Submit to API
-      const response = await fetch("http://localhost:3001/api/v1/orders", {
+      // Submit to API (use env-configured base URL; fallback to local in dev)
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+      const response = await fetch(`${apiUrl}/api/v1/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
