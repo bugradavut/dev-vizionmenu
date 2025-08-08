@@ -64,7 +64,7 @@ export default function OrderHistoryPage() {
     refetch,
     clearError 
   } = useOrders({
-    status: 'completed,cancelled',
+    status: 'completed,cancelled,rejected',
     limit: 50
   })
 
@@ -90,7 +90,7 @@ export default function OrderHistoryPage() {
 
     // Status filter
     if (statusFilter === 'all') {
-      params.status = 'completed,cancelled'
+      params.status = 'completed,cancelled,rejected'
     } else {
       params.status = statusFilter
     }
@@ -158,12 +158,15 @@ export default function OrderHistoryPage() {
       pending: "outline",
       preparing: "secondary", 
       ready: "default",
-      completed: "default"
+      completed: "default",
+      rejected: "destructive",
+      cancelled: "destructive"
     }
     
     const colors: Record<string, string> = {
       completed: "text-green-700 border-green-300 bg-green-100",
-      cancelled: "text-red-700 border-red-300 bg-red-100"
+      cancelled: "text-red-700 border-red-300 bg-red-100",
+      rejected: "text-red-700 border-red-300 bg-red-100"
     }
 
     return (

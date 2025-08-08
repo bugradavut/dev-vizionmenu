@@ -23,7 +23,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet } from "lucide-react"
+import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle } from "lucide-react"
 import { getSourceIcon } from "@/assets/images"
 import Image from "next/image"
 import Link from "next/link"
@@ -59,6 +59,9 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
   const [refundSuccess, setRefundSuccess] = useState(false)
   const [showRefundDialog, setShowRefundDialog] = useState(false)
+  
+  // Reject confirmation state
+  const [showRejectDialog, setShowRejectDialog] = useState(false)
   
   // Status update loading state
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
@@ -107,7 +110,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   }
 
   // Handle order status updates
-  const handleStatusUpdate = async (newStatus: 'preparing' | 'ready' | 'completed' | 'cancelled') => {
+  const handleStatusUpdate = async (newStatus: 'preparing' | 'ready' | 'completed' | 'cancelled' | 'rejected') => {
     setUpdatingStatus(newStatus)
     try {
       const success = await updateStatus({ status: newStatus });
@@ -192,7 +195,9 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
       pending: "text-orange-700 border-orange-300 bg-orange-100 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-700",
       preparing: "text-blue-700 border-blue-300 bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700",
       ready: "text-green-700 border-green-400 bg-green-100 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700",
-      completed: "text-gray-600 border-gray-200 bg-gray-50 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-700"
+      completed: "text-gray-600 border-gray-200 bg-gray-50 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-700",
+      rejected: "text-red-700 border-red-300 bg-red-100 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700",
+      cancelled: "text-red-700 border-red-300 bg-red-100 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700"
     }
 
     return (
@@ -758,21 +763,56 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                               'Accept Order'
                             )}
                           </Button>
-                          <Button 
-                            onClick={() => handleStatusUpdate('cancelled')}
-                            disabled={updatingStatus !== null}
-                            variant="outline" 
-                            className="w-full border-red-300 text-red-700 hover:bg-red-50 py-2.5 rounded-lg transition-colors"
-                          >
-                            {updatingStatus === 'cancelled' ? (
-                              <>
-                                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                                Rejecting...
-                              </>
-                            ) : (
-                              'Reject Order'
-                            )}
-                          </Button>
+                          <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+                            <DialogTrigger asChild>
+                              <Button 
+                                disabled={updatingStatus !== null}
+                                variant="outline" 
+                                className="w-full border-red-300 text-red-700 hover:bg-red-50 py-2.5 rounded-lg transition-colors"
+                              >
+                                Reject Order
+                              </Button>
+                            </DialogTrigger>
+                            
+                            <DialogContent className="max-w-md">
+                              <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                  <AlertCircle className="h-5 w-5 text-red-600" />
+                                  Reject Order
+                                </DialogTitle>
+                                <DialogDescription>
+                                  Are you sure you want to reject this order? This action cannot be undone.
+                                </DialogDescription>
+                              </DialogHeader>
+                              
+                              <DialogFooter className="gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  onClick={() => setShowRejectDialog(false)}
+                                  disabled={updatingStatus !== null}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button 
+                                  onClick={() => {
+                                    handleStatusUpdate('rejected')
+                                    setShowRejectDialog(false)
+                                  }}
+                                  disabled={updatingStatus !== null}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  {updatingStatus === 'rejected' ? (
+                                    <>
+                                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                                      Rejecting...
+                                    </>
+                                  ) : (
+                                    'Yes, Reject Order'
+                                  )}
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
                         </div>
                       )}
                       
@@ -850,8 +890,21 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                       
                       {order.status === 'cancelled' && (
                         <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 text-center">
-                          <div className="text-red-700 dark:text-red-300 font-medium">
-                            ❌ Order Cancelled
+                          <div className="flex items-center justify-center gap-2 text-red-700 dark:text-red-300 font-medium">
+                            <XCircle className="h-5 w-5" />
+                            Order Cancelled
+                          </div>
+                        </div>
+                      )}
+                      
+                      {order.status === 'rejected' && (
+                        <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 text-center">
+                          <div className="flex items-center justify-center gap-2 text-red-700 dark:text-red-300 font-medium">
+                            <XCircle className="h-5 w-5" />
+                            Order Rejected
+                          </div>
+                          <div className="text-xs text-red-600 dark:text-red-400 mt-1">
+                            This order was rejected and cannot be processed
                           </div>
                         </div>
                       )}

@@ -80,6 +80,7 @@ export type OrderStatus =
   | "delivered"
   | "completed"
   | "cancelled"
+  | "rejected"
   | "refunded";
 
 export type OrderType = "dine_in" | "takeaway" | "delivery" | "table_service";

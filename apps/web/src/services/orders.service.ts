@@ -40,7 +40,7 @@ export interface Order {
   orderNumber: string;
   customer: OrderCustomer;
   source: 'qr_code' | 'uber_eats' | 'doordash' | 'phone' | 'web';
-  status: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+  status: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'rejected';
   order_type: string;
   table_number?: string;
   payment_method?: string;
@@ -73,7 +73,7 @@ export interface OrdersListResponse {
 }
 
 export interface OrderStatusUpdateRequest {
-  status: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+  status: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'rejected';
   notes?: string;
 }
 

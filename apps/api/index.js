@@ -1341,7 +1341,7 @@ app.patch('/api/v1/orders/:orderId/status', async (req, res) => {
       });
     }
     
-    const validStatuses = ['pending', 'preparing', 'ready', 'completed', 'cancelled'];
+    const validStatuses = ['pending', 'preparing', 'ready', 'completed', 'cancelled', 'rejected'];
     if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({
         error: { 
@@ -1690,27 +1690,20 @@ app.post('/api/v1/orders', async (req, res) => {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Get user context (for branch_id)
+    // Get user/branch context
     const authHeader = req.headers.authorization;
-    let branchId;
-    
+    let branchId = req.body.branchId; // allow explicit branch for public orders
+
     if (process.env.NODE_ENV === 'development' && (!authHeader || authHeader === 'Bearer null')) {
       // Development mode: Use test branch
-      branchId = '550e8400-e29b-41d4-a716-446655440002'; // Downtown Branch
-    } else {
-      // Production auth
-      if (!authHeader?.startsWith('Bearer ')) {
-        return res.status(401).json({
-          error: { code: 'UNAUTHORIZED', message: 'Missing or invalid authorization header' }
-        });
-      }
-
+      branchId = branchId || '550e8400-e29b-41d4-a716-446655440002'; // Downtown Branch
+    } else if (authHeader?.startsWith('Bearer ')) {
+      // Authenticated request: derive branch from user context
       const token = authHeader.split(' ')[1];
       try {
         const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
         const userId = payload.sub;
         
-        // Get user's branch context
         const { data: userBranchData, error: userBranchError } = await supabase
           .from('branch_users')
           .select('branch_id')
@@ -1723,11 +1716,37 @@ app.post('/api/v1/orders', async (req, res) => {
             error: { code: 'ACCESS_DENIED', message: 'User not found in any active branch' }
           });
         }
-        
         branchId = userBranchData.branch_id;
       } catch (error) {
         return res.status(401).json({
           error: { code: 'INVALID_TOKEN', message: 'Invalid token format' }
+        });
+      }
+    } else {
+      // Public order (no Authorization header): require branchId in body and validate origin/branch
+      if (!branchId) {
+        return res.status(400).json({
+          error: { code: 'VALIDATION_ERROR', message: 'branchId is required for unauthenticated orders' }
+        });
+      }
+      // Optional origin check to restrict to known frontend
+      const allowedOrigin = process.env.FRONTEND_URL;
+      const origin = req.headers.origin;
+      if (allowedOrigin && origin && origin !== allowedOrigin) {
+        return res.status(403).json({
+          error: { code: 'FORBIDDEN', message: 'Invalid request origin' }
+        });
+      }
+      // Validate branch exists and is active
+      const { data: branchRow, error: branchErr } = await supabase
+        .from('branches')
+        .select('id')
+        .eq('id', branchId)
+        .eq('is_active', true)
+        .single();
+      if (branchErr || !branchRow) {
+        return res.status(404).json({
+          error: { code: 'BRANCH_NOT_FOUND', message: 'Branch not found or inactive' }
         });
       }
     }

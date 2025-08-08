@@ -14,6 +14,19 @@
 
 ## ✅ RECENTLY COMPLETED WORK (January 2025)
 
+### **❌ Order Rejection System - COMPLETED ✅**
+**Implementation Date**: January 8, 2025
+- **Business Logic Implementation**: Clear distinction between "Rejected" (pending orders) vs "Cancelled" (processing orders)
+- **Professional Dialog System**: Replaced native confirm() with proper Dialog component using Radix UI
+- **Backend API Support**: Added 'rejected' status to order status validation and processing pipeline
+- **Frontend Integration**: Updated all order pages (Live Orders, History, Kitchen) with rejected status styling
+- **Status Badge System**: Consistent red styling for both rejected and cancelled orders across all pages
+- **History Integration**: Rejected orders now appear in Order History alongside completed and cancelled orders
+- **Professional Icons**: Replaced emoji with Lucide XCircle icon for clean, professional appearance
+- **Type Safety**: Full TypeScript support with proper status type definitions
+- **Location**: Order Detail page (`apps/web/src/app/orders/[orderId]/page.tsx`), Backend API (`apps/api/api/index.js`)
+- **Status**: ✅ **PRODUCTION READY** - Professional rejection workflow implemented
+
 ### **🔔 Notification System Enhancement - COMPLETED ✅**
 **Implementation Date**: January 8, 2025
 - **First Order Notification Fix**: Resolved issue where initial orders weren't triggering notifications
@@ -200,9 +213,42 @@
 
 ## 📋 PLANNED FEATURES & ROADMAP
 
+## 🔄 CURRENT ACTIVE DEVELOPMENT
+
+### **🇫🇷 Canadian French Language Support - IN PROGRESS**
+**Start Date**: January 8, 2025  
+**Priority**: HIGH (Critical for Canadian market expansion)
+**Target Languages**: English (EN) + Canadian French (FR-CA)
+
+**Implementation Plan**:
+- **Phase 1**: i18n Infrastructure setup with react-i18next
+- **Phase 2**: Canadian French translations for all UI components  
+- **Phase 3**: Language switching in user interface
+- **Phase 4**: Localized date/time/currency formatting
+- **Phase 5**: French language testing and quality assurance
+
+**Key Requirements**:
+- Canadian French (FR-CA) specifically, not European French
+- Professional restaurant industry translations
+- Seamless language switching without page refresh
+- Persistent language preference per user
+- All order management interfaces must be bilingual
+
+**Technical Implementation**:
+- Framework: react-i18next with namespace organization
+- Translation Storage: JSON files organized by feature modules
+- Backend API: Bilingual error messages and responses  
+- Currency: CAD formatting for both languages
+- Date/Time: Canadian format standards
+
+**Estimated Timeline**: 2-3 days for complete implementation
+**Impact**: Enables Canadian market penetration and regulatory compliance
+
+---
+
 ### **Phase 1: Core Feature Completion (Next 3-4 weeks)**
-1. **Order Rejection System** - Quick implementation for order rejection with reasons (1-2 days)
-2. **Multi-language Support** - Full i18n with Canadian French (1-2 weeks)
+1. ~~**Order Rejection System**~~ - ✅ **COMPLETED** (January 8, 2025)
+2. **🔄 Multi-language Support** - **IN PROGRESS** - Canadian French (FR-CA) implementation 
 3. **Menu Management System** - Complete CRUD operations, availability toggles, presets (2-3 weeks)
 4. **Order Creation API** - POST endpoint for new orders (integrated with menu system)
 

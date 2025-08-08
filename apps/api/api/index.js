@@ -1341,7 +1341,7 @@ app.patch('/api/v1/orders/:orderId/status', async (req, res) => {
       });
     }
     
-    const validStatuses = ['pending', 'preparing', 'ready', 'completed', 'cancelled'];
+    const validStatuses = ['pending', 'preparing', 'ready', 'completed', 'cancelled', 'rejected'];
     if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({
         error: { 

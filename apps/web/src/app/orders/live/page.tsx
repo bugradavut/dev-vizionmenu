@@ -159,14 +159,18 @@ export default function LiveOrdersPage() {
       pending: "outline",
       preparing: "secondary", 
       ready: "default",
-      completed: "default"
+      completed: "default",
+      rejected: "destructive",
+      cancelled: "destructive"
     }
     
     const colors: Record<string, string> = {
       pending: "text-orange-700 border-orange-300 bg-orange-100",
       preparing: "text-blue-700 border-blue-300 bg-blue-100",
       ready: "text-green-700 border-green-400 bg-green-100",
-      completed: "text-gray-600 border-gray-200 bg-gray-50"
+      completed: "text-gray-600 border-gray-200 bg-gray-50",
+      rejected: "text-red-700 border-red-300 bg-red-100",
+      cancelled: "text-red-700 border-red-300 bg-red-100"
     }
 
     return (
