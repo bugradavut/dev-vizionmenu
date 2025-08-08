@@ -91,9 +91,15 @@ export const useNotificationSound = (options: NotificationSoundOptions = {}): No
 
       const context = audioContextRef.current;
       
-      // Resume audio context if suspended
+      // Resume audio context if suspended (with error handling)
       if (context.state === 'suspended') {
-        await context.resume();
+        try {
+          await context.resume();
+        } catch (error) {
+          // If resume fails due to user gesture requirement, skip audio
+          console.debug('AudioContext resume failed - user gesture required:', error);
+          return;
+        }
       }
       
       const oscillator = context.createOscillator();
@@ -138,13 +144,17 @@ export const useNotificationSound = (options: NotificationSoundOptions = {}): No
         await createBeepSound();
         return;
       }
-    } catch {
+    } catch (error) {
+      // Handle autoplay policy errors gracefully
+      console.debug('🔇 Audio playback failed (browser policy):', error);
+      
       // Try beep fallback on play error
       if (fallbackToBeep) {
         try {
           await createBeepSound();
-        } catch {
-          // Silent fail
+        } catch (fallbackError) {
+          // Silent fail - browser doesn't allow audio without user gesture
+          console.debug('🔇 Beep fallback also failed:', fallbackError);
         }
       }
     }
