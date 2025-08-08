@@ -119,7 +119,7 @@ export default function OrderPage() {
     try {
       // Create order payload
       const orderData = {
-        branchId: "550e8400-e29b-41d4-a716-446655440002", // Downtown Branch (with simplified flow)
+        branchId: "550e8400-e29b-41d4-a716-446655440002", // Required for unauthenticated public order creation
         customer: {
           name: customerInfo.name,
           phone: customerInfo.phone,
