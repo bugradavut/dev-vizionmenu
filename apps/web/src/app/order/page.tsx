@@ -137,8 +137,8 @@ export default function OrderPage() {
         third_party_platform: null,
         pricing: {
           subtotal: getTotal(),
-          tax: getTotal() * 0.1, // 10% tax
-          total: getTotal() * 1.1
+          tax: getTotal() * 0.13, // 13% HST
+          total: getTotal() * 1.13
         }
       }
 
@@ -277,7 +277,7 @@ export default function OrderPage() {
                     <div className="border-t pt-4">
                       <div className="flex justify-between text-lg font-bold">
                         <span>Total (with tax):</span>
-                        <span>${(getTotal() * 1.1).toFixed(2)}</span>
+                        <span>${(getTotal() * 1.13).toFixed(2)}</span>
                       </div>
                     </div>
                   )}

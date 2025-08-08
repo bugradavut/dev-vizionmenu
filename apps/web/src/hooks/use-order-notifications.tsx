@@ -59,66 +59,93 @@ export const useOrderNotifications = (
     fallbackToBeep: true
   });
 
-  // Show modern minimal toast notification for new order
+  // Show modern minimal toast notification for new order with animations
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const showOrderToast = useCallback((order: any) => {
     const orderNumber = order.orderNumber || order.id;
     const customerName = order.customer?.name || order.customer_name || 'Customer';
     const total = order.pricing?.total?.toFixed(2) || order.total || '0.00';
     
-    toast.custom((t) => (
-      <div className="bg-white dark:bg-gray-900 p-0 overflow-hidden" 
-           style={{
-             width: '320px',
-             maxWidth: '320px',
-             minWidth: '320px',
-             borderRadius: '20px',
-             border: '1px solid rgba(0, 0, 0, 0.08)',
-             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 10px 25px -5px rgba(0, 0, 0, 0.1)'
-           }}>
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 pb-3">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-            New Order Received
-          </h3>
-          <button
-            onClick={() => toast.dismiss(t.id)}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6L18 18"/>
-            </svg>
-          </button>
-        </div>
+    // Custom dismiss function with exit animation
+    const handleDismiss = (toastId: string) => {
+      // First trigger exit animation
+      const toastElement = document.querySelector(`[data-toast-id="${toastId}"]`);
+      if (toastElement) {
+        toastElement.classList.remove('toast-enter');
+        toastElement.classList.add('toast-exit');
         
-        {/* Content */}
-        <div className="px-4 pb-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
-            A new order <span className="font-bold">#{orderNumber}</span> has been placed by <span className="font-bold">{customerName}</span> with a total amount of <span className="font-bold">${total}</span>. Please review and process the order.
+        // Wait for animation to complete, then dismiss
+        setTimeout(() => {
+          toast.dismiss(toastId);
+        }, 250); // Match CSS animation duration
+      } else {
+        // Fallback: immediate dismiss if element not found
+        toast.dismiss(toastId);
+      }
+    };
+    
+    const toastId = toast.custom((t) => (
+      <div data-toast-id={t.id}>
+        <div className="bg-white dark:bg-gray-900 p-0 overflow-hidden toast-enter" 
+             style={{
+               width: '320px',
+               maxWidth: '320px',
+               minWidth: '320px',
+               borderRadius: '20px',
+               border: '1px solid rgba(0, 0, 0, 0.08)',
+               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 10px 25px -5px rgba(0, 0, 0, 0.1)'
+             }}>
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 pb-3">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+              New Order Received
+            </h3>
+            <button
+              onClick={() => handleDismiss(t.id)}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6L18 18"/>
+              </svg>
+            </button>
           </div>
           
-          {/* Action Button */}
-          <button
-            onClick={() => {
-              toast.dismiss(t.id);
-              window.location.href = `/orders/${orderNumber}?context=live`;
-            }}
-            className="w-full text-white font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 text-sm"
-            style={{ backgroundColor: 'var(--primary)' }}
-            onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#e6440a'}
-            onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = 'var(--primary)'}
-          >
-            View Order
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M7 17L17 7M17 7H7M17 7V17"/>
-            </svg>
-          </button>
+          {/* Content */}
+          <div className="px-4 pb-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
+              A new order <span className="font-bold">#{orderNumber}</span> has been placed by <span className="font-bold">{customerName}</span> with a total amount of <span className="font-bold">${total}</span>. Please review and process the order.
+            </div>
+            
+            {/* Action Button */}
+            <button
+              onClick={() => {
+                handleDismiss(t.id);
+                setTimeout(() => {
+                  window.location.href = `/orders/${orderNumber}?context=live`;
+                }, 250);
+              }}
+              className="w-full text-white font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 text-sm"
+              style={{ backgroundColor: 'var(--primary)' }}
+              onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#e6440a'}
+              onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = 'var(--primary)'}
+            >
+              View Order
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M7 17L17 7M17 7H7M17 7V17"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     ), {
-      duration: 10000, // 10 seconds
+      duration: Infinity, // Disable auto-dismiss
       position: 'top-right',
     });
+    
+    // Manual dismiss after 10 seconds with animation
+    setTimeout(() => {
+      handleDismiss(toastId);
+    }, 10000);
   }, []);
 
   // Process new orders and trigger notifications
