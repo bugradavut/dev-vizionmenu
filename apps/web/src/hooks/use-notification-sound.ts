@@ -38,6 +38,7 @@ export const useNotificationSound = (options: NotificationSoundOptions = {}): No
   const [isLoaded, setIsLoaded] = useState(false);
   const [isEnabled, setIsEnabled] = useState(initialEnabled);
   const [volume, setVolume] = useState(initialVolume);
+  const [isUnlocked, setIsUnlocked] = useState(false);
 
   // Initialize audio (with fallback priority)
   useEffect(() => {
@@ -101,6 +102,7 @@ export const useNotificationSound = (options: NotificationSoundOptions = {}): No
           return;
         }
       }
+      if (!isUnlocked) setIsUnlocked(true);
       
       const oscillator = context.createOscillator();
       const gainNode = context.createGain();
@@ -121,7 +123,43 @@ export const useNotificationSound = (options: NotificationSoundOptions = {}): No
     } catch {
       // Silent fail - don't spam console
     }
-  }, [volume]);
+  }, [volume, isUnlocked]);
+
+  // Unlock AudioContext on first user gesture (Chrome autoplay policy)
+  const unlockAudio = useCallback(async () => {
+    try {
+      if (isUnlocked) return;
+      if (!audioContextRef.current) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const context = audioContextRef.current;
+      if (context.state === 'suspended') {
+        await context.resume();
+      }
+      // Play a near-silent, ultra-short tone to unlock
+      const osc = context.createOscillator();
+      const gain = context.createGain();
+      gain.gain.value = 0.0001;
+      osc.connect(gain);
+      gain.connect(context.destination);
+      osc.start();
+      osc.stop(context.currentTime + 0.01);
+      setIsUnlocked(true);
+    } catch {
+      // ignore
+    }
+  }, [isUnlocked]);
+
+  useEffect(() => {
+    if (isUnlocked) return;
+    const handler = () => unlockAudio();
+    const events: Array<keyof WindowEventMap> = ['click', 'touchstart', 'pointerdown', 'keydown'];
+    events.forEach((evt) => window.addEventListener(evt, handler, { once: true, passive: true } as EventListenerOptions));
+    return () => {
+      events.forEach((evt) => window.removeEventListener(evt, handler));
+    };
+  }, [isUnlocked, unlockAudio]);
 
   // Play notification sound
   const playSound = useCallback(async (): Promise<void> => {
