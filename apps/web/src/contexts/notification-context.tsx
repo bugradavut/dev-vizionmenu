@@ -265,15 +265,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const newOrderList = newOrders.filter((order: any) => {
           const orderCreatedAt = new Date(order.created_at || order.createdAt).getTime();
-          const isRecentOrder = orderCreatedAt > (notificationData.sessionStartTime - (5 * 60 * 1000)); // 5 min buffer
+          const isAfterSessionStart = orderCreatedAt >= (notificationData.sessionStartTime - 2000); // 2s tolerance
           const isNewOrder = !notificationData.seenOrders.has(order.id);
           const isNotCompleted = !shouldCleanupOrder(order, notificationData.orderTimestamps);
           
-          // Only notify for:
-          // 1. Truly new orders (not seen before)
-          // 2. Recent orders (created after session start - 5 min buffer)
-          // 3. Not completed/cancelled orders
-          return isNewOrder && isRecentOrder && isNotCompleted;
+          // Only notify for orders created after page open and not seen before
+          return isNewOrder && isAfterSessionStart && isNotCompleted;
         });
         
         // Update state

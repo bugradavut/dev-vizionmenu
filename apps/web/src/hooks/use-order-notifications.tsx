@@ -51,6 +51,7 @@ export const useOrderNotifications = (
   const notificationCountRef = useRef(0);
   const lastNotificationTimeRef = useRef(0);
   const sessionStartTimeRef = useRef(Date.now());
+  const initializedRef = useRef(false); // marks completion of the first poll (prevents missing first real order)
 
   // Audio notification hook
   const { playSound, testSound } = useNotificationSound({
@@ -151,27 +152,30 @@ export const useOrderNotifications = (
   // Process new orders and trigger notifications
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const processNewOrders = useCallback(async (currentOrders: any[]) => {
-    if (!isEnabledRef.current || !currentOrders?.length) {
+    // Mark first invocation so sessionStartTimeRef works as intended
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+    }
+
+    if (!isEnabledRef.current || !currentOrders) {
       return;
     }
 
     // Create set of current order IDs
     const currentOrderIds = new Set(currentOrders.map(order => order.id));
-    
+
+    // Do not early-return here: rely on time-based filter so that
+    // only orders created after sessionStart are notified.
+
     // Find new orders with intelligent timestamp checking
     const newOrders = currentOrders.filter(order => {
       const orderCreatedAt = new Date(order.created_at || order.createdAt).getTime();
-      const isRecentOrder = orderCreatedAt > (sessionStartTimeRef.current - (5 * 60 * 1000)); // 5 min buffer
+      const isAfterSessionStart = orderCreatedAt >= (sessionStartTimeRef.current - 2000); // 2s tolerance
       const isNewOrder = !previousOrdersRef.current.has(order.id);
       const isPendingOrder = order.status === 'pending';
-      const hasSeenOrdersBefore = previousOrdersRef.current.size > 0;
-      
-      // Only process orders that are:
-      // 1. New (not seen before)
-      // 2. Recent (created after session start)
-      // 3. Pending status
-      // 4. Not on initial load
-      return isNewOrder && isRecentOrder && isPendingOrder && hasSeenOrdersBefore;
+
+      // Notify only for orders created after page open and not seen before
+      return isNewOrder && isAfterSessionStart && isPendingOrder;
     });
 
     // Update previous orders set
