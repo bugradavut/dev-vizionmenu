@@ -3,14 +3,6 @@
 import { useState, useEffect } from "react"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
@@ -38,6 +30,9 @@ import { useOrders } from "@/hooks/use-orders"
 import { useOrderTimer } from "@/hooks/use-order-timer"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
+import { useLanguage } from "@/contexts/language-context"
+import { translations } from "@/lib/translations"
+import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
 // Order type imported for future use
 
 type ViewMode = 'table' | 'card'
@@ -46,6 +41,8 @@ export default function LiveOrdersPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState("")
+  const { language } = useLanguage()
+  const t = translations[language] || translations.en
 
   // Get branch context and settings
   const { branchId } = useEnhancedAuth()
@@ -173,9 +170,21 @@ export default function LiveOrdersPage() {
       cancelled: "text-red-700 border-red-300 bg-red-100"
     }
 
+    const getStatusText = (status: string) => {
+      switch(status) {
+        case 'pending': return t.liveOrders.statusPending
+        case 'preparing': return t.liveOrders.statusPreparing
+        case 'ready': return t.liveOrders.statusReady
+        case 'completed': return t.liveOrders.statusCompleted
+        case 'rejected': return t.liveOrders.statusRejected
+        case 'cancelled': return t.liveOrders.statusCancelled
+        default: return status.charAt(0).toUpperCase() + status.slice(1)
+      }
+    }
+
     return (
       <Badge variant={variants[status]} className={colors[status]}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {getStatusText(status)}
       </Badge>
     )
   }
@@ -187,6 +196,17 @@ export default function LiveOrdersPage() {
     // Client-side status filter (backend already filters, but this handles 'all' case)
     if (statusFilter !== 'all') {
       filteredOrders = filteredOrders.filter(order => order.status === statusFilter)
+    }
+    
+    // Client-side search filter for immediate response
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filteredOrders = filteredOrders.filter(order => 
+        order.id.toLowerCase().includes(query) ||
+        (order.customer?.name && order.customer.name.toLowerCase().includes(query)) ||
+        (order.customer?.phone && order.customer.phone.toLowerCase().includes(query)) ||
+        (order.customer?.email && order.customer.email.toLowerCase().includes(query))
+      )
     }
     
     return filteredOrders
@@ -203,7 +223,7 @@ export default function LiveOrdersPage() {
           className="h-9 text-sm"
           disabled={loading}
         >
-          All
+          {t.liveOrders.filterAll}
         </Button>
         <Button
           variant={statusFilter === 'pending' ? 'default' : 'outline'}
@@ -212,7 +232,7 @@ export default function LiveOrdersPage() {
           className="h-9 text-sm"
           disabled={loading}
         >
-          New Orders
+          {t.liveOrders.filterNewOrders}
         </Button>
         <Button
           variant={statusFilter === 'preparing' ? 'default' : 'outline'}
@@ -221,7 +241,7 @@ export default function LiveOrdersPage() {
           className="h-9 text-sm"
           disabled={loading}
         >
-          Preparing
+          {t.liveOrders.filterPreparing}
         </Button>
         <Button
           variant={statusFilter === 'ready' ? 'default' : 'outline'}
@@ -230,7 +250,7 @@ export default function LiveOrdersPage() {
           className="h-9 text-sm"
           disabled={loading}
         >
-          Ready
+          {t.liveOrders.filterReady}
         </Button>
         <Button
           variant="outline"
@@ -254,7 +274,7 @@ export default function LiveOrdersPage() {
       <div className="relative flex-1 min-w-0 max-w-md">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search orders, customer, phone"
+          placeholder={t.liveOrders.searchPlaceholder}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10 pr-10 w-full"
@@ -317,13 +337,13 @@ export default function LiveOrdersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[140px]">Channel</TableHead>
-                <TableHead className="w-[120px]">Order</TableHead>
-                <TableHead className="w-[200px]">Customer</TableHead>
-                <TableHead className="w-[100px]">Status</TableHead>
-                <TableHead className="w-[90px]">Total</TableHead>
-                <TableHead className="w-[80px]">Time</TableHead>
-                <TableHead className="w-[70px] text-center">Action</TableHead>
+                <TableHead className="w-[140px]">{t.liveOrders.tableHeaderChannel}</TableHead>
+                <TableHead className="w-[120px]">{t.liveOrders.tableHeaderOrder}</TableHead>
+                <TableHead className="w-[200px]">{t.liveOrders.tableHeaderCustomer}</TableHead>
+                <TableHead className="w-[100px]">{t.liveOrders.tableHeaderStatus}</TableHead>
+                <TableHead className="w-[90px]">{t.liveOrders.tableHeaderTotal}</TableHead>
+                <TableHead className="w-[80px]">{t.liveOrders.tableHeaderTime}</TableHead>
+                <TableHead className="w-[70px] text-center">{t.liveOrders.tableHeaderAction}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -489,17 +509,7 @@ export default function LiveOrdersPage() {
               <div className="flex items-center gap-2">
                 <SidebarTrigger className="-ml-1" />
                 <Separator orientation="vertical" className="mr-2 h-4" />
-                <Breadcrumb>
-                  <BreadcrumbList>
-                    <BreadcrumbItem>
-                      <BreadcrumbLink href="/orders">Orders</BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                      <BreadcrumbPage>Live Orders</BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </BreadcrumbList>
-                </Breadcrumb>
+                <DynamicBreadcrumb />
               </div>
               
               {/* Simplified Mode Badge */}
@@ -507,7 +517,7 @@ export default function LiveOrdersPage() {
                 <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-md">
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                   <span className="text-xs text-blue-700 font-medium">
-                    Simplified Mode: Active
+                    {t.liveOrders.simplifiedModeActive}
                   </span>
                 </div>
               )}
@@ -518,15 +528,15 @@ export default function LiveOrdersPage() {
             <div className="px-2 py-6 sm:px-4 lg:px-6 bg-background">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8">
-                  <h1 className="text-3xl font-bold tracking-tight">Live Orders</h1>
+                  <h1 className="text-3xl font-bold tracking-tight">{t.liveOrders.pageTitle}</h1>
                   <p className="text-muted-foreground mt-2 text-lg">
-                    Monitor and manage active orders in real-time
+                    {t.liveOrders.pageSubtitle}
                   </p>
                 </div>
                 <div className="lg:col-span-4 flex items-center justify-end">
                   {/* View Toggle */}
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">View:</span>
+                    <span className="text-sm text-muted-foreground">{t.liveOrders.viewLabel}</span>
                     <Button
                       variant={viewMode === 'table' ? 'default' : 'outline'}
                       size="sm"

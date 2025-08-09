@@ -3,14 +3,6 @@
 import { useState } from 'react';
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
@@ -20,6 +12,9 @@ import { Card, CardContent } from "@repo/ui"
 import { UserCheck, Shield, Users } from "lucide-react"
 import { UserListTable, CreateUserModal, EditUserModal } from "@/components/user-management"
 import { useUsers, useAuthApi } from "@/hooks"
+import { useLanguage } from "@/contexts/language-context"
+import { translations } from "@/lib/translations"
+import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
 import type { BranchUser } from "@repo/types/auth"
 import { DashboardLayout } from "@/components/dashboard-layout"
 
@@ -30,6 +25,8 @@ export default function UserManagementPage() {
 
   const { users, totalUsers } = useUsers();
   const { user } = useAuthApi();
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
   
 
   // Get current branch ID from authenticated user
@@ -66,25 +63,7 @@ export default function UserManagementPage() {
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="/dashboard">
-                      Dashboard
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="/settings">
-                      Settings
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>User Management</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
+              <DynamicBreadcrumb />
             </div>
           </header>
           
@@ -93,9 +72,9 @@ export default function UserManagementPage() {
             <div className="px-2 py-6 sm:px-4 lg:px-6 bg-background">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8">
-                  <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+                  <h1 className="text-3xl font-bold tracking-tight">{t.settingsUsers.pageTitle}</h1>
                   <p className="text-muted-foreground mt-2 text-lg">
-                    Manage restaurant staff, roles, and permissions.
+                    {t.settingsUsers.pageSubtitle}
                   </p>
                 </div>
                 <div className="lg:col-span-4 flex items-center justify-end">
@@ -114,7 +93,7 @@ export default function UserManagementPage() {
                       <CardContent className="p-3">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Total Users</p>
+                            <p className="text-sm font-medium text-muted-foreground">{t.settingsUsers.totalUsers}</p>
                             <p className="text-xl font-bold">{totalUsers}</p>
                           </div>
                           <Users className="h-4 w-4 text-muted-foreground" />
@@ -126,7 +105,7 @@ export default function UserManagementPage() {
                       <CardContent className="p-3">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Active Users</p>
+                            <p className="text-sm font-medium text-muted-foreground">{t.settingsUsers.activeUsers}</p>
                             <p className="text-xl font-bold">{activeUsers}</p>
                           </div>
                           <UserCheck className="h-4 w-4 text-muted-foreground" />
@@ -138,7 +117,7 @@ export default function UserManagementPage() {
                       <CardContent className="p-3">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Administrators</p>
+                            <p className="text-sm font-medium text-muted-foreground">{t.settingsUsers.administrators}</p>
                             <p className="text-xl font-bold">{adminUsers}</p>
                           </div>
                           <Shield className="h-4 w-4 text-muted-foreground" />

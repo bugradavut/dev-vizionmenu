@@ -2,14 +2,6 @@
 
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
@@ -21,22 +13,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Palette } from "lucide-react"
 import { useTheme } from "@/contexts/theme-context"
 import { useLanguage } from "@/contexts/language-context"
+import { translations } from "@/lib/translations"
+import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
 import { DashboardLayout } from "@/components/dashboard-layout"
 
 export default function GeneralSettingsPage() {
   const { theme } = useTheme()
   const { language } = useLanguage()
+  const t = translations[language] || translations.en
 
   const getThemeLabel = (currentTheme: string) => {
     switch (currentTheme) {
       case "light":
-        return "Light"
+        return t.settingsGeneral.light
       case "dark":
-        return "Dark"
+        return t.settingsGeneral.dark
       case "system":
-        return "System"
+        return t.settingsGeneral.system
       default:
-        return "System"
+        return t.settingsGeneral.system
     }
   }
   return (
@@ -48,25 +43,7 @@ export default function GeneralSettingsPage() {
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="/dashboard">
-                      Dashboard
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="/settings">
-                      Settings
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>General</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
+              <DynamicBreadcrumb />
             </div>
           </header>
           <div className="flex flex-1 flex-col px-2 sm:px-4 lg:px-6">
@@ -74,9 +51,9 @@ export default function GeneralSettingsPage() {
             <div className="px-2 py-6 sm:px-4 lg:px-6 bg-background">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8">
-                  <h1 className="text-3xl font-bold tracking-tight">General Settings</h1>
+                  <h1 className="text-3xl font-bold tracking-tight">{t.settingsGeneral.pageTitle}</h1>
                   <p className="text-muted-foreground mt-2 text-lg">
-                    Manage your application preferences and account settings.
+                    {t.settingsGeneral.pageSubtitle}
                   </p>
                 </div>
                 <div className="lg:col-span-4 flex items-center justify-end">
@@ -95,21 +72,21 @@ export default function GeneralSettingsPage() {
                 <CardHeader className="pb-4 border-b mb-4">
                   <div className="flex items-center gap-3">
                     <Palette className="h-5 w-5 text-muted-foreground" />
-                    <CardTitle className="text-lg">Appearance</CardTitle>
+                    <CardTitle className="text-lg">{t.settingsGeneral.appearance}</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between pb-4 border-b border-border">
                     <div className="space-y-1">
-                      <div className="text-sm font-medium">Theme</div>
-                      <div className="text-xs text-muted-foreground">Currently using theme: {getThemeLabel(theme)}</div>
+                      <div className="text-sm font-medium">{t.settingsGeneral.theme}</div>
+                      <div className="text-xs text-muted-foreground">{t.settingsGeneral.currentlyUsingTheme} {getThemeLabel(theme)}</div>
                     </div>
                     <ThemeToggle />
                   </div>
                   <div className="flex items-center justify-between pt-4">
                     <div className="space-y-1">
-                      <div className="text-sm font-medium">Language</div>
-                      <div className="text-xs text-muted-foreground">Currently selected language: {getLanguageLabel(language)}</div>
+                      <div className="text-sm font-medium">{t.settingsGeneral.language}</div>
+                      <div className="text-xs text-muted-foreground">{t.settingsGeneral.currentlySelectedLanguage} {getLanguageLabel(language)}</div>
                     </div>
                     <LanguageToggle />
                   </div>

@@ -3,14 +3,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
@@ -28,6 +20,9 @@ import { useOrders } from "@/hooks/use-orders"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
 import { useOrderTimer } from "@/hooks/use-order-timer"
+import { useLanguage } from "@/contexts/language-context"
+import { translations } from "@/lib/translations"
+import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
 import type { Order } from "@/services/orders.service"
 
 // Kitchen Display interfaces - compatible with Order API types
@@ -97,6 +92,8 @@ interface KitchenOrder {
 export default function KitchenDisplayPage() {
   const { branchId } = useEnhancedAuth()
   const { settings: branchSettings } = useBranchSettings({ branchId: branchId || undefined })
+  const { language } = useLanguage()
+  const t = translations[language] || translations.en
   // Timer hook for simplified flow automation
   const { startTimer, stopTimer, runManualCheck } = useOrderTimer()
 
@@ -231,12 +228,12 @@ export default function KitchenDisplayPage() {
     const scheduled = new Date(scheduledFor)
     const diffMs = scheduled.getTime() - now.getTime()
     
-    if (diffMs <= 0) return "Ready to start"
+    if (diffMs <= 0) return t.kitchenDisplay.readyToStart
     
     const hours = Math.floor(diffMs / (1000 * 60 * 60))
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
     
-    return `${hours}h ${minutes}m left`
+    return `${hours}${t.kitchenDisplay.hoursLeft} ${minutes}${t.kitchenDisplay.minutesLeft}`
   }
 
   // Real-time state for smooth timer updates
@@ -417,7 +414,7 @@ export default function KitchenDisplayPage() {
       return (
         <Badge variant="outline" className="text-yellow-700 border-yellow-400 bg-yellow-50">
           <Clock className="h-3 w-3 mr-1" />
-          PRE-ORDER
+          {t.kitchenDisplay.preOrder}
         </Badge>
       )
     }
@@ -450,7 +447,7 @@ export default function KitchenDisplayPage() {
           return (
             <Button disabled className={`${baseClasses} text-gray-500`}>
               <Clock className="h-3 w-3 mr-1" />
-              {isTableView ? "Scheduled" : "Scheduled"}
+              {t.kitchenDisplay.scheduled}
             </Button>
           )
         }
@@ -459,7 +456,7 @@ export default function KitchenDisplayPage() {
             onClick={() => changeOrderStatus(order.id, 'preparing')} 
             className={`${baseClasses} hover:bg-primary/90`}
           >
-            Start Prep
+            {t.kitchenDisplay.startPrep}
           </Button>
         )
       case 'preparing':
@@ -475,10 +472,10 @@ export default function KitchenDisplayPage() {
             {isUpdating ? (
               <>
                 <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                Marking Ready...
+                {t.kitchenDisplay.markingReady}
               </>
             ) : (
-              'Mark Ready'
+              t.kitchenDisplay.markReady
             )}
           </Button>
         )
@@ -488,7 +485,7 @@ export default function KitchenDisplayPage() {
             <div className={`px-4 py-2 text-xs font-medium text-green-600 border border-green-300 bg-green-50 rounded-md ${
               isTableView ? 'min-w-[100px]' : ''
             }`}>
-              Ready
+              {t.kitchenDisplay.ready}
             </div>
           </div>
         )
@@ -511,17 +508,7 @@ export default function KitchenDisplayPage() {
               <div className="flex items-center gap-2">
                 <SidebarTrigger className="-ml-1" />
                 <Separator orientation="vertical" className="mr-2 h-4" />
-                <Breadcrumb>
-                  <BreadcrumbList>
-                    <BreadcrumbItem>
-                      <BreadcrumbLink href="/orders">Orders</BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                      <BreadcrumbPage>Kitchen Display</BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </BreadcrumbList>
-                </Breadcrumb>
+                <DynamicBreadcrumb />
               </div>
               
               {/* Simplified Mode Badge */}
@@ -529,7 +516,7 @@ export default function KitchenDisplayPage() {
                 <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-md">
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                   <span className="text-xs text-blue-700 font-medium">
-                    Simplified Mode: Active
+                    {t.kitchenDisplay.simplifiedModeActive}
                   </span>
                 </div>
               )}
@@ -541,15 +528,15 @@ export default function KitchenDisplayPage() {
             <div className="px-2 py-6 sm:px-4 lg:px-6 bg-background">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8">
-                  <h1 className="text-3xl font-bold tracking-tight">Kitchen Display</h1>
+                  <h1 className="text-3xl font-bold tracking-tight">{t.kitchenDisplay.pageTitle}</h1>
                   <p className="text-muted-foreground mt-2 text-lg">
-                    Monitor and manage orders for kitchen preparation
+                    {t.kitchenDisplay.pageSubtitle}
                   </p>
                 </div>
                 <div className="lg:col-span-4 flex items-center justify-end">
                   {/* View Toggle */}
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">View:</span>
+                    <span className="text-sm text-muted-foreground">{t.kitchenDisplay.viewLabel}</span>
                     <Button
                       variant={viewType === 'kanban' ? 'default' : 'outline'}
                       size="sm"
@@ -587,7 +574,7 @@ export default function KitchenDisplayPage() {
                       onClick={clearError}
                       className="ml-2"
                     >
-                      Dismiss
+                      {t.kitchenDisplay.dismiss}
                     </Button>
                   </AlertDescription>
                 </Alert>
@@ -603,14 +590,14 @@ export default function KitchenDisplayPage() {
                     className="flex items-center gap-2"
                   >
                     <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                    Refresh
+                    {t.kitchenDisplay.refresh}
                   </Button>
                 </div>
                 
                 <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search orders, customer"
+                    placeholder={t.kitchenDisplay.searchPlaceholder}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10 pr-10 w-full"
@@ -637,7 +624,7 @@ export default function KitchenDisplayPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-xl sm:text-2xl font-bold text-orange-600">{preparingOrders.length}</div>
-                        <div className="text-xs sm:text-sm text-muted-foreground">In Progress</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">{t.kitchenDisplay.inProgress}</div>
                       </div>
                       <div className="bg-orange-100 p-1.5 sm:p-2 rounded-full">
                         <Utensils className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
@@ -651,7 +638,7 @@ export default function KitchenDisplayPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-xl sm:text-2xl font-bold text-green-600">{readyOrders.length}</div>
-                        <div className="text-xs sm:text-sm text-muted-foreground">Ready</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">{t.kitchenDisplay.ready}</div>
                       </div>
                       <div className="bg-green-100 p-1.5 sm:p-2 rounded-full">
                         <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
@@ -665,7 +652,7 @@ export default function KitchenDisplayPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-xl sm:text-2xl font-bold text-yellow-600">{preOrders.length}</div>
-                        <div className="text-xs sm:text-sm text-muted-foreground">Pre-Orders</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">{t.kitchenDisplay.preOrders}</div>
                       </div>
                       <div className="bg-yellow-100 p-1.5 sm:p-2 rounded-full">
                         <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
@@ -686,7 +673,7 @@ export default function KitchenDisplayPage() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                        <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wide">IN PROGRESS</h3>
+                        <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wide">{t.kitchenDisplay.inProgressColumn}</h3>
                       </div>
                       <span className="bg-orange-100 text-orange-800 text-xs font-medium px-2 py-1 rounded-full">
                         {preparingOrders.length}
@@ -695,7 +682,7 @@ export default function KitchenDisplayPage() {
                     <div className="space-y-3">
                       {preparingOrders.length === 0 ? (
                         <div className="text-center py-8 text-gray-400">
-                          <p className="text-sm">No orders in progress</p>
+                          <p className="text-sm">{t.kitchenDisplay.noOrdersInProgress}</p>
                         </div>
                       ) : (
                         preparingOrders.map((order) => (
@@ -735,7 +722,7 @@ export default function KitchenDisplayPage() {
                                       </div>
                                       <span className="text-xs text-gray-500">
                                         {timerData.isOverdue 
-                                          ? 'Ready for manual check' 
+                                          ? t.kitchenDisplay.readyForManualCheck
                                           : `${timerData.elapsedMinutes}m / ${timerData.totalMinutes}m`
                                         }
                                       </span>
@@ -779,12 +766,12 @@ export default function KitchenDisplayPage() {
                                           {updatingOrders.has(order.id) ? (
                                             <>
                                               <RefreshCw className="h-3 w-3 animate-spin mr-1" />
-                                              Marking Ready...
+                                              {t.kitchenDisplay.markingReady}
                                             </>
                                           ) : (
                                             <>
                                               <CheckCircle2 className="h-3 w-3 mr-1" />
-                                              Mark Ready Now
+                                              {t.kitchenDisplay.markReadyNow}
                                             </>
                                           )}
                                         </Button>
@@ -842,12 +829,12 @@ export default function KitchenDisplayPage() {
                                             {isExpanded ? (
                                               <>
                                                 <ChevronUp className="h-3 w-3 mr-1" />
-                                                Show Less
+                                                {t.kitchenDisplay.showLess}
                                               </>
                                             ) : (
                                               <>
                                                 <ChevronDown className="h-3 w-3 mr-1" />
-                                                +{hiddenItemsCount} More
+                                                +{hiddenItemsCount} {t.kitchenDisplay.more}
                                               </>
                                             )}
                                           </button>
@@ -875,7 +862,7 @@ export default function KitchenDisplayPage() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                        <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wide">READY</h3>
+                        <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wide">{t.kitchenDisplay.readyColumn}</h3>
                       </div>
                       <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
                         {readyOrders.length}
@@ -941,12 +928,12 @@ export default function KitchenDisplayPage() {
                                             {isExpanded ? (
                                               <>
                                                 <ChevronUp className="h-3 w-3 mr-1" />
-                                                Show Less
+                                                {t.kitchenDisplay.showLess}
                                               </>
                                             ) : (
                                               <>
                                                 <ChevronDown className="h-3 w-3 mr-1" />
-                                                +{hiddenItemsCount} More
+                                                +{hiddenItemsCount} {t.kitchenDisplay.more}
                                               </>
                                             )}
                                           </button>
@@ -973,7 +960,7 @@ export default function KitchenDisplayPage() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                        <h3 className="font-semibold text-yellow-900 text-sm uppercase tracking-wide">PRE-ORDERS</h3>
+                        <h3 className="font-semibold text-yellow-900 text-sm uppercase tracking-wide">{t.kitchenDisplay.preOrdersColumn}</h3>
                       </div>
                       <span className="bg-yellow-200 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">
                         {preOrders.length}
@@ -982,7 +969,7 @@ export default function KitchenDisplayPage() {
                     <div className="space-y-3">
                       {preOrders.length === 0 ? (
                         <div className="text-center py-8 text-yellow-600">
-                          <p className="text-sm">No pre-orders</p>
+                          <p className="text-sm">{t.kitchenDisplay.noPreOrders}</p>
                         </div>
                       ) : (
                         preOrders.map((order) => (
@@ -1029,13 +1016,13 @@ export default function KitchenDisplayPage() {
                     <table className="w-full border-collapse">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
-                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-28">Status</th>
-                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-32">Order</th>
-                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-40">Customer</th>
-                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-20">Time</th>
-                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-24">Items</th>
-                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-24">Total</th>
-                          <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide w-32">Action</th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-28">{t.kitchenDisplay.status}</th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-32">{t.kitchenDisplay.order}</th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-40">{t.kitchenDisplay.customer}</th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-20">{t.kitchenDisplay.time}</th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-24">{t.kitchenDisplay.items}</th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide w-24">{t.kitchenDisplay.total}</th>
+                          <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide w-32">{t.kitchenDisplay.action}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -1112,10 +1099,10 @@ export default function KitchenDisplayPage() {
                                 {order.orderTime}
                               </td>
                               <td className="px-4 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">{order.items.length} items</div>
+                                <div className="text-sm text-gray-900">{order.items.length} {t.kitchenDisplay.items}</div>
                                 {order.status === 'preparing' && (
                                   <div className="text-xs text-orange-600">
-                                    {order.items.filter(item => item.isCompleted).length}/{order.items.length} completed
+                                    {order.items.filter(item => item.isCompleted).length}/{order.items.length} {t.kitchenDisplay.completed}
                                   </div>
                                 )}
                               </td>
@@ -1135,10 +1122,10 @@ export default function KitchenDisplayPage() {
                                 <td colSpan={7} className="px-6 py-6">
                                   <div className="space-y-4">
                                     <div className="flex items-center justify-between mb-4">
-                                      <h4 className="text-sm font-semibold text-gray-900">Order Items</h4>
+                                      <h4 className="text-sm font-semibold text-gray-900">{t.kitchenDisplay.orderItems}</h4>
                                       {order.status === 'preparing' && (
                                         <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
-                                          {order.items.filter(item => item.isCompleted).length} of {order.items.length} completed
+                                          {order.items.filter(item => item.isCompleted).length} {t.kitchenDisplay.of} {order.items.length} {t.kitchenDisplay.completed}
                                         </span>
                                       )}
                                     </div>
@@ -1184,7 +1171,7 @@ export default function KitchenDisplayPage() {
                                       <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                                         <div className="flex items-center gap-2 text-orange-700 text-sm font-medium mb-2">
                                           <AlertCircle className="h-4 w-4" />
-                                          Special Instructions Summary
+                                          {t.kitchenDisplay.specialInstructionsSummary}
                                         </div>
                                         <div className="text-xs text-orange-600 space-y-1">
                                           {order.items
@@ -1215,7 +1202,7 @@ export default function KitchenDisplayPage() {
                 <div className="flex justify-center items-center py-12">
                   <div className="flex items-center gap-3 text-muted-foreground">
                     <RefreshCw className="h-6 w-6 animate-spin" />
-                    <span className="text-sm">Loading kitchen orders...</span>
+                    <span className="text-sm">{t.kitchenDisplay.loadingKitchenOrders}</span>
                   </div>
                 </div>
               )}
@@ -1225,7 +1212,7 @@ export default function KitchenDisplayPage() {
                 <div className="text-center py-4">
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted text-muted-foreground text-sm">
                     <CheckCircle2 className="h-4 w-4" />
-                    {displayedOrders.length} active order{displayedOrders.length !== 1 ? 's' : ''}
+                    {displayedOrders.length} {displayedOrders.length !== 1 ? t.kitchenDisplay.activeOrders : t.kitchenDisplay.activeOrder}
                   </div>
                 </div>
               )}
@@ -1235,10 +1222,10 @@ export default function KitchenDisplayPage() {
                 <div className="text-center py-12">
                   <ChefHat className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-muted-foreground">
-                    No Active Orders
+                    {t.kitchenDisplay.noActiveOrders}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    Kitchen is all caught up! 🎉
+                    {t.kitchenDisplay.kitchenCaughtUp}
                   </p>
                 </div>
               )}

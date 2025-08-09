@@ -1,19 +1,21 @@
+"use client"
+
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
+import { useLanguage } from "@/contexts/language-context"
+import { translations } from "@/lib/translations"
 
 export default function Page() {
+  const { language } = useLanguage()
+  const t = translations[language] || translations.en
+
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
       <DashboardLayout>
@@ -23,21 +25,15 @@ export default function Page() {
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>Dashboard</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
+              <DynamicBreadcrumb />
             </div>
           </header>
           <div className="flex flex-1 flex-col gap-6 py-4 px-4 md:px-8 lg:px-12 pt-8">
             <div className="max-w-6xl">
               <div className="mb-8">
-                <h2 className="text-2xl font-semibold tracking-tight">Dashboard Overview</h2>
+                <h2 className="text-2xl font-semibold tracking-tight">{t.dashboard.title}</h2>
                 <p className="text-muted-foreground mt-2">
-                  Welcome back! Here&apos;s what&apos;s happening with your restaurant today.
+                  {t.dashboard.subtitle}
                 </p>
               </div>
             </div>

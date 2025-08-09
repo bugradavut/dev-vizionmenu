@@ -21,6 +21,8 @@ import { useUserMutations } from '@/hooks';
 import { useUsersStore } from '@/hooks/use-users';
 import { usePermissions } from '@/hooks/use-enhanced-auth';
 import { apiClient } from '@/services/api-client';
+import { useLanguage } from '@/contexts/language-context';
+import { translations } from '@/lib/translations';
 import type { BranchRole, BranchUser, UpdateUserRequest } from '@repo/types/auth';
 
 interface EditUserModalProps {
@@ -29,12 +31,7 @@ interface EditUserModalProps {
   user: BranchUser | null;
 }
 
-const ROLE_OPTIONS: { value: BranchRole; label: string }[] = [
-  { value: 'branch_staff', label: 'Branch Staff' },
-  { value: 'branch_cashier', label: 'Branch Cashier' },
-  { value: 'branch_manager', label: 'Branch Manager' },
-  { value: 'chain_owner', label: 'Chain Owner' },
-];
+// Role options will be handled dynamically with translations
 
 export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,6 +47,16 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
   const { updateUser } = useUserMutations();
   const { updateUserInList } = useUsersStore();
   const permissions = usePermissions();
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
+  
+  // Dynamic role options based on language
+  const getRoleOptions = () => [
+    { value: 'branch_staff' as BranchRole, label: t.settingsUsers.userTable.staff },
+    { value: 'branch_cashier' as BranchRole, label: t.settingsUsers.userTable.cashier },
+    { value: 'branch_manager' as BranchRole, label: t.settingsUsers.userTable.branchManager },
+    { value: 'chain_owner' as BranchRole, label: t.settingsUsers.userTable.chainOwner },
+  ];
 
   // Only chain owners and branch managers can assign roles
   const canAssignRoles = permissions.isChainOwner || permissions.hasRole('branch_manager');
@@ -73,17 +80,17 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
     const newErrors: Record<string, string> = {};
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t.settingsUsers.editUserModal.emailRequired;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
+      newErrors.email = t.settingsUsers.editUserModal.emailInvalid;
     }
 
     if (!formData.full_name.trim()) {
-      newErrors.full_name = 'Full name is required';
+      newErrors.full_name = t.settingsUsers.editUserModal.nameRequired;
     }
 
     if (formData.phone && !/^\+?[\d\s\-\(\)]+$/.test(formData.phone)) {
-      newErrors.phone = 'Invalid phone format';
+      newErrors.phone = t.settingsUsers.editUserModal.phoneInvalid;
     }
 
     setErrors(newErrors);
@@ -154,7 +161,7 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
       onClose();
     } catch (error) {
       setErrors({
-        submit: error instanceof Error ? error.message : 'Failed to update user'
+        submit: error instanceof Error ? error.message : t.settingsUsers.editUserModal.updateFailed
       });
     } finally {
       setIsSubmitting(false);
@@ -174,20 +181,20 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>Edit User</DialogTitle>
+          <DialogTitle>{t.settingsUsers.editUserModal.title}</DialogTitle>
           <DialogDescription>
-            Update user information and settings for {user.user.full_name || user.user.email}.
+            {t.settingsUsers.editUserModal.subtitle.replace('{name}', user.user.full_name || user.user.email)}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Email */}
           <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
+            <Label htmlFor="email">{t.settingsUsers.editUserModal.email} *</Label>
             <Input
               id="email"
               type="email"
-              placeholder="user@example.com"
+              placeholder={t.settingsUsers.editUserModal.emailPlaceholder}
               value={formData.email}
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               className={errors.email ? 'border-red-500' : ''}
@@ -202,11 +209,11 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
 
           {/* Full Name */}
           <div className="space-y-2">
-            <Label htmlFor="full_name">Full Name *</Label>
+            <Label htmlFor="full_name">{t.settingsUsers.editUserModal.fullName} *</Label>
             <Input
               id="full_name"
               type="text"
-              placeholder="John Doe"
+              placeholder={t.settingsUsers.editUserModal.fullNamePlaceholder}
               value={formData.full_name}
               onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
               className={errors.full_name ? 'border-red-500' : ''}
@@ -220,11 +227,11 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
 
           {/* Phone (Optional) */}
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
+            <Label htmlFor="phone">{t.settingsUsers.editUserModal.phone}</Label>
             <Input
               id="phone"
               type="tel"
-              placeholder="+1 (555) 123-4567"
+              placeholder={t.settingsUsers.editUserModal.phonePlaceholder}
               value={formData.phone}
               onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
               className={errors.phone ? 'border-red-500' : ''}
@@ -237,7 +244,7 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
 
           {/* Role */}
           <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
+            <Label htmlFor="role">{t.settingsUsers.editUserModal.role}</Label>
             <select
               id="role"
               value={formData.role}
@@ -245,7 +252,7 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
               disabled={!canAssignRoles}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {ROLE_OPTIONS.map((role) => (
+              {getRoleOptions().map((role) => (
                 <option key={role.value} value={role.value}>
                   {role.label}
                 </option>
@@ -255,7 +262,7 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
 
           {/* Status */}
           <div className="space-y-2">
-            <Label htmlFor="is_active">Status</Label>
+            <Label htmlFor="is_active">{t.settingsUsers.editUserModal.status}</Label>
             <select
               id="is_active"
               value={formData.is_active ? 'active' : 'inactive'}
@@ -263,8 +270,8 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
               disabled={isSubmitting}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="active">{t.settingsUsers.userTable.active}</option>
+              <option value="inactive">{t.settingsUsers.userTable.inactive}</option>
             </select>
           </div>
 
@@ -282,13 +289,13 @@ export function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
               onClick={handleClose}
               disabled={isSubmitting}
             >
-              Cancel
+              {t.settingsUsers.editUserModal.cancel}
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Updating...' : 'Update User'}
+              {isSubmitting ? t.settingsUsers.editUserModal.saving : t.settingsUsers.editUserModal.saveChanges}
             </Button>
           </DialogFooter>
         </form>

@@ -5,6 +5,8 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { useNotificationSound } from './use-notification-sound';
+import { useLanguage } from '@/contexts/language-context';
+import { translations } from '@/lib/translations';
 import toast from 'react-hot-toast';
 
 export interface OrderNotificationOptions {
@@ -41,6 +43,10 @@ export const useOrderNotifications = (
     notificationTimeout = 5000
   } = options;
 
+  // Language context for translations
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
+
   // Refs for state persistence
   const isEnabledRef = useRef(initialEnabled);
   const isSoundEnabledRef = useRef(initialSoundEnabled);
@@ -59,6 +65,14 @@ export const useOrderNotifications = (
     volume: 0.8,
     fallbackToBeep: true
   });
+
+  // Format order message with bold formatting (removed - will use JSX instead)
+  // const formatOrderMessage = useCallback((orderNumber: string, customerName: string, total: string) => {
+  //   return t.orderNotifications.orderMessage
+  //     .replace('{orderNumber}', orderNumber)
+  //     .replace('{customerName}', customerName)
+  //     .replace('{total}', total);
+  // }, [t]);
 
   // Show modern minimal toast notification for new order with animations
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -85,8 +99,8 @@ export const useOrderNotifications = (
       }
     };
     
-    const toastId = toast.custom((t) => (
-      <div data-toast-id={t.id}>
+    const toastId = toast.custom((toastProps) => (
+      <div data-toast-id={toastProps.id}>
         <div className="bg-white dark:bg-gray-900 p-0 overflow-hidden toast-enter" 
              style={{
                width: '320px',
@@ -99,10 +113,10 @@ export const useOrderNotifications = (
           {/* Header */}
           <div className="flex items-center justify-between p-4 pb-3">
             <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-              New Order Received
+              {t.orderNotifications.newOrderReceived}
             </h3>
             <button
-              onClick={() => handleDismiss(t.id)}
+              onClick={() => handleDismiss(toastProps.id)}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -114,13 +128,21 @@ export const useOrderNotifications = (
           {/* Content */}
           <div className="px-4 pb-4">
             <div className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
-              A new order <span className="font-bold">#{orderNumber}</span> has been placed by <span className="font-bold">{customerName}</span> with a total amount of <span className="font-bold">${total}</span>. Please review and process the order.
+              {language === 'fr' ? (
+                <>
+                  Une nouvelle commande <span className="font-bold">#{orderNumber}</span> a été placée par <span className="font-bold">{customerName}</span> pour un montant total de <span className="font-bold">{total} $</span>. Veuillez examiner et traiter la commande.
+                </>
+              ) : (
+                <>
+                  A new order <span className="font-bold">#{orderNumber}</span> has been placed by <span className="font-bold">{customerName}</span> with a total amount of <span className="font-bold">${total}</span>. Please review and process the order.
+                </>
+              )}
             </div>
             
             {/* Action Button */}
             <button
               onClick={() => {
-                handleDismiss(t.id);
+                handleDismiss(toastProps.id);
                 setTimeout(() => {
                   window.location.href = `/orders/${orderNumber}?context=live`;
                 }, 250);
@@ -130,7 +152,7 @@ export const useOrderNotifications = (
               onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#e6440a'}
               onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = 'var(--primary)'}
             >
-              View Order
+              {t.orderNotifications.viewOrder}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M7 17L17 7M17 7H7M17 7V17"/>
               </svg>
@@ -147,7 +169,7 @@ export const useOrderNotifications = (
     setTimeout(() => {
       handleDismiss(toastId);
     }, 10000);
-  }, []);
+  }, [t, language]);
 
   // Process new orders and trigger notifications
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

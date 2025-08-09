@@ -3,14 +3,7 @@
 import { useState } from "react"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
+import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
@@ -23,6 +16,8 @@ import { Label } from "@/components/ui/label"
 import { ArrowRight, CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw } from "lucide-react"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
+import { useLanguage } from "@/contexts/language-context"
+import { translations } from "@/lib/translations"
 import { DashboardLayout } from "@/components/dashboard-layout"
 
 export default function BranchSettingsPage() {
@@ -40,6 +35,8 @@ export default function BranchSettingsPage() {
     canSave
   } = useBranchSettings({ branchId: branchId || undefined })
 
+  const { language } = useLanguage()
+  const t = translations[language] || translations.en
   const [saved, setSaved] = useState(false)
 
   // Handle save
@@ -76,7 +73,7 @@ export default function BranchSettingsPage() {
             <div className="flex items-center justify-center h-screen">
               <div className="flex items-center gap-2">
                 <RefreshCw className="h-4 w-4 animate-spin" />
-                <span>Loading branch settings...</span>
+                <span>{t.settingsBranch.loadingSettings}</span>
               </div>
             </div>
           </SidebarInset>
@@ -95,16 +92,16 @@ export default function BranchSettingsPage() {
             <div className="flex flex-col items-center justify-center h-screen gap-4">
               <AlertCircle className="h-12 w-12 text-red-500" />
               <div className="text-center">
-                <h2 className="text-lg font-semibold">Failed to load settings</h2>
+                <h2 className="text-lg font-semibold">{t.settingsBranch.failedToLoad}</h2>
                 <p className="text-muted-foreground">{error}</p>
               </div>
               <div className="flex gap-2">
                 <Button onClick={loadSettings} variant="outline">
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Retry
+                  {t.settingsBranch.retry}
                 </Button>
                 <Button onClick={clearError} variant="ghost">
-                  Dismiss
+                  {t.settingsBranch.dismiss}
                 </Button>
               </div>
             </div>
@@ -123,25 +120,7 @@ export default function BranchSettingsPage() {
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="/dashboard">
-                      Dashboard
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="/settings">
-                      Settings
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>Branch Settings</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
+              <DynamicBreadcrumb />
             </div>
           </header>
           <div className="flex flex-1 flex-col px-2 sm:px-4 lg:px-6">
@@ -149,9 +128,9 @@ export default function BranchSettingsPage() {
             <div className="px-2 py-6 sm:px-4 lg:px-6 bg-background">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8">
-                  <h1 className="text-3xl font-bold tracking-tight">Branch Settings</h1>
+                  <h1 className="text-3xl font-bold tracking-tight">{t.settingsBranch.pageTitle}</h1>
                   <p className="text-muted-foreground mt-2 text-lg">
-                    Configure how your restaurant handles orders and workflows.
+                    {t.settingsBranch.pageSubtitle}
                   </p>
                 </div>
                 <div className="lg:col-span-4 flex items-center justify-end">
@@ -170,10 +149,10 @@ export default function BranchSettingsPage() {
                       <CardHeader className="pb-4 border-b mb-6">
                         <div className="flex items-center gap-3">
                           <Settings className="h-5 w-5 text-muted-foreground" />
-                          <CardTitle className="text-lg">Order Management Flow</CardTitle>
+                          <CardTitle className="text-lg">{t.settingsBranch.orderFlow.title}</CardTitle>
                         </div>
                         <p className="text-sm text-muted-foreground mt-2">
-                          Choose how your restaurant handles order progression
+                          {t.settingsBranch.orderFlow.subtitle}
                         </p>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -198,20 +177,20 @@ export default function BranchSettingsPage() {
                               )}
                             </div>
                             <div className="flex-1">
-                              <h3 className="font-medium mb-1">Standard Flow</h3>
+                              <h3 className="font-medium mb-1">{t.settingsBranch.orderFlow.standardFlow}</h3>
                               <p className="text-sm text-muted-foreground mb-3">
-                                Manually control each order status with full workflow flexibility
+                                {t.settingsBranch.orderFlow.standardDesc}
                               </p>
                               
                               {/* Flow Visualization */}
                               <div className="flex items-center gap-1 text-xs flex-wrap">
-                                <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">Pending</span>
+                                <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">{t.settingsBranch.orderFlow.pending}</span>
                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">Confirmed</span>
+                                <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">{t.settingsBranch.orderFlow.confirmed}</span>
                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">Preparing</span>
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">{t.settingsBranch.orderFlow.preparing}</span>
                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Ready</span>
+                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">{t.settingsBranch.orderFlow.ready}</span>
                               </div>
                             </div>
                           </div>
@@ -237,27 +216,27 @@ export default function BranchSettingsPage() {
                               )}
                             </div>
                             <div className="flex-1">
-                              <h3 className="font-medium mb-1">Simplified Flow</h3>
+                              <h3 className="font-medium mb-1">{t.settingsBranch.orderFlow.simplifiedFlow}</h3>
                               <p className="text-sm text-muted-foreground mb-3">
-                                Automatic order acceptance with smart timing based on menu prep times
+                                {t.settingsBranch.orderFlow.simplifiedDesc}
                               </p>
                               
                               {/* Flow Visualization */}
                               <div className="flex items-center gap-1 text-xs flex-wrap mb-3">
-                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Auto-accept</span>
+                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">{t.settingsBranch.orderFlow.autoAccept}</span>
                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">Preparing</span>
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">{t.settingsBranch.orderFlow.preparing}</span>
                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Auto Ready</span>
+                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">{t.settingsBranch.orderFlow.autoReady}</span>
                               </div>
 
                               {/* Smart Timing Info */}
                               <div className="bg-muted p-3 rounded text-xs text-muted-foreground">
                                 <div className="flex items-center gap-2 mb-1">
                                   <Clock className="h-3 w-3" />
-                                  <span className="font-medium">Smart Timing</span>
+                                  <span className="font-medium">{t.settingsBranch.orderFlow.smartTiming}</span>
                                 </div>
-                                <p>Uses prep times from menu items • Defaults to 25 minutes • Takes longest item time for orders</p>
+                                <p>{t.settingsBranch.orderFlow.smartTimingDesc}</p>
                               </div>
                             </div>
                           </div>
@@ -266,17 +245,17 @@ export default function BranchSettingsPage() {
                         {/* Save Button */}
                         <div className="flex items-center justify-between pt-4">
                           <div className="text-sm text-muted-foreground">
-                            Currently using: <span className="font-medium">
-                              {settings.orderFlow === 'standard' ? 'Standard Flow' : 'Simplified Flow'}
+                            {t.settingsBranch.orderFlow.currentlyUsing} <span className="font-medium">
+                              {settings.orderFlow === 'standard' ? t.settingsBranch.orderFlow.standardFlow : t.settingsBranch.orderFlow.simplifiedFlow}
                             </span>
-                            {isDirty && <span className="text-orange-600 ml-2">(unsaved changes)</span>}
+                            {isDirty && <span className="text-orange-600 ml-2">{t.settingsBranch.orderFlow.unsavedChanges}</span>}
                           </div>
                           <Button 
                             onClick={handleSave} 
                             disabled={!canSave}
                             className={saving ? "animate-pulse" : ""}
                           >
-                            {saving ? "Saving..." : "Save Changes"}
+                            {saving ? t.settingsBranch.saving : t.settingsBranch.saveChanges}
                           </Button>
                         </div>
 
@@ -308,12 +287,12 @@ export default function BranchSettingsPage() {
                         <div className="space-y-3">
                           <h3 className="font-medium flex items-center gap-2">
                             <Clock className="h-4 w-4 text-muted-foreground" />
-                            Base Preparation Delay
+                            {t.settingsBranch.timingSettings.basePreparationDelay}
                           </h3>
                           
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-2">
-                              <Label htmlFor="base-initial">Initial (Minutes)</Label>
+                              <Label htmlFor="base-initial">{t.settingsBranch.timingSettings.initialMinutes}</Label>
                               <Input
                                 id="base-initial"
                                 type="number"
@@ -326,7 +305,7 @@ export default function BranchSettingsPage() {
                             </div>
                             
                             <div className="space-y-2">
-                              <Label htmlFor="base-temporary">Temporary (+/-)</Label>
+                              <Label htmlFor="base-temporary">{t.settingsBranch.timingSettings.temporary}</Label>
                               <div className="flex items-center gap-1">
                                 <Button
                                   variant="outline"
@@ -359,7 +338,7 @@ export default function BranchSettingsPage() {
                           
                           <div className="bg-primary/5 p-2 rounded text-sm">
                             <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Total:</span>
+                              <span className="text-muted-foreground">{t.settingsBranch.timingSettings.total}</span>
                               <span className="font-medium text-primary">{settings.timingSettings.baseDelay + settings.timingSettings.temporaryBaseDelay} min</span>
                             </div>
                           </div>
@@ -371,12 +350,12 @@ export default function BranchSettingsPage() {
                         <div className="space-y-3">
                           <h3 className="font-medium flex items-center gap-2">
                             <Clock className="h-4 w-4 text-muted-foreground" />
-                            Delivery Delay
+                            {t.settingsBranch.timingSettings.deliveryDelay}
                           </h3>
                           
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-2">
-                              <Label htmlFor="delivery-initial">Initial (Minutes)</Label>
+                              <Label htmlFor="delivery-initial">{t.settingsBranch.timingSettings.initialMinutes}</Label>
                               <Input
                                 id="delivery-initial"
                                 type="number"
@@ -389,7 +368,7 @@ export default function BranchSettingsPage() {
                             </div>
                             
                             <div className="space-y-2">
-                              <Label htmlFor="delivery-temporary">Temporary (+/-)</Label>
+                              <Label htmlFor="delivery-temporary">{t.settingsBranch.timingSettings.temporary}</Label>
                               <div className="flex items-center gap-1">
                                 <Button
                                   variant="outline"
@@ -422,7 +401,7 @@ export default function BranchSettingsPage() {
                           
                           <div className="bg-primary/5 p-2 rounded text-sm">
                             <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Total:</span>
+                              <span className="text-muted-foreground">{t.settingsBranch.timingSettings.total}</span>
                               <span className="font-medium text-primary">{Math.max(0, settings.timingSettings.deliveryDelay + settings.timingSettings.temporaryDeliveryDelay)} min</span>
                             </div>
                           </div>
@@ -435,10 +414,10 @@ export default function BranchSettingsPage() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Clock className="h-4 w-4 text-primary" />
-                              <h3 className="font-medium text-primary">Expected Total Time</h3>
+                              <h3 className="font-medium text-primary">{t.settingsBranch.timingSettings.expectedTotalTime}</h3>
                             </div>
                             <p className="text-xl font-bold text-primary">
-                              {Math.max(0, settings.timingSettings.baseDelay + settings.timingSettings.temporaryBaseDelay + settings.timingSettings.deliveryDelay + settings.timingSettings.temporaryDeliveryDelay)} MIN
+                              {Math.max(0, settings.timingSettings.baseDelay + settings.timingSettings.temporaryBaseDelay + settings.timingSettings.deliveryDelay + settings.timingSettings.temporaryDeliveryDelay)} {t.settingsBranch.timingSettings.min}
                             </p>
                           </div>
                         </div>
@@ -461,8 +440,8 @@ export default function BranchSettingsPage() {
                   <CheckCircle className="h-5 w-5 text-green-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-green-900">Settings saved successfully!</p>
-                  <p className="text-xs text-green-700 mt-1">Your order flow preferences have been updated.</p>
+                  <p className="text-sm font-medium text-green-900">{t.settingsBranch.settingsSaved}</p>
+                  <p className="text-xs text-green-700 mt-1">{t.settingsBranch.settingsSavedDesc}</p>
                 </div>
                 <button 
                   onClick={() => setSaved(false)}

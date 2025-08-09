@@ -19,87 +19,94 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { useAuth } from "@/contexts/auth-context"
+import { useLanguage } from "@/contexts/language-context"
+import { translations } from "@/lib/translations"
 
-// Navigation data
-const data = {
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: PieChart,
-      items: [
-        {
-          title: "Overview",
-          url: "/dashboard",
-        },
-        {
-          title: "Analytics",
-          url: "/dashboard/analytics",
-        },
-      ],
-    },
-    {
-      title: "Menu Management",
-      url: "/menu",
-      icon: BookOpen,
-      items: [
-        {
-          title: "Categories",
-          url: "/menu/categories",
-        },
-        {
-          title: "Items",
-          url: "/menu/items",
-        },
-        {
-          title: "Pricing",
-          url: "/menu/pricing",
-        },
-      ],
-    },
-    {
-      title: "Orders",
-      url: "/orders",
-      icon: SquareTerminal,
-      items: [
-        {
-          title: "Live Orders",
-          url: "/orders/live",
-        },
-        {
-          title: "Order History",
-          url: "/orders/history",
-        },
-        {
-          title: "Kitchen Display",
-          url: "/orders/kitchen",
-        },
-      ],
-    },
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "/settings/general",
-        },
-        {
-          title: "User Management",
-          url: "/settings/users",
-        },
-        {
-          title: "Branch Settings",
-          url: "/settings/branch",
-        },
-      ],
-    },
-  ],
-}
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth()
+  const { language } = useLanguage()
+
+  // Use centralized translations
+  const t = translations[language] || translations.en
+
+  // Create translated navigation data using centralized translations
+  const translatedNavData = {
+    navMain: [
+      {
+        title: t.navigation.dashboard,
+        url: "/dashboard",
+        icon: PieChart,
+        items: [
+          {
+            title: t.navigation.overview,
+            url: "/dashboard",
+          },
+          {
+            title: t.navigation.analytics,
+            url: "/dashboard/analytics",
+          },
+        ],
+      },
+      {
+        title: t.navigation.menuManagement,
+        url: "/menu",
+        icon: BookOpen,
+        items: [
+          {
+            title: t.navigation.categories,
+            url: "/menu/categories",
+          },
+          {
+            title: t.navigation.items,
+            url: "/menu/items",
+          },
+          {
+            title: t.navigation.pricing,
+            url: "/menu/pricing",
+          },
+        ],
+      },
+      {
+        title: t.navigation.orders,
+        url: "/orders",
+        icon: SquareTerminal,
+        items: [
+          {
+            title: t.navigation.liveOrders,
+            url: "/orders/live",
+          },
+          {
+            title: t.navigation.orderHistory,
+            url: "/orders/history",
+          },
+          {
+            title: t.navigation.kitchenDisplay,
+            url: "/orders/kitchen",
+          },
+        ],
+      },
+      {
+        title: t.navigation.settings,
+        url: "/settings",
+        icon: Settings2,
+        items: [
+          {
+            title: t.navigation.generalSettings,
+            url: "/settings/general",
+          },
+          {
+            title: t.navigation.userManagement,
+            url: "/settings/users",
+          },
+          {
+            title: t.navigation.branchSettings,
+            url: "/settings/branch",
+          },
+        ],
+      },
+    ],
+  }
 
   // Parse user info from email
   const getUserInfo = () => {
@@ -151,7 +158,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <div className="border-b border-sidebar-border mx-4"></div>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={translatedNavData.navMain} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={userInfo} />

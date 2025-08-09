@@ -42,6 +42,8 @@ import {
 import { MoreHorizontal, Search, UserPlus } from 'lucide-react';
 import { useUsers, useUserMutations } from '@/hooks';
 import { usePermissions } from '@/hooks/use-enhanced-auth';
+import { useLanguage } from '@/contexts/language-context';
+import { translations } from '@/lib/translations';
 import type { BranchUser, BranchRole } from '@repo/types/auth';
 import { cn } from '@/lib/utils';
 
@@ -75,12 +77,7 @@ const ROLE_STYLES: Record<BranchRole, { bg: string; text: string; border: string
   },
 };
 
-const ROLE_LABELS: Record<BranchRole, string> = {
-  chain_owner: 'Chain Owner',
-  branch_manager: 'Branch Manager',
-  branch_staff: 'Staff',
-  branch_cashier: 'Cashier',
-};
+// Role labels will be handled dynamically with translations
 
 export function UserListTable({
   branchId,
@@ -92,6 +89,20 @@ export function UserListTable({
   const [roleFilter, setRoleFilter] = useState<BranchRole | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
+  
+  // Dynamic role labels based on language
+  const getRoleLabel = (role: BranchRole): string => {
+    switch (role) {
+      case 'chain_owner': return t.settingsUsers.userTable.chainOwner;
+      case 'branch_manager': return t.settingsUsers.userTable.branchManager;
+      case 'branch_staff': return t.settingsUsers.userTable.staff;
+      case 'branch_cashier': return t.settingsUsers.userTable.cashier;
+      default: return role;
+    }
+  };
 
   const { users, loading, error, fetchUsers, totalUsers } = useUsers();
   const { toggleUserStatus, removeUser } = useUserMutations();
@@ -131,7 +142,8 @@ export function UserListTable({
   };
 
   const handleDeleteUser = async (user: BranchUser) => {
-    if (!confirm(`Are you sure you want to permanently delete ${user.user.full_name || user.user.email}? This action cannot be undone.`)) {
+    const confirmMessage = t.settingsUsers.userTable.deleteConfirm.replace('{name}', user.user.full_name || user.user.email);
+    if (!confirm(confirmMessage)) {
       return;
     }
 
@@ -171,7 +183,7 @@ export function UserListTable({
               <div className="relative w-full md:w-full lg:w-auto">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search users..."
+                  placeholder={t.settingsUsers.userTable.searchPlaceholder}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9 w-full lg:min-w-[200px]"
@@ -189,9 +201,9 @@ export function UserListTable({
               </SheetTrigger>
               <SheetContent className="flex flex-col">
                 <SheetHeader>
-                  <SheetTitle>Filter Users</SheetTitle>
+                  <SheetTitle>{t.settingsUsers.userTable.filters}</SheetTitle>
                   <SheetDescription>
-                    Filter users by role and status
+                    {t.settingsUsers.userTable.filterByRole} {t.settingsUsers.userTable.filterByStatus.toLowerCase()}
                   </SheetDescription>
                 </SheetHeader>
 
@@ -200,7 +212,7 @@ export function UserListTable({
                   <div className="grid gap-6 py-6">
                     {/* Role Filter */}
                     <div className="space-y-3">
-                      <h4 className="text-sm font-medium text-foreground">Role</h4>
+                      <h4 className="text-sm font-medium text-foreground">{t.settingsUsers.userTable.role}</h4>
                       <div className="grid grid-cols-2 gap-2">
                         <Button
                           variant="outline"
@@ -211,20 +223,20 @@ export function UserListTable({
                             : ''
                             }`}
                         >
-                          All Roles
+                          {t.settingsUsers.userTable.filterAll} {t.settingsUsers.userTable.role}s
                         </Button>
-                        {Object.entries(ROLE_LABELS).map(([role, label]) => (
+                        {(['chain_owner', 'branch_manager', 'branch_staff', 'branch_cashier'] as BranchRole[]).map((role) => (
                           <Button
                             key={role}
                             variant="outline"
                             size="sm"
-                            onClick={() => setRoleFilter(role as BranchRole)}
+                            onClick={() => setRoleFilter(role)}
                             className={`justify-start ${roleFilter === role
                               ? 'bg-slate-100 border-slate-300 text-slate-900 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100'
                               : ''
                               }`}
                           >
-                            {label}
+                            {getRoleLabel(role)}
                           </Button>
                         ))}
                       </div>
@@ -232,7 +244,7 @@ export function UserListTable({
 
                     {/* Status Filter */}
                     <div className="space-y-3">
-                      <h4 className="text-sm font-medium text-foreground">Status</h4>
+                      <h4 className="text-sm font-medium text-foreground">{t.settingsUsers.userTable.status}</h4>
                       <div className="grid grid-cols-2 gap-2">
                         <Button
                           variant="outline"
@@ -243,7 +255,7 @@ export function UserListTable({
                             : ''
                             }`}
                         >
-                          All Users
+                          {t.settingsUsers.userTable.filterAll}
                         </Button>
                         <Button
                           variant="outline"
@@ -254,7 +266,7 @@ export function UserListTable({
                             : ''
                             }`}
                         >
-                          Active
+                          {t.settingsUsers.userTable.active}
                         </Button>
                         <Button
                           variant="outline"
@@ -265,7 +277,7 @@ export function UserListTable({
                             : ''
                             }`}
                         >
-                          Inactive
+                          {t.settingsUsers.userTable.inactive}
                         </Button>
                       </div>
                     </div>
@@ -284,14 +296,14 @@ export function UserListTable({
                     }}
                     className="flex-1"
                   >
-                    Clear Filters
+                    {t.settingsUsers.userTable.filterAll}
                   </Button>
                   <Button
                     size="sm"
                     onClick={() => setIsFilterSheetOpen(false)}
                     className="flex-1"
                   >
-                    Apply
+                    {t.settingsUsers.userTable.filters}
                   </Button>
                 </div>
               </SheetContent>
@@ -301,7 +313,7 @@ export function UserListTable({
             {permissions.canManageUsers && onCreateUser && (
               <Button onClick={onCreateUser} size="sm">
                 <UserPlus className="mr-2 h-4 w-4" />
-                Add User
+                {t.settingsUsers.userTable.addUser}
               </Button>
             )}
             </div>
@@ -320,11 +332,11 @@ export function UserListTable({
           <Table className="min-w-[600px]">
             <TableHeader className="bg-muted">
               <TableRow className="hover:bg-muted">
-                <TableHead className="px-4">User</TableHead>
-                <TableHead className="px-4">Role</TableHead>
-                <TableHead className="px-4">Status</TableHead>
+                <TableHead className="px-4">{t.settingsUsers.userTable.name}</TableHead>
+                <TableHead className="px-4">{t.settingsUsers.userTable.role}</TableHead>
+                <TableHead className="px-4">{t.settingsUsers.userTable.status}</TableHead>
                 <TableHead className="px-4">Joined</TableHead>
-                <TableHead className="w-[70px] px-4 text-center">Actions</TableHead>
+                <TableHead className="w-[70px] px-4 text-center">{t.settingsUsers.userTable.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -351,7 +363,7 @@ export function UserListTable({
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center">
                     <div className="flex flex-col items-center justify-center">
-                      <p className="text-muted-foreground">No users found</p>
+                      <p className="text-muted-foreground">{t.settingsUsers.userTable.noUsers}</p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -378,7 +390,7 @@ export function UserListTable({
                     </TableCell>
                     <TableCell>
                       <div className={`inline-flex items-center px-2 py-1 rounded-lg border text-xs font-medium ${ROLE_STYLES[user.role].bg} ${ROLE_STYLES[user.role].text} ${ROLE_STYLES[user.role].border}`}>
-                        {ROLE_LABELS[user.role]}
+                        {getRoleLabel(user.role)}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -386,12 +398,12 @@ export function UserListTable({
                         {user.is_active ? (
                           <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-700">
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400"></div>
-                            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Active</span>
+                            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">{t.settingsUsers.userTable.active}</span>
                           </div>
                         ) : (
                           <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gray-50 border border-gray-200 dark:bg-gray-900/20 dark:border-gray-700">
                             <div className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500"></div>
-                            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Inactive</span>
+                            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{t.settingsUsers.userTable.inactive}</span>
                           </div>
                         )}
                       </div>
@@ -419,18 +431,18 @@ export function UserListTable({
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuLabel>{t.settingsUsers.userTable.actions}</DropdownMenuLabel>
                               <DropdownMenuSeparator />
 
                               {onEditUser && permissions.canEditUser(user.role) && (
                                 <DropdownMenuItem onClick={() => onEditUser(user)}>
-                                  Edit User
+                                  {t.settingsUsers.userTable.editUser}
                                 </DropdownMenuItem>
                               )}
 
                               {permissions.canManageUsers && permissions.canEditUser(user.role) && (
                                 <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
-                                  {user.is_active ? 'Deactivate' : 'Activate'}
+                                  {user.is_active ? t.settingsUsers.userTable.inactive : t.settingsUsers.userTable.active}
                                 </DropdownMenuItem>
                               )}
 
@@ -441,7 +453,7 @@ export function UserListTable({
                                     className="text-destructive"
                                     onClick={() => handleDeleteUser(user)}
                                   >
-                                    Delete User
+                                    {t.settingsUsers.userTable.deleteUser}
                                   </DropdownMenuItem>
                                 </>
                               )}

@@ -69,6 +69,133 @@ This dual-flow system provides competitive advantage over UEAT by offering both 
 
 ---
 
+## 🌍 MULTI-LANGUAGE SYSTEM - CRITICAL IMPLEMENTATION RULES
+
+### **🇨🇦 Canadian French Language Support - PRODUCTION READY**
+
+**Vision Menu implements a comprehensive bilingual system (English/Canadian French) that is PRODUCTION READY and fully deployed.**
+
+#### **Language Architecture Overview**
+- **Centralized Translation System**: Single `translations.ts` file with all translations
+- **React Context**: Language switching without page refresh using `LanguageContext`
+- **Persistent Preferences**: User language choice stored in localStorage
+- **Professional Quality**: Restaurant industry-specific Canadian French terminology
+
+#### **CRITICAL LANGUAGE RULES FOR FUTURE DEVELOPMENT**
+
+**1. MANDATORY: Use Centralized Translation System**
+```typescript
+// ✅ ALWAYS use centralized translations
+import { useLanguage } from '@/contexts/language-context'
+import { translations } from '@/lib/translations'
+
+const { language } = useLanguage()
+const t = translations[language] || translations.en
+
+// Use: t.navigation.dashboard, t.orderDetail.loading, etc.
+
+// ❌ NEVER create inline translations
+const title = language === 'fr' ? 'Tableau de bord' : 'Dashboard'
+```
+
+**2. CANADIAN FRENCH SPECIFIC TERMINOLOGY - NEVER CHANGE THESE**
+```typescript
+// ✅ CORRECT Canadian French restaurant terms
+"dineIn": "Sur place"        // NOT "Salle à manger"
+"takeaway": "À emporter"     // NOT "À l'emporter" 
+"cash": "Comptant"           // NOT "Espèces"
+"email": "Courriel"          // NOT "Email"
+"tax": "Taxe (TVH)"          // NOT "Taxe (TPS/TVQ)"
+
+// ✅ CORRECT Canadian currency formatting
+"$25.99" in English → "25,99 $" in Canadian French
+```
+
+**3. TRANSLATION FILE STRUCTURE - FOLLOW EXACTLY**
+```typescript
+// apps/web/src/lib/translations.ts
+export const translations = {
+  en: {
+    navigation: { /* English translations */ },
+    dashboard: { /* English translations */ },
+    // ... other sections
+  },
+  fr: {
+    navigation: { /* Canadian French translations */ },
+    dashboard: { /* Canadian French translations */ },
+    // ... other sections - MIRROR English structure exactly
+  }
+} as const
+```
+
+**4. NEW FEATURE TRANSLATION REQUIREMENTS**
+When adding ANY new UI text or feature:
+
+**Step 1**: Add English translations to `translations.ts`
+```typescript
+// Add to appropriate section
+newFeature: {
+  title: "New Feature",
+  description: "Feature description",
+  // ... all text strings
+}
+```
+
+**Step 2**: Add Canadian French translations immediately
+```typescript
+// Add to same section in fr object
+newFeature: {
+  title: "Nouvelle fonctionnalité",
+  description: "Description de la fonctionnalité", 
+  // ... all text strings in Canadian French
+}
+```
+
+**Step 3**: Use in components with translation context
+```typescript
+const t = translations[language] || translations.en
+return <h1>{t.newFeature.title}</h1>
+```
+
+**5. NOTIFICATION SYSTEM - SPECIAL FORMATTING RULES**
+```typescript
+// ✅ CORRECT: Use JSX for bold formatting in notifications
+{language === 'fr' ? (
+  <>
+    Une nouvelle commande <span className="font-bold">#{orderNumber}</span> a été placée par <span className="font-bold">{customerName}</span> pour un montant total de <span className="font-bold">{total} $</span>.
+  </>
+) : (
+  <>
+    A new order <span className="font-bold">#{orderNumber}</span> has been placed by <span className="font-bold">{customerName}</span> with a total amount of <span className="font-bold">${total}</span>.
+  </>
+)}
+
+// ❌ NEVER use string interpolation for dynamic data in notifications
+```
+
+#### **COMPLETED TRANSLATION COVERAGE - DO NOT MODIFY**
+**All these areas are FULLY TRANSLATED and PRODUCTION READY:**
+- ✅ Navigation (Sidebar, Breadcrumbs, Menu items)
+- ✅ Dashboard (Overview, Analytics)
+- ✅ Orders System (Live Orders, Order History, Order Detail, Kitchen Display)
+- ✅ Settings (General, Branch, User Management)
+- ✅ User Management (Tables, Modals, Forms, Validation)
+- ✅ Notification System (Real-time order notifications with bold formatting)
+- ✅ All Status Labels (pending, preparing, ready, completed, cancelled, rejected)
+- ✅ All Form Validation Messages
+- ✅ All Error States and Loading States
+
+#### **LANGUAGE TESTING CHECKLIST**
+Before deploying any new feature with text:
+1. **Switch Language**: Test language toggle works without refresh
+2. **All Text Translated**: Verify no English text appears in French mode
+3. **Currency Format**: Check Canadian French uses "25,99 $" format
+4. **Restaurant Terms**: Verify Canadian French restaurant terminology
+5. **Mobile Responsive**: Test translation lengths on mobile devices
+6. **Build Success**: Ensure `npm run build` passes with new translations
+
+---
+
 ## 🏗️ ARCHITECTURE & TECHNICAL STANDARDS
 
 ### **1. Monorepo Structure Rules**
@@ -617,6 +744,8 @@ interface UserListTableProps {
 - **❌ Never commit sensitive data** - API keys, passwords, tokens
 - **❌ Never disable TypeScript strict mode** - maintain type safety
 - **❌ Never use deprecated React patterns** - avoid class components, use hooks
+- **❌ Never create inline translations** - always use centralized translation system
+- **❌ Never modify existing Canadian French translations** - they are production-ready
 
 ### **2. ALWAYS DO THESE THINGS**
 - **✅ Always validate user permissions** before any operation
@@ -627,6 +756,8 @@ interface UserListTableProps {
 - **✅ Always follow component naming conventions** - PascalCase for components
 - **✅ Always update documentation** when making significant changes
 - **✅ Always commit with descriptive messages** using conventional commit format
+- **✅ Always add both English and Canadian French translations** for new features
+- **✅ Always test language switching** after adding new translations
 
 ---
 
@@ -638,13 +769,19 @@ interface UserListTableProps {
 - **Data Isolation**: Ensure branch-level data isolation in all queries
 - **Permission Checks**: Validate permissions before any sensitive operation
 
-### **2. Responsive Design Priority**
+### **2. Multi-Language Requirements**
+- **Bilingual Support**: All UI text must support English and Canadian French
+- **Canadian French Priority**: Use Canadian French terminology, not European French
+- **Centralized System**: All translations must use the centralized translation system
+- **Professional Quality**: Restaurant industry-specific translations required
+
+### **3. Responsive Design Priority**
 - **Mobile First**: Design for mobile, enhance for larger screens
 - **Tablet Experience**: Ensure excellent iPad experience (both Air and Mini)
 - **No Horizontal Scroll**: Eliminate horizontal scrolling on all devices
 - **Touch Friendly**: Proper touch targets and gesture support
 
-### **3. Code Quality Standards**
+### **4. Code Quality Standards**
 - **TypeScript Strict**: Maintain 95%+ TypeScript coverage
 - **ESLint Clean**: Zero ESLint warnings or errors
 - **Performance**: Monitor and maintain excellent Core Web Vitals
@@ -660,6 +797,7 @@ interface UserListTableProps {
 - **New dependencies** or technology additions
 - **Security-related implementations** beyond basic validation
 - **Performance optimizations** that require significant refactoring
+- **Translation changes** to existing Canadian French terms
 
 ### **How to Handle Uncertainty**
 1. **Check existing patterns** in the codebase first
@@ -667,6 +805,7 @@ interface UserListTableProps {
 3. **Follow established conventions** when in doubt
 4. **Ask for clarification** before making significant changes
 5. **Document decisions** made during development
+6. **Test language switching** for any UI changes
 
 ---
 
@@ -679,14 +818,17 @@ interface UserListTableProps {
 2. **Responsive Design**: Ensure excellent mobile and tablet experience
 3. **Security**: Maintain multi-tenant security and permission validation
 4. **Performance**: Optimize for speed and scalability
-5. **Standards**: Follow all established conventions and patterns
-6. **Documentation**: Keep documentation current and accurate
+5. **Multi-Language**: Support bilingual system with Canadian French translations
+6. **Standards**: Follow all established conventions and patterns
+7. **Documentation**: Keep documentation current and accurate
 
 **Success Criteria**:
 - All code builds without errors or warnings
 - Responsive design works perfectly across all devices
 - Security requirements are met for multi-tenant architecture
 - Performance standards are maintained
+- Language switching works seamlessly between English and Canadian French
+- All new features include proper translations
 - Code follows established patterns and conventions
 
 ---
@@ -783,4 +925,4 @@ git merge to main
 
 *This document serves as the comprehensive guide for all development work on Vision Menu. Following these rules ensures consistency, quality, and maintainability of the platform.*
 
-**Last Updated**: January 6, 2025 | **Version**: 1.1.0
+**Last Updated**: January 9, 2025 | **Version**: 2.0.0

@@ -5,14 +5,6 @@ import { type DateRange } from "react-day-picker"
 import { format } from "date-fns"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
@@ -43,6 +35,9 @@ import Image from "next/image"
 import Link from "next/link"
 import { useOrders } from "@/hooks/use-orders"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { useLanguage } from "@/contexts/language-context"
+import { translations } from "@/lib/translations"
+import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
 // Order type imported but used in future implementations
 
 
@@ -54,6 +49,8 @@ export default function OrderHistoryPage() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest')
   const [searchQuery, setSearchQuery] = useState("")
+  const { language } = useLanguage()
+  const t = translations[language] || translations.en
 
   // Initialize orders hook with history orders filter
   const { 
@@ -169,9 +166,18 @@ export default function OrderHistoryPage() {
       rejected: "text-red-700 border-red-300 bg-red-100"
     }
 
+    const getStatusText = (status: string) => {
+      switch(status) {
+        case 'completed': return t.orderHistory.statusCompleted
+        case 'cancelled': return t.orderHistory.statusCancelled
+        case 'rejected': return t.orderHistory.statusRejected
+        default: return status.charAt(0).toUpperCase() + status.slice(1)
+      }
+    }
+
     return (
       <Badge variant={variants[status]} className={colors[status]}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {getStatusText(status)}
       </Badge>
     )
   }
@@ -222,7 +228,7 @@ export default function OrderHistoryPage() {
           className="h-9 text-sm flex-shrink-0"
           disabled={loading}
         >
-          All
+          {t.orderHistory.filterAll}
         </Button>
         <Button
           variant={statusFilter === 'completed' ? 'default' : 'outline'}
@@ -231,7 +237,7 @@ export default function OrderHistoryPage() {
           className="h-9 text-sm flex-shrink-0"
           disabled={loading}
         >
-          Completed
+          {t.orderHistory.filterCompleted}
         </Button>
         <Button
           variant={statusFilter === 'cancelled' ? 'default' : 'outline'}
@@ -240,7 +246,7 @@ export default function OrderHistoryPage() {
           className="h-9 text-sm flex-shrink-0"
           disabled={loading}
         >
-          Cancelled
+          {t.orderHistory.filterCancelled}
         </Button>
         <Button
           variant="outline"
@@ -264,8 +270,8 @@ export default function OrderHistoryPage() {
             onClick={() => setSortOrder(sortOrder === 'newest' ? 'oldest' : 'newest')}
           >
             <ArrowUpDown className="h-4 w-4" />
-            <span className="hidden lg:inline">{sortOrder === 'newest' ? 'Newest First' : 'Oldest First'}</span>
-            <span className="lg:hidden">{sortOrder === 'newest' ? 'Newest' : 'Oldest'}</span>
+            <span className="hidden lg:inline">{sortOrder === 'newest' ? t.orderHistory.sortNewest : t.orderHistory.sortOldest}</span>
+            <span className="lg:hidden">{sortOrder === 'newest' ? t.orderHistory.sortNewest.split(' ')[0] : t.orderHistory.sortOldest.split(' ')[0]}</span>
           </Button>
           
           <Popover>
@@ -345,7 +351,7 @@ export default function OrderHistoryPage() {
         <div className="relative flex-1 min-w-0 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search orders, customer, phone"
+            placeholder={t.orderHistory.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 pr-10 w-full h-9"
@@ -364,7 +370,7 @@ export default function OrderHistoryPage() {
   )
 
   const formatDateRange = () => {
-    if (!dateRange?.from) return "Date Range"
+    if (!dateRange?.from) return t.orderHistory.dateRange
     if (!dateRange.to) return format(dateRange.from, "MMM dd")
     if (dateRange.from.getTime() === dateRange.to.getTime()) {
       return format(dateRange.from, "MMM dd")
@@ -401,13 +407,13 @@ export default function OrderHistoryPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[140px]">Channel</TableHead>
-                <TableHead className="w-[120px]">Order</TableHead>
-                <TableHead className="w-[200px]">Customer</TableHead>
-                <TableHead className="w-[100px]">Status</TableHead>
-                <TableHead className="w-[90px]">Total</TableHead>
-                <TableHead className="w-[80px]">Date</TableHead>
-                <TableHead className="w-[70px] text-center">Action</TableHead>
+                <TableHead className="w-[140px]">{t.orderHistory.tableHeaderChannel}</TableHead>
+                <TableHead className="w-[120px]">{t.orderHistory.tableHeaderOrder}</TableHead>
+                <TableHead className="w-[200px]">{t.orderHistory.tableHeaderCustomer}</TableHead>
+                <TableHead className="w-[100px]">{t.orderHistory.tableHeaderStatus}</TableHead>
+                <TableHead className="w-[90px]">{t.orderHistory.tableHeaderTotal}</TableHead>
+                <TableHead className="w-[80px]">{t.orderHistory.tableHeaderDate}</TableHead>
+                <TableHead className="w-[70px] text-center">{t.orderHistory.tableHeaderAction}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -416,7 +422,7 @@ export default function OrderHistoryPage() {
                   <TableCell colSpan={7} className="h-24 text-center">
                     <div className="flex items-center justify-center">
                       <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                      Loading order history...
+                      {t.orderHistory.loading}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -424,7 +430,7 @@ export default function OrderHistoryPage() {
                 <TableRow>
                   <TableCell colSpan={7} className="h-24 text-center">
                     <div className="flex flex-col items-center justify-center">
-                      <p className="text-muted-foreground">No orders found</p>
+                      <p className="text-muted-foreground">{t.orderHistory.noOrdersFound}</p>
                       <p className="text-sm text-muted-foreground mt-1">
                         Try adjusting your filters or date range
                       </p>
@@ -550,7 +556,7 @@ export default function OrderHistoryPage() {
                     </div>
                     <Link href={`/orders/${order.orderNumber}?context=history`}>
                       <button className="px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors text-sm font-medium text-gray-700">
-                        View Details
+                        {t.orderHistory.viewDetails}
                       </button>
                     </Link>
                   </div>
@@ -572,17 +578,7 @@ export default function OrderHistoryPage() {
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink href="/orders">Orders</BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>Order History</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
+              <DynamicBreadcrumb />
             </div>
           </header>
           <div className="flex flex-1 flex-col px-2 sm:px-4 lg:px-6">
@@ -590,15 +586,15 @@ export default function OrderHistoryPage() {
             <div className="px-2 py-6 sm:px-4 lg:px-6 bg-background">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8">
-                  <h1 className="text-3xl font-bold tracking-tight">Order History</h1>
+                  <h1 className="text-3xl font-bold tracking-tight">{t.orderHistory.pageTitle}</h1>
                   <p className="text-muted-foreground mt-2 text-lg">
-                    View completed and cancelled orders
+                    {t.orderHistory.pageSubtitle}
                   </p>
                 </div>
                 <div className="lg:col-span-4 flex items-center justify-end">
                   {/* View Toggle */}
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">View:</span>
+                    <span className="text-sm text-muted-foreground">{t.orderHistory.viewLabel}</span>
                     <Button
                       variant={viewMode === 'table' ? 'default' : 'outline'}
                       size="sm"

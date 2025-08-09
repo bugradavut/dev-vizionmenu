@@ -13,7 +13,7 @@ import { useLanguage } from "@/contexts/language-context"
 
 const languages = {
   en: "English",
-  fr: "Français",
+  fr: "Français (Canada)",
 } as const
 
 export function LanguageToggle() {
@@ -39,8 +39,8 @@ export function LanguageToggle() {
           onClick={() => setLanguage("fr")}
           className={language === "fr" ? "bg-accent" : ""}
         >
-          <span className="mr-2">🇫🇷</span>
-          Français
+          <span className="mr-2">🇨🇦</span>
+          Français (Canada)
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

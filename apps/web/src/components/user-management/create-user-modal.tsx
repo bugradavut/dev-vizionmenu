@@ -19,6 +19,8 @@ import {
 } from '@repo/ui';
 // Simple select without external dependencies
 import { useUserMutations } from '@/hooks';
+import { useLanguage } from '@/contexts/language-context';
+import { translations } from '@/lib/translations';
 import type { BranchRole, CreateUserRequest } from '@repo/types/auth';
 
 interface CreateUserModalProps {
@@ -27,12 +29,7 @@ interface CreateUserModalProps {
   branchId: string;
 }
 
-const ROLE_OPTIONS: { value: BranchRole; label: string }[] = [
-  { value: 'branch_staff', label: 'Branch Staff' },
-  { value: 'branch_cashier', label: 'Branch Cashier' },
-  { value: 'branch_manager', label: 'Branch Manager' },
-  { value: 'chain_owner', label: 'Chain Owner' },
-];
+// Role options will be handled dynamically with translations
 
 const DEFAULT_PERMISSIONS: Record<BranchRole, string[]> = {
   chain_owner: [
@@ -77,28 +74,38 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { createUser } = useUserMutations();
+  const { language } = useLanguage();
+  const t = translations[language] || translations.en;
+  
+  // Dynamic role options based on language
+  const getRoleOptions = () => [
+    { value: 'branch_staff' as BranchRole, label: t.settingsUsers.userTable.staff },
+    { value: 'branch_cashier' as BranchRole, label: t.settingsUsers.userTable.cashier },
+    { value: 'branch_manager' as BranchRole, label: t.settingsUsers.userTable.branchManager },
+    { value: 'chain_owner' as BranchRole, label: t.settingsUsers.userTable.chainOwner },
+  ];
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t.settingsUsers.createUserModal.emailRequired;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
+      newErrors.email = t.settingsUsers.createUserModal.emailInvalid;
     }
 
     if (!formData.full_name.trim()) {
-      newErrors.full_name = 'Full name is required';
+      newErrors.full_name = t.settingsUsers.createUserModal.nameRequired;
     }
 
     if (!formData.password.trim()) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t.settingsUsers.createUserModal.passwordRequired;
     } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+      newErrors.password = t.settingsUsers.createUserModal.passwordMinLength;
     }
 
     if (formData.phone && !/^\+?[\d\s\-\(\)]+$/.test(formData.phone)) {
-      newErrors.phone = 'Invalid phone format';
+      newErrors.phone = t.settingsUsers.createUserModal.phoneInvalid;
     }
 
     setErrors(newErrors);
@@ -139,7 +146,7 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
       onClose();
     } catch (error) {
       setErrors({
-        submit: error instanceof Error ? error.message : 'Failed to create user'
+        submit: error instanceof Error ? error.message : t.settingsUsers.createUserModal.createFailed
       });
     } finally {
       setIsSubmitting(false);
@@ -164,20 +171,20 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>Add New User</DialogTitle>
+          <DialogTitle>{t.settingsUsers.createUserModal.title}</DialogTitle>
           <DialogDescription>
-            Create a new team member for this branch. They will receive login credentials via email.
+            {t.settingsUsers.createUserModal.subtitle}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Email */}
           <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
+            <Label htmlFor="email">{t.settingsUsers.createUserModal.email} *</Label>
             <Input
               id="email"
               type="email"
-              placeholder="user@example.com"
+              placeholder={t.settingsUsers.createUserModal.emailPlaceholder}
               value={formData.email}
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               className={errors.email ? 'border-red-500' : ''}
@@ -192,11 +199,11 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
 
           {/* Full Name */}
           <div className="space-y-2">
-            <Label htmlFor="full_name">Full Name *</Label>
+            <Label htmlFor="full_name">{t.settingsUsers.createUserModal.fullName} *</Label>
             <Input
               id="full_name"
               type="text"
-              placeholder="John Doe"
+              placeholder={t.settingsUsers.createUserModal.fullNamePlaceholder}
               value={formData.full_name}
               onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
               className={errors.full_name ? 'border-red-500' : ''}
@@ -210,11 +217,11 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
 
           {/* Phone (Optional) */}
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
+            <Label htmlFor="phone">{t.settingsUsers.createUserModal.phone}</Label>
             <Input
               id="phone"
               type="tel"
-              placeholder="+1 (555) 123-4567"
+              placeholder={t.settingsUsers.createUserModal.phonePlaceholder}
               value={formData.phone}
               onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
               className={errors.phone ? 'border-red-500' : ''}
@@ -227,11 +234,11 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
 
           {/* Password */}
           <div className="space-y-2">
-            <Label htmlFor="password">Temporary Password *</Label>
+            <Label htmlFor="password">{t.settingsUsers.createUserModal.tempPassword} *</Label>
             <Input
               id="password"
               type="password"
-              placeholder="Minimum 8 characters"
+              placeholder={t.settingsUsers.createUserModal.passwordPlaceholder}
               value={formData.password}
               onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
               className={errors.password ? 'border-red-500' : ''}
@@ -242,13 +249,13 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
               <p className="text-sm text-red-600">{errors.password}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              User will be prompted to change this on first login
+              {t.settingsUsers.createUserModal.passwordHint}
             </p>
           </div>
 
           {/* Role */}
           <div className="space-y-2">
-            <Label htmlFor="role">Role *</Label>
+            <Label htmlFor="role">{t.settingsUsers.createUserModal.role} *</Label>
             <select
               id="role"
               value={formData.role}
@@ -257,7 +264,7 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               required
             >
-              {ROLE_OPTIONS.map((role) => (
+              {getRoleOptions().map((role) => (
                 <option key={role.value} value={role.value}>
                   {role.label}
                 </option>
@@ -279,13 +286,13 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
               onClick={handleClose}
               disabled={isSubmitting}
             >
-              Cancel
+              {t.settingsUsers.createUserModal.cancel}
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Creating...' : 'Create User'}
+              {isSubmitting ? t.settingsUsers.createUserModal.creating : t.settingsUsers.createUserModal.createUser}
             </Button>
           </DialogFooter>
         </form>

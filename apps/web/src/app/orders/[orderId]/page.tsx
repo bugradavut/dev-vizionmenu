@@ -3,14 +3,6 @@
 import { use, useState } from "react"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
@@ -29,6 +21,9 @@ import Image from "next/image"
 import Link from "next/link"
 import { useOrderDetail } from "@/hooks/use-orders"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { useLanguage } from "@/contexts/language-context"
+import { translations } from "@/lib/translations"
+import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
 
 // Types - Clean and simple interface definitions
 
@@ -44,6 +39,8 @@ interface OrderDetailPageProps {
 export default function OrderDetailPage({ params, searchParams }: OrderDetailPageProps) {
   const { orderId } = use(params)
   const { context = 'live' } = use(searchParams)
+  const { language } = useLanguage()
+  const t = translations[language] || translations.en
   
   // Real API integration
   const { 
@@ -132,34 +129,34 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
       case 'doordash': return 'DoorDash'
       case 'phone': return 'Phone'
       case 'web': return 'Web'
-      default: return 'Unknown'
+      default: return t.orderDetail.unknown
     }
   }
 
   const getOrderTypeLabel = (orderType: string) => {
     switch (orderType?.toLowerCase()) {
-      case 'dine_in': return 'Dine In'
-      case 'takeaway': return 'Takeaway'
-      case 'delivery': return 'Delivery'
-      case 'pickup': return 'Pickup'
-      default: return orderType || 'Unknown'
+      case 'dine_in': return t.orderDetail.dineIn
+      case 'takeaway': return t.orderDetail.takeaway
+      case 'delivery': return t.orderDetail.delivery
+      case 'pickup': return t.orderDetail.pickup
+      default: return orderType || t.orderDetail.unknown
     }
   }
 
   const getPaymentMethodLabel = (paymentMethod: string) => {
     switch (paymentMethod?.toLowerCase()) {
-      case 'credit_card': return 'Credit Card'
-      case 'debit_card': return 'Debit Card'
-      case 'cash': return 'Cash'
-      case 'paypal': return 'PayPal'
-      case 'apple_pay': return 'Apple Pay'
-      case 'google_pay': return 'Google Pay'
-      default: return paymentMethod || 'Not specified'
+      case 'credit_card': return t.orderDetail.creditCard
+      case 'debit_card': return t.orderDetail.debitCard
+      case 'cash': return t.orderDetail.cash
+      case 'paypal': return t.orderDetail.paypal
+      case 'apple_pay': return t.orderDetail.applePay
+      case 'google_pay': return t.orderDetail.googlePay
+      default: return paymentMethod || t.orderDetail.notSpecified
     }
   }
 
   const formatEstimatedTime = (timestamp: string) => {
-    if (!timestamp) return 'Not specified'
+    if (!timestamp) return t.orderDetail.notSpecified
     
     try {
       const date = new Date(timestamp)
@@ -183,7 +180,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
         hour12: false
       })
     } catch {
-      return 'Invalid time'
+      return t.orderDetail.invalidTime
     }
   }
 
@@ -256,7 +253,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
             <div className="flex items-center justify-center h-screen">
               <div className="flex items-center gap-2">
                 <RefreshCw className="h-4 w-4 animate-spin" />
-                <span>Loading order details...</span>
+                <span>{t.orderDetail.loading}</span>
               </div>
             </div>
           </SidebarInset>
@@ -274,16 +271,16 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
             <div className="flex flex-col items-center justify-center h-screen gap-4">
               <AlertCircle className="h-12 w-12 text-red-500" />
               <div className="text-center">
-                <h2 className="text-lg font-semibold">Failed to load order</h2>
+                <h2 className="text-lg font-semibold">{t.orderDetail.failedToLoad}</h2>
                 <p className="text-muted-foreground">{error}</p>
               </div>
               <div className="flex gap-2">
                 <Button onClick={refetch} variant="outline">
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Retry
+                  {t.orderDetail.retry}
                 </Button>
                 <Button onClick={clearError} variant="ghost">
-                  Dismiss
+                  {t.orderDetail.dismiss}
                 </Button>
               </div>
             </div>
@@ -302,11 +299,11 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
             <div className="flex flex-col items-center justify-center h-screen gap-4">
               <Package className="h-12 w-12 text-muted-foreground" />
               <div className="text-center">
-                <h2 className="text-lg font-semibold">Order not found</h2>
-                <p className="text-muted-foreground">The order you&rsquo;re looking for doesn&rsquo;t exist.</p>
+                <h2 className="text-lg font-semibold">{t.orderDetail.orderNotFound}</h2>
+                <p className="text-muted-foreground">{t.orderDetail.orderNotFoundDesc}</p>
               </div>
               <Button asChild>
-                <Link href="/orders">Back to Orders</Link>
+                <Link href="/orders">{t.orderDetail.backToOrders}</Link>
               </Button>
             </div>
           </SidebarInset>
@@ -324,23 +321,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink href="/orders">Orders</BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    <BreadcrumbLink href={`/orders/${context}`}>
-                      {context === 'live' ? 'Live Orders' : 'Order History'}
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>{order.orderNumber}</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
+              <DynamicBreadcrumb />
             </div>
           </header>
           
@@ -351,7 +332,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                 <Link href={`/orders/${context}`}>
                   <Button variant="outline" size="sm">
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to {context === 'live' ? 'Live Orders' : 'Order History'}
+                    {context === 'live' ? t.orderDetail.backToLive : t.orderDetail.backToHistory}
                   </Button>
                 </Link>
               </div>
@@ -366,7 +347,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                   {order.source === 'qr_code' && order.table_number && (
                     <div className="flex items-center gap-1">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Table {order.table_number}</span>
+                      <span className="text-sm font-medium">{t.orderDetail.table} {order.table_number}</span>
                     </div>
                   )}
                 </div>
@@ -385,7 +366,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         <AccordionTrigger className="hover:no-underline px-6">
                           <div className="flex items-center gap-2">
                             <Clock className="h-5 w-5" />
-                            <span className="font-medium">Order Progress ({Math.round(getProgressValue())}% Complete)</span>
+                            <span className="font-medium">{t.orderDetail.orderProgress} ({Math.round(getProgressValue())}{t.orderDetail.percentComplete})</span>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="px-0 pb-0">
@@ -415,10 +396,10 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                       <div className="flex-1">
                                         <div className="flex items-center justify-between">
                                           <p className={`text-sm font-medium ${isCompleted ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                            {status === 'pending' && 'Order received and pending confirmation'}
-                                            {status === 'preparing' && 'Kitchen is preparing your order'}
-                                            {status === 'ready' && 'Order is ready for pickup/delivery'}
-                                            {status === 'completed' && 'Order has been completed'}
+                                            {status === 'pending' && t.orderDetail.orderReceived}
+                                            {status === 'preparing' && t.orderDetail.kitchenPreparing}
+                                            {status === 'ready' && t.orderDetail.orderReady}
+                                            {status === 'completed' && t.orderDetail.orderCompleted}
                                           </p>
                                         </div>
                                       </div>
@@ -438,7 +419,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         <AccordionTrigger className="hover:no-underline px-6">
                           <div className="flex items-center gap-2">
                             <Package className="h-5 w-5" />
-                            <span className="font-medium">Order Items ({order.items?.length || 0})</span>
+                            <span className="font-medium">{t.orderDetail.orderItems} ({order.items?.length || 0})</span>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="px-0 pb-0">
@@ -450,7 +431,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
                                     <RefreshCw className="h-4 w-4 text-gray-600" />
-                                    <span className="text-sm text-gray-700">Select items below to refund</span>
+                                    <span className="text-sm text-gray-700">{t.orderDetail.selectItemsRefund}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <Checkbox
@@ -459,7 +440,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                       onCheckedChange={handleSelectAll}
                                     />
                                     <label htmlFor="select-all" className="text-xs text-gray-600 cursor-pointer">
-                                      Select All
+                                      {t.orderDetail.selectAll}
                                     </label>
                                   </div>
                                 </div>
@@ -469,7 +450,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                   <div className="mt-3 pt-3 border-t border-gray-300">
                                     <div className="flex items-center justify-between">
                                       <span className="text-sm text-blue-700">
-                                        {selectedItems.size} item(s) selected
+                                        {selectedItems.size} {t.orderDetail.itemsSelected}
                                       </span>
                                       <Dialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>
                                         <DialogTrigger asChild>
@@ -478,7 +459,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                             onClick={handleRefundClick}
                                             className="bg-blue-600 hover:bg-blue-700"
                                           >
-                                            Refund ${getSelectedAmount().toFixed(2)}
+                                            {t.orderDetail.refund} ${getSelectedAmount().toFixed(2)}
                                           </Button>
                                         </DialogTrigger>
                                         
@@ -486,17 +467,17 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                           <DialogHeader>
                                             <DialogTitle className="flex items-center gap-2">
                                               <AlertCircle className="h-5 w-5 text-red-600" />
-                                              Confirm Partial Refund
+                                              {t.orderDetail.confirmPartialRefund}
                                             </DialogTitle>
                                             <DialogDescription>
-                                              You are about to refund {selectedItems.size} item(s) for a total amount of ${getSelectedAmount().toFixed(2)}.
-                                              This action cannot be undone.
+                                              {t.orderDetail.refundDescription} {selectedItems.size} {t.orderDetail.refundDescriptionItems} ${getSelectedAmount().toFixed(2)}.
+                                              {t.orderDetail.refundCannotUndo}
                                             </DialogDescription>
                                           </DialogHeader>
                                           
                                           <div className="py-4">
                                             <div className="space-y-2">
-                                              <h4 className="font-medium text-sm">Items to be refunded:</h4>
+                                              <h4 className="font-medium text-sm">{t.orderDetail.itemsToRefund}</h4>
                                               <div className="space-y-1 max-h-40 overflow-y-auto border rounded-md p-2 bg-gray-50">
                                                 {order.items
                                                   ?.filter(item => selectedItems.has(item.id))
@@ -515,13 +496,13 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                               variant="outline" 
                                               onClick={() => setShowRefundDialog(false)}
                                             >
-                                              Cancel
+                                              {t.orderDetail.cancel}
                                             </Button>
                                             <Button 
                                               onClick={handleConfirmRefund}
                                               className="bg-red-600 hover:bg-red-700"
                                             >
-                                              Confirm Refund ${getSelectedAmount().toFixed(2)}
+                                              {t.orderDetail.confirmRefund} ${getSelectedAmount().toFixed(2)}
                                             </Button>
                                           </DialogFooter>
                                         </DialogContent>
@@ -538,7 +519,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                     <div className="flex items-center gap-2">
                                       <CheckCircle className="h-4 w-4 text-green-600" />
                                       <span className="text-sm font-medium text-green-800">
-                                        Refund processed successfully! Funds will be returned within 3-5 business days.
+                                        {t.orderDetail.refundSuccess}
                                       </span>
                                     </div>
                               </div>
@@ -589,7 +570,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                     {/* Show unit price if quantity > 1 */}
                                     {item.quantity > 1 && (
                                       <div className="text-xs text-gray-500">
-                                        ${item.price.toFixed(2)} each
+                                        ${item.price.toFixed(2)} {t.orderDetail.each}
                                       </div>
                                     )}
                                   </div>
@@ -599,17 +580,17 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                               {/* Notes and Special Instructions for Order */}
                               {(order.notes || order.special_instructions) && (
                                 <div className="mt-4 pt-4 border-t border-gray-200">
-                                  <h4 className="font-medium text-gray-900 mb-2">Order Notes & Instructions</h4>
+                                  <h4 className="font-medium text-gray-900 mb-2">{t.orderDetail.orderNotes}</h4>
                                   <div className="space-y-3">
                                     {order.notes && (
                                       <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
-                                        <h5 className="text-sm font-medium text-blue-900 mb-1">Notes</h5>
+                                        <h5 className="text-sm font-medium text-blue-900 mb-1">{t.orderDetail.notes}</h5>
                                         <p className="text-sm text-blue-700">{order.notes}</p>
                                       </div>
                                     )}
                                     {order.special_instructions && (
                                       <div className="p-3 bg-orange-50 rounded-md border border-orange-200">
-                                        <h5 className="text-sm font-medium text-orange-900 mb-1">Special Instructions</h5>
+                                        <h5 className="text-sm font-medium text-orange-900 mb-1">{t.orderDetail.specialInstructions}</h5>
                                         <p className="text-sm text-orange-700">{order.special_instructions}</p>
                                       </div>
                                     )}
@@ -628,7 +609,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         <AccordionTrigger className="hover:no-underline px-6">
                           <div className="flex items-center gap-2">
                             <User className="h-5 w-5" />
-                            <span className="font-medium">Customer Information</span>
+                            <span className="font-medium">{t.orderDetail.customerInformation}</span>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="px-0 pb-0">
@@ -637,25 +618,25 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                             <div className="space-y-0">
                               {/* Customer Name Row */}
                               <div className="flex items-center justify-between py-3 border-b border-border/40">
-                                <label className="text-sm text-muted-foreground">Customer Name</label>
-                                <p className="font-medium">{order.customer?.name || 'Walk-in Customer'}</p>
+                                <label className="text-sm text-muted-foreground">{t.orderDetail.customerName}</label>
+                                <p className="font-medium">{order.customer?.name || t.orderDetail.walkInCustomer}</p>
                               </div>
                               
                               {/* Contact Row */}
                               <div className="flex items-center justify-between py-3 border-b border-border/40">
-                                <label className="text-sm text-muted-foreground">Contact</label>
-                                <p className="text-sm">{order.customer?.phone || 'Not provided'}</p>
+                                <label className="text-sm text-muted-foreground">{t.orderDetail.contact}</label>
+                                <p className="text-sm">{order.customer?.phone || t.orderDetail.notProvided}</p>
                               </div>
                               
                               {/* Email Row */}
                               <div className="flex items-center justify-between py-3 border-b border-border/40">
-                                <label className="text-sm text-muted-foreground">Email Address</label>
-                                <p className="text-sm">{order.customer.email || 'Not provided'}</p>
+                                <label className="text-sm text-muted-foreground">{t.orderDetail.emailAddress}</label>
+                                <p className="text-sm">{order.customer.email || t.orderDetail.notProvided}</p>
                               </div>
                               
                               {/* Order Type Row */}
                               <div className="flex items-center justify-between py-3">
-                                <label className="text-sm text-muted-foreground">Order Type</label>
+                                <label className="text-sm text-muted-foreground">{t.orderDetail.orderType}</label>
                                 <p className="text-sm">{getOrderTypeLabel(order.order_type)}</p>
                               </div>
                               
@@ -663,7 +644,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                               {(order as any).deliveryAddress && (
                                 <div className="flex items-start justify-between py-3">
-                                  <label className="text-sm text-muted-foreground">Delivery Address</label>
+                                  <label className="text-sm text-muted-foreground">{t.orderDetail.deliveryAddress}</label>
                                   <div className="text-right text-sm">
                                     {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                     <p>{(order as any).deliveryAddress.street}</p>
@@ -688,51 +669,51 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                     <CardHeader className="px-6 py-4">
                       <CardTitle className="flex items-center gap-2 text-base font-medium">
                         <Wallet className="h-5 w-5" />
-                        Payment Summary
+                        {t.orderDetail.paymentSummary}
                       </CardTitle>
                     </CardHeader>
                     <Separator />
                     <CardContent className="space-y-3 p-6">
                       <div className="flex justify-between text-sm">
-                        <span>Subtotal</span>
+                        <span>{t.orderDetail.subtotal}</span>
                         <span>${order.pricing.subtotal.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span>Tax (HST)</span>
+                        <span>{t.orderDetail.tax}</span>
                         <span>${order.pricing.tax_amount.toFixed(2)}</span>
                       </div>
                       {order.pricing.service_fee > 0 && (
                         <div className="flex justify-between text-sm">
-                          <span>Service Fee</span>
+                          <span>{t.orderDetail.serviceFee}</span>
                           <span>${order.pricing.service_fee.toFixed(2)}</span>
                         </div>
                       )}
                       {order.pricing.delivery_fee > 0 && (
                         <div className="flex justify-between text-sm">
-                          <span>Delivery Fee</span>
+                          <span>{t.orderDetail.deliveryFee}</span>
                           <span>${order.pricing.delivery_fee.toFixed(2)}</span>
                         </div>
                       )}
                       <Separator />
                       <div className="flex justify-between font-medium text-lg">
-                        <span>Total</span>
+                        <span>{t.orderDetail.total}</span>
                         <span>${order.pricing.total.toFixed(2)}</span>
                       </div>
                       <div className="text-center text-sm text-muted-foreground mt-2">
-                        Payment: {getPaymentMethodLabel(order.payment_method || 'cash')}
+                        {t.orderDetail.payment}: {getPaymentMethodLabel(order.payment_method || 'cash')}
                       </div>
                       <Separator className="my-3" />
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Order Date</span>
+                          <span className="text-muted-foreground">{t.orderDetail.orderDate}</span>
                           <span>{new Date(order.created_at).toLocaleDateString('en-CA')}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Order Time</span>
+                          <span className="text-muted-foreground">{t.orderDetail.orderTime}</span>
                           <span>{new Date(order.created_at).toLocaleTimeString('en-CA')}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Est. Time</span>
+                          <span className="text-muted-foreground">{t.orderDetail.estTime}</span>
                           <span>{formatEstimatedTime(order.estimated_ready_time || '')}</span>
                         </div>
                       </div>
@@ -757,10 +738,10 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                             {updatingStatus === 'preparing' ? (
                               <>
                                 <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                                Accepting...
+                                {t.orderDetail.accepting}
                               </>
                             ) : (
-                              'Accept Order'
+                              t.orderDetail.acceptOrder
                             )}
                           </Button>
                           <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
@@ -770,7 +751,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                 variant="outline" 
                                 className="w-full border-red-300 text-red-700 hover:bg-red-50 py-2.5 rounded-lg transition-colors"
                               >
-                                Reject Order
+                                {t.orderDetail.rejectOrder}
                               </Button>
                             </DialogTrigger>
                             
@@ -778,10 +759,10 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                               <DialogHeader>
                                 <DialogTitle className="flex items-center gap-2">
                                   <AlertCircle className="h-5 w-5 text-red-600" />
-                                  Reject Order
+                                  {t.orderDetail.rejectOrder}
                                 </DialogTitle>
                                 <DialogDescription>
-                                  Are you sure you want to reject this order? This action cannot be undone.
+                                  {t.orderDetail.rejectConfirm}
                                 </DialogDescription>
                               </DialogHeader>
                               
@@ -804,10 +785,10 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                   {updatingStatus === 'rejected' ? (
                                     <>
                                       <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                                      Rejecting...
+                                      {t.orderDetail.rejecting}
                                     </>
                                   ) : (
-                                    'Yes, Reject Order'
+                                    t.orderDetail.yesRejectOrder
                                   )}
                                 </Button>
                               </DialogFooter>
@@ -821,10 +802,10 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                           <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                             <div className="flex items-center gap-2 text-orange-700">
                               <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                              <span className="font-medium">Kitchen is preparing this order</span>
+                              <span className="font-medium">{t.orderDetail.kitchenPreparing2}</span>
                             </div>
                             <p className="text-sm text-orange-600 mt-1">
-                              Waiting for kitchen to mark as ready...
+                              {t.orderDetail.waitingKitchen}
                             </p>
                           </div>
                           <Button 
@@ -836,10 +817,10 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                             {updatingStatus === 'cancelled' ? (
                               <>
                                 <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                                Cancelling...
+                                {t.orderDetail.cancelling}
                               </>
                             ) : (
-                              'Cancel Order'
+                              t.orderDetail.cancelOrder
                             )}
                           </Button>
                         </div>
@@ -855,10 +836,10 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                             {updatingStatus === 'completed' ? (
                               <>
                                 <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                                Completing...
+                                {t.orderDetail.completing}
                               </>
                             ) : (
-                              'Mark as Completed'
+                              t.orderDetail.markCompleted
                             )}
                           </Button>
                           <Button 
@@ -870,10 +851,10 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                             {updatingStatus === 'cancelled' ? (
                               <>
                                 <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                                Cancelling...
+                                {t.orderDetail.cancelling}
                               </>
                             ) : (
-                              'Cancel Order'
+                              t.orderDetail.cancelOrder
                             )}
                           </Button>
                         </div>
@@ -883,7 +864,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
                           <div className="flex items-center justify-center gap-2 text-green-700 dark:text-green-300 font-medium">
                             <CheckCircle2 className="h-5 w-5" />
-                            Order Completed
+                            {t.orderDetail.orderCompleted2}
                           </div>
                         </div>
                       )}
@@ -892,7 +873,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 text-center">
                           <div className="flex items-center justify-center gap-2 text-red-700 dark:text-red-300 font-medium">
                             <XCircle className="h-5 w-5" />
-                            Order Cancelled
+                            {t.orderDetail.orderCancelled}
                           </div>
                         </div>
                       )}
@@ -901,10 +882,10 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 text-center">
                           <div className="flex items-center justify-center gap-2 text-red-700 dark:text-red-300 font-medium">
                             <XCircle className="h-5 w-5" />
-                            Order Rejected
+                            {t.orderDetail.orderRejected}
                           </div>
                           <div className="text-xs text-red-600 dark:text-red-400 mt-1">
-                            This order was rejected and cannot be processed
+                            {t.orderDetail.orderRejectedDesc}
                           </div>
                         </div>
                       )}
