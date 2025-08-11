@@ -31,6 +31,9 @@ const usersService = require('./services/users.service');
 const ordersService = require('./services/orders.service');
 const branchesService = require('./services/branches.service');
 
+// Import middleware
+const { requireAuth, requireAuthWithBranch, optionalAuth } = require('./middleware/auth.middleware');
+
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -87,36 +90,9 @@ app.get('/api/v1/health', (req, res) => {
 });
 
 // Get user profile endpoint
-app.get('/auth/profile', async (req, res) => {
+app.get('/auth/profile', requireAuth, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'Missing or invalid authorization header'
-      });
-    }
-
-    const token = authHeader.split(' ')[1];
-    
-    // Simple JWT decode to get user_id (skip verification for now)
-    let userId;
-    try {
-      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-      userId = payload.sub;
-      
-      if (!userId) {
-        return res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Invalid token - no user ID'
-        });
-      }
-    } catch (error) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'Invalid token format'
-      });
-    }
+    const userId = req.currentUserId;
 
     // Get user profile with role and permissions (step by step)
     const { data: branchUser, error: branchError } = await supabase
@@ -218,31 +194,11 @@ app.post('/api/v1/users', async (req, res) => {
 });
 
 // Update user endpoint
-app.patch('/api/v1/users/:userId/branch/:branchId', async (req, res) => {
+app.patch('/api/v1/users/:userId/branch/:branchId', requireAuth, async (req, res) => {
   try {
     const { userId, branchId } = req.params;
     const updateData = req.body;
-    
-    // Get current user ID from JWT token
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'Missing or invalid authorization header'
-      });
-    }
-
-    const token = authHeader.split(' ')[1];
-    let currentUserId;
-    try {
-      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-      currentUserId = payload.sub;
-    } catch (error) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'Invalid token format'
-      });
-    }
+    const currentUserId = req.currentUserId;
 
     // Call service function
     const result = await usersService.updateUser(userId, branchId, updateData, currentUserId);
@@ -287,7 +243,7 @@ app.patch('/api/v1/users/:userId/branch/:branchId', async (req, res) => {
 });
 
 // Users endpoint for production
-app.get('/api/v1/users/branch/:branchId', async (req, res) => {
+app.get('/api/v1/users/branch/:branchId', requireAuthWithBranch, async (req, res) => {
   try {
     const { branchId } = req.params;
     const { page = 1, limit = 50 } = req.query;
@@ -315,10 +271,11 @@ app.get('/api/v1/users/branch/:branchId', async (req, res) => {
 });
 
 // Role assignment endpoint
-app.post('/api/v1/users/:userId/branch/:branchId/assign-role', async (req, res) => {
+app.post('/api/v1/users/:userId/branch/:branchId/assign-role', requireAuth, async (req, res) => {
   try {
     const { userId, branchId } = req.params;
     const { role } = req.body;
+    const currentUserId = req.currentUserId;
     
     // Validate role using hierarchy
     const validRoles = Object.keys(ROLE_HIERARCHY).filter(r => r !== 'super_admin'); // Exclude super_admin for now
@@ -326,27 +283,6 @@ app.post('/api/v1/users/:userId/branch/:branchId/assign-role', async (req, res) 
       return res.status(400).json({
         error: 'Validation Error',
         message: `Invalid role. Must be one of: ${validRoles.join(', ')}`
-      });
-    }
-
-    // Get current user ID from JWT token
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'Missing or invalid authorization header'
-      });
-    }
-
-    const token = authHeader.split(' ')[1];
-    let currentUserId;
-    try {
-      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-      currentUserId = payload.sub;
-    } catch (error) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'Invalid token format'
       });
     }
 
@@ -384,30 +320,10 @@ app.post('/api/v1/users/:userId/branch/:branchId/assign-role', async (req, res) 
 
 
 // Delete user endpoint (hard delete)
-app.delete('/api/v1/users/:userId/branch/:branchId', async (req, res) => {
+app.delete('/api/v1/users/:userId/branch/:branchId', requireAuth, async (req, res) => {
   try {
     const { userId, branchId } = req.params;
-
-    // Get current user ID from JWT token
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'Missing or invalid authorization header'
-      });
-    }
-
-    const token = authHeader.split(' ')[1];
-    let currentUserId;
-    try {
-      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-      currentUserId = payload.sub;
-    } catch (error) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'Invalid token format'
-      });
-    }
+    const currentUserId = req.currentUserId;
 
     // Call service function
     const result = await usersService.deleteUser(userId, branchId, currentUserId);
@@ -460,49 +376,10 @@ app.delete('/api/v1/users/:userId/branch/:branchId', async (req, res) => {
  * 
  * Response: { data: Order[], meta: { total, page, limit, totalPages } }
  */
-app.get('/api/v1/orders', async (req, res) => {
+app.get('/api/v1/orders', requireAuthWithBranch, async (req, res) => {
   try {
     const filters = req.query;
-
-    // Authentication & Authorization
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'Missing or invalid authorization header' }
-      });
-    }
-
-    const token = authHeader.split(' ')[1];
-    let currentUserId;
-    try {
-      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-      currentUserId = payload.sub;
-      if (!currentUserId) throw new Error('No user ID in token');
-    } catch (error) {
-      return res.status(401).json({
-        error: { code: 'INVALID_TOKEN', message: 'Invalid token format' }
-      });
-    }
-
-    // Get user's branch context
-    const { createClient } = require('@supabase/supabase-js');
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-    
-    const { data: userBranch, error: userBranchError } = await supabase
-      .from('branch_users')
-      .select('branch_id, role')
-      .eq('user_id', currentUserId)
-      .eq('is_active', true)
-      .single();
-
-    if (userBranchError || !userBranch) {
-      return res.status(403).json({
-        error: { code: 'ACCESS_DENIED', message: 'User not found in any active branch' }
-      });
-    }
+    const userBranch = req.userBranch;
 
     // Call service function
     const result = await ordersService.getOrders(filters, userBranch);
@@ -529,7 +406,7 @@ app.get('/api/v1/orders', async (req, res) => {
  * 
  * Response: { data: OrderDetail }
  */
-app.get('/api/v1/orders/:orderId', async (req, res) => {
+app.get('/api/v1/orders/:orderId', optionalAuth, async (req, res) => {
   try {
     const { orderId } = req.params;
     
@@ -539,58 +416,15 @@ app.get('/api/v1/orders/:orderId', async (req, res) => {
       });
     }
 
-    // Authentication - DEV MODE: Skip auth for testing
-    const authHeader = req.headers.authorization;
-    let currentUserId;
-    let userBranch;
+    // Get user context from middleware (handles dev mode automatically)
+    const currentUserId = req.currentUserId;
+    let userBranch = req.userBranch;
     
-    if (process.env.NODE_ENV === 'development' && (!authHeader || authHeader === 'Bearer null')) {
-      // Development mode: Use test user
-      currentUserId = 'test-user-id';
+    // Development fallback if no auth provided
+    if (!currentUserId && process.env.NODE_ENV === 'development') {
       userBranch = {
-        branch_id: '550e8400-e29b-41d4-a716-446655440002', // Downtown Branch
-        role: 'branch_manager'
+        branch_id: '550e8400-e29b-41d4-a716-446655440002' // Downtown Branch
       };
-    } else {
-      // Production auth
-      if (!authHeader?.startsWith('Bearer ')) {
-        return res.status(401).json({
-          error: { code: 'UNAUTHORIZED', message: 'Missing or invalid authorization header' }
-        });
-      }
-
-      const token = authHeader.split(' ')[1];
-      try {
-        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-        currentUserId = payload.sub;
-        if (!currentUserId) throw new Error('No user ID in token');
-      } catch (error) {
-        return res.status(401).json({
-          error: { code: 'INVALID_TOKEN', message: 'Invalid token format' }
-        });
-      }
-
-      const { createClient } = require('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-      );
-
-      // Get user's branch context
-      const { data: userBranchData, error: userBranchError } = await supabase
-        .from('branch_users')
-        .select('branch_id, role')
-        .eq('user_id', currentUserId)
-        .eq('is_active', true)
-        .single();
-
-      if (userBranchError || !userBranchData) {
-        return res.status(403).json({
-          error: { code: 'ACCESS_DENIED', message: 'User not found in any active branch' }
-        });
-      }
-      
-      userBranch = userBranchData;
     }
 
     // Use order service to get order details
@@ -621,7 +455,7 @@ app.get('/api/v1/orders/:orderId', async (req, res) => {
  * Body: { status: string, notes?: string, estimated_ready_time?: string }
  * Response: { data: { message, orderId, previousStatus, newStatus, updatedAt } }
  */
-app.patch('/api/v1/orders/:orderId/status', async (req, res) => {
+app.patch('/api/v1/orders/:orderId/status', optionalAuth, async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status, notes, estimated_ready_time } = req.body;
@@ -643,59 +477,16 @@ app.patch('/api/v1/orders/:orderId/status', async (req, res) => {
       });
     }
 
-    // Authentication - DEV MODE: Skip auth for testing
-    const authHeader = req.headers.authorization;
-    let currentUserId;
-    let userBranch;
+    // Get user context from middleware (handles dev mode automatically)
+    const currentUserId = req.currentUserId;
+    let userBranch = req.userBranch;
     
-    if (process.env.NODE_ENV === 'development' && (!authHeader || authHeader === 'Bearer null')) {
-      // Development mode: Use test user
-      currentUserId = 'test-user-id';
+    // Development fallback if no auth provided
+    if (!currentUserId && process.env.NODE_ENV === 'development') {
       userBranch = {
-        branch_id: '550e8400-e29b-41d4-a716-446655440002', // Downtown Branch
-        role: 'branch_manager'
+        branch_id: '550e8400-e29b-41d4-a716-446655440002' // Downtown Branch
       };
       console.log('🧪 DEV MODE: Using test authentication for status update');
-    } else {
-      // Production auth
-      if (!authHeader?.startsWith('Bearer ')) {
-        return res.status(401).json({
-          error: { code: 'UNAUTHORIZED', message: 'Missing or invalid authorization header' }
-        });
-      }
-
-      const token = authHeader.split(' ')[1];
-      try {
-        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-        currentUserId = payload.sub;
-        if (!currentUserId) throw new Error('No user ID in token');
-      } catch (error) {
-        return res.status(401).json({
-          error: { code: 'INVALID_TOKEN', message: 'Invalid token format' }
-        });
-      }
-
-      const { createClient } = require('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-      );
-
-      // Get user's branch context
-      const { data: userBranchData, error: userBranchError } = await supabase
-        .from('branch_users')
-        .select('branch_id, role')
-        .eq('user_id', currentUserId)
-        .eq('is_active', true)
-        .single();
-
-      if (userBranchError || !userBranchData) {
-        return res.status(403).json({
-          error: { code: 'ACCESS_DENIED', message: 'User not found in any active branch' }
-        });
-      }
-      
-      userBranch = userBranchData;
     }
 
     // Use order service to update order status
@@ -792,7 +583,7 @@ app.post('/api/v1/orders/auto-accept-check', async (req, res) => {
  * Body: { customer, items, orderType, source, tableNumber?, notes? }
  * Response: { data: { order, autoAccepted } }
  */
-app.post('/api/v1/orders', async (req, res) => {
+app.post('/api/v1/orders', optionalAuth, async (req, res) => {
   try {
     const { customer, items, orderType, source, tableNumber, notes, specialInstructions } = req.body;
     
@@ -810,51 +601,24 @@ app.post('/api/v1/orders', async (req, res) => {
       });
     }
 
-    // Get user/branch context
-    const authHeader = req.headers.authorization;
-    let branchId = req.body.branchId; // allow explicit branch for public orders
-
-    if (process.env.NODE_ENV === 'development' && (!authHeader || authHeader === 'Bearer null')) {
-      // Development mode: Use test branch
-      branchId = branchId || '550e8400-e29b-41d4-a716-446655440002'; // Downtown Branch
-    } else if (authHeader?.startsWith('Bearer ')) {
-      // Authenticated request: derive branch from user context
-      const token = authHeader.split(' ')[1];
-      try {
-        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-        const userId = payload.sub;
-        
-        const { createClient } = require('@supabase/supabase-js');
-        const supabase = createClient(
-          process.env.SUPABASE_URL,
-          process.env.SUPABASE_SERVICE_ROLE_KEY
-        );
-        
-        const { data: userBranchData, error: userBranchError } = await supabase
-          .from('branch_users')
-          .select('branch_id')
-          .eq('user_id', userId)
-          .eq('is_active', true)
-          .single();
-
-        if (userBranchError || !userBranchData) {
-          return res.status(403).json({
-            error: { code: 'ACCESS_DENIED', message: 'User not found in any active branch' }
-          });
-        }
-        branchId = userBranchData.branch_id;
-      } catch (error) {
-        return res.status(401).json({
-          error: { code: 'INVALID_TOKEN', message: 'Invalid token format' }
-        });
-      }
-    } else {
-      // Public order (no Authorization header): require branchId in body and validate origin/branch
+    // Get user/branch context from middleware or request body
+    const currentUserId = req.currentUserId;
+    let branchId = req.userBranch?.branch_id || req.body.branchId;
+    
+    // Handle different authentication scenarios
+    if (currentUserId && req.userBranch) {
+      // Authenticated request: use branch from middleware
+      branchId = req.userBranch.branch_id;
+    } else if (!currentUserId) {
+      // Public/unauthenticated order: require branchId in body
+      branchId = req.body.branchId;
+      
       if (!branchId) {
         return res.status(400).json({
           error: { code: 'VALIDATION_ERROR', message: 'branchId is required for unauthenticated orders' }
         });
       }
+      
       // Optional origin check to restrict to known frontend
       const allowedOrigin = process.env.FRONTEND_URL;
       const origin = req.headers.origin;
@@ -863,13 +627,8 @@ app.post('/api/v1/orders', async (req, res) => {
           error: { code: 'FORBIDDEN', message: 'Invalid request origin' }
         });
       }
-      // Validate branch exists and is active
-      const { createClient } = require('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-      );
       
+      // Validate branch exists and is active
       const { data: branchRow, error: branchErr } = await supabase
         .from('branches')
         .select('id')
@@ -881,6 +640,9 @@ app.post('/api/v1/orders', async (req, res) => {
           error: { code: 'BRANCH_NOT_FOUND', message: 'Branch not found or inactive' }
         });
       }
+    } else {
+      // Development mode fallback
+      branchId = branchId || '550e8400-e29b-41d4-a716-446655440002'; // Downtown Branch
     }
 
     // Use order service to create order
@@ -986,7 +748,7 @@ app.post('/api/v1/orders/timer-check', async (req, res) => {
  * 
  * Response: { data: { branchId, settings: { orderFlow, timingSettings } } }
  */
-app.get('/api/v1/branch/:branchId/settings', async (req, res) => {
+app.get('/api/v1/branch/:branchId/settings', requireAuth, async (req, res) => {
   try {
     const { branchId } = req.params;
     
@@ -1031,7 +793,7 @@ app.get('/api/v1/branch/:branchId/settings', async (req, res) => {
 });
 
 // PUT /api/v1/branch/:branchId/settings - Update branch settings  
-app.put('/api/v1/branch/:branchId/settings', async (req, res) => {
+app.put('/api/v1/branch/:branchId/settings', requireAuth, async (req, res) => {
   try {
     console.log(`PUT /api/v1/branch/${req.params.branchId}/settings - Update branch settings`);
     
@@ -1087,27 +849,12 @@ app.put('/api/v1/branch/:branchId/settings', async (req, res) => {
       }
     }
 
-    // Get user token and validate authentication
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
-      });
-    }
-
-    const token = authHeader.split(' ')[1];
-    
-    // Verify JWT token with Supabase
-    const { data: user, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user?.user) {
-      return res.status(401).json({
-        error: { code: 'INVALID_TOKEN', message: 'Invalid authentication token' }
-      });
-    }
+    // Get user context from middleware
+    const currentUserId = req.currentUserId;
 
     // Use branch service to update settings
     const settingsData = { orderFlow, timingSettings };
-    const result = await branchesService.updateBranchSettings(branchId, settingsData, user.user.id);
+    const result = await branchesService.updateBranchSettings(branchId, settingsData, currentUserId);
 
     // Success response
     res.json({
