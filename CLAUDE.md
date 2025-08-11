@@ -227,11 +227,13 @@ vision-menu/
 - **Forms**: React Hook Form + Zod validation (mandatory)
 - **Icons**: Lucide React only
 
-#### **Backend (Express.js)**
-- **Framework**: Unified Express.js for both development and production
+#### **Backend (Express.js) - MODERN ARCHITECTURE**
+- **Framework**: Unified Express.js with Controller-Service-Route pattern
+- **Architecture**: Modular MVC structure (NOT monolithic)
 - **Database**: Supabase PostgreSQL with Row-Level Security (RLS)
 - **Authentication**: Supabase Auth + JWT with custom claims
-- **Validation**: Zod schemas with automatic TypeScript inference
+- **Validation**: Input validation in controllers with proper error handling
+- **Error Handling**: Centralized error handler with standardized responses
 - **Legacy Code**: NestJS code in `apps/api/src/` is ARCHIVED - do not modify
 
 #### **Database & Security**
@@ -437,6 +439,133 @@ const { data: allOrders } = await supabase
 - **RLS policies active** - trust database policies for data isolation
 - **No cross-branch access** - users cannot see other branches' data
 - **Service role carefully** - use service role only for admin operations
+
+---
+
+## 🏗️ MODERN BACKEND ARCHITECTURE RULES
+
+### **CRITICAL: ALL NEW APIS MUST FOLLOW MODERN PATTERN**
+
+**🚨 MANDATORY STRUCTURE FOR ALL NEW FEATURES:**
+
+### **1. File Organization (NEVER Create Monolithic Code)**
+```
+apps/api/api/
+├── controllers/     # Route handlers ONLY
+├── services/        # Business logic layer
+├── routes/          # Route definitions ONLY
+├── middleware/      # Auth, validation middleware
+├── helpers/         # Utilities (auth, permissions, error-handler)
+└── index.js         # Entry point - imports only
+```
+
+### **2. Controller Pattern (REQUIRED)**
+```javascript
+// ✅ GOOD - Clean controller structure
+const { handleControllerError } = require('../helpers/error-handler');
+const serviceModule = require('../services/feature.service');
+
+const controllerMethod = async (req, res) => {
+  try {
+    const { param1 } = req.params;
+    const requestData = req.body;
+    
+    const result = await serviceModule.businessLogicMethod(param1, requestData);
+    res.json({ data: result });
+    
+  } catch (error) {
+    handleControllerError(error, 'operation description', res);
+  }
+};
+
+module.exports = { controllerMethod };
+
+// ❌ BAD - Inline business logic in controller
+const badController = async (req, res) => {
+  // Lots of business logic here - WRONG!
+  const { data } = await supabase.from('table').select('*');
+  // Complex calculations here - WRONG!
+  res.json(data);
+};
+```
+
+### **3. Service Pattern (REQUIRED)**
+```javascript
+// ✅ GOOD - Pure business logic
+const { createClient } = require('@supabase/supabase-js');
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+async function businessLogicMethod(param1, requestData) {
+  // Validation
+  if (!param1) {
+    throw new Error('Parameter is required');
+  }
+  
+  // Database operations
+  const { data, error } = await supabase
+    .from('table_name')
+    .select('*')
+    .eq('param', param1);
+    
+  if (error) {
+    throw new Error(`Database operation failed: ${error.message}`);
+  }
+  
+  // Business logic
+  const processedData = processBusinessLogic(data);
+  return processedData;
+}
+
+module.exports = { businessLogicMethod };
+```
+
+### **4. Route Pattern (REQUIRED)**
+```javascript
+// ✅ GOOD - Clean route definitions
+const express = require('express');
+const controller = require('../controllers/feature.controller');
+const { requireAuth, requireAuthWithBranch } = require('../middleware/auth.middleware');
+
+const router = express.Router();
+
+router.get('/', requireAuthWithBranch, controller.listMethod);
+router.get('/:id', requireAuth, controller.getMethod);
+router.post('/', requireAuth, controller.createMethod);
+router.patch('/:id', requireAuth, controller.updateMethod);
+router.delete('/:id', requireAuth, controller.deleteMethod);
+
+module.exports = router;
+```
+
+### **5. Error Handling Pattern (MANDATORY)**
+```javascript
+// ✅ ALWAYS use centralized error handler
+const { handleControllerError } = require('../helpers/error-handler');
+
+// In controller:
+} catch (error) {
+  handleControllerError(error, 'descriptive operation name', res);
+}
+
+// ❌ NEVER create custom error handling in controllers
+} catch (error) {
+  console.error(error);
+  res.status(500).json({ error: 'Something went wrong' }); // WRONG!
+}
+```
+
+### **6. Entry Point Integration (REQUIRED)**
+```javascript
+// apps/api/api/index.js - Add new routes here
+const newFeatureRoutes = require('./routes/new-feature.routes');
+
+// Mount new routes
+app.use('/api/v1/new-feature', newFeatureRoutes);
+```
 
 ---
 
@@ -736,6 +865,16 @@ interface UserListTableProps {
 ## 🚨 CRITICAL RULES & RESTRICTIONS
 
 ### **1. NEVER DO THESE THINGS**
+
+#### **🚨 BACKEND ARCHITECTURE - CRITICAL RULES**
+- **❌ NEVER create monolithic API code** - always use Controller-Service-Route pattern
+- **❌ NEVER put business logic in controllers** - controllers are for request/response only
+- **❌ NEVER create inline error handling** - always use centralized error handler
+- **❌ NEVER bypass the modern architecture** - no direct database calls in routes
+- **❌ NEVER create duplicate Supabase clients** - import from existing services
+- **❌ NEVER modify apps/api/index.js directly** - use the modular structure in apps/api/api/
+
+#### **🚨 GENERAL RULES**
 - **❌ Never modify archived NestJS code** in `apps/api/src/` - use Express.js only
 - **❌ Never create custom authentication** - use Supabase Auth exclusively
 - **❌ Never bypass RLS policies** - respect database security constraints
@@ -748,6 +887,16 @@ interface UserListTableProps {
 - **❌ Never modify existing Canadian French translations** - they are production-ready
 
 ### **2. ALWAYS DO THESE THINGS**
+
+#### **✅ BACKEND ARCHITECTURE - MANDATORY STEPS**
+- **✅ Always create Controller-Service-Route** for every new feature
+- **✅ Always use handleControllerError** for error handling in controllers
+- **✅ Always put business logic in services** - never in controllers or routes
+- **✅ Always mount new routes in apps/api/api/index.js** following existing pattern
+- **✅ Always use existing middleware** (requireAuth, requireAuthWithBranch) for authentication
+- **✅ Always test endpoints** with proper authentication headers
+
+#### **✅ GENERAL DEVELOPMENT RULES**
 - **✅ Always validate user permissions** before any operation
 - **✅ Always use TypeScript interfaces** for props and API responses
 - **✅ Always test responsive design** on multiple devices
@@ -758,6 +907,7 @@ interface UserListTableProps {
 - **✅ Always commit with descriptive messages** using conventional commit format
 - **✅ Always add both English and Canadian French translations** for new features
 - **✅ Always test language switching** after adding new translations
+- **✅ Always run npm run lint && npm run build** before committing
 
 ---
 
@@ -923,6 +1073,68 @@ git merge to main
 
 ---
 
+---
+
+## 🚀 QUICK REFERENCE - NEW FEATURE DEVELOPMENT
+
+### **For Adding ANY New API Feature:**
+
+**Step 1: Create Service** (`apps/api/api/services/feature.service.js`)
+```javascript
+const { createClient } = require('@supabase/supabase-js');
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+async function businessMethod(param) {
+  // Business logic here
+  return result;
+}
+
+module.exports = { businessMethod };
+```
+
+**Step 2: Create Controller** (`apps/api/api/controllers/feature.controller.js`)
+```javascript
+const { handleControllerError } = require('../helpers/error-handler');
+const service = require('../services/feature.service');
+
+const controllerMethod = async (req, res) => {
+  try {
+    const result = await service.businessMethod(req.params.id);
+    res.json({ data: result });
+  } catch (error) {
+    handleControllerError(error, 'operation name', res);
+  }
+};
+
+module.exports = { controllerMethod };
+```
+
+**Step 3: Create Routes** (`apps/api/api/routes/feature.routes.js`)
+```javascript
+const express = require('express');
+const controller = require('../controllers/feature.controller');
+const { requireAuth } = require('../middleware/auth.middleware');
+
+const router = express.Router();
+router.get('/:id', requireAuth, controller.controllerMethod);
+
+module.exports = router;
+```
+
+**Step 4: Mount Routes** (`apps/api/api/index.js`)
+```javascript
+const featureRoutes = require('./routes/feature.routes');
+app.use('/api/v1/feature', featureRoutes);
+```
+
+**Step 5: Test & Validate**
+```bash
+npm run lint    # ✅ Must pass
+npm run build   # ✅ Must pass
+```
+
+---
+
 *This document serves as the comprehensive guide for all development work on Vision Menu. Following these rules ensures consistency, quality, and maintainability of the platform.*
 
-**Last Updated**: January 9, 2025 | **Version**: 2.0.0
+**Last Updated**: January 11, 2025 | **Version**: 3.0.0 - Modern Backend Architecture

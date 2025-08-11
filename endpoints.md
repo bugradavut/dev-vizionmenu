@@ -7,9 +7,11 @@ Development: http://localhost:3001
 Production: https://dev-vizionmenu-web.vercel.app (Vercel deployment)
 ```
 
-**Architecture:** Unified Express.js backend (same code for dev + production)
+**Architecture:** Modern Express.js with Controller-Service-Route pattern (MVC)
+**Code Structure:** Modular backend with clean separation of concerns
 **Database:** Supabase PostgreSQL with Row-Level Security (RLS)
 **Authentication:** Bearer JWT Token from Supabase with custom claims
+**Error Handling:** Centralized error handler with standardized responses
 
 ```javascript
 Headers: {

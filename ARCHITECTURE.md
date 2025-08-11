@@ -25,9 +25,9 @@ Vision Menu is an enterprise-grade **multi-tenant restaurant management platform
 ├─────────────────────────────────────────────────────────────┤
 │  Frontend (Next.js 15)     │    Backend (Express.js)       │
 │  ┌─────────────────────┐   │   ┌─────────────────────────┐  │
-│  │ • React 19          │   │   │ • Unified API Server    │  │
-│  │ • App Router        │   │   │ • Multi-tenant Auth     │  │
-│  │ • ShadCN UI         │   │   │ • Role-based Security   │  │
+│  │ • React 19          │   │   │ • Modern MVC Structure  │  │
+│  │ • App Router        │   │   │ • Controller-Service    │  │
+│  │ • ShadCN UI         │   │   │ • Multi-tenant Auth     │  │
 │  │ • Real-time Updates │   │   │ • Supabase Integration  │  │
 │  └─────────────────────┘   │   └─────────────────────────┘  │
 ├─────────────────────────────────────────────────────────────┤
