@@ -1,0 +1,745 @@
+// =====================================================
+// ORDER MANAGEMENT SERVICE
+// All order-related business logic and database operations
+// =====================================================
+
+const { createClient } = require('@supabase/supabase-js');
+
+// Create Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+/**
+ * Get orders list with filtering and pagination
+ * @param {Object} filters - Filter parameters
+ * @param {Object} userBranch - User branch context
+ * @returns {Object} Orders list with pagination
+ */
+async function getOrders(filters, userBranch) {
+  const { 
+    status, 
+    source, 
+    page = 1, 
+    limit = 20, 
+    date_from, 
+    date_to,
+    branch_id 
+  } = filters;
+  
+  // Input validation
+  const pageNum = Math.max(1, parseInt(page) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 20));
+
+  // Determine target branch (chain_owner can access other branches)
+  let targetBranchId = userBranch.branch_id;
+  if (branch_id && userBranch.role === 'chain_owner') {
+    targetBranchId = branch_id;
+  }
+
+  // Build query with comprehensive filtering including order items for Kitchen Display
+  let query = supabase
+    .from('orders')
+    .select(`
+      id,
+      customer_name,
+      customer_phone,
+      customer_email,
+      order_type,
+      table_number,
+      order_status,
+      payment_status,
+      payment_method,
+      subtotal,
+      tax_amount,
+      service_fee,
+      delivery_fee,
+      total_amount,
+      notes,
+      special_instructions,
+      estimated_ready_time,
+      third_party_order_id,
+      third_party_platform,
+      created_at,
+      updated_at,
+      order_items(
+        id,
+        menu_item_name,
+        menu_item_price,
+        quantity,
+        item_total,
+        special_instructions,
+        order_item_variants(*)
+      )
+    `)
+    .eq('branch_id', targetBranchId)
+    .order('created_at', { ascending: false });
+
+  // Apply filters - support multiple statuses
+  if (status) {
+    const statusArray = status.split(',').map(s => s.trim());
+    query = query.in('order_status', statusArray);
+  }
+  if (source) {
+    if (source === 'qr_code') {
+      query = query.is('third_party_platform', null);
+    } else {
+      query = query.eq('third_party_platform', source);
+    }
+  }
+  if (date_from) query = query.gte('created_at', date_from);
+  if (date_to) query = query.lte('created_at', date_to);
+
+  // Get total count for pagination
+  let countQuery = supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('branch_id', targetBranchId);
+  
+  if (status) {
+    const statusArray = status.split(',').map(s => s.trim());
+    countQuery = countQuery.in('order_status', statusArray);
+  }
+  if (source) {
+    if (source === 'qr_code') {
+      countQuery = countQuery.is('third_party_platform', null);
+    } else {
+      countQuery = countQuery.eq('third_party_platform', source);
+    }
+  }
+  if (date_from) countQuery = countQuery.gte('created_at', date_from);
+  if (date_to) countQuery = countQuery.lte('created_at', date_to);
+
+  // Execute queries in parallel
+  const [ordersResult, countResult] = await Promise.all([
+    query.range((pageNum - 1) * limitNum, pageNum * limitNum - 1),
+    countQuery
+  ]);
+
+  if (ordersResult.error) {
+    console.error('Orders fetch error:', ordersResult.error);
+    throw new Error(`Failed to fetch orders: ${ordersResult.error.message}`);
+  }
+
+  // Format response for mobile app including order items for Kitchen Display
+  const formattedOrders = (ordersResult.data || []).map(order => ({
+    id: order.id,
+    orderNumber: order.id.split('-')[0].toUpperCase(),
+    customerName: order.customer_name || 'Walk-in Customer',
+    customerPhone: order.customer_phone,
+    customerEmail: order.customer_email,
+    orderType: order.order_type,
+    tableNumber: order.table_number,
+    source: order.third_party_platform || (order.table_number ? 'qr_code' : 'web'),
+    status: order.order_status,
+    paymentStatus: order.payment_status,
+    paymentMethod: order.payment_method,
+    pricing: {
+      subtotal: parseFloat(order.subtotal || 0),
+      taxAmount: parseFloat(order.tax_amount || 0),
+      serviceFee: parseFloat(order.service_fee || 0),
+      deliveryFee: parseFloat(order.delivery_fee || 0),
+      total: parseFloat(order.total_amount || 0)
+    },
+    notes: order.notes,
+    specialInstructions: order.special_instructions,
+    estimatedReadyTime: order.estimated_ready_time,
+    items: (order.order_items || []).map(item => ({
+      id: item.id,
+      name: item.menu_item_name,
+      price: parseFloat(item.menu_item_price || 0),
+      quantity: item.quantity || 1,
+      total: parseFloat(item.item_total || 0),
+      special_instructions: item.special_instructions,
+      variants: item.order_item_variants || []
+    })),
+    created_at: order.created_at,
+    updated_at: order.updated_at
+  }));
+
+  const totalCount = countResult.count || 0;
+  
+  return {
+    data: formattedOrders,
+    meta: { 
+      total: totalCount,
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(totalCount / limitNum),
+      hasNextPage: pageNum * limitNum < totalCount,
+      hasPreviousPage: pageNum > 1
+    }
+  };
+}
+
+/**
+ * Get detailed order information
+ * @param {string} orderId - Order ID (can be UUID or ORDER-XXXXX format)
+ * @param {Object} userBranch - User branch context
+ * @returns {Object} Detailed order data
+ */
+async function getOrderDetail(orderId, userBranch) {
+  // Handle both UUID and short order number formats
+  let actualOrderId = orderId;
+  let existingOrder;
+  let findError;
+
+  // First try as UUID
+  if (orderId.length === 36 && orderId.includes('-')) {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items(
+          *,
+          order_item_variants(*)
+        )
+      `)
+      .eq('id', orderId)
+      .eq('branch_id', userBranch.branch_id)
+      .single();
+    existingOrder = data;
+    findError = error;
+  } else {
+    // Try as short order number (ORDER-XXXXX format)
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('branch_id', userBranch.branch_id);
+
+    if (!error && orders) {
+      // Find order by short ID pattern matching
+      const matchingOrder = orders.find(order => {
+        const shortId = order.id.substring(0, 8).toUpperCase();
+        const orderNumber = `ORDER-${shortId}`;
+        return orderNumber === orderId.toUpperCase();
+      });
+
+      if (matchingOrder) {
+        actualOrderId = matchingOrder.id;
+        // Get full order details
+        const result = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items(
+              *,
+              order_item_variants(*)
+            )
+          `)
+          .eq('id', matchingOrder.id)
+          .eq('branch_id', userBranch.branch_id)
+          .single();
+        
+        existingOrder = result.data;
+        findError = result.error;
+      } else {
+        findError = { message: 'Order not found' };
+      }
+    } else {
+      findError = error;
+    }
+  }
+
+  if (findError || !existingOrder) {
+    throw new Error('Order not found or access denied');
+  }
+
+  // Format detailed response for frontend (match Order interface)
+  const formattedOrder = {
+    id: existingOrder.id,
+    orderNumber: existingOrder.id.split('-')[0].toUpperCase(),
+    customer: {
+      name: existingOrder.customer_name || 'Walk-in Customer',
+      phone: existingOrder.customer_phone || '',
+      email: existingOrder.customer_email
+    },
+    source: existingOrder.third_party_platform || (existingOrder.table_number ? 'qr_code' : 'web'), // 'qr_code' | 'uber_eats' | 'doordash' | 'phone' | 'web'
+    status: existingOrder.order_status, // 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled'
+    order_type: existingOrder.order_type,
+    table_number: existingOrder.table_number,
+    payment_method: existingOrder.payment_method,
+    pricing: {
+      subtotal: parseFloat(existingOrder.subtotal || 0),
+      tax_amount: parseFloat(existingOrder.tax_amount || 0),
+      service_fee: parseFloat(existingOrder.service_fee || 0),
+      delivery_fee: parseFloat(existingOrder.delivery_fee || 0),
+      total: parseFloat(existingOrder.total_amount || 0)
+    },
+    notes: existingOrder.notes,
+    special_instructions: existingOrder.special_instructions,
+    estimated_ready_time: existingOrder.estimated_ready_time,
+    third_party_order_id: existingOrder.third_party_order_id,
+    third_party_platform: existingOrder.third_party_platform,
+    created_at: existingOrder.created_at,
+    updated_at: existingOrder.updated_at,
+    items: (existingOrder.order_items || []).map(item => ({
+      id: item.id,
+      name: item.menu_item_name,
+      price: parseFloat(item.menu_item_price || 0),
+      quantity: item.quantity || 1,
+      total: parseFloat(item.item_total || 0),
+      special_instructions: item.special_instructions,
+      variants: (item.order_item_variants || []).map(variant => ({
+        name: variant.variant_name,
+        price: parseFloat(variant.variant_price || 0)
+      }))
+    }))
+  };
+
+  return formattedOrder;
+}
+
+/**
+ * Update order status with validation
+ * @param {string} orderId - Order ID
+ * @param {Object} updateData - Status update data
+ * @param {Object} userBranch - User branch context
+ * @returns {Object} Update response
+ */
+async function updateOrderStatus(orderId, updateData, userBranch) {
+  const { status, notes, estimated_ready_time } = updateData;
+  
+  // Validation
+  const validStatuses = ['pending', 'preparing', 'ready', 'completed', 'cancelled', 'rejected'];
+  if (!status || !validStatuses.includes(status)) {
+    throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+  }
+
+  // Handle both UUID and short order number formats
+  let actualOrderId = orderId;
+  let existingOrder;
+  let findError;
+
+  // First try as UUID
+  if (orderId.length === 36 && orderId.includes('-')) {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, order_status, branch_id')
+      .eq('id', orderId)
+      .eq('branch_id', userBranch.branch_id)
+      .single();
+    existingOrder = data;
+    findError = error;
+  } else {
+    // Try as short order number (ORDER-XXXXX format)
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('id, order_status, branch_id')
+      .eq('branch_id', userBranch.branch_id);
+
+    if (!error && orders) {
+      // Find order by short ID pattern matching
+      const matchingOrder = orders.find(order => {
+        const shortId = order.id.substring(0, 8).toUpperCase();
+        const orderNumber = `ORDER-${shortId}`;
+        return orderNumber === orderId.toUpperCase();
+      });
+
+      if (matchingOrder) {
+        existingOrder = matchingOrder;
+        actualOrderId = matchingOrder.id;
+        findError = null;
+      } else {
+        findError = { message: 'Order not found' };
+      }
+    } else {
+      findError = error;
+    }
+  }
+
+  if (findError || !existingOrder) {
+    throw new Error('Order not found or access denied');
+  }
+
+  // Get branch settings to check for simplified flow auto-accept logic
+  const { data: branchData, error: branchError } = await supabase
+    .from('branches')
+    .select('settings')
+    .eq('id', userBranch.branch_id)
+    .single();
+
+  let shouldAutoAccept = false;
+  if (!branchError && branchData?.settings) {
+    const orderFlow = branchData.settings.orderFlow || 'standard';
+    
+    // Auto-accept logic for Simplified Flow
+    if (orderFlow === 'simplified' && existingOrder.order_status === 'pending' && status === 'preparing') {
+      shouldAutoAccept = true;
+    }
+  }
+
+  // Prepare update data
+  const updateDataObj = {
+    order_status: status,
+    updated_at: new Date().toISOString()
+  };
+
+  if (notes) updateDataObj.notes = notes;
+  if (estimated_ready_time) updateDataObj.estimated_ready_time = estimated_ready_time;
+
+  // Update order using the actual UUID
+  const { data: updatedOrder, error: updateError } = await supabase
+    .from('orders')
+    .update(updateDataObj)
+    .eq('id', actualOrderId)
+    .eq('branch_id', userBranch.branch_id)
+    .select()
+    .single();
+
+  if (updateError) {
+    console.error('Order status update error:', updateError);
+    throw new Error(`Failed to update order: ${updateError.message}`);
+  }
+
+  return {
+    success: true,
+    message: 'Order status updated successfully',
+    orderId: orderId,
+    statusChange: {
+      from: existingOrder.order_status,
+      to: status
+    },
+    updatedAt: updateDataObj.updated_at,
+    order: {
+      id: updatedOrder.id,
+      status: updatedOrder.order_status,
+      notes: updatedOrder.notes,
+      estimatedReadyTime: updatedOrder.estimated_ready_time
+    }
+  };
+}
+
+/**
+ * Create new order
+ * @param {Object} orderData - Order creation data
+ * @param {string} branchId - Branch ID
+ * @returns {Object} Created order data
+ */
+async function createOrder(orderData, branchId) {
+  const { customer, items, orderType, source, tableNumber, notes, specialInstructions } = orderData;
+  
+  // Only allow internal orders for now (third-party will be added in 2 weeks)
+  if (!['qr_code', 'web'].includes(source)) {
+    throw new Error('Only qr_code and web orders are supported currently');
+  }
+
+  // Calculate order totals
+  const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const taxRate = 0.13; // 13% HST
+  const taxAmount = subtotal * taxRate;
+  const total = subtotal + taxAmount;
+
+  // Create order in database
+  const orderDataObj = {
+    branch_id: branchId,
+    customer_name: customer.name,
+    customer_phone: customer.phone,
+    customer_email: customer.email || null,
+    order_type: orderType,
+    table_number: tableNumber || null,
+    order_status: 'pending', // Always start as pending
+    payment_status: 'pending',
+    subtotal: subtotal,
+    tax_amount: taxAmount,
+    total_amount: total,
+    notes: notes || null,
+    special_instructions: specialInstructions || null,
+    third_party_platform: source === 'qr_code' ? null : source, // qr_code doesn't set platform
+    created_at: new Date().toISOString()
+  };
+
+  const { data: createdOrder, error: createError } = await supabase
+    .from('orders')
+    .insert(orderDataObj)
+    .select()
+    .single();
+
+  if (createError) {
+    console.error('Order creation error:', createError);
+    throw new Error('Failed to create order');
+  }
+
+  // Create order items
+  const orderItems = items.map(item => ({
+    order_id: createdOrder.id,
+    menu_item_name: item.name,
+    menu_item_price: item.price,
+    quantity: item.quantity,
+    item_total: item.price * item.quantity,
+    special_instructions: item.special_instructions || null
+  }));
+
+  const { error: itemsError } = await supabase
+    .from('order_items')
+    .insert(orderItems);
+
+  if (itemsError) {
+    console.error('Order items creation error:', itemsError);
+    // Rollback order creation
+    await supabase.from('orders').delete().eq('id', createdOrder.id);
+    throw new Error('Failed to create order items');
+  }
+
+  return {
+    order: {
+      id: createdOrder.id,
+      orderNumber: `ORDER-${createdOrder.id.substring(0, 8).toUpperCase()}`,
+      status: createdOrder.order_status,
+      total: total,
+      createdAt: createdOrder.created_at
+    }
+  };
+}
+
+/**
+ * Check if order should be auto-accepted based on branch settings
+ * @param {string} orderId - Order ID
+ * @param {string} branchId - Branch ID
+ * @returns {Object} Auto-accept result
+ */
+async function checkAutoAccept(orderId, branchId) {
+  // Get order to check current status
+  const { data: orderData, error: orderError } = await supabase
+    .from('orders')
+    .select('id, order_status, branch_id, order_type, third_party_platform')
+    .eq('id', orderId)
+    .eq('branch_id', branchId)
+    .single();
+
+  if (orderError || !orderData) {
+    throw new Error('Order not found');
+  }
+
+  // Only process pending orders
+  if (orderData.order_status !== 'pending') {
+    return {
+      autoAccepted: false,
+      status: orderData.order_status,
+      message: `Order already has status: ${orderData.order_status}`
+    };
+  }
+
+  // Get branch settings
+  const { data: branchData, error: branchError } = await supabase
+    .from('branches')
+    .select('name, settings')
+    .eq('id', branchId)
+    .single();
+
+  if (branchError || !branchData) {
+    throw new Error('Branch not found');
+  }
+
+  const orderFlow = branchData.settings?.orderFlow || 'standard';
+  let shouldAutoAccept = false;
+  let reason = '';
+
+  // Auto-accept logic
+  if (orderFlow === 'simplified') {
+    // Check if it's an internal order (QR code, web) - these can be fully automated
+    if (['qr_code', 'web'].includes(orderData.third_party_platform) || !orderData.third_party_platform) {
+      shouldAutoAccept = true;
+      reason = 'Simplified Flow: Internal order auto-accepted';
+    } 
+    // Third-party orders (Uber Eats, DoorDash) still need manual confirmation for "Ready" status
+    // but can be auto-accepted to "preparing"
+    else if (['uber_eats', 'doordash', 'phone'].includes(orderData.third_party_platform)) {
+      shouldAutoAccept = true;
+      reason = 'Simplified Flow: Third-party order auto-accepted to preparing (ready status requires manual confirmation)';
+    }
+  } else {
+    reason = 'Standard Flow: Manual confirmation required';
+  }
+
+  // If should auto-accept, update the order status
+  if (shouldAutoAccept) {
+    const { data: updatedOrder, error: updateError } = await supabase
+      .from('orders')
+      .update({ 
+        order_status: 'preparing',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', orderId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Auto-accept update error:', updateError);
+      throw new Error('Failed to auto-accept order');
+    }
+
+    return {
+      autoAccepted: true,
+      status: 'preparing',
+      message: reason,
+      order: {
+        id: updatedOrder.id,
+        status: updatedOrder.order_status,
+        updatedAt: updatedOrder.updated_at
+      }
+    };
+  }
+
+  // No auto-accept needed
+  return {
+    autoAccepted: false,
+    status: 'pending',
+    message: reason
+  };
+}
+
+/**
+ * Check and auto-advance orders from 'preparing' to 'ready' based on timing settings
+ * @param {string} branchId - Branch ID
+ * @returns {Object} Timer check results
+ */
+async function checkOrderTimers(branchId) {
+  // Get branch settings
+  const { data: branchData, error: branchError } = await supabase
+    .from('branches')
+    .select('name, settings')
+    .eq('id', branchId)
+    .single();
+
+  if (branchError || !branchData) {
+    throw new Error('Branch not found');
+  }
+
+  const orderFlow = branchData.settings?.orderFlow || 'standard';
+  
+  // Only process orders for Simplified Flow
+  if (orderFlow !== 'simplified') {
+    return {
+      processed: 0,
+      orders: [],
+      message: 'Branch uses Standard Flow - no automatic timer processing'
+    };
+  }
+
+  // Get timing settings
+  const timingSettings = branchData.settings?.timingSettings || {
+    baseDelay: 20,
+    temporaryBaseDelay: 0,
+    deliveryDelay: 15,
+    temporaryDeliveryDelay: 0,
+  };
+
+  // Calculate total preparation time in minutes
+  // Kitchen prep time - only base + temporary (no delivery time for kitchen)
+  const kitchenPrepTime = timingSettings.baseDelay + timingSettings.temporaryBaseDelay;
+
+  // Get all preparing orders for this branch
+  const { data: preparingOrders, error: ordersError } = await supabase
+    .from('orders')
+    .select('id, order_status, created_at, updated_at, order_type, third_party_platform')
+    .eq('branch_id', branchId)
+    .eq('order_status', 'preparing');
+
+  if (ordersError) {
+    console.error('Failed to fetch preparing orders:', ordersError);
+    throw new Error('Failed to fetch preparing orders');
+  }
+
+  if (!preparingOrders || preparingOrders.length === 0) {
+    return {
+      processed: 0,
+      orders: [],
+      message: 'No preparing orders found'
+    };
+  }
+
+  const now = new Date();
+  const processedOrders = [];
+  let updatedCount = 0;
+
+  // Check each preparing order
+  for (const order of preparingOrders) {
+    // Use updated_at as the reference time (when it was moved to 'preparing')
+    const prepStartTime = new Date(order.updated_at);
+    const minutesSincePrepStart = (now.getTime() - prepStartTime.getTime()) / (1000 * 60);
+    
+    let shouldAutoReady = false;
+    let reason = '';
+
+    // Auto-ready logic based on order type and timing
+    if (minutesSincePrepStart >= kitchenPrepTime) {
+      // For internal orders (QR code, web, or null platform), auto-ready is allowed
+      if (!order.third_party_platform || ['qr_code', 'web'].includes(order.third_party_platform)) {
+        shouldAutoReady = true;
+        reason = `Internal order auto-ready after ${Math.round(minutesSincePrepStart)} minutes`;
+      }
+      // For third-party orders, respect manual ready option
+      else if (['uber_eats', 'doordash', 'phone'].includes(order.third_party_platform)) {
+        // Third-party orders always require manual confirmation for 'ready' status
+        // This is a business rule regardless of manualReadyOption setting
+        shouldAutoReady = false;
+        reason = `Third-party order requires manual 'Ready' confirmation (${Math.round(minutesSincePrepStart)} min elapsed)`;
+      }
+    } else {
+      const remainingMinutes = Math.ceil(kitchenPrepTime - minutesSincePrepStart);
+      reason = `Timer pending: ${remainingMinutes} minutes remaining`;
+    }
+
+    if (shouldAutoReady) {
+      // Update order to ready status
+      const { data: updatedOrder, error: updateError } = await supabase
+        .from('orders')
+        .update({ 
+          order_status: 'ready',
+          updated_at: now.toISOString()
+        })
+        .eq('id', order.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error(`Failed to auto-ready order ${order.id}:`, updateError);
+        processedOrders.push({
+          id: order.id,
+          status: 'preparing',
+          success: false,
+          message: `Auto-ready failed: ${updateError.message}`
+        });
+      } else {
+        updatedCount++;
+        processedOrders.push({
+          id: order.id,
+          status: 'ready',
+          success: true,
+          message: reason,
+          prepTime: Math.round(minutesSincePrepStart)
+        });
+      }
+    } else {
+      processedOrders.push({
+        id: order.id,
+        status: 'preparing',
+        success: false,
+        message: reason,
+        prepTime: Math.round(minutesSincePrepStart)
+      });
+    }
+  }
+
+  return {
+    processed: updatedCount,
+    totalChecked: preparingOrders.length,
+    orders: processedOrders,
+    branchName: branchData.name,
+    timingSettings: {
+      kitchenPrepTime,
+      breakdown: timingSettings
+    }
+  };
+}
+
+module.exports = {
+  getOrders,
+  getOrderDetail,
+  updateOrderStatus,
+  createOrder,
+  checkAutoAccept,
+  checkOrderTimers
+};
