@@ -194,10 +194,10 @@ export const useOrderNotifications = (
       const orderCreatedAt = new Date(order.created_at || order.createdAt).getTime();
       const isAfterSessionStart = orderCreatedAt >= (sessionStartTimeRef.current - 2000); // 2s tolerance
       const isNewOrder = !previousOrdersRef.current.has(order.id);
-      const isPendingOrder = order.status === 'pending';
+      const isPreparingOrder = order.status === 'preparing';
 
       // Notify only for orders created after page open and not seen before
-      return isNewOrder && isAfterSessionStart && isPendingOrder;
+      return isNewOrder && isAfterSessionStart && isPreparingOrder;
     });
 
     // Update previous orders set

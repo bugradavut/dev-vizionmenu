@@ -256,7 +256,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       try {
         // Only poll for pending orders to detect new ones
         const response = await ordersService.getOrders({
-          status: 'pending',
+          status: 'preparing',
           limit: 50
         });
         

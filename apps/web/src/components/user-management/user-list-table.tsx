@@ -409,7 +409,9 @@ export function UserListTable({
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(user.created_at).toLocaleDateString()}
+                      {new Date(user.created_at).toLocaleDateString('en-CA', {
+                        timeZone: 'America/Toronto'
+                      })}
                     </TableCell>
                     <TableCell className="text-center">
                       {(() => {

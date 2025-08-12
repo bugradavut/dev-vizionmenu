@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useState } from "react"
+import { use, useState, useEffect, useCallback, useRef } from "react"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -15,11 +15,14 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle } from "lucide-react"
+import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle, Timer } from "lucide-react"
 import { getSourceIcon } from "@/assets/images"
 import Image from "next/image"
 import Link from "next/link"
 import { useOrderDetail } from "@/hooks/use-orders"
+import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
+import { useBranchSettings } from "@/hooks/use-branch-settings"
+import { useOrderTimer } from "@/hooks/use-order-timer"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/translations"
@@ -42,6 +45,13 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   const { language } = useLanguage()
   const t = translations[language] || translations.en
   
+  // Get branch context
+  const { branchId } = useEnhancedAuth()
+  const { settings } = useBranchSettings({ branchId: branchId || undefined })
+  
+  // Initialize timer service for auto-completion
+  const { startTimer, stopTimer } = useOrderTimer()
+  
   // Real API integration
   const { 
     order, 
@@ -51,6 +61,9 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
     clearError,
     updateStatus 
   } = useOrderDetail(orderId)
+  
+  // Timer state
+  const [currentTime, setCurrentTime] = useState(new Date())
   
   // Partial refund state
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
@@ -62,6 +75,10 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   
   // Status update loading state
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
+  
+  // Polling ref for cleanup
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  
 
   // Partial refund handlers
   const handleItemSelect = (itemId: string, checked: boolean) => {
@@ -165,6 +182,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
       // If it's today, show time only
       if (date.toDateString() === now.toDateString()) {
         return date.toLocaleTimeString('en-CA', { 
+          timeZone: 'America/Toronto',
           hour: '2-digit', 
           minute: '2-digit',
           hour12: false 
@@ -173,6 +191,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
       
       // If it's different day, show date and time
       return date.toLocaleString('en-CA', {
+        timeZone: 'America/Toronto',
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
@@ -208,7 +227,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
     const iconSrc = getSourceIcon(source)
     const label = getSourceLabel(source)
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
         <Image 
           src={iconSrc}
           alt={`${source} icon`}
@@ -221,17 +240,13 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
     )
   }
 
-  const getProgressValue = () => {
-    if (!order) return 0;
-    const statusOrder = ['pending', 'preparing', 'ready', 'completed']
-    const currentIndex = statusOrder.indexOf(order.status)
-    return currentIndex >= 0 ? ((currentIndex + 1) / statusOrder.length) * 100 : 0
-  }
+  // Progress calculation now handled directly in JSX with 2-step progress bars
 
   const renderTimelineIcon = (status: string) => {
     if (!order) return <Circle className="h-5 w-5 text-gray-400" />;
-    const statusOrder = ['pending', 'preparing', 'ready', 'completed']
-    const currentIndex = statusOrder.indexOf(order.status)
+    const statusOrder = ['preparing', 'completed']
+    const currentOrderStatus = order.status === 'ready' ? 'completed' : order.status
+    const currentIndex = statusOrder.indexOf(currentOrderStatus)
     const stepIndex = statusOrder.indexOf(status)
     
     if (stepIndex <= currentIndex) {
@@ -242,6 +257,115 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
       return <Circle className="h-5 w-5 text-gray-400" />
     }
   }
+
+  // Calculate timer information for auto-ready
+  const getTimerInfo = useCallback(() => {
+    if (!order || order.status !== 'preparing' || !settings.timingSettings?.autoReady) {
+      return null
+    }
+
+    const timingSettings = settings.timingSettings
+    const kitchenPrepTime = timingSettings.baseDelay + timingSettings.temporaryBaseDelay
+    
+    // Use updated_at as reference time (when order moved to preparing)
+    const prepStartTime = new Date(order.updated_at)
+    const elapsedMinutes = (currentTime.getTime() - prepStartTime.getTime()) / (1000 * 60)
+    const remainingMinutes = Math.max(0, kitchenPrepTime - elapsedMinutes)
+    
+    const isComplete = remainingMinutes <= 0
+    const progressPercent = Math.min(100, (elapsedMinutes / kitchenPrepTime) * 100)
+    
+    // Calculate remaining seconds for countdown
+    const remainingSeconds = isComplete ? 0 : Math.floor(((kitchenPrepTime * 60) - (elapsedMinutes * 60)) % 60)
+    const remainingMins = isComplete ? 0 : Math.floor(remainingMinutes)
+
+    // Check if third-party order (requires manual completion)
+    const isThirdParty = order.source && ['uber_eats', 'doordash', 'phone'].includes(order.source)
+    
+    return {
+      kitchenPrepTime,
+      elapsedMinutes: Math.floor(elapsedMinutes),
+      remainingMinutes: remainingMins,
+      remainingSeconds,
+      isComplete,
+      progressPercent,
+      isThirdParty,
+      canAutoComplete: !isThirdParty && isComplete
+    }
+  }, [order, currentTime, settings.timingSettings])
+
+  const timerInfo = getTimerInfo()
+
+  // Smart timer with auto-completion detection
+  useEffect(() => {
+    // Clear any existing polling
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current)
+      pollingIntervalRef.current = null
+    }
+
+    if (order?.status === 'preparing' && settings.timingSettings?.autoReady) {
+      // Visual countdown timer (every second)
+      const visualTimer = setInterval(() => {
+        setCurrentTime(new Date())
+      }, 1000)
+      
+      // Check if timer is complete
+      const currentTimerInfo = getTimerInfo()
+      if (currentTimerInfo?.isComplete) {
+        // Timer completed, start frequent polling to catch backend auto-completion
+        pollingIntervalRef.current = setInterval(async () => {
+          try {
+            await refetch()
+            
+            // If order is now completed, stop polling
+            if (order?.status === 'completed') {
+              if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current)
+                pollingIntervalRef.current = null
+              }
+            }
+          } catch {
+            // Silent error handling
+          }
+        }, 5000) // 5 seconds for even faster detection
+        
+        return () => {
+          clearInterval(visualTimer)
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current)
+            pollingIntervalRef.current = null
+          }
+        }
+      }
+      
+      return () => {
+        clearInterval(visualTimer)
+      }
+    }
+  }, [order?.status, order?.updated_at, settings.timingSettings?.autoReady, refetch, getTimerInfo])
+  
+  // Start timer service for auto-completion
+  useEffect(() => {
+    if (settings.timingSettings?.autoReady) {
+      startTimer()
+    } else {
+      stopTimer()
+    }
+    
+    return () => stopTimer()
+  }, [settings.timingSettings?.autoReady, startTimer, stopTimer])
+  
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
+      }
+    }
+  }, [])
+
 
   // Loading and error states
   if (loading) {
@@ -318,10 +442,22 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
         <AppSidebar />
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-            <div className="flex items-center gap-2 px-4">
-              <SidebarTrigger className="-ml-1" />
-              <Separator orientation="vertical" className="mr-2 h-4" />
-              <DynamicBreadcrumb />
+            <div className="flex items-center justify-between w-full px-4">
+              <div className="flex items-center gap-2">
+                <SidebarTrigger className="-ml-1" />
+                <Separator orientation="vertical" className="mr-2 h-4" />
+                <DynamicBreadcrumb />
+              </div>
+              
+              {/* Auto-Ready Mode Badge - Show when auto-ready is enabled */}
+              {settings.timingSettings?.autoReady && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-blue-700 font-medium">
+                    Auto-Ready: Active
+                  </span>
+                </div>
+              )}
             </div>
           </header>
           
@@ -366,27 +502,43 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         <AccordionTrigger className="hover:no-underline px-6">
                           <div className="flex items-center gap-2">
                             <Clock className="h-5 w-5" />
-                            <span className="font-medium">{t.orderDetail.orderProgress} ({Math.round(getProgressValue())}{t.orderDetail.percentComplete})</span>
+                            <span className="font-medium">{t.orderDetail.orderProgress}</span>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="px-0 pb-0">
                           <Separator />
                           <CardContent className="p-6">
                             <div className="space-y-4">
-                              <div className="mb-4 relative">
-                                <Progress value={getProgressValue()} className="h-3" />
-                                <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                                  <span>0%</span>
-                                  <span>25%</span>
-                                  <span>50%</span>
-                                  <span>75%</span>
-                                  <span>100%</span>
+                              {/* Two-Step Progress Bar */}
+                              <div className="mb-4">
+                                <div className="flex gap-2">
+                                  {/* Step 1: Preparing */}
+                                  <div className="flex-1">
+                                    <div className="mb-2 text-left">
+                                      <span className="text-xs text-muted-foreground">{t.orderDetail.preparing}</span>
+                                    </div>
+                                    <Progress 
+                                      value={order.status === 'preparing' || order.status === 'ready' || order.status === 'completed' ? 100 : 0} 
+                                      className="h-3 bg-gray-300" 
+                                    />
+                                  </div>
+                                  
+                                  {/* Step 2: Completed */}
+                                  <div className="flex-1">
+                                    <div className="mb-2 text-right">
+                                      <span className="text-xs text-muted-foreground">{t.orderDetail.completed}</span>
+                                    </div>
+                                    <Progress 
+                                      value={order.status === 'completed' || order.status === 'ready' ? 100 : 0} 
+                                      className="h-3 bg-gray-300" 
+                                    />
+                                  </div>
                                 </div>
                               </div>
                               <div className="space-y-3">
-                                {['pending', 'preparing', 'ready', 'completed'].map((status) => {
-                                  const statusOrder = ['pending', 'preparing', 'ready', 'completed']
-                                  const currentIndex = statusOrder.indexOf(order.status)
+                                {['preparing', 'completed'].map((status) => {
+                                  const statusOrder = ['preparing', 'completed']
+                                  const currentIndex = statusOrder.indexOf(order.status === 'ready' ? 'completed' : order.status)
                                   const stepIndex = statusOrder.indexOf(status)
                                   const isCompleted = stepIndex <= currentIndex
                                   
@@ -396,9 +548,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                       <div className="flex-1">
                                         <div className="flex items-center justify-between">
                                           <p className={`text-sm font-medium ${isCompleted ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                            {status === 'pending' && t.orderDetail.orderReceived}
-                                            {status === 'preparing' && t.orderDetail.kitchenPreparing}
-                                            {status === 'ready' && t.orderDetail.orderReady}
+                                            {status === 'preparing' && t.orderDetail.orderPreparing}
                                             {status === 'completed' && t.orderDetail.orderCompleted}
                                           </p>
                                         </div>
@@ -706,11 +856,17 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{t.orderDetail.orderDate}</span>
-                          <span>{new Date(order.created_at).toLocaleDateString('en-CA')}</span>
+                          <span>{new Date(order.created_at).toLocaleDateString('en-CA', {
+                            timeZone: 'America/Toronto'
+                          })}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{t.orderDetail.orderTime}</span>
-                          <span>{new Date(order.created_at).toLocaleTimeString('en-CA')}</span>
+                          <span>{new Date(order.created_at).toLocaleTimeString('en-CA', {
+                            timeZone: 'America/Toronto',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{t.orderDetail.estTime}</span>
@@ -727,21 +883,69 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                     </CardHeader>
                     <Separator />
                     <CardContent className="space-y-3 p-6">
+                      {/* Auto-Ready Timer Display */}
+                      {timerInfo && (
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Timer className="h-4 w-4 text-orange-600" />
+                              <span className="text-sm font-medium text-orange-900">
+                                Preparation Timer
+                              </span>
+                            </div>
+                            <div className="text-sm font-mono font-bold text-orange-700">
+                              {timerInfo.isComplete ? (
+                                <span className="text-green-600 animate-pulse">00:00</span>
+                              ) : (
+                                <span>
+                                  {String(timerInfo.remainingMinutes).padStart(2, '0')}:
+                                  {String(timerInfo.remainingSeconds).padStart(2, '0')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Progress bar */}
+                          <div className="w-full bg-gray-300 rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full transition-all duration-500 ${
+                                timerInfo.isComplete 
+                                  ? 'bg-green-500 animate-pulse' 
+                                  : 'bg-orange-500'
+                              }`}
+                              style={{ width: `${Math.min(timerInfo.progressPercent, 100)}%` }}
+                            ></div>
+                          </div>
+                          
+                          {/* Status text - only show when timer is complete */}
+                          {timerInfo.isComplete && (
+                            <div className="text-xs text-orange-700">
+                              {timerInfo.canAutoComplete ? (
+                                <span className="font-medium text-green-700">Ready for completion</span>
+                              ) : (
+                                <span className="font-medium">Manual completion required (third-party order)</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Order Status Actions */}
-                      {order.status === 'pending' && (
+                      {order.status === 'preparing' && (
                         <div className="space-y-3">
+                          {/* Mark Ready Button */}
                           <Button 
-                            onClick={() => handleStatusUpdate('preparing')}
+                            onClick={() => handleStatusUpdate('completed')}
                             disabled={updatingStatus !== null}
-                            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-medium py-3 rounded-lg transition-colors"
+                            className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors"
                           >
-                            {updatingStatus === 'preparing' ? (
+                            {updatingStatus === 'completed' ? (
                               <>
                                 <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                                {t.orderDetail.accepting}
+                                {t.orderDetail.markingReady}
                               </>
                             ) : (
-                              t.orderDetail.acceptOrder
+                              t.orderDetail.markReady
                             )}
                           </Button>
                           <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
@@ -797,34 +1001,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         </div>
                       )}
                       
-                      {order.status === 'preparing' && (
-                        <div className="space-y-3">
-                          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                            <div className="flex items-center gap-2 text-orange-700">
-                              <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                              <span className="font-medium">{t.orderDetail.kitchenPreparing2}</span>
-                            </div>
-                            <p className="text-sm text-orange-600 mt-1">
-                              {t.orderDetail.waitingKitchen}
-                            </p>
-                          </div>
-                          <Button 
-                            onClick={() => handleStatusUpdate('cancelled')}
-                            disabled={updatingStatus !== null}
-                            variant="outline" 
-                            className="w-full border-red-300 text-red-700 hover:bg-red-50 py-2.5 rounded-lg transition-colors"
-                          >
-                            {updatingStatus === 'cancelled' ? (
-                              <>
-                                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                                {t.orderDetail.cancelling}
-                              </>
-                            ) : (
-                              t.orderDetail.cancelOrder
-                            )}
-                          </Button>
-                        </div>
-                      )}
+                      {/* Preparing status info removed - direct ready button only */}
                       
                       {order.status === 'ready' && (
                         <div className="space-y-3">

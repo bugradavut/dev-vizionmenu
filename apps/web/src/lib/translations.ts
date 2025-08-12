@@ -35,16 +35,9 @@ export const translations = {
     liveOrders: {
       pageTitle: "Live Orders",
       pageSubtitle: "Monitor and manage active orders in real-time",
-      simplifiedModeActive: "Simplified Mode: Active",
       viewLabel: "View:",
       searchPlaceholder: "Search orders, customer, phone",
-      filterAll: "All",
-      filterNewOrders: "New Orders",
-      filterPreparing: "Preparing",
-      filterReady: "Ready",
-      statusPending: "Pending",
       statusPreparing: "Preparing",
-      statusReady: "Ready",
       statusCompleted: "Completed",
       statusRejected: "Rejected",
       statusCancelled: "Cancelled",
@@ -110,9 +103,8 @@ export const translations = {
       customerInformation: "Customer Information",
       
       // Order Progress Steps
-      orderReceived: "Order received and pending confirmation",
+      orderPreparing: "Order is being prepared",
       kitchenPreparing: "Kitchen is preparing your order", 
-      orderReady: "Order is ready for pickup/delivery",
       orderCompleted: "Order has been completed",
       
       // Refund Section
@@ -177,12 +169,14 @@ export const translations = {
       quickActions: "Quick Actions",
       acceptOrder: "Accept Order",
       accepting: "Accepting...",
+      markReady: "Mark Ready",
+      markingReady: "Marking Ready...",
       rejectOrder: "Reject Order",
       rejecting: "Rejecting...",
       yesRejectOrder: "Yes, Reject Order",
       rejectConfirm: "Are you sure you want to reject this order? This action cannot be undone.",
       kitchenPreparing2: "Kitchen is preparing this order",
-      waitingKitchen: "Waiting for kitchen to mark as ready...",
+      waitingKitchen: "Waiting for kitchen to complete the order...",
       cancelOrder: "Cancel Order", 
       cancelling: "Cancelling...",
       markCompleted: "Mark as Completed",
@@ -193,9 +187,7 @@ export const translations = {
       orderRejectedDesc: "This order was rejected and cannot be processed",
       
       // Status Labels
-      pending: "Pending",
       preparing: "Preparing",
-      ready: "Ready",
       completed: "Completed",
       cancelled: "Cancelled",
       rejected: "Rejected"
@@ -218,23 +210,17 @@ export const translations = {
       
       // Status Overview Cards
       inProgress: "In Progress",
-      ready: "Ready",
       preOrders: "Pre-Orders",
       
       // Kanban Column Headers
       inProgressColumn: "IN PROGRESS",
-      readyColumn: "READY",
       preOrdersColumn: "PRE-ORDERS",
       
       // Order Status and Actions
       startPrep: "Start Prep",
-      markReady: "Mark Ready",
-      markReadyNow: "Mark Ready Now",
-      markingReady: "Marking Ready...",
       scheduled: "Scheduled",
       
       // Timer and Progress
-      readyForManualCheck: "Ready for manual check",
       minutesLeft: "m left",
       hoursLeft: "h",
       readyToStart: "Ready to start",
@@ -433,23 +419,7 @@ export const translations = {
         title: "Order Management Flow",
         subtitle: "Choose how your restaurant handles order progression",
         currentlyUsing: "Currently using:",
-        unsavedChanges: "(unsaved changes)",
-        
-        // Standard Flow
-        standardFlow: "Standard Flow",
-        standardDesc: "Manually control each order status with full workflow flexibility",
-        pending: "Pending",
-        confirmed: "Confirmed", 
-        preparing: "Preparing",
-        ready: "Ready",
-        
-        // Simplified Flow
-        simplifiedFlow: "Simplified Flow",
-        simplifiedDesc: "Automatic order acceptance with smart timing based on menu prep times",
-        autoAccept: "Auto-accept",
-        autoReady: "Auto Ready",
-        smartTiming: "Smart Timing",
-        smartTimingDesc: "Uses prep times from menu items • Defaults to 25 minutes • Takes longest item time for orders"
+        unsavedChanges: "(unsaved changes)"
       },
       
       // Timing Settings
@@ -530,16 +500,9 @@ export const translations = {
     liveOrders: {
       pageTitle: "Commandes en cours",
       pageSubtitle: "Surveillez et gérez les commandes actives en temps réel",
-      simplifiedModeActive: "Mode simplifié : Actif",
       viewLabel: "Affichage :",
       searchPlaceholder: "Rechercher commandes, client, téléphone",
-      filterAll: "Toutes",
-      filterNewOrders: "Nouvelles commandes",
-      filterPreparing: "En préparation",
-      filterReady: "Prêtes",
-      statusPending: "En attente",
       statusPreparing: "En préparation", 
-      statusReady: "Prête",
       statusCompleted: "Terminée",
       statusRejected: "Rejetée",
       statusCancelled: "Annulée",
@@ -605,9 +568,8 @@ export const translations = {
       customerInformation: "Informations du client",
       
       // Order Progress Steps
-      orderReceived: "Commande reçue et en attente de confirmation",
+      orderPreparing: "Commande en cours de préparation",
       kitchenPreparing: "La cuisine prépare votre commande", 
-      orderReady: "Commande prête pour la collecte/livraison",
       orderCompleted: "Commande terminée",
       
       // Refund Section
@@ -672,12 +634,14 @@ export const translations = {
       quickActions: "Actions rapides",
       acceptOrder: "Accepter la commande",
       accepting: "Acceptation...",
+      markReady: "Marquer comme prête",
+      markingReady: "Marquage en cours...",
       rejectOrder: "Rejeter la commande",
       rejecting: "Rejet...",
       yesRejectOrder: "Oui, rejeter la commande",
       rejectConfirm: "Êtes-vous sûr de vouloir rejeter cette commande? Cette action ne peut pas être annulée.",
       kitchenPreparing2: "La cuisine prépare cette commande",
-      waitingKitchen: "En attente que la cuisine marque comme prête...",
+      waitingKitchen: "En attente que la cuisine termine la commande...",
       cancelOrder: "Annuler la commande", 
       cancelling: "Annulation...",
       markCompleted: "Marquer comme terminée",
@@ -688,9 +652,7 @@ export const translations = {
       orderRejectedDesc: "Cette commande a été rejetée et ne peut pas être traitée",
       
       // Status Labels
-      pending: "En attente",
       preparing: "En préparation",
-      ready: "Prête",
       completed: "Terminée",
       cancelled: "Annulée",
       rejected: "Rejetée"
@@ -713,23 +675,17 @@ export const translations = {
       
       // Status Overview Cards
       inProgress: "En cours",
-      ready: "Prêtes",
       preOrders: "Précommandes",
       
       // Kanban Column Headers
       inProgressColumn: "EN COURS",
-      readyColumn: "PRÊTES",
       preOrdersColumn: "PRÉCOMMANDES",
       
       // Order Status and Actions
       startPrep: "Commencer la préparation",
-      markReady: "Marquer comme prête",
-      markReadyNow: "Marquer comme prête maintenant",
-      markingReady: "Marquage en cours...",
       scheduled: "Planifiée",
       
       // Timer and Progress
-      readyForManualCheck: "Prête pour vérification manuelle",
       minutesLeft: "min restantes",
       hoursLeft: "h",
       readyToStart: "Prête à commencer",
@@ -928,23 +884,7 @@ export const translations = {
         title: "Flux de gestion des commandes",
         subtitle: "Choisissez comment votre restaurant gère la progression des commandes",
         currentlyUsing: "Actuellement utilisé :",
-        unsavedChanges: "(modifications non sauvegardées)",
-        
-        // Standard Flow
-        standardFlow: "Flux standard",
-        standardDesc: "Contrôlez manuellement chaque statut de commande avec une flexibilité complète du flux de travail",
-        pending: "En attente",
-        confirmed: "Confirmée", 
-        preparing: "En préparation",
-        ready: "Prête",
-        
-        // Simplified Flow
-        simplifiedFlow: "Flux simplifié",
-        simplifiedDesc: "Acceptation automatique des commandes avec chronométrage intelligent basé sur les temps de préparation du menu",
-        autoAccept: "Acceptation automatique",
-        autoReady: "Prête automatiquement",
-        smartTiming: "Chronométrage intelligent",
-        smartTimingDesc: "Utilise les temps de préparation des articles du menu • Par défaut 25 minutes • Prend le temps de l'article le plus long pour les commandes"
+        unsavedChanges: "(modifications non sauvegardées)"
       },
       
       // Timing Settings

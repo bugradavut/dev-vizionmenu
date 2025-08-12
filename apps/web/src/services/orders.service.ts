@@ -40,7 +40,7 @@ export interface Order {
   orderNumber: string;
   customer: OrderCustomer;
   source: 'qr_code' | 'uber_eats' | 'doordash' | 'phone' | 'web';
-  status: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'rejected';
+  status: 'preparing' | 'ready' | 'completed' | 'cancelled' | 'rejected';
   order_type: string;
   table_number?: string;
   payment_method?: string;
@@ -73,7 +73,7 @@ export interface OrdersListResponse {
 }
 
 export interface OrderStatusUpdateRequest {
-  status: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'rejected';
+  status: 'preparing' | 'ready' | 'completed' | 'cancelled' | 'rejected';
   notes?: string;
 }
 
@@ -151,12 +151,12 @@ class OrdersService {
   }
 
   /**
-   * Get live orders (pending, preparing, ready)
+   * Get live orders (preparing only in new simplified flow)
    */
   async getLiveOrders(params?: Omit<OrderListParams, 'status'>): Promise<ApiResponse<OrdersListResponse>> {
     return this.getOrders({
       ...params,
-      status: 'pending,preparing,ready'
+      status: 'preparing'
     });
   }
 

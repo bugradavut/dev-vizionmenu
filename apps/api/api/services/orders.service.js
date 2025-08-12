@@ -256,7 +256,7 @@ async function getOrderDetail(orderId, userBranch) {
       email: existingOrder.customer_email
     },
     source: existingOrder.third_party_platform || (existingOrder.table_number ? 'qr_code' : 'web'), // 'qr_code' | 'uber_eats' | 'doordash' | 'phone' | 'web'
-    status: existingOrder.order_status, // 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled'
+    status: existingOrder.order_status, // 'preparing' | 'ready' | 'completed' | 'cancelled' | 'rejected'
     order_type: existingOrder.order_type,
     table_number: existingOrder.table_number,
     payment_method: existingOrder.payment_method,
@@ -301,8 +301,8 @@ async function getOrderDetail(orderId, userBranch) {
 async function updateOrderStatus(orderId, updateData, userBranch) {
   const { status, notes, estimated_ready_time } = updateData;
   
-  // Validation
-  const validStatuses = ['pending', 'preparing', 'ready', 'completed', 'cancelled', 'rejected'];
+  // Validation - Updated for new 2-step flow: preparing → completed
+  const validStatuses = ['preparing', 'completed', 'cancelled', 'rejected'];
   if (!status || !validStatuses.includes(status)) {
     throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
   }
@@ -353,22 +353,7 @@ async function updateOrderStatus(orderId, updateData, userBranch) {
     throw new Error('Order not found or access denied');
   }
 
-  // Get branch settings to check for simplified flow auto-accept logic
-  const { data: branchData, error: branchError } = await supabase
-    .from('branches')
-    .select('settings')
-    .eq('id', userBranch.branch_id)
-    .single();
-
-  let shouldAutoAccept = false;
-  if (!branchError && branchData?.settings) {
-    const orderFlow = branchData.settings.orderFlow || 'standard';
-    
-    // Auto-accept logic for Simplified Flow
-    if (orderFlow === 'simplified' && existingOrder.order_status === 'pending' && status === 'preparing') {
-      shouldAutoAccept = true;
-    }
-  }
+  // Note: Auto-accept logic removed - all orders now start as 'preparing'
 
   // Prepare update data
   const updateDataObj = {
@@ -439,7 +424,7 @@ async function createOrder(orderData, branchId) {
     customer_email: customer.email || null,
     order_type: orderType,
     table_number: tableNumber || null,
-    order_status: 'pending', // Always start as pending
+    order_status: 'preparing', // New flow: auto-accept all orders
     payment_status: 'pending',
     subtotal: subtotal,
     tax_amount: taxAmount,
@@ -512,12 +497,12 @@ async function checkAutoAccept(orderId, branchId) {
     throw new Error('Order not found');
   }
 
-  // Only process pending orders
-  if (orderData.order_status !== 'pending') {
+  // Note: All orders now start as 'preparing', no pending status check needed
+  if (orderData.order_status !== 'preparing') {
     return {
       autoAccepted: false,
       status: orderData.order_status,
-      message: `Order already has status: ${orderData.order_status}`
+      message: `Order already processed: ${orderData.order_status}`
     };
   }
 
@@ -591,7 +576,7 @@ async function checkAutoAccept(orderId, branchId) {
 }
 
 /**
- * Check and auto-advance orders from 'preparing' to 'ready' based on timing settings
+ * Check and auto-advance orders from 'preparing' to 'completed' based on timing settings and auto-ready toggle
  * @param {string} branchId - Branch ID
  * @returns {Object} Timer check results
  */
@@ -607,24 +592,23 @@ async function checkOrderTimers(branchId) {
     throw new Error('Branch not found');
   }
 
-  const orderFlow = branchData.settings?.orderFlow || 'standard';
-  
-  // Only process orders for Simplified Flow
-  if (orderFlow !== 'simplified') {
-    return {
-      processed: 0,
-      orders: [],
-      message: 'Branch uses Standard Flow - no automatic timer processing'
-    };
-  }
-
-  // Get timing settings
+  // Get timing settings (including autoReady toggle)
   const timingSettings = branchData.settings?.timingSettings || {
     baseDelay: 20,
     temporaryBaseDelay: 0,
     deliveryDelay: 15,
     temporaryDeliveryDelay: 0,
+    autoReady: false
   };
+
+  // Check if auto-ready is enabled
+  if (!timingSettings.autoReady) {
+    return {
+      processed: 0,
+      orders: [],
+      message: 'Auto-ready disabled - manual order progression required'
+    };
+  }
 
   // Calculate total preparation time in minutes
   // Kitchen prep time - only base + temporary (no delivery time for kitchen)
@@ -660,34 +644,34 @@ async function checkOrderTimers(branchId) {
     const prepStartTime = new Date(order.updated_at);
     const minutesSincePrepStart = (now.getTime() - prepStartTime.getTime()) / (1000 * 60);
     
-    let shouldAutoReady = false;
+    let shouldAutoComplete = false;
     let reason = '';
 
-    // Auto-ready logic based on order type and timing
+    // Auto-complete logic based on order type and timing
     if (minutesSincePrepStart >= kitchenPrepTime) {
-      // For internal orders (QR code, web, or null platform), auto-ready is allowed
+      // For internal orders (QR code, web, or null platform), auto-complete is allowed
       if (!order.third_party_platform || ['qr_code', 'web'].includes(order.third_party_platform)) {
-        shouldAutoReady = true;
-        reason = `Internal order auto-ready after ${Math.round(minutesSincePrepStart)} minutes`;
+        shouldAutoComplete = true;
+        reason = `Internal order auto-completed after ${Math.round(minutesSincePrepStart)} minutes`;
       }
       // For third-party orders, respect manual ready option
       else if (['uber_eats', 'doordash', 'phone'].includes(order.third_party_platform)) {
-        // Third-party orders always require manual confirmation for 'ready' status
-        // This is a business rule regardless of manualReadyOption setting
-        shouldAutoReady = false;
-        reason = `Third-party order requires manual 'Ready' confirmation (${Math.round(minutesSincePrepStart)} min elapsed)`;
+        // Third-party orders always require manual confirmation for completion
+        // This is a business rule for external platform compatibility
+        shouldAutoComplete = false;
+        reason = `Third-party order requires manual completion confirmation (${Math.round(minutesSincePrepStart)} min elapsed)`;
       }
     } else {
       const remainingMinutes = Math.ceil(kitchenPrepTime - minutesSincePrepStart);
       reason = `Timer pending: ${remainingMinutes} minutes remaining`;
     }
 
-    if (shouldAutoReady) {
-      // Update order to ready status
+    if (shouldAutoComplete) {
+      // Update order to completed status (new 2-step flow: preparing → completed)
       const { data: updatedOrder, error: updateError } = await supabase
         .from('orders')
         .update({ 
-          order_status: 'ready',
+          order_status: 'completed',
           updated_at: now.toISOString()
         })
         .eq('id', order.id)
@@ -695,18 +679,18 @@ async function checkOrderTimers(branchId) {
         .single();
 
       if (updateError) {
-        console.error(`Failed to auto-ready order ${order.id}:`, updateError);
+        console.error(`Failed to auto-complete order ${order.id}:`, updateError);
         processedOrders.push({
           id: order.id,
           status: 'preparing',
           success: false,
-          message: `Auto-ready failed: ${updateError.message}`
+          message: `Auto-complete failed: ${updateError.message}`
         });
       } else {
         updatedCount++;
         processedOrders.push({
           id: order.id,
-          status: 'ready',
+          status: 'completed',
           success: true,
           message: reason,
           prepTime: Math.round(minutesSincePrepStart)
@@ -730,6 +714,7 @@ async function checkOrderTimers(branchId) {
     branchName: branchData.name,
     timingSettings: {
       kitchenPrepTime,
+      autoReady: timingSettings.autoReady,
       breakdown: timingSettings
     }
   };

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useCallback, useMemo } from "react"
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -12,6 +12,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -42,7 +43,8 @@ const transformOrderForKitchen = (order: Order): KitchenOrder => {
     customerName: order.customer?.name || 'Unknown Customer',
     customerPhone: order.customer?.phone || '',
     status: mapApiStatusToKitchenStatus(order.status),
-    orderTime: new Date(order.created_at).toLocaleTimeString('en-US', { 
+    orderTime: new Date(order.created_at).toLocaleTimeString('en-CA', { 
+      timeZone: 'America/Toronto',
       hour: '2-digit', 
       minute: '2-digit' 
     }),
@@ -63,14 +65,10 @@ const transformOrderForKitchen = (order: Order): KitchenOrder => {
 // Map API order status to kitchen display status
 const mapApiStatusToKitchenStatus = (apiStatus: Order['status']): KitchenOrder['status'] => {
   switch (apiStatus) {
-    case 'pending':
-      return 'accepted' // This won't appear in kitchen (filtered at API level)
     case 'preparing':
-      return 'preparing' // Show in "In Progress" - ready for Mark Ready button
-    case 'ready':
-      return 'ready'
+      return 'preparing' // Show in "In Progress" - ready for Mark Completed button
     default:
-      return 'accepted'
+      return 'preparing'
   }
 }
 
@@ -79,7 +77,7 @@ interface KitchenOrder {
   orderNumber: string
   customerName: string
   customerPhone: string
-  status: 'accepted' | 'preparing' | 'ready'
+  status: 'accepted' | 'preparing'
   orderTime: string
   isPreOrder: boolean
   scheduledFor: string | null
@@ -135,7 +133,7 @@ export default function KitchenDisplayPage() {
     localStorage.removeItem(key);
   }, []);
 
-  // Use orders hook for kitchen display with Realtime (pending, preparing, ready orders)
+  // Use orders hook for kitchen display with Realtime (only preparing orders in new simplified flow)
   const { 
     orders: apiOrders, 
     loading, 
@@ -144,7 +142,7 @@ export default function KitchenDisplayPage() {
     refetch,
     clearError 
   } = useOrders({
-    status: 'preparing,ready',
+    status: 'preparing',
     limit: 100 // Show more orders for kitchen
   })
 
@@ -173,16 +171,16 @@ export default function KitchenDisplayPage() {
     }
   }, [apiOrders, getCompletedItems])
 
-  // Auto-start timer service for Simplified Flow
+  // Auto-start timer service when auto-ready is enabled
   useEffect(() => {
-    if (branchSettings?.orderFlow === 'simplified') {
+    if (branchSettings?.timingSettings?.autoReady) {
       startTimer()
     } else {
       stopTimer()
     }
     
     return () => stopTimer()
-  }, [branchSettings?.orderFlow, startTimer, stopTimer])
+  }, [branchSettings?.timingSettings?.autoReady, startTimer, stopTimer])
 
   // Note: Auto-refresh removed - now using Supabase Realtime for instant kitchen updates!
 
@@ -238,6 +236,9 @@ export default function KitchenDisplayPage() {
 
   // Real-time state for smooth timer updates
   const [currentTime, setCurrentTime] = useState(new Date())
+  
+  // Polling ref for auto-completion detection
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Update timer every second for smooth progress bar
   useEffect(() => {
@@ -248,22 +249,15 @@ export default function KitchenDisplayPage() {
     return () => clearInterval(interval)
   }, [])
 
-  // Clean up local storage when orders become ready (via auto-timer or real-time updates)
+  // Clean up local storage when orders are completed (no longer shown in kitchen display)
   useEffect(() => {
-    apiOrders.forEach(order => {
-      if (order.status === 'ready') {
-        // Check if we have local storage items for this order and clear them
-        const storageKey = `kitchen_items_${order.id}`;
-        if (localStorage.getItem(storageKey)) {
-          clearOrderItems(order.id);
-        }
-      }
-    });
+    // Since we only show 'preparing' orders, completed orders are automatically removed from view
+    // No cleanup needed here as orders move directly from preparing to completed
   }, [apiOrders, clearOrderItems]) // Run when orders change
 
-  // Calculate timer progress for Simplified Flow preparing orders
-  const getTimerProgress = (order: KitchenOrder) => {
-    if (!branchSettings || branchSettings.orderFlow !== 'simplified' || order.status !== 'preparing') {
+  // Calculate timer progress for orders with auto-ready enabled
+  const getTimerProgress = useCallback((order: KitchenOrder) => {
+    if (!branchSettings || !branchSettings.timingSettings?.autoReady || order.status !== 'preparing') {
       return null
     }
 
@@ -287,6 +281,9 @@ export default function KitchenDisplayPage() {
     // Calculate elapsed minutes for display - should show completed minutes only
     const elapsedDisplayMinutes = Math.floor(elapsedMinutes) // Use floor to show only completed minutes
     
+    // Check if third-party order (requires manual completion)
+    const isThirdParty = apiOrder.source && ['uber_eats', 'doordash', 'phone'].includes(apiOrder.source)
+    
     return {
       progressPercent,
       remainingMinutes,
@@ -294,11 +291,49 @@ export default function KitchenDisplayPage() {
       totalMinutes: kitchenPrepTime,
       elapsedMinutes: elapsedDisplayMinutes,
       isOverdue: elapsedMinutes >= kitchenPrepTime,
+      isThirdParty,
+      canAutoComplete: !isThirdParty && elapsedMinutes >= kitchenPrepTime,
       remainingTimeFormatted: remainingMs > 0 
         ? `${String(remainingMinutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`
         : '00:00'
     }
-  }
+  }, [branchSettings, currentTime, apiOrders])
+
+  // Auto-completion detection for orders with completed timers
+  useEffect(() => {
+    // Clear any existing polling
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current)
+      pollingIntervalRef.current = null
+    }
+
+    if (branchSettings?.timingSettings?.autoReady && kitchenOrders.length > 0) {
+      // Check for orders that need auto-completion detection
+      const preparingOrders = kitchenOrders.filter(order => order.status === 'preparing')
+      const ordersWithCompletedTimers = preparingOrders.filter(order => {
+        const timerData = getTimerProgress(order)
+        return timerData?.canAutoComplete // Only auto-completable orders
+      })
+
+      if (ordersWithCompletedTimers.length > 0) {
+        // Start polling to detect backend auto-completion
+        pollingIntervalRef.current = setInterval(async () => {
+          try {
+            await refetch()
+          } catch (error) {
+            console.debug('Auto-completion polling failed:', error)
+          }
+        }, 5000) // Poll every 5 seconds for faster detection
+      }
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
+      }
+    }
+  }, [kitchenOrders, branchSettings?.timingSettings?.autoReady, getTimerProgress, refetch])
 
   // Toggle item completion with local storage persistence
   const toggleItemCompletion = (orderId: string, itemId: string) => {
@@ -328,7 +363,7 @@ export default function KitchenDisplayPage() {
   }
 
   // Change order status with API integration
-  const changeOrderStatus = async (orderId: string, newStatus: 'accepted' | 'preparing' | 'ready' | 'completed') => {
+  const changeOrderStatus = async (orderId: string, newStatus: 'accepted' | 'preparing' | 'completed') => {
     // Add to updating orders set
     setUpdatingOrders(prev => new Set(prev).add(orderId))
     
@@ -347,10 +382,6 @@ export default function KitchenDisplayPage() {
       } else {
         const success = await updateOrderStatus(orderId, { status: apiStatus })
         if (success) {
-          // Clear local storage when order moves to ready (kitchen done)
-          if (newStatus === 'ready') {
-            clearOrderItems(orderId)
-          }
           // Update local kitchen order status
           setKitchenOrders(prevOrders => 
             prevOrders.map(order =>
@@ -372,18 +403,16 @@ export default function KitchenDisplayPage() {
   }
 
   // Map kitchen status to API status
-  const mapKitchenStatusToApiStatus = (kitchenStatus: 'accepted' | 'preparing' | 'ready' | 'completed'): Order['status'] => {
+  const mapKitchenStatusToApiStatus = (kitchenStatus: 'accepted' | 'preparing' | 'completed'): Order['status'] => {
     switch (kitchenStatus) {
       case 'accepted':
-        return 'pending' // This shouldn't be used
+        return 'preparing' // This shouldn't be used - fallback
       case 'preparing':
         return 'preparing' // Kitchen "Start Prep" → API "preparing"
-      case 'ready':
-        return 'ready'     // Kitchen "Mark Ready" → API "ready"
       case 'completed':
-        return 'completed'
+        return 'completed' // Kitchen "Mark Completed" → API "completed"
       default:
-        return 'pending'
+        return 'preparing'
     }
   }
 
@@ -460,34 +489,24 @@ export default function KitchenDisplayPage() {
           </Button>
         )
       case 'preparing':
-        // Order is already being prepared, show Mark Ready button
+        // Order is already being prepared, show Mark Completed button
         const allItemsCompleted = order.items.every(item => item.isCompleted)
         const isUpdating = updatingOrders.has(order.id)
         return (
           <Button 
-            onClick={() => changeOrderStatus(order.id, 'ready')} 
+            onClick={() => changeOrderStatus(order.id, 'completed')} 
             disabled={!allItemsCompleted || isUpdating}
             className={`${baseClasses} bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed disabled:shadow-none`}
           >
             {isUpdating ? (
               <>
                 <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                {t.kitchenDisplay.markingReady}
+                {t.orderDetail.completing}
               </>
             ) : (
-              t.kitchenDisplay.markReady
+              t.orderDetail.markCompleted
             )}
           </Button>
-        )
-      case 'ready':
-        return (
-          <div className={`text-center ${isTableView ? 'flex justify-center' : ''}`}>
-            <div className={`px-4 py-2 text-xs font-medium text-green-600 border border-green-300 bg-green-50 rounded-md ${
-              isTableView ? 'min-w-[100px]' : ''
-            }`}>
-              {t.kitchenDisplay.ready}
-            </div>
-          </div>
         )
       default:
         return null
@@ -496,7 +515,7 @@ export default function KitchenDisplayPage() {
 
   // Filter displayed orders by status (for overview cards)
   const preparingOrders = displayedOrders.filter(order => order.status === 'preparing')
-  const readyOrders = displayedOrders.filter(order => order.status === 'ready')
+  // No ready orders column in new simplified flow - orders go directly from preparing to completed
 
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
@@ -511,12 +530,12 @@ export default function KitchenDisplayPage() {
                 <DynamicBreadcrumb />
               </div>
               
-              {/* Simplified Mode Badge */}
-              {branchSettings.orderFlow === 'simplified' && (
+              {/* Auto-Ready Mode Badge */}
+              {branchSettings?.timingSettings?.autoReady && (
                 <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-md">
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                   <span className="text-xs text-blue-700 font-medium">
-                    {t.kitchenDisplay.simplifiedModeActive}
+                    Auto-Ready: Active
                   </span>
                 </div>
               )}
@@ -618,7 +637,7 @@ export default function KitchenDisplayPage() {
             {/* Status Overview Cards - Show only in Table view */}
             {viewType === 'table' && (
               <div className="px-2 pb-6 sm:px-4 lg:px-6">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <Card className="hover:shadow-md transition-all duration-200 border-l-4 border-l-orange-500">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
@@ -628,20 +647,6 @@ export default function KitchenDisplayPage() {
                       </div>
                       <div className="bg-orange-100 p-1.5 sm:p-2 rounded-full">
                         <Utensils className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="hover:shadow-md transition-all duration-200 border-l-4 border-l-green-500">
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-xl sm:text-2xl font-bold text-green-600">{readyOrders.length}</div>
-                        <div className="text-xs sm:text-sm text-muted-foreground">{t.kitchenDisplay.ready}</div>
-                      </div>
-                      <div className="bg-green-100 p-1.5 sm:p-2 rounded-full">
-                        <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                       </div>
                     </div>
                   </CardContent>
@@ -667,7 +672,7 @@ export default function KitchenDisplayPage() {
             {/* Orders Layout - Kanban and Table Views Only */}
             <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6 min-w-0 overflow-x-hidden">
               {viewType === 'kanban' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* In Progress Column */}
                   <div className="bg-gray-50/50 rounded-lg p-4 border border-gray-200">
                     <div className="flex items-center justify-between mb-4">
@@ -704,7 +709,7 @@ export default function KitchenDisplayPage() {
                                 {getStatusBadge(order.status, order.isPreOrder)}
                               </div>
                               
-                              {/* Timer Progress Bar for Simplified Flow */}
+                              {/* Auto-Ready Timer Progress Bar */}
                               {(() => {
                                 const timerData = getTimerProgress(order)
                                 if (!timerData) return null
@@ -722,21 +727,24 @@ export default function KitchenDisplayPage() {
                                       </div>
                                       <span className="text-xs text-gray-500">
                                         {timerData.isOverdue 
-                                          ? t.kitchenDisplay.readyForManualCheck
+                                          ? "Ready for completion"
                                           : `${timerData.elapsedMinutes}m / ${timerData.totalMinutes}m`
                                         }
                                       </span>
                                     </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-2">
-                                      <div 
-                                        className={`h-2 rounded-full ${
-                                          timerData.isOverdue 
-                                            ? 'bg-green-500 animate-pulse transition-all duration-1000' 
-                                            : 'bg-orange-500 transition-all duration-500'
-                                        }`}
-                                        style={{ width: `${Math.min(timerData.progressPercent, 100)}%` }}
-                                      ></div>
-                                    </div>
+                                    <Progress 
+                                      value={Math.min(timerData.progressPercent, 100)} 
+                                      className={`h-2 bg-gray-300 ${
+                                        timerData.isOverdue ? '[&>div]:bg-green-500 [&>div]:animate-pulse' : '[&>div]:bg-orange-500'
+                                      }`}
+                                    />
+                                    
+                                    {/* Third-party order notice */}
+                                    {timerData.isThirdParty && timerData.isOverdue && (
+                                      <div className="mt-1 text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded px-2 py-1">
+                                        Third-party orders require manual completion
+                                      </div>
+                                    )}
                                     <div className="mt-2 flex gap-2">
                                       {timerData.isOverdue && (
                                         <Button 
@@ -746,14 +754,14 @@ export default function KitchenDisplayPage() {
                                           onClick={async () => {
                                             setUpdatingOrders(prev => new Set(prev).add(order.id))
                                             try {
-                                              const success = await updateOrderStatus(order.id, { status: 'ready' })
+                                              const success = await updateOrderStatus(order.id, { status: 'completed' })
                                               if (success) {
-                                                // Clear local storage when order moves to ready
+                                                // Clear local storage when order is completed
                                                 clearOrderItems(order.id)
                                               }
                                               await runManualCheck() // Update timer results
                                             } catch (error) {
-                                              console.error('Failed to mark order ready:', error)
+                                              console.error('Failed to mark order completed:', error)
                                             } finally {
                                               setUpdatingOrders(prev => {
                                                 const newSet = new Set(prev)
@@ -766,12 +774,12 @@ export default function KitchenDisplayPage() {
                                           {updatingOrders.has(order.id) ? (
                                             <>
                                               <RefreshCw className="h-3 w-3 animate-spin mr-1" />
-                                              {t.kitchenDisplay.markingReady}
+                                              {t.orderDetail.completing}
                                             </>
                                           ) : (
                                             <>
                                               <CheckCircle2 className="h-3 w-3 mr-1" />
-                                              {t.kitchenDisplay.markReadyNow}
+                                              {t.orderDetail.markCompleted}
                                             </>
                                           )}
                                         </Button>
@@ -797,14 +805,14 @@ export default function KitchenDisplayPage() {
                                             <Checkbox
                                               id={`kanban-prep-item-${item.id}`}
                                               checked={item.isCompleted}
-                                              disabled={order.status === 'accepted' || order.status === 'ready'}
+                                              disabled={order.status === 'accepted'}
                                               onCheckedChange={() => toggleItemCompletion(order.id, item.id)}
                                               className="mt-0.5 data-[state=checked]:bg-green-600"
                                             />
                                             <label 
                                               htmlFor={`kanban-prep-item-${item.id}`}
                                               className={`flex-1 text-xs ${
-                                                order.status === 'accepted' || order.status === 'ready' 
+                                                order.status === 'accepted' 
                                                   ? 'cursor-not-allowed opacity-50' 
                                                   : 'cursor-pointer'
                                               } ${
@@ -854,104 +862,6 @@ export default function KitchenDisplayPage() {
                         </div>
                         ))
                       )}
-                    </div>
-                  </div>
-
-                  {/* Ready Column */}
-                  <div className="bg-gray-50/50 rounded-lg p-4 border border-gray-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                        <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wide">{t.kitchenDisplay.readyColumn}</h3>
-                      </div>
-                      <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                        {readyOrders.length}
-                      </span>
-                    </div>
-                    <div className="space-y-3">
-                      {readyOrders.map((order) => (
-                        <div 
-                          key={`ready-${order.id}`}
-                          className="animate-in fade-in-0 slide-in-from-left-4 duration-700"
-                        >
-                          <Card className={`hover:shadow-lg transition-all duration-300 ease-in-out ${
-                            order.isPreOrder 
-                              ? 'bg-yellow-50 border-yellow-200 border-2' 
-                              : ''
-                          }`}>
-                            <CardContent className="p-4">
-                              <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
-                                <div>
-                                  <div className="text-sm font-bold">{order.orderNumber}</div>
-                                  <div className="text-xs text-muted-foreground">{order.orderTime} - {order.customerName}</div>
-                                </div>
-                                {getStatusBadge(order.status, order.isPreOrder)}
-                              </div>
-                              
-                              {/* Order Items - Read Only for Ready Status */}
-                              <div className="mb-3 pb-3 border-b border-gray-200">
-                                <div className="space-y-2">
-                                  {(() => {
-                                    const isExpanded = expandedOrders.has(order.id)
-                                    const maxVisibleItems = 2
-                                    const visibleItems = isExpanded ? order.items : order.items.slice(0, maxVisibleItems)
-                                    const hiddenItemsCount = order.items.length - maxVisibleItems
-                                    
-                                    return (
-                                      <>
-                                        {visibleItems.map((item) => (
-                                          <div key={item.id} className="flex items-start space-x-2">
-                                            <Checkbox
-                                              id={`kanban-ready-item-${item.id}`}
-                                              checked={true}
-                                              disabled={true}
-                                              className="mt-0.5 data-[state=checked]:bg-green-600 opacity-60"
-                                            />
-                                            <label 
-                                              className="flex-1 text-xs text-muted-foreground line-through cursor-default"
-                                            >
-                                              {item.quantity}x {item.name}
-                                              {item.specialInstructions && (
-                                                <div className="text-xs text-orange-500/70 mt-1">
-                                                  ⚠️ {item.specialInstructions}
-                                                </div>
-                                              )}
-                                            </label>
-                                          </div>
-                                        ))}
-                                        
-                                        {order.items.length > maxVisibleItems && (
-                                          <button
-                                            onClick={() => toggleOrderExpansion(order.id)}
-                                            className="flex items-center justify-center w-full py-1 text-xs text-muted-foreground hover:text-foreground transition-colors border border-dashed border-gray-300 rounded-md hover:border-gray-400"
-                                          >
-                                            {isExpanded ? (
-                                              <>
-                                                <ChevronUp className="h-3 w-3 mr-1" />
-                                                {t.kitchenDisplay.showLess}
-                                              </>
-                                            ) : (
-                                              <>
-                                                <ChevronDown className="h-3 w-3 mr-1" />
-                                                +{hiddenItemsCount} {t.kitchenDisplay.more}
-                                              </>
-                                            )}
-                                          </button>
-                                        )}
-                                      </>
-                                    )
-                                  })()}
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center justify-between">
-                                <div className="text-sm font-bold">${order.total.toFixed(2)}</div>
-                                {getActionButton(order)}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-                      ))}
                     </div>
                   </div>
 
@@ -1051,30 +961,35 @@ export default function KitchenDisplayPage() {
                                         {getRemainingTime(order.scheduledFor)}
                                       </div>
                                     )}
-                                    {/* Timer Progress for Simplified Flow preparing orders */}
+                                    {/* Auto-Ready Timer Progress */}
                                     {(() => {
                                       const timerData = getTimerProgress(order)
                                       if (!timerData) return null
                                       
                                       return (
                                         <div className="mt-1">
-                                          <div className="flex items-center justify-between mb-1">
-                                            <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                              <div 
-                                                className={`h-1.5 rounded-full ${
-                                                  timerData.isOverdue 
-                                                    ? 'bg-green-500 animate-pulse transition-all duration-1000' 
-                                                    : 'bg-orange-500 transition-all duration-500'
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <div className="flex-1">
+                                              <Progress 
+                                                value={Math.min(timerData.progressPercent, 100)} 
+                                                className={`h-2 bg-gray-300 ${
+                                                  timerData.isOverdue ? '[&>div]:bg-green-500 [&>div]:animate-pulse' : '[&>div]:bg-orange-500'
                                                 }`}
-                                                style={{ width: `${Math.min(timerData.progressPercent, 100)}%` }}
-                                              ></div>
+                                              />
                                             </div>
-                                            <span className={`ml-2 text-xs font-mono font-medium whitespace-nowrap ${
+                                            <span className={`text-xs font-mono font-medium whitespace-nowrap ${
                                               timerData.isOverdue ? 'text-green-600' : 'text-gray-600'
                                             }`}>
                                               {timerData.isOverdue ? '00:00' : timerData.remainingTimeFormatted}
                                             </span>
                                           </div>
+                                          
+                                          {/* Third-party order notice */}
+                                          {timerData.isThirdParty && timerData.isOverdue && (
+                                            <div className="mt-1 text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded px-2 py-1">
+                                              Third-party orders require manual completion
+                                            </div>
+                                          )}
                                         </div>
                                       )
                                     })()}
@@ -1140,14 +1055,14 @@ export default function KitchenDisplayPage() {
                                           <Checkbox
                                             id={`table-item-${item.id}`}
                                             checked={item.isCompleted}
-                                            disabled={order.status === 'accepted' || order.status === 'ready'}
+                                            disabled={order.status === 'accepted'}
                                             onCheckedChange={() => toggleItemCompletion(order.id, item.id)}
                                             className="mt-0.5 data-[state=checked]:bg-green-600"
                                           />
                                           <label 
                                             htmlFor={`table-item-${item.id}`}
                                             className={`flex-1 text-sm ${
-                                              order.status === 'accepted' || order.status === 'ready' 
+                                              order.status === 'accepted' 
                                                 ? 'cursor-not-allowed opacity-50' 
                                                 : 'cursor-pointer'
                                             } ${

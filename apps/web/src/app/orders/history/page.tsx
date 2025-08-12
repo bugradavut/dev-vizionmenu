@@ -152,9 +152,6 @@ export default function OrderHistoryPage() {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      pending: "outline",
-      preparing: "secondary", 
-      ready: "default",
       completed: "default",
       rejected: "destructive",
       cancelled: "destructive"
@@ -184,7 +181,22 @@ export default function OrderHistoryPage() {
 
   const getFilteredOrders = () => {
     // Sort orders client-side (API filtering is handled server-side)
-    const sortedOrders = [...orders].sort((a, b) => {
+    let filteredOrders = [...orders]
+    
+    // Client-side search filter for immediate response
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filteredOrders = filteredOrders.filter(order => 
+        order.id.toLowerCase().includes(query) ||
+        order.orderNumber.toLowerCase().includes(query) ||
+        (order.customer?.name && order.customer.name.toLowerCase().includes(query)) ||
+        (order.customer?.phone && order.customer.phone.toLowerCase().includes(query)) ||
+        (order.customer?.email && order.customer.email.toLowerCase().includes(query))
+      )
+    }
+    
+    // Sort orders
+    const sortedOrders = filteredOrders.sort((a, b) => {
       const dateA = new Date(a.created_at)
       const dateB = new Date(b.created_at)
       return sortOrder === 'newest' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime()
@@ -247,6 +259,15 @@ export default function OrderHistoryPage() {
           disabled={loading}
         >
           {t.orderHistory.filterCancelled}
+        </Button>
+        <Button
+          variant={statusFilter === 'rejected' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleStatusFilterChange('rejected')}
+          className="h-9 text-sm flex-shrink-0"
+          disabled={loading}
+        >
+          {t.orderHistory.filterRejected}
         </Button>
         <Button
           variant="outline"
@@ -453,7 +474,9 @@ export default function OrderHistoryPage() {
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">${order.pricing.total.toFixed(2)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(order.created_at).toLocaleDateString('en-CA')}
+                      {new Date(order.created_at).toLocaleDateString('en-CA', {
+                        timeZone: 'America/Toronto'
+                      })}
                     </TableCell>
                     <TableCell className="text-center">
                       <Link href={`/orders/${order.orderNumber}?context=history`}>
@@ -537,10 +560,13 @@ export default function OrderHistoryPage() {
                       <div className="text-right">
                         <div className="text-sm font-bold text-foreground">{order.orderNumber}</div>
                         <div className="text-xs text-muted-foreground">
-                          {new Date(order.created_at).toLocaleDateString('en-CA')}
+                          {new Date(order.created_at).toLocaleDateString('en-CA', {
+                        timeZone: 'America/Toronto'
+                      })}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {new Date(order.created_at).toLocaleTimeString('en-CA', { 
+                            timeZone: 'America/Toronto',
                             hour: '2-digit', 
                             minute: '2-digit' 
                           })}

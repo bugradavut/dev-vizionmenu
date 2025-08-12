@@ -80,7 +80,11 @@
       "Bash(echo $NODE_ENV)",
       "Bash(rg:*)",
       "Bash(set SUPABASE_ACCESS_TOKEN=sbp_8b1716a002dc9a9102e02f7ef5cd65d577c473ac)",
-      "mcp__supabase__list_projects"
+      "mcp__supabase__list_projects",
+      "Bash(git clean:*)",
+      "Bash(del index.backup.js index.clean.js index.ts)",
+      "Bash(git rm:*)",
+      "Bash(git log:*)"
     ],
     "deny": []
   },

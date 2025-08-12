@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { ArrowRight, CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw } from "lucide-react"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
@@ -48,9 +49,14 @@ export default function BranchSettingsPage() {
     }
   }
 
-  // Handle order flow change
-  const handleOrderFlowChange = (newFlow: 'standard' | 'simplified') => {
-    updateSettings({ orderFlow: newFlow })
+  // Handle auto-ready toggle
+  const handleAutoReadyChange = (enabled: boolean) => {
+    updateSettings({
+      timingSettings: {
+        ...settings.timingSettings,
+        autoReady: enabled
+      }
+    })
   }
 
   // Handle timing settings changes
@@ -149,106 +155,61 @@ export default function BranchSettingsPage() {
                       <CardHeader className="pb-4 border-b mb-6">
                         <div className="flex items-center gap-3">
                           <Settings className="h-5 w-5 text-muted-foreground" />
-                          <CardTitle className="text-lg">{t.settingsBranch.orderFlow.title}</CardTitle>
+                          <CardTitle className="text-lg">Order Management Flow</CardTitle>
                         </div>
                         <p className="text-sm text-muted-foreground mt-2">
-                          {t.settingsBranch.orderFlow.subtitle}
+                          Configure how your restaurant handles order progression and timing
                         </p>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent className="space-y-6">
                         
-                        {/* Standard Flow Option */}
-                        <div 
-                          className={`p-4 rounded-lg border cursor-pointer transition-colors ${
-                            settings.orderFlow === 'standard' 
-                              ? 'border-primary bg-primary/5' 
-                              : 'border-border hover:bg-muted/50'
-                          }`}
-                          onClick={() => handleOrderFlowChange('standard')}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-1 ${
-                              settings.orderFlow === 'standard' 
-                                ? 'border-primary bg-primary' 
-                                : 'border-muted-foreground/30'
-                            }`}>
-                              {settings.orderFlow === 'standard' && (
-                                <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="font-medium mb-1">{t.settingsBranch.orderFlow.standardFlow}</h3>
-                              <p className="text-sm text-muted-foreground mb-3">
-                                {t.settingsBranch.orderFlow.standardDesc}
-                              </p>
-                              
-                              {/* Flow Visualization */}
-                              <div className="flex items-center gap-1 text-xs flex-wrap">
-                                <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">{t.settingsBranch.orderFlow.pending}</span>
-                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">{t.settingsBranch.orderFlow.confirmed}</span>
-                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">{t.settingsBranch.orderFlow.preparing}</span>
-                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">{t.settingsBranch.orderFlow.ready}</span>
-                              </div>
-                            </div>
+                        {/* Simplified Order Flow Display */}
+                        <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                          <h3 className="font-medium mb-3">Simplified Order Flow (Active)</h3>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Streamlined 2-step process for faster order management with optional timing automation
+                          </p>
+                          
+                          {/* Flow Visualization */}
+                          <div className="flex items-center gap-2 text-xs flex-wrap mb-4">
+                            <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md font-medium">Preparing</span>
+                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                            <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-md font-medium">Completed</span>
                           </div>
                         </div>
 
-                        {/* Simplified Flow Option */}
-                        <div 
-                          className={`p-4 rounded-lg border cursor-pointer transition-colors ${
-                            settings.orderFlow === 'simplified' 
-                              ? 'border-primary bg-primary/5' 
-                              : 'border-border hover:bg-muted/50'
-                          }`}
-                          onClick={() => handleOrderFlowChange('simplified')}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-1 ${
-                              settings.orderFlow === 'simplified' 
-                                ? 'border-primary bg-primary' 
-                                : 'border-muted-foreground/30'
-                            }`}>
-                              {settings.orderFlow === 'simplified' && (
-                                <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="font-medium mb-1">{t.settingsBranch.orderFlow.simplifiedFlow}</h3>
-                              <p className="text-sm text-muted-foreground mb-3">
-                                {t.settingsBranch.orderFlow.simplifiedDesc}
+                        {/* Auto-Ready Setting */}
+                        <div className="p-4 rounded-lg border border-border">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-medium mb-1">Automatic Order Completion</h4>
+                              <p className="text-sm text-muted-foreground">
+                                Automatically mark orders as completed based on preparation time
                               </p>
-                              
-                              {/* Flow Visualization */}
-                              <div className="flex items-center gap-1 text-xs flex-wrap mb-3">
-                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">{t.settingsBranch.orderFlow.autoAccept}</span>
-                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">{t.settingsBranch.orderFlow.preparing}</span>
-                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">{t.settingsBranch.orderFlow.autoReady}</span>
-                              </div>
-
-                              {/* Smart Timing Info */}
-                              <div className="bg-muted p-3 rounded text-xs text-muted-foreground">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Clock className="h-3 w-3" />
-                                  <span className="font-medium">{t.settingsBranch.orderFlow.smartTiming}</span>
-                                </div>
-                                <p>{t.settingsBranch.orderFlow.smartTimingDesc}</p>
-                              </div>
                             </div>
+                            <Switch
+                              checked={settings.timingSettings?.autoReady || false}
+                              onCheckedChange={handleAutoReadyChange}
+                            />
                           </div>
+                          
+                          {settings.timingSettings?.autoReady && (
+                            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+                              <div className="flex items-center gap-2 text-green-700 text-sm">
+                                <Clock className="h-4 w-4" />
+                                <span className="font-medium">Timer-based completion is enabled</span>
+                              </div>
+                              <p className="text-xs text-green-600 mt-1">
+                                Orders will be automatically marked as completed when the preparation timer expires
+                              </p>
+                            </div>
+                          )}
                         </div>
 
                         {/* Save Button */}
-                        <div className="flex items-center justify-between pt-4">
+                        <div className="flex items-center justify-between pt-4 border-t">
                           <div className="text-sm text-muted-foreground">
-                            {t.settingsBranch.orderFlow.currentlyUsing} <span className="font-medium">
-                              {settings.orderFlow === 'standard' ? t.settingsBranch.orderFlow.standardFlow : t.settingsBranch.orderFlow.simplifiedFlow}
-                            </span>
-                            {isDirty && <span className="text-orange-600 ml-2">{t.settingsBranch.orderFlow.unsavedChanges}</span>}
+                            {isDirty && <span className="text-orange-600">{t.settingsBranch.orderFlow.unsavedChanges}</span>}
                           </div>
                           <Button 
                             onClick={handleSave} 
@@ -264,21 +225,17 @@ export default function BranchSettingsPage() {
 
                 </div>
 
-                {/* Timing Settings - Always visible, disabled for Standard flow */}
+                {/* Timing Settings - Always active */}
                 <div className="xl:col-span-6">
                   {/* Timing Settings Card */}
-                  <Card className={`group transition-all duration-200 ${
-                    settings.orderFlow === 'simplified' 
-                      ? 'hover:shadow-lg opacity-100' 
-                      : 'opacity-60 pointer-events-none'
-                  }`}>
+                  <Card className="group hover:shadow-lg transition-all duration-200">
                       <CardHeader className="pb-4 border-b mb-6">
                         <div className="flex items-center gap-3">
                           <Timer className="h-5 w-5 text-muted-foreground" />
                           <CardTitle className="text-lg">Preparation & Delivery Timing</CardTitle>
                         </div>
                         <p className="text-sm text-muted-foreground mt-2">
-                          {settings.orderFlow === 'standard' ? 'Available only with Simplified Flow' : 'Configure general preparation times and delivery delays'}
+                          Configure preparation times for automatic order completion and delivery estimates
                         </p>
                       </CardHeader>
                       <CardContent className="space-y-4">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -21,12 +21,14 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { getSourceIcon } from "@/assets/images"
 import Image from "next/image"
 import Link from "next/link"
 import { useOrders } from "@/hooks/use-orders"
+import type { Order } from "@/services/orders.service"
 import { useOrderTimer } from "@/hooks/use-order-timer"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
@@ -39,8 +41,9 @@ type ViewMode = 'table' | 'card'
 
 export default function LiveOrdersPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('table')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  // Status filter removed - only showing preparing orders
   const [searchQuery, setSearchQuery] = useState("")
+  const [currentTime, setCurrentTime] = useState(new Date())
   const { language } = useLanguage()
   const t = translations[language] || translations.en
 
@@ -57,7 +60,7 @@ export default function LiveOrdersPage() {
     refetch,
     clearError 
   } = useOrders({
-    status: 'pending,preparing,ready',
+    status: 'preparing',
     limit: 50
   })
 
@@ -89,28 +92,53 @@ export default function LiveOrdersPage() {
     }
   }, [startTimer, stopTimer])
 
+  // Timer service runs in background - no automatic refresh needed
+
+  // Timer calculation for each order
+  const getOrderTimerInfo = useCallback((order: Order) => {
+    if (!order || order.status !== 'preparing' || !settings.timingSettings?.autoReady) {
+      return null
+    }
+
+    const timingSettings = settings.timingSettings
+    const kitchenPrepTime = timingSettings.baseDelay + timingSettings.temporaryBaseDelay
+    
+    // Use updated_at as reference time (when order moved to preparing)
+    const prepStartTime = new Date(order.updated_at)
+    const elapsedMinutes = (currentTime.getTime() - prepStartTime.getTime()) / (1000 * 60)
+    const remainingMinutes = Math.max(0, kitchenPrepTime - elapsedMinutes)
+    
+    const isComplete = remainingMinutes <= 0
+    const progressPercent = Math.min(100, (elapsedMinutes / kitchenPrepTime) * 100)
+    
+    return {
+      progressPercent,
+      isComplete,
+      remainingMinutes: Math.floor(remainingMinutes)
+    }
+  }, [currentTime, settings.timingSettings])
+
+  // Update current time every second for progress bars
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+    
+    return () => clearInterval(interval)
+  }, [])
+
   // Save view mode to localStorage when it changes
   const handleViewModeChange = (newViewMode: ViewMode) => {
     setViewMode(newViewMode)
     localStorage.setItem('liveOrdersViewMode', newViewMode)
   }
 
-  // Handle status filter changes
-  const handleStatusFilterChange = async (newStatus: string) => {
-    setStatusFilter(newStatus)
-    
-    const statusParam = newStatus === 'all' ? 'pending,preparing,ready' : newStatus
-    await fetchOrders({
-      status: statusParam,
-      search: searchQuery || undefined,
-      limit: 50
-    })
-  }
+  // Status filter removed - only showing preparing orders in new flow
 
   // Handle search changes with debouncing
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
-      const statusParam = statusFilter === 'all' ? 'pending,preparing,ready' : statusFilter
+      const statusParam = 'preparing' // Only show preparing orders in new flow
       await fetchOrders({
         status: statusParam,
         search: searchQuery || undefined,
@@ -119,7 +147,7 @@ export default function LiveOrdersPage() {
     }, 300)
 
     return () => clearTimeout(timeoutId)
-  }, [searchQuery, statusFilter, fetchOrders])
+  }, [searchQuery, fetchOrders])
 
   // Note: Auto-refresh removed - now using Supabase Realtime for instant updates!
 
@@ -153,18 +181,14 @@ export default function LiveOrdersPage() {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      pending: "outline",
       preparing: "secondary", 
-      ready: "default",
       completed: "default",
       rejected: "destructive",
       cancelled: "destructive"
     }
     
     const colors: Record<string, string> = {
-      pending: "text-orange-700 border-orange-300 bg-orange-100",
       preparing: "text-blue-700 border-blue-300 bg-blue-100",
-      ready: "text-green-700 border-green-400 bg-green-100",
       completed: "text-gray-600 border-gray-200 bg-gray-50",
       rejected: "text-red-700 border-red-300 bg-red-100",
       cancelled: "text-red-700 border-red-300 bg-red-100"
@@ -172,9 +196,7 @@ export default function LiveOrdersPage() {
 
     const getStatusText = (status: string) => {
       switch(status) {
-        case 'pending': return t.liveOrders.statusPending
         case 'preparing': return t.liveOrders.statusPreparing
-        case 'ready': return t.liveOrders.statusReady
         case 'completed': return t.liveOrders.statusCompleted
         case 'rejected': return t.liveOrders.statusRejected
         case 'cancelled': return t.liveOrders.statusCancelled
@@ -193,11 +215,6 @@ export default function LiveOrdersPage() {
   const getFilteredOrders = () => {
     let filteredOrders = orders
     
-    // Client-side status filter (backend already filters, but this handles 'all' case)
-    if (statusFilter !== 'all') {
-      filteredOrders = filteredOrders.filter(order => order.status === statusFilter)
-    }
-    
     // Client-side search filter for immediate response
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim()
@@ -214,44 +231,8 @@ export default function LiveOrdersPage() {
 
   const renderFilterButtons = () => (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6 pb-4 border-b">
-      {/* Filter Buttons - Left Side */}
-      <div className="flex items-center gap-2">
-        <Button
-          variant={statusFilter === 'all' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => handleStatusFilterChange('all')}
-          className="h-9 text-sm"
-          disabled={loading}
-        >
-          {t.liveOrders.filterAll}
-        </Button>
-        <Button
-          variant={statusFilter === 'pending' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => handleStatusFilterChange('pending')}
-          className="h-9 text-sm"
-          disabled={loading}
-        >
-          {t.liveOrders.filterNewOrders}
-        </Button>
-        <Button
-          variant={statusFilter === 'preparing' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => handleStatusFilterChange('preparing')}
-          className="h-9 text-sm"
-          disabled={loading}
-        >
-          {t.liveOrders.filterPreparing}
-        </Button>
-        <Button
-          variant={statusFilter === 'ready' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => handleStatusFilterChange('ready')}
-          className="h-9 text-sm"
-          disabled={loading}
-        >
-          {t.liveOrders.filterReady}
-        </Button>
+      {/* Refresh Button - Left Side */}
+      <div className="flex items-center gap-3">
         <Button
           variant="outline"
           size="sm"
@@ -262,10 +243,11 @@ export default function LiveOrdersPage() {
               runManualCheck()
             ]);
           }}
-          className="h-9 text-sm ml-2"
+          className="h-9 px-3 text-sm"
           disabled={loading}
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          {t.kitchenDisplay.refresh}
         </Button>
         
       </div>
@@ -373,7 +355,30 @@ export default function LiveOrdersPage() {
                     <TableCell>
                       {renderSourceIcon(order.source)}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{order.orderNumber}</TableCell>
+                    <TableCell>
+                      <div className="space-y-1.5">
+                        <div className="text-sm text-muted-foreground">{order.orderNumber}</div>
+                        {(() => {
+                          const timerInfo = getOrderTimerInfo(order)
+                          if (timerInfo && settings.timingSettings?.autoReady) {
+                            return (
+                              <div className="flex items-center gap-2">
+                                <div className="w-12">
+                                  <Progress 
+                                    value={timerInfo.progressPercent} 
+                                    className="h-1.5 bg-gray-300" 
+                                  />
+                                </div>
+                                <div className="text-xs text-orange-600 font-mono">
+                                  {timerInfo.isComplete ? '0m' : `${timerInfo.remainingMinutes}m`}
+                                </div>
+                              </div>
+                            )
+                          }
+                          return null
+                        })()}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div>
                         <div className="text-sm text-foreground font-medium">{order.customer.name}</div>
@@ -383,7 +388,8 @@ export default function LiveOrdersPage() {
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">${order.pricing.total.toFixed(2)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(order.created_at).toLocaleTimeString('tr-TR', { 
+                      {new Date(order.created_at).toLocaleTimeString('en-CA', { 
+                        timeZone: 'America/Toronto',
                         hour: '2-digit', 
                         minute: '2-digit' 
                       })}
@@ -468,12 +474,34 @@ export default function LiveOrdersPage() {
                         <div className="text-xs text-muted-foreground">{order.customer.phone}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-bold text-foreground">{order.orderNumber}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(order.created_at).toLocaleTimeString('tr-TR', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
+                        <div className="space-y-1.5">
+                          <div className="text-sm font-bold text-foreground">{order.orderNumber}</div>
+                          {(() => {
+                            const timerInfo = getOrderTimerInfo(order)
+                            if (timerInfo && settings.timingSettings?.autoReady) {
+                              return (
+                                <div className="flex items-center gap-1 justify-end">
+                                  <div className="w-12">
+                                    <Progress 
+                                      value={timerInfo.progressPercent} 
+                                      className="h-1.5 bg-gray-300" 
+                                    />
+                                  </div>
+                                  <div className="text-xs text-orange-600 font-mono">
+                                    {timerInfo.isComplete ? '0m' : `${timerInfo.remainingMinutes}m`}
+                                  </div>
+                                </div>
+                              )
+                            }
+                            return null
+                          })()}
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(order.created_at).toLocaleTimeString('en-CA', { 
+                              timeZone: 'America/Toronto',
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -512,12 +540,12 @@ export default function LiveOrdersPage() {
                 <DynamicBreadcrumb />
               </div>
               
-              {/* Simplified Mode Badge */}
-              {settings.orderFlow === 'simplified' && (
+              {/* Auto-Ready Mode Badge - Show when auto-ready is enabled */}
+              {settings.timingSettings?.autoReady && (
                 <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-md">
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                   <span className="text-xs text-blue-700 font-medium">
-                    {t.liveOrders.simplifiedModeActive}
+                    Auto-Ready: Active
                   </span>
                 </div>
               )}

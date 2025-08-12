@@ -37,7 +37,8 @@ async function getBranchSettings(branchId) {
       baseDelay: 20,
       temporaryBaseDelay: 0,
       deliveryDelay: 15,
-      temporaryDeliveryDelay: 0
+      temporaryDeliveryDelay: 0,
+      autoReady: false
     }
   };
 
@@ -65,13 +66,9 @@ async function updateBranchSettings(branchId, settingsData, userId) {
     throw new Error('orderFlow must be "standard" or "simplified"');
   }
 
-  // Validate timingSettings if orderFlow is simplified
-  if (orderFlow === 'simplified') {
-    if (!timingSettings || typeof timingSettings !== 'object') {
-      throw new Error('timingSettings is required for simplified flow');
-    }
-    
-    const { baseDelay, temporaryBaseDelay, deliveryDelay, temporaryDeliveryDelay } = timingSettings;
+  // Validate timingSettings - always allow timing settings regardless of flow
+  if (timingSettings && typeof timingSettings === 'object') {
+    const { baseDelay, temporaryBaseDelay, deliveryDelay, temporaryDeliveryDelay, autoReady } = timingSettings;
     
     if (typeof baseDelay !== 'number' || baseDelay < 0 || baseDelay > 120) {
       throw new Error('baseDelay must be a number between 0 and 120');
@@ -87,6 +84,10 @@ async function updateBranchSettings(branchId, settingsData, userId) {
     
     if (typeof temporaryDeliveryDelay !== 'number' || temporaryDeliveryDelay < -60 || temporaryDeliveryDelay > 60) {
       throw new Error('temporaryDeliveryDelay must be a number between -60 and 60');
+    }
+    
+    if (typeof autoReady !== 'boolean') {
+      throw new Error('autoReady must be a boolean');
     }
   }
 
@@ -119,16 +120,17 @@ async function updateBranchSettings(branchId, settingsData, userId) {
     throw new Error('Branch not found');
   }
 
-  // Prepare new settings
+  // Prepare new settings - always preserve timingSettings with autoReady toggle
   const newSettings = {
     ...branchData.settings,
     orderFlow,
-    timingSettings: orderFlow === 'simplified' ? timingSettings : {
+    timingSettings: timingSettings || {
       baseDelay: 20,
       temporaryBaseDelay: 0,
       deliveryDelay: 15,
       temporaryDeliveryDelay: 0,
-      }
+      autoReady: false
+    }
   };
 
   // Update branch settings in database
