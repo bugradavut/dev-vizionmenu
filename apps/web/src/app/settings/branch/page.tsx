@@ -147,244 +147,272 @@ export default function BranchSettingsPage() {
 
             {/* Main Content */}
             <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6">
-              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-                <div className="xl:col-span-6">
-
-                    {/* Order Flow Management Card */}
-                    <Card className="group hover:shadow-lg transition-all duration-200">
-                      <CardHeader className="pb-4 border-b mb-6">
-                        <div className="flex items-center gap-3">
-                          <Settings className="h-5 w-5 text-muted-foreground" />
-                          <CardTitle className="text-lg">Order Management Flow</CardTitle>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Configure how your restaurant handles order progression and timing
+              <div className="max-w-4xl">
+                {/* Single Unified Card */}
+                <Card className="group hover:shadow-lg transition-all duration-200">
+                  <CardHeader className="pb-4 border-b mb-6">
+                    <div className="flex items-center gap-3">
+                      <Settings className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle className="text-xl">Order Management & Timing</CardTitle>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Configure your restaurant&apos;s order flow and automatic completion settings
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-8">
+                    
+                    {/* Order Flow Section */}
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                        <h3 className="font-medium mb-3">Simplified Order Flow</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Streamlined 2-step process for efficient order management
                         </p>
-                      </CardHeader>
-                      <CardContent className="space-y-6">
                         
-                        {/* Simplified Order Flow Display */}
-                        <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                          <h3 className="font-medium mb-3">Simplified Order Flow (Active)</h3>
-                          <p className="text-sm text-muted-foreground mb-4">
-                            Streamlined 2-step process for faster order management with optional timing automation
-                          </p>
-                          
-                          {/* Flow Visualization */}
-                          <div className="flex items-center gap-2 text-xs flex-wrap mb-4">
-                            <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md font-medium">Preparing</span>
-                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                            <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-md font-medium">Completed</span>
+                        {/* Flow Visualization */}
+                        <div className="flex items-center gap-3">
+                          <div className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-medium text-sm">
+                            Preparing
+                          </div>
+                          <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                          <div className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-medium text-sm">
+                            Completed
                           </div>
                         </div>
+                      </div>
+                    </div>
 
-                        {/* Auto-Ready Setting */}
-                        <div className="p-4 rounded-lg border border-border">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h4 className="font-medium mb-1">Automatic Order Completion</h4>
-                              <p className="text-sm text-muted-foreground">
-                                Automatically mark orders as completed based on preparation time
-                              </p>
-                            </div>
-                            <Switch
-                              checked={settings.timingSettings?.autoReady || false}
-                              onCheckedChange={handleAutoReadyChange}
+                    <Separator />
+
+                    {/* Auto-Ready Toggle Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-background">
+                        <div>
+                          <h4 className="text-lg font-semibold mb-1">Auto-Ready System</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Automatically complete orders when preparation time expires
+                          </p>
+                        </div>
+                        <Switch
+                          checked={settings.timingSettings?.autoReady || false}
+                          onCheckedChange={handleAutoReadyChange}
+                          className="data-[state=checked]:bg-primary"
+                        />
+                      </div>
+                      
+                      {/* Auto-Ready Status Indicator */}
+                      {settings.timingSettings?.autoReady ? (
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center gap-2 text-green-700 text-sm">
+                            <CheckCircle className="h-4 w-4" />
+                            <span className="font-medium">Auto-Ready is enabled</span>
+                          </div>
+                          <p className="text-xs text-green-600 mt-1">
+                            Orders will automatically move to completed status based on timing settings below
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                          <div className="flex items-center gap-2 text-gray-600 text-sm">
+                            <AlertCircle className="h-4 w-4" />
+                            <span className="font-medium">Manual completion only</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Staff will need to manually complete orders - timing settings are for reference only
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Timing Settings Section */}
+                    <div className={`space-y-6 transition-all duration-300 ${!settings.timingSettings?.autoReady ? 'opacity-50' : ''}`}>
+                      <div className="flex items-center gap-3">
+                        <Timer className="h-5 w-5 text-primary" />
+                        <h3 className="text-lg font-semibold">Timing Configuration</h3>
+                      </div>
+                      
+                      {/* Base Preparation Time */}
+                      <div className="space-y-4">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          Kitchen Preparation Time
+                        </h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="base-initial" className="text-sm font-medium">Base Time (Minutes)</Label>
+                            <Input
+                              id="base-initial"
+                              type="number"
+                              value={settings.timingSettings.baseDelay}
+                              onChange={(e) => handleTimingChange('baseDelay', Number(e.target.value))}
+                              className="h-10"
+                              min="0"
+                              max="120"
+                              disabled={!settings.timingSettings?.autoReady}
                             />
                           </div>
                           
-                          {settings.timingSettings?.autoReady && (
-                            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
-                              <div className="flex items-center gap-2 text-green-700 text-sm">
-                                <Clock className="h-4 w-4" />
-                                <span className="font-medium">Timer-based completion is enabled</span>
-                              </div>
-                              <p className="text-xs text-green-600 mt-1">
-                                Orders will be automatically marked as completed when the preparation timer expires
-                              </p>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Save Button */}
-                        <div className="flex items-center justify-between pt-4 border-t">
-                          <div className="text-sm text-muted-foreground">
-                            {isDirty && <span className="text-orange-600">{t.settingsBranch.orderFlow.unsavedChanges}</span>}
-                          </div>
-                          <Button 
-                            onClick={handleSave} 
-                            disabled={!canSave}
-                            className={saving ? "animate-pulse" : ""}
-                          >
-                            {saving ? t.settingsBranch.saving : t.settingsBranch.saveChanges}
-                          </Button>
-                        </div>
-
-                      </CardContent>
-                    </Card>
-
-                </div>
-
-                {/* Timing Settings - Always active */}
-                <div className="xl:col-span-6">
-                  {/* Timing Settings Card */}
-                  <Card className="group hover:shadow-lg transition-all duration-200">
-                      <CardHeader className="pb-4 border-b mb-6">
-                        <div className="flex items-center gap-3">
-                          <Timer className="h-5 w-5 text-muted-foreground" />
-                          <CardTitle className="text-lg">Preparation & Delivery Timing</CardTitle>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Configure preparation times for automatic order completion and delivery estimates
-                        </p>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        
-                        {/* Base Delay Section */}
-                        <div className="space-y-3">
-                          <h3 className="font-medium flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            {t.settingsBranch.timingSettings.basePreparationDelay}
-                          </h3>
-                          
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-2">
-                              <Label htmlFor="base-initial">{t.settingsBranch.timingSettings.initialMinutes}</Label>
-                              <Input
-                                id="base-initial"
-                                type="number"
-                                value={settings.timingSettings.baseDelay}
-                                onChange={(e) => handleTimingChange('baseDelay', Number(e.target.value))}
-                                className="h-9"
-                                min="0"
-                                max="120"
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <Label htmlFor="base-temporary">{t.settingsBranch.timingSettings.temporary}</Label>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleTimingChange('temporaryBaseDelay', Math.max(-60, settings.timingSettings.temporaryBaseDelay - 5))}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Minus className="h-3 w-3" />
-                                </Button>
-                                <Input
-                                  id="base-temporary"
-                                  type="number"
-                                  value={settings.timingSettings.temporaryBaseDelay}
-                                  onChange={(e) => handleTimingChange('temporaryBaseDelay', Number(e.target.value))}
-                                  className="h-8 text-center text-sm"
-                                  min="-60"
-                                  max="60"
-                                />
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleTimingChange('temporaryBaseDelay', Math.min(60, settings.timingSettings.temporaryBaseDelay + 5))}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="bg-primary/5 p-2 rounded text-sm">
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">{t.settingsBranch.timingSettings.total}</span>
-                              <span className="font-medium text-primary">{settings.timingSettings.baseDelay + settings.timingSettings.temporaryBaseDelay} min</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <Separator />
-
-                        {/* Delivery Delay Section */}
-                        <div className="space-y-3">
-                          <h3 className="font-medium flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            {t.settingsBranch.timingSettings.deliveryDelay}
-                          </h3>
-                          
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-2">
-                              <Label htmlFor="delivery-initial">{t.settingsBranch.timingSettings.initialMinutes}</Label>
-                              <Input
-                                id="delivery-initial"
-                                type="number"
-                                value={settings.timingSettings.deliveryDelay}
-                                onChange={(e) => handleTimingChange('deliveryDelay', Number(e.target.value))}
-                                className="h-9"
-                                min="0"
-                                max="120"
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <Label htmlFor="delivery-temporary">{t.settingsBranch.timingSettings.temporary}</Label>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleTimingChange('temporaryDeliveryDelay', Math.max(-60, settings.timingSettings.temporaryDeliveryDelay - 5))}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Minus className="h-3 w-3" />
-                                </Button>
-                                <Input
-                                  id="delivery-temporary"
-                                  type="number"
-                                  value={settings.timingSettings.temporaryDeliveryDelay}
-                                  onChange={(e) => handleTimingChange('temporaryDeliveryDelay', Number(e.target.value))}
-                                  className="h-8 text-center text-sm"
-                                  min="-60"
-                                  max="60"
-                                />
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleTimingChange('temporaryDeliveryDelay', Math.min(60, settings.timingSettings.temporaryDeliveryDelay + 5))}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="bg-primary/5 p-2 rounded text-sm">
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">{t.settingsBranch.timingSettings.total}</span>
-                              <span className="font-medium text-primary">{Math.max(0, settings.timingSettings.deliveryDelay + settings.timingSettings.temporaryDeliveryDelay)} min</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <Separator />
-
-                        {/* Expected Total Delivery Time */}
-                        <div className="p-3 bg-primary/10 border border-primary/30 rounded-lg">
-                          <div className="flex items-center justify-between">
+                          <div className="space-y-2">
+                            <Label htmlFor="base-temporary" className="text-sm font-medium">Temporary Adjustment</Label>
                             <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-primary" />
-                              <h3 className="font-medium text-primary">{t.settingsBranch.timingSettings.expectedTotalTime}</h3>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleTimingChange('temporaryBaseDelay', Math.max(-60, settings.timingSettings.temporaryBaseDelay - 5))}
+                                className="h-10 w-10 p-0"
+                                disabled={!settings.timingSettings?.autoReady}
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+                              <Input
+                                id="base-temporary"
+                                type="number"
+                                value={settings.timingSettings.temporaryBaseDelay}
+                                onChange={(e) => handleTimingChange('temporaryBaseDelay', Number(e.target.value))}
+                                className="h-10 text-center"
+                                min="-60"
+                                max="60"
+                                disabled={!settings.timingSettings?.autoReady}
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleTimingChange('temporaryBaseDelay', Math.min(60, settings.timingSettings.temporaryBaseDelay + 5))}
+                                className="h-10 w-10 p-0"
+                                disabled={!settings.timingSettings?.autoReady}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
                             </div>
-                            <p className="text-xl font-bold text-primary">
-                              {Math.max(0, settings.timingSettings.baseDelay + settings.timingSettings.temporaryBaseDelay + settings.timingSettings.deliveryDelay + settings.timingSettings.temporaryDeliveryDelay)} {t.settingsBranch.timingSettings.min}
-                            </p>
                           </div>
                         </div>
+                        
+                        <div className="bg-primary/10 p-3 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Kitchen Total:</span>
+                            <span className="text-lg font-bold text-primary">
+                              {settings.timingSettings.baseDelay + settings.timingSettings.temporaryBaseDelay} min
+                            </span>
+                          </div>
+                        </div>
+                      </div>
 
+                      <Separator />
 
-                      </CardContent>
-                    </Card>
+                      {/* Delivery Time */}
+                      <div className="space-y-4">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          Customer Delivery Time
+                        </h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="delivery-initial" className="text-sm font-medium">Base Time (Minutes)</Label>
+                            <Input
+                              id="delivery-initial"
+                              type="number"
+                              value={settings.timingSettings.deliveryDelay}
+                              onChange={(e) => handleTimingChange('deliveryDelay', Number(e.target.value))}
+                              className="h-10"
+                              min="0"
+                              max="120"
+                              disabled={!settings.timingSettings?.autoReady}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="delivery-temporary" className="text-sm font-medium">Temporary Adjustment</Label>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleTimingChange('temporaryDeliveryDelay', Math.max(-60, settings.timingSettings.temporaryDeliveryDelay - 5))}
+                                className="h-10 w-10 p-0"
+                                disabled={!settings.timingSettings?.autoReady}
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+                              <Input
+                                id="delivery-temporary"
+                                type="number"
+                                value={settings.timingSettings.temporaryDeliveryDelay}
+                                onChange={(e) => handleTimingChange('temporaryDeliveryDelay', Number(e.target.value))}
+                                className="h-10 text-center"
+                                min="-60"
+                                max="60"
+                                disabled={!settings.timingSettings?.autoReady}
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleTimingChange('temporaryDeliveryDelay', Math.min(60, settings.timingSettings.temporaryDeliveryDelay + 5))}
+                                className="h-10 w-10 p-0"
+                                disabled={!settings.timingSettings?.autoReady}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-primary/10 p-3 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Delivery Total:</span>
+                            <span className="text-lg font-bold text-primary">
+                              {Math.max(0, settings.timingSettings.deliveryDelay + settings.timingSettings.temporaryDeliveryDelay)} min
+                            </span>
+                          </div>
+                        </div>
+                      </div>
 
-                  </div>
+                      {/* Expected Total Time */}
+                      <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-5 w-5 text-orange-600" />
+                            <h3 className="font-semibold text-orange-900">Expected Total Time</h3>
+                          </div>
+                          <p className="text-2xl font-bold text-orange-600">
+                            {Math.max(0, settings.timingSettings.baseDelay + settings.timingSettings.temporaryBaseDelay + settings.timingSettings.deliveryDelay + settings.timingSettings.temporaryDeliveryDelay)} MIN
+                          </p>
+                        </div>
+                        <p className="text-xs text-orange-600 mt-1">
+                          This is the total time customers will see for order completion
+                        </p>
+                      </div>
+                    </div>
 
+                    {/* Save Button */}
+                    <div className="flex items-center justify-between pt-6 border-t">
+                      <div className="text-sm text-muted-foreground">
+                        {isDirty && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                            <span className="text-orange-600 font-medium">Unsaved changes</span>
+                          </div>
+                        )}
+                      </div>
+                      <Button 
+                        onClick={handleSave} 
+                        disabled={!canSave}
+                        size="lg"
+                        className={saving ? "animate-pulse" : ""}
+                      >
+                        {saving ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Save Changes'
+                        )}
+                      </Button>
+                    </div>
+
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>
