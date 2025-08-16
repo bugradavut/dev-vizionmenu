@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS menu_categories (
   description TEXT,
   display_order INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT TRUE,
+  icon TEXT, -- Lucide icon key for professional category display
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -154,6 +155,30 @@ CREATE TABLE IF NOT EXISTS order_item_variants (
   variant_name TEXT NOT NULL,
   variant_price DECIMAL(10,2) NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Menu Presets (Smart preset management for different meal times/seasons)
+CREATE TABLE IF NOT EXISTS menu_presets (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  branch_id UUID REFERENCES branches(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  menu_data JSONB NOT NULL, -- Complete menu state snapshot with categories and items
+  is_active BOOLEAN DEFAULT FALSE,
+  
+  -- One-time scheduling fields
+  scheduled_start TIMESTAMPTZ,
+  scheduled_end TIMESTAMPTZ,
+  
+  -- Daily recurring scheduling fields
+  schedule_type TEXT DEFAULT 'one-time' CHECK (schedule_type IN ('one-time', 'daily')),
+  daily_start_time TIME, -- Daily start time (e.g., '07:00:00')
+  daily_end_time TIME,   -- Daily end time (e.g., '11:00:00')
+  
+  auto_apply BOOLEAN DEFAULT FALSE,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- =====================================================
@@ -308,6 +333,15 @@ FOR ALL USING (EXISTS (
   AND branch_users.user_id = auth.uid()
 ));
 
+-- Menu Presets: Branch staff can manage presets
+DROP POLICY IF EXISTS "Branch staff can manage menu presets" ON menu_presets;
+CREATE POLICY "Branch staff can manage menu presets" ON menu_presets
+FOR ALL USING (EXISTS (
+  SELECT 1 FROM branch_users 
+  WHERE branch_users.branch_id = menu_presets.branch_id 
+  AND branch_users.user_id = auth.uid()
+));
+
 -- Orders: Branch staff can access orders
 DROP POLICY IF EXISTS "Branch staff can access orders" ON orders;
 CREATE POLICY "Branch staff can access orders" ON orders
@@ -350,6 +384,11 @@ CREATE TRIGGER update_menu_categories_updated_at
 DROP TRIGGER IF EXISTS update_menu_items_updated_at ON menu_items;
 CREATE TRIGGER update_menu_items_updated_at 
   BEFORE UPDATE ON menu_items 
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_menu_presets_updated_at ON menu_presets;
+CREATE TRIGGER update_menu_presets_updated_at 
+  BEFORE UPDATE ON menu_presets 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_orders_updated_at ON orders;

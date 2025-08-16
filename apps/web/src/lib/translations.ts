@@ -3,6 +3,22 @@
 
 export const translations = {
   en: {
+    // Common terms
+    common: {
+      loading: "Loading...",
+      search: "Search",
+      save: "Save",
+      cancel: "Cancel",
+      delete: "Delete",
+      edit: "Edit",
+      create: "Create",
+      update: "Update",
+      close: "Close",
+      yes: "Yes",
+      no: "No",
+      confirm: "Confirm"
+    },
+    
     // Navigation
     navigation: {
       dashboard: "Dashboard",
@@ -22,7 +38,8 @@ export const translations = {
       analytics: "Analytics",
       categories: "Categories",
       items: "Items",
-      pricing: "Pricing"
+      pricing: "Pricing",
+      menu: "Menu"
     },
     
     // Dashboard
@@ -464,10 +481,237 @@ export const translations = {
       
       // Success Messages
       notificationHistoryCleared: "Cleared notification history"
+    },
+    
+    // Menu Management
+    menuManagement: {
+      // Page Header
+      pageTitle: "Menu Management",
+      pageSubtitle: "Manage your menu categories, items, and pricing in real-time",
+      
+      // Quick Actions
+      presets: "Presets",
+      newItem: "New Item",
+      newCategory: "New Category",
+      
+      
+      // Stats Cards
+      activeCategories: "active categories",
+      available: "available",
+      revenue: "Revenue",
+      thisMonth: "this month",
+      avgTime: "Avg. Time",
+      preparation: "preparation",
+      
+      // Search
+      searchPlaceholder: "Search categories or items...",
+      
+      // Categories Tab
+      categoriesTab: {
+        title: "Menu Categories",
+        subtitle: "Organize your menu items into categories",
+        noCategories: "No Categories",
+        noCategoriesDesc: "Get started by creating your first menu category",
+        createCategory: "Create Category",
+        editCategory: "Edit Category",
+        deleteCategory: "Delete Category",
+        duplicateCategory: "Duplicate Category",
+        toggleAvailability: "Toggle Availability",
+        hide: "Hide",
+        show: "Show",
+        moveUp: "Move up",
+        moveDown: "Move down",
+        confirmDelete: "Are you sure you want to delete category \"{name}\"?",
+        failedToToggle: "Failed to toggle availability",
+        retryAction: "Try Again",
+        
+        // Smart Delete Dialog (when category has items)
+        cannotDeleteTitle: "Category Contains Menu Items",
+        cannotDeleteMessage: "This category contains {count} menu item(s). What would you like to do?",
+        moveAndDeleteOption: "Move items to 'Uncategorized' and delete category",
+        cancelDeletion: "Cancel deletion",
+        moveAndDelete: "Move & Delete",
+        
+        // Card actions
+        active: "Active",
+        inactive: "Inactive",
+        edit: "Edit",
+        delete: "Delete",
+        activate: "Active",
+        deactivate: "Inactive"
+      },
+      
+      // Items Tab  
+      itemsTab: {
+        title: "Menu Items",
+        subtitle: "Manage individual items, pricing, and availability",
+        noItems: "No Items",
+        noItemsDesc: "Get started by creating your first menu item",
+        createItem: "Create Item",
+        editItem: "Edit Item",
+        deleteItem: "Delete Item",
+        duplicateItem: "Duplicate Item",
+        hideItem: "Hide Item",
+        showItem: "Show Item",
+        updating: "Updating...",
+        confirmDelete: "Are you sure you want to delete item \"{name}\"?",
+        failedToToggleItem: "Failed to toggle item availability",
+        order: "Order:",
+        variants: "Variants:",
+        more: "more",
+        
+        // Filters
+        filters: "Filters",
+        allCategories: "All",
+        uncategorized: "Uncategorized",
+        allStatus: "All",
+        availableOnly: "Available",
+        unavailableOnly: "Unavailable",
+        noItemsFound: "No items found",
+        noItemsCreated: "No items created yet",
+        
+        // Card actions
+        available: "Available",
+        unavailable: "Unavailable",
+        variantsCount: "variants"
+      },
+      
+      // Presets Tab
+      presetsTab: {
+        title: "Menu Presets",
+        subtitle: "Create menu configurations for different time periods",
+        newPreset: "New Preset",
+        noPresets: "No Presets",
+        noPresetsDesc: "Create your first menu preset for different time periods",
+        createPreset: "Create Preset",
+        currentMenu: "Current Menu",
+        saveCurrentConfig: "Save current menu configuration",
+        categories: "Categories:",
+        items: "Items:",
+        available: "Available:",
+        saveAsPreset: "Save as Preset",
+        active: "Active",
+        inactive: "Inactive",
+        created: "Created:",
+        currentPreset: "Current Preset",
+        applyPreset: "Apply Preset"
+      },
+      
+      // Category Create Modal
+      categoryModal: {
+        createTitle: "New Category",
+        editTitle: "Edit Category",
+        createSubtitle: "Add a new category to organize your menu items",
+        editSubtitle: "Edit category information and settings",
+        categoryName: "Category Name",
+        categoryNamePlaceholder: "e.g: Appetizers, Main Courses",
+        description: "Description",
+        descriptionPlaceholder: "Optional description for this category...",
+        displayOrder: "Display Order",
+        displayOrderDesc: "Controls the order this category appears in menus",
+        cancel: "Cancel",
+        createCategory: "Create Category",
+        updateCategory: "Update Category",
+        creating: "Creating...",
+        updating: "Updating...",
+        nameRequired: "Category name is required",
+        nameMaxLength: "Name must be 100 characters or less",
+        descriptionMaxLength: "Description must be 500 characters or less",
+        displayOrderMin: "Display order must be 0 or greater",
+        createFailed: "Failed to create category",
+        updateFailed: "Failed to update category"
+      },
+      
+      // Item Create Modal
+      itemModal: {
+        createTitle: "New Menu Item",
+        editTitle: "Edit Menu Item", 
+        createSubtitle: "Add a new item to your menu with photo, pricing, and variants",
+        editSubtitle: "Edit the details of this menu item",
+        
+        // Photo Section
+        itemPhoto: "Item Photo",
+        clickToAddPhoto: "Click to add photo",
+        maxSize: "Max 5MB - JPG, PNG",
+        changePhoto: "Change Photo",
+        addPhoto: "Add Photo",
+        
+        // Basic Info
+        itemName: "Item Name",
+        itemNamePlaceholder: "e.g: Margherita Pizza",
+        price: "Price",
+        description: "Description",
+        descriptionPlaceholder: "Detailed item description...",
+        descriptionHelper: "Description that will appear on the menu (max 1000 characters)",
+        
+        // Category & Timing
+        category: "Category",
+        selectCategory: "Select category",
+        noCategory: "No category",
+        prepTime: "Prep Time",
+        order: "Order",
+        min: "min",
+        
+        // Allergens
+        allergens: "Allergens",
+        customAllergen: "Custom allergen...",
+        
+        // Dietary Info
+        dietaryInfo: "Dietary Information",
+        customDietaryInfo: "Custom dietary info...",
+        
+        // Variants
+        variants: "Variants",
+        addVariant: "Add Variant",
+        variantName: "Name",
+        variantNamePlaceholder: "e.g: Large",
+        priceModifier: "Price Modifier",
+        default: "Default",
+        
+        // Availability (edit mode)
+        itemAvailable: "Item Available",
+        availabilityHelper: "Unavailable items are hidden from customers",
+        
+        // Actions
+        cancel: "Cancel",
+        createItem: "Create Item",
+        updateItem: "Update Item",
+        saving: "Saving...",
+        
+        // Validation
+        nameRequired: "Item name is required",
+        nameMaxLength: "Name must be 150 characters or less",
+        descriptionMaxLength: "Description must be 1000 characters or less", 
+        priceRequired: "Price must be greater than 0",
+        priceMax: "Price must be less than 1000",
+        prepTimeMin: "Preparation time must be at least 1 minute",
+        prepTimeMax: "Preparation time must be less than 1000 minutes",
+        orderMin: "Display order must be a positive number",
+        orderMax: "Display order must be less than 1000",
+        variantNameRequired: "Variant name is required",
+        fileSizeError: "File size cannot exceed 5MB",
+        fileTypeError: "Please select a valid image file"
+      }
     }
   },
   
   fr: {
+    // Common terms - Canadian French  
+    common: {
+      loading: "Chargement...",
+      search: "Rechercher",
+      save: "Sauvegarder",
+      cancel: "Annuler",
+      delete: "Supprimer",
+      edit: "Modifier",
+      create: "Créer",
+      update: "Mettre à jour",
+      close: "Fermer",
+      yes: "Oui",
+      no: "Non", 
+      confirm: "Confirmer"
+    },
+    
     // Navigation - Canadian French
     navigation: {
       dashboard: "Tableau de bord",
@@ -487,7 +731,8 @@ export const translations = {
       analytics: "Analyses",
       categories: "Catégories", 
       items: "Articles",
-      pricing: "Tarification"
+      pricing: "Tarification",
+      menu: "Menu"
     },
     
     // Dashboard - Canadian French
@@ -929,6 +1174,217 @@ export const translations = {
       
       // Success Messages
       notificationHistoryCleared: "Historique des notifications effacé"
+    },
+    
+    // Menu Management - Canadian French
+    menuManagement: {
+      // Page Header
+      pageTitle: "Gestion du menu",
+      pageSubtitle: "Gérez les catégories, articles et prix de votre menu en temps réel",
+      
+      // Quick Actions
+      presets: "Préréglages",
+      newItem: "Nouvel article",
+      newCategory: "Nouvelle catégorie",
+      
+      
+      // Stats Cards
+      activeCategories: "catégories actives",
+      available: "disponibles",
+      revenue: "Revenus",
+      thisMonth: "ce mois-ci",
+      avgTime: "Temps moyen",
+      preparation: "préparation",
+      
+      // Search
+      searchPlaceholder: "Rechercher des catégories ou articles...",
+      
+      // Categories Tab
+      categoriesTab: {
+        title: "Catégories du menu",
+        subtitle: "Organisez vos articles en catégories",
+        noCategories: "Aucune catégorie",
+        noCategoriesDesc: "Commencez par créer votre première catégorie de menu",
+        createCategory: "Créer une catégorie",
+        editCategory: "Modifier la catégorie",
+        deleteCategory: "Supprimer la catégorie",
+        duplicateCategory: "Dupliquer la catégorie",
+        toggleAvailability: "Basculer la disponibilité",
+        hide: "Masquer",
+        show: "Afficher",
+        moveUp: "Monter",
+        moveDown: "Descendre",
+        confirmDelete: "Êtes-vous sûr de vouloir supprimer la catégorie \"{name}\" ?",
+        failedToToggle: "Erreur lors de la modification de la disponibilité",
+        retryAction: "Réessayer",
+        
+        // Smart Delete Dialog (when category has items)
+        cannotDeleteTitle: "La catégorie contient des articles",
+        cannotDeleteMessage: "Cette catégorie contient {count} article(s) de menu. Que souhaitez-vous faire ?",
+        moveAndDeleteOption: "Déplacer les articles vers 'Non catégorisé' et supprimer la catégorie",
+        cancelDeletion: "Annuler la suppression",
+        moveAndDelete: "Déplacer et supprimer",
+        
+        // Card actions
+        active: "Active",
+        inactive: "Inactif",
+        edit: "Modifier",
+        delete: "Supprimer",
+        activate: "Activer",
+        deactivate: "Désactiver"
+      },
+      
+      // Items Tab  
+      itemsTab: {
+        title: "Articles du menu",
+        subtitle: "Gérez vos articles individuels, prix et disponibilité",
+        noItems: "Aucun article",
+        noItemsDesc: "Commencez par créer votre premier article de menu",
+        createItem: "Créer un article",
+        editItem: "Modifier l'article",
+        deleteItem: "Supprimer l'article",
+        duplicateItem: "Dupliquer l'article",
+        hideItem: "Masquer l'article",
+        showItem: "Afficher l'article",
+        updating: "Mise à jour...",
+        confirmDelete: "Êtes-vous sûr de vouloir supprimer l'article \"{name}\" ?",
+        failedToToggleItem: "Erreur lors de la modification de la disponibilité de l'article",
+        order: "Ordre :",
+        variants: "Variantes :",
+        more: "plus",
+        
+        // Filters
+        filters: "Filtres",
+        allCategories: "Toutes",
+        uncategorized: "Sans catégorie",
+        allStatus: "Tous",
+        availableOnly: "Disponible",
+        unavailableOnly: "Indisponible",
+        noItemsFound: "Aucun article trouvé",
+        noItemsCreated: "Aucun article créé",
+        
+        // Card actions
+        available: "Disponible",
+        unavailable: "Indisponible", 
+        variantsCount: "variantes"
+      },
+      
+      // Presets Tab
+      presetsTab: {
+        title: "Préréglages du menu",
+        subtitle: "Créez des configurations pour différentes périodes",
+        newPreset: "Nouveau préréglage",
+        noPresets: "Aucun préréglage",
+        noPresetsDesc: "Créez votre premier préréglage de menu pour différentes périodes",
+        createPreset: "Créer un préréglage",
+        currentMenu: "Menu actuel",
+        saveCurrentConfig: "Sauvegardez la configuration actuelle",
+        categories: "Catégories :",
+        items: "Articles :",
+        available: "Disponibles :",
+        saveAsPreset: "Sauvegarder comme préréglage",
+        active: "Actif",
+        inactive: "Inactif",
+        created: "Créé :",
+        currentPreset: "Préréglage actuel",
+        applyPreset: "Appliquer le préréglage"
+      },
+      
+      // Category Create Modal
+      categoryModal: {
+        createTitle: "Nouvelle catégorie",
+        editTitle: "Modifier la catégorie",
+        createSubtitle: "Ajoutez une nouvelle catégorie pour organiser vos articles de menu",
+        editSubtitle: "Modifiez les informations et paramètres de la catégorie",
+        categoryName: "Nom de la catégorie",
+        categoryNamePlaceholder: "ex : Entrées, Plats principaux",
+        description: "Description",
+        descriptionPlaceholder: "Description optionnelle pour cette catégorie...",
+        displayOrder: "Ordre d'affichage",
+        displayOrderDesc: "Contrôle l'ordre d'apparition de cette catégorie dans les menus",
+        cancel: "Annuler",
+        createCategory: "Créer la catégorie",
+        updateCategory: "Mettre à jour la catégorie",
+        creating: "Création...",
+        updating: "Mise à jour...",
+        nameRequired: "Le nom de la catégorie est requis",
+        nameMaxLength: "Le nom doit contenir au maximum 100 caractères",
+        descriptionMaxLength: "La description doit contenir au maximum 500 caractères",
+        displayOrderMin: "L'ordre d'affichage doit être 0 ou plus",
+        createFailed: "Échec de la création de la catégorie",
+        updateFailed: "Échec de la mise à jour de la catégorie"
+      },
+      
+      // Item Create Modal
+      itemModal: {
+        createTitle: "Nouvel article",
+        editTitle: "Modifier l'article", 
+        createSubtitle: "Ajoutez un nouvel article à votre menu avec photo, prix et variantes",
+        editSubtitle: "Modifiez les détails de cet article de menu",
+        
+        // Photo Section
+        itemPhoto: "Photo de l'article",
+        clickToAddPhoto: "Cliquez pour ajouter une photo",
+        maxSize: "Max 5MB - JPG, PNG",
+        changePhoto: "Changer la photo",
+        addPhoto: "Ajouter une photo",
+        
+        // Basic Info
+        itemName: "Nom de l'article",
+        itemNamePlaceholder: "ex : Pizza Margherita",
+        price: "Prix",
+        description: "Description",
+        descriptionPlaceholder: "Description détaillée de l'article...",
+        descriptionHelper: "Description qui apparaîtra sur le menu (max 1000 caractères)",
+        
+        // Category & Timing
+        category: "Catégorie",
+        selectCategory: "Choisir une catégorie",
+        noCategory: "Aucune catégorie",
+        prepTime: "Temps de préparation",
+        order: "Ordre",
+        min: "min",
+        
+        // Allergens
+        allergens: "Allergènes",
+        customAllergen: "Allergène personnalisé...",
+        
+        // Dietary Info
+        dietaryInfo: "Informations diététiques",
+        customDietaryInfo: "Info diététique personnalisée...",
+        
+        // Variants
+        variants: "Variantes",
+        addVariant: "Ajouter une variante",
+        variantName: "Nom",
+        variantNamePlaceholder: "ex : Grande",
+        priceModifier: "Ajustement prix",
+        default: "Par défaut",
+        
+        // Availability (edit mode)
+        itemAvailable: "Article disponible",
+        availabilityHelper: "Les articles indisponibles sont masqués des clients",
+        
+        // Actions
+        cancel: "Annuler",
+        createItem: "Créer l'article",
+        updateItem: "Mettre à jour l'article",
+        saving: "Enregistrement...",
+        
+        // Validation
+        nameRequired: "Le nom de l'article est requis",
+        nameMaxLength: "Le nom doit contenir au maximum 150 caractères",
+        descriptionMaxLength: "La description doit contenir au maximum 1000 caractères", 
+        priceRequired: "Le prix doit être supérieur à 0",
+        priceMax: "Le prix doit être inférieur à 1000",
+        prepTimeMin: "Le temps de préparation doit être d'au moins 1 minute",
+        prepTimeMax: "Le temps de préparation doit être inférieur à 1000 minutes",
+        orderMin: "L'ordre d'affichage doit être un nombre positif",
+        orderMax: "L'ordre d'affichage doit être inférieur à 1000",
+        variantNameRequired: "Le nom de la variante est requis",
+        fileSizeError: "La taille du fichier ne peut pas dépasser 5 MB",
+        fileTypeError: "Veuillez sélectionner un fichier image valide"
+      }
     }
   }
 } as const

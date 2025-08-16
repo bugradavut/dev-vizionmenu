@@ -54,16 +54,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         icon: BookOpen,
         items: [
           {
-            title: t.navigation.categories,
-            url: "/menu/categories",
-          },
-          {
-            title: t.navigation.items,
-            url: "/menu/items",
-          },
-          {
-            title: t.navigation.pricing,
-            url: "/menu/pricing",
+            title: t.navigation.menu,
+            url: "/menu",
           },
         ],
       },

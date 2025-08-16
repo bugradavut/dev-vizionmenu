@@ -40,6 +40,9 @@ const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
 const ordersRoutes = require('./routes/orders.routes');
 const branchesRoutes = require('./routes/branches.routes');
+const menuCategoriesRoutes = require('./routes/menu-categories.routes');
+const menuItemsRoutes = require('./routes/menu-items.routes');
+const menuPresetsRoutes = require('./routes/menu-presets.routes');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -68,7 +71,7 @@ app.use((req, res, next) => {
 app.use('/', healthRoutes);
 
 // Use auth routes
-app.use('/auth', authRoutes);
+app.use('/api/v1/auth', authRoutes);
 
 // Use users routes
 app.use('/api/v1/users', usersRoutes);
@@ -78,6 +81,15 @@ app.use('/api/v1/orders', ordersRoutes);
 
 // Use branches routes
 app.use('/api/v1/branch', branchesRoutes);
+
+// Use menu categories routes
+app.use('/api/v1/menu/categories', menuCategoriesRoutes);
+
+// Use menu items routes
+app.use('/api/v1/menu/items', menuItemsRoutes);
+
+// Use menu presets routes
+app.use('/api/v1/menu/presets', menuPresetsRoutes);
 
 // Catch all other routes
 app.use('*', (req, res) => {
@@ -101,7 +113,32 @@ app.use('*', (req, res) => {
       'POST /api/v1/orders/auto-accept-check',
       'POST /api/v1/orders/timer-check',
       'GET /api/v1/branch/:branchId/settings',
-      'PUT /api/v1/branch/:branchId/settings'
+      'PUT /api/v1/branch/:branchId/settings',
+      'GET /api/v1/menu/categories',
+      'GET /api/v1/menu/categories/:id',
+      'POST /api/v1/menu/categories',
+      'PUT /api/v1/menu/categories/:id',
+      'DELETE /api/v1/menu/categories/:id',
+      'PATCH /api/v1/menu/categories/:id/toggle',
+      'PUT /api/v1/menu/categories/reorder',
+      'GET /api/v1/menu/items',
+      'GET /api/v1/menu/items/:id',
+      'POST /api/v1/menu/items',
+      'PUT /api/v1/menu/items/:id',
+      'DELETE /api/v1/menu/items/:id',
+      'PATCH /api/v1/menu/items/:id/toggle',
+      'POST /api/v1/menu/items/:id/duplicate',
+      'PUT /api/v1/menu/items/reorder',
+      'POST /api/v1/menu/items/bulk',
+      'GET /api/v1/menu/presets',
+      'GET /api/v1/menu/presets/:id',
+      'POST /api/v1/menu/presets',
+      'PUT /api/v1/menu/presets/:id',
+      'DELETE /api/v1/menu/presets/:id',
+      'POST /api/v1/menu/presets/:id/activate',
+      'POST /api/v1/menu/presets/deactivate',
+      'POST /api/v1/menu/presets/check-scheduled',
+      'POST /api/v1/menu/presets/current-menu'
     ]
   });
 });
@@ -125,6 +162,14 @@ if (require.main === module) {
     console.log(`   POST /api/v1/orders/timer-check`);
     console.log(`   GET  /api/v1/branch/:branchId/settings`);
     console.log(`   PUT  /api/v1/branch/:branchId/settings`);
+    console.log(`   GET  /api/v1/menu/categories`);
+    console.log(`   GET  /api/v1/menu/items`);
+    console.log(`   POST /api/v1/menu/items`);
+    console.log(`   GET  /api/v1/menu/presets`);
+    console.log(`   POST /api/v1/menu/presets/:id/activate`);
+    console.log(`   POST /api/v1/menu/categories`);
+    console.log(`   PUT  /api/v1/menu/categories/:id`);
+    console.log(`   PATCH /api/v1/menu/categories/:id/toggle`);
   });
 }
 

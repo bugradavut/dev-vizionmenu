@@ -231,62 +231,504 @@ Headers: {
 - **Priority:** ⚡ **MEDIUM**
 - **Purpose:** Get specific branch details
 
+### `GET /api/v1/branch/:branchId/settings`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Get branch-specific settings including auto-ready configuration
+- **Auth Required:** Yes (Branch context required)
+- **Implementation:** Settings management with auto-ready toggle system
+- **Response:**
+```json
+{
+  "data": {
+    "branch_id": "uuid",
+    "auto_ready_enabled": true,
+    "base_delay": 20,
+    "temporary_base_delay": 0,
+    "delivery_delay": 15,
+    "temporary_delivery_delay": 0,
+    "auto_accept_orders": false,
+    "notification_settings": {
+      "new_orders": true,
+      "status_updates": true,
+      "email_notifications": false
+    },
+    "updated_at": "2025-01-13T10:30:00Z"
+  }
+}
+```
+
+### `PUT /api/v1/branch/:branchId/settings`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Update branch settings including timing configuration
+- **Auth Required:** Yes (Manager+ permissions)
+- **Implementation:** Settings validation with real-time timer updates
+- **Request Body:**
+```json
+{
+  "auto_ready_enabled": true,
+  "base_delay": 25,
+  "temporary_base_delay": -5,
+  "delivery_delay": 20,
+  "temporary_delivery_delay": 10,
+  "auto_accept_orders": false
+}
+```
+
+---
+
+## **🍽️ Menu Management Endpoints**
+
+### `GET /api/v1/menu/categories`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** List all menu categories for branch with optional items
+- **Auth Required:** Yes (Branch context required) 
+- **Implementation:** Controller-Service-Route pattern with advanced filtering
+- **Query Parameters:**
+  - `includeItems=true|false` (include menu items in response)
+  - `includeInactive=true|false` (include inactive categories)
+  - `page=1&limit=50` (pagination)
+  - `sortBy=name|display_order|created_at`
+  - `sortOrder=asc|desc`
+- **Response:**
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Pizzas",
+      "description": "Fresh wood-fired pizzas",
+      "display_order": 1,
+      "is_active": true,
+      "items_count": 12,
+      "available_items": 10,
+      "created_at": "2025-01-13T10:30:00Z",
+      "updated_at": "2025-01-13T10:30:00Z",
+      "items": [] // if includeItems=true
+    }
+  ],
+  "meta": {
+    "total": 8,
+    "page": 1,
+    "limit": 50,
+    "active": 7,
+    "inactive": 1
+  }
+}
+```
+
+### `GET /api/v1/menu/categories/:id`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Get detailed category information with items
+- **Auth Required:** Yes (Branch context required)
+- **Response:**
+```json
+{
+  "data": {
+    "id": "uuid",
+    "name": "Pizzas",
+    "description": "Fresh wood-fired pizzas",
+    "display_order": 1,
+    "is_active": true,
+    "items": [
+      {
+        "id": "uuid",
+        "name": "Margherita Pizza", 
+        "price": 18.99,
+        "is_available": true
+      }
+    ],
+    "created_at": "2025-01-13T10:30:00Z",
+    "updated_at": "2025-01-13T10:30:00Z"
+  }
+}
+```
+
+### `POST /api/v1/menu/categories`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Create new menu category
+- **Auth Required:** Yes (Manager+ permissions)
+- **Request Body:**
+```json
+{
+  "name": "New Category",
+  "description": "Category description",
+  "display_order": 5
+}
+```
+
+### `PUT /api/v1/menu/categories/:id`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Update existing category
+- **Auth Required:** Yes (Manager+ permissions)
+- **Request Body:**
+```json
+{
+  "name": "Updated Category Name",
+  "description": "Updated description",
+  "display_order": 3,
+  "is_active": true
+}
+```
+
+### `DELETE /api/v1/menu/categories/:id`
+- **Status:** ✅ **READY** (Production implemented) 
+- **Purpose:** Delete category (moves items to uncategorized)
+- **Auth Required:** Yes (Manager+ permissions)
+- **Implementation:** Safe deletion with item reassignment
+
+### `PATCH /api/v1/menu/categories/:id/toggle`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Toggle category availability instantly  
+- **Auth Required:** Yes (Staff+ permissions)
+- **Implementation:** Instant on/off toggle for categories
+
+### `PUT /api/v1/menu/categories/reorder`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Reorder categories (drag & drop support)
+- **Auth Required:** Yes (Manager+ permissions)
+- **Request Body:**
+```json
+{
+  "reorderData": [
+    {"id": "cat-uuid-1", "display_order": 1},
+    {"id": "cat-uuid-2", "display_order": 2}
+  ]
+}
+```
+
+### `GET /api/v1/menu/items`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** List menu items with advanced filtering and search
+- **Auth Required:** Yes (Branch context required)
+- **Implementation:** Advanced filtering, search, pagination, and sorting
+- **Query Parameters:**
+  - `categoryId=uuid` (filter by category)
+  - `search=text` (search name/description)
+  - `isAvailable=true|false` (availability filter)
+  - `priceMin=10.00&priceMax=50.00` (price range)
+  - `allergens=dairy,gluten` (comma-separated allergens)
+  - `dietaryInfo=vegetarian,vegan` (comma-separated dietary info)
+  - `includeVariants=true|false` (include item variants)
+  - `page=1&limit=50` (pagination, max 100)
+  - `sortBy=name|price|display_order|created_at`
+  - `sortOrder=asc|desc`
+- **Response:**
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Pizza Margherita", 
+      "description": "Fresh mozzarella, tomatoes, basil",
+      "price": 18.99,
+      "image_url": "https://storage-url/image.jpg",
+      "allergens": ["dairy", "gluten"],
+      "dietary_info": ["vegetarian"],
+      "preparation_time": 15,
+      "is_available": true,
+      "display_order": 1,
+      "category": {
+        "id": "cat-uuid",
+        "name": "Pizzas",
+        "is_active": true
+      },
+      "variants": [
+        {
+          "id": "variant-uuid",
+          "name": "Large",
+          "price_modifier": 5.00,
+          "is_default": false,
+          "display_order": 1
+        }
+      ],
+      "created_at": "2025-01-13T10:30:00Z",
+      "updated_at": "2025-01-13T10:30:00Z"
+    }
+  ],
+  "meta": {
+    "total": 25,
+    "page": 1,
+    "limit": 50,
+    "totalPages": 1,
+    "hasNextPage": false,
+    "hasPreviousPage": false,
+    "available": 23,
+    "unavailable": 2
+  }
+}
+```
+
+### `GET /api/v1/menu/items/:id`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Get detailed menu item information with variants
+- **Auth Required:** Yes (Branch context required)
+
+### `POST /api/v1/menu/items`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Create new menu item with instant photo upload
+- **Auth Required:** Yes (Manager+ permissions)
+- **Content-Type:** `multipart/form-data`
+- **Implementation:** Instant photo upload (vs UEAT's 3-5 day review process)
+- **Form Fields:**
+  - `name`: "Pizza Margherita" (required)
+  - `description`: "Fresh mozzarella, tomatoes, basil"
+  - `price`: 18.99 (required, positive number)
+  - `category_id`: "category-uuid" (optional)
+  - `allergens`: ["dairy", "gluten"] (JSON array)
+  - `dietary_info`: ["vegetarian"] (JSON array)
+  - `preparation_time`: 15 (minutes, optional)
+  - `display_order`: 1 (optional, auto-increments)
+  - `variants`: [{"name": "Large", "price_modifier": 5.00}] (JSON array)
+  - `photo`: [IMAGE FILE] (optional, max 5MB)
+
+### `PUT /api/v1/menu/items/:id`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Update menu item with photo replacement
+- **Auth Required:** Yes (Manager+ permissions)
+- **Content-Type:** `multipart/form-data`
+- **Implementation:** Smart photo replacement with auto-cleanup
+
+### `DELETE /api/v1/menu/items/:id`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Delete menu item with photo cleanup
+- **Auth Required:** Yes (Manager+ permissions)
+- **Implementation:** Complete cleanup including photo deletion
+
+### `PATCH /api/v1/menu/items/:id/toggle`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Toggle menu item availability instantly
+- **Auth Required:** Yes (Staff+ permissions)
+- **Implementation:** Instant on/off toggle for menu items
+
+### `POST /api/v1/menu/items/:id/duplicate`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Duplicate menu item with optional modifications
+- **Auth Required:** Yes (Manager+ permissions)
+- **Implementation:** Smart duplication with customization options
+- **Request Body:**
+```json
+{
+  "name": "New Item Name (Copy)",
+  "price": 15.99,
+  "category_id": "different-category-uuid",
+  "includeVariants": true
+}
+```
+
+### `PUT /api/v1/menu/items/reorder`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Reorder menu items (drag & drop support)
+- **Auth Required:** Yes (Manager+ permissions)
+- **Request Body:**
+```json
+{
+  "reorderData": [
+    {"id": "item-uuid-1", "display_order": 1},
+    {"id": "item-uuid-2", "display_order": 2}
+  ]
+}
+```
+
+### `POST /api/v1/menu/items/bulk`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Advanced bulk operations on menu items (Superior to UEAT)
+- **Auth Required:** Yes (Manager+ permissions)
+- **Implementation:** Bulk availability, pricing, and category operations
+- **Request Body Examples:**
+```json
+// Bulk Availability Update
+{
+  "itemIds": ["uuid1", "uuid2", "uuid3"],
+  "operation": "availability",
+  "data": {"is_available": false}
+}
+
+// Bulk Category Update
+{
+  "itemIds": ["uuid1", "uuid2"],
+  "operation": "category",
+  "data": {"category_id": "new-category-uuid"}
+}
+
+// Bulk Pricing - Percentage Adjustment  
+{
+  "itemIds": ["uuid1", "uuid2"],
+  "operation": "pricing",
+  "data": {
+    "price_adjustment_type": "percentage",
+    "adjustment": 10.0
+  }
+}
+
+// Bulk Pricing - Fixed Price
+{
+  "itemIds": ["uuid1", "uuid2"], 
+  "operation": "pricing",
+  "data": {
+    "price_adjustment_type": "fixed",
+    "new_price": 12.99
+  }
+}
+```
+
 ---
 
 ## **📋 Order Management Endpoints**
 
 ### `GET /api/v1/orders`
-- **Status:** ❌ **NOT IMPLEMENTED**
-- **Priority:** 🔥 **CRITICAL** (Week 3 focus)
-- **Purpose:** List branch orders with filtering
-- **Planned Query Parameters:**
-  - `status=pending|preparing|ready|completed`
-  - `source=qr_code|uber_eats|doordash|phone|web`
-  - `page=1&limit=20`
-  - `date_from=2025-07-01`
-  - `date_to=2025-07-28`
-- **Planned Response:**
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** List branch orders with filtering and pagination
+- **Auth Required:** Yes (Branch context required)
+- **Implementation:** Controller-Service-Route pattern with advanced filtering
+- **Query Parameters:**
+  - `status=pending|preparing|ready|completed|cancelled|rejected`
+  - `source=qr_code|uber_eats|doordash|phone|web|walk_in`
+  - `page=1&limit=20` (pagination)
+  - `date_from=2025-01-01` (ISO date)
+  - `date_to=2025-01-31` (ISO date)
+  - `search=customer_name` (search by customer name)
+  - `sortBy=created_at|total|order_number`
+  - `sortOrder=asc|desc`
+- **Response:**
 ```json
 {
   "data": [
     {
-      "id": "ORDER-001",
-      "orderNumber": "ORDER-001",
-      "customerName": "John Doe",
-      "customerPhone": "+1 416 555 1234",
+      "id": "uuid",
+      "order_number": "ORDER-001",
+      "customer_name": "John Doe", 
+      "customer_phone": "+1 416 555 1234",
+      "customer_email": "john@example.com",
       "source": "qr_code",
-      "status": "pending",
+      "status": "pending", 
       "total": 125.50,
-      "items": [...],
-      "createdAt": "2025-07-28T10:30:00Z"
+      "order_type": "delivery",
+      "payment_status": "paid",
+      "items_count": 3,
+      "special_instructions": "Extra spicy",
+      "created_at": "2025-01-13T10:30:00Z",
+      "updated_at": "2025-01-13T10:30:00Z"
     }
   ],
-  "meta": { "total": 50, "page": 1 }
+  "meta": {
+    "total": 150,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 8,
+    "hasNextPage": true,
+    "hasPreviousPage": false
+  }
 }
 ```
 
 ### `GET /api/v1/orders/:orderId`
-- **Status:** ❌ **NOT IMPLEMENTED**
-- **Priority:** 🔥 **CRITICAL** (Needed for detail page)
-- **Purpose:** Get detailed order information
-- **Planned Response:** Complete order with items, customer, payment info
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Get detailed order information with items and customer data
+- **Auth Required:** Yes (Branch context required)
+- **Implementation:** Complete order details with order items relationship
+- **Response:**
+```json
+{
+  "data": {
+    "id": "uuid",
+    "order_number": "ORDER-001",
+    "customer_name": "John Doe",
+    "customer_phone": "+1 416 555 1234", 
+    "customer_email": "john@example.com",
+    "source": "qr_code",
+    "status": "preparing",
+    "total": 125.50,
+    "subtotal": 112.50,
+    "tax": 13.00,
+    "order_type": "delivery",
+    "payment_method": "card",
+    "payment_status": "paid",
+    "delivery_address": "123 Main St, Toronto",
+    "special_instructions": "Extra spicy, no onions",
+    "items": [
+      {
+        "id": "uuid",
+        "menu_item_name": "Margherita Pizza",
+        "quantity": 2,
+        "unit_price": 18.99,
+        "total_price": 37.98,
+        "special_requests": "Extra cheese"
+      }
+    ],
+    "created_at": "2025-01-13T10:30:00Z",
+    "updated_at": "2025-01-13T10:32:00Z"
+  }
+}
+```
 
 ### `PATCH /api/v1/orders/:orderId/status`
-- **Status:** ❌ **NOT IMPLEMENTED**
-- **Priority:** 🔥 **CRITICAL** (Core restaurant operation)
-- **Purpose:** Update order status
-- **Planned Request:**
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Update order status with validation and business rules
+- **Auth Required:** Yes (Staff+ permissions)
+- **Implementation:** Status transition validation with auto-ready logic integration
+- **Request Body:**
 ```json
 {
   "status": "preparing",
   "notes": "Started cooking - ETA 15 mins"
 }
 ```
+- **Valid Status Transitions:** 
+  - `pending → preparing → ready → completed`
+  - `any → cancelled` (Manager+ only)
+  - `pending → rejected` (Manager+ only)
+- **Response:**
+```json
+{
+  "data": {
+    "id": "uuid",
+    "order_number": "ORDER-001",
+    "previous_status": "pending",
+    "new_status": "preparing", 
+    "updated_at": "2025-01-13T10:32:00Z",
+    "updated_by": "user_uuid",
+    "notes": "Started cooking - ETA 15 mins"
+  }
+}
+```
 
 ### `POST /api/v1/orders`
-- **Status:** ❌ **NOT IMPLEMENTED**
-- **Priority:** ⚡ **MEDIUM** (For manual order entry)
-- **Purpose:** Create new order (QR code orders, phone orders)
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Create new order (QR code orders, manual entry, phone orders)
+- **Auth Required:** Yes (Staff+ permissions)
+- **Implementation:** Complete order creation with items, customer data, and payment processing
+- **Request Body:**
+```json
+{
+  "customer_name": "John Doe",
+  "customer_phone": "+1 416 555 1234",
+  "customer_email": "john@example.com", 
+  "source": "phone",
+  "order_type": "pickup",
+  "payment_method": "cash",
+  "items": [
+    {
+      "menu_item_id": "uuid",
+      "quantity": 2,
+      "special_requests": "No onions"
+    }
+  ],
+  "special_instructions": "Call when ready",
+  "delivery_address": "123 Main St" // if order_type is delivery
+}
+```
+
+### `POST /api/v1/orders/auto-accept-check`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Check if orders should be auto-accepted based on branch settings
+- **Auth Required:** Yes (System/Background job)
+- **Implementation:** Automated system for processing pending orders
+
+### `POST /api/v1/orders/timer-check`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Check if orders should be auto-marked as ready based on timer
+- **Auth Required:** Yes (System/Background job)
+- **Implementation:** Automated system for timer-based order status updates
 
 ---
 
@@ -395,24 +837,35 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ## **🚀 Implementation Status Overview**
 
 ### **✅ Completed & Production Ready**
-- **User Management System**: Complete CRUD with role-based hierarchy
-- **Authentication**: Multi-tenant auth with Supabase integration
-- **Authorization**: Role-based access control with cross-branch protection
-- **API Architecture**: Unified Express.js backend deployed on Vercel
-- **Database**: Supabase with Row-Level Security policies
-- **Frontend**: Next.js 15 application with real-time order dashboard
+- **User Management System**: Complete CRUD with role-based hierarchy ✅
+- **Authentication**: Multi-tenant auth with Supabase integration ✅
+- **Authorization**: Role-based access control with cross-branch protection ✅
+- **Order Management System**: Full CRUD, status updates, auto-ready system ✅
+- **Branch Settings**: Auto-ready configuration, timing controls ✅
+- **Menu Categories API**: Full CRUD, toggle, reorder, advanced filtering ✅
+- **Menu Items API**: CRUD, instant photo upload, bulk operations, variants ✅
+- **API Architecture**: Modern Express.js with Controller-Service-Route pattern ✅
+- **Database**: Supabase with RLS policies and optimized schemas ✅
+- **Frontend**: Next.js 15 with real-time dashboard and bilingual support ✅
 
-### **🔄 In Active Development**
-- **Order Management Endpoints**: Core CRUD operations for orders
-- **Menu Management System**: Category and item management
-- **Analytics Dashboard**: Order statistics and reporting
-- **Real-time Features**: WebSocket integration for live updates
+### **🔄 Currently Testing**
+- **Menu Items API**: Thunder Client testing in progress
+- **Photo Upload System**: Multipart/form-data testing
+- **Bulk Operations**: Advanced bulk update testing
 
-### **📋 Planned Features**
-- **Third-party Integrations**: Uber Eats, DoorDash API sync
-- **Background Jobs**: Email notifications, webhook processing
-- **Mobile API**: Enhanced endpoints for mobile applications
-- **Advanced Analytics**: Performance metrics and insights
+### **📋 Next Development Phase**
+- **Menu Presets API**: Smart scheduling system with time-based switching
+- **Advanced Frontend**: Modern drag & drop Menu Builder interface
+- **Analytics Dashboard**: Menu performance tracking and insights
+- **Real-time Sync**: WebSocket integration for live menu updates
+
+### **🚀 UEAT-Competitive Advantages Implemented**
+- **Instant Photo Upload**: vs UEAT's 3-5 day review process ✅
+- **Advanced Bulk Operations**: Superior to UEAT's basic operations ✅
+- **Smart Filtering**: Multi-field search and filtering ✅
+- **Drag & Drop Management**: Intuitive reordering system ✅
+- **Role-based Permissions**: Granular access control ✅
+- **Multi-tenant Architecture**: Branch-level isolation ✅
 
 ---
 

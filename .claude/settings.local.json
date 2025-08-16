@@ -84,9 +84,20 @@
       "Bash(git clean:*)",
       "Bash(del index.backup.js index.clean.js index.ts)",
       "Bash(git rm:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "WebSearch",
+      "WebFetch(domain:ui.shadcn.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(Y)",
+      "mcp__supabase__get_project",
+      "Bash(NODE_ENV=development node apps/api/api/index.js)",
+      "Bash(git reset:*)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits",
+    "additionalDirectories": [
+      "C:\\c"
+    ]
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
