@@ -60,7 +60,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
         // Check if user is active by calling our API
         try {
           const token = authData.session?.access_token;
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile`, {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/profile`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'

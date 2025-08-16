@@ -39,7 +39,7 @@ export class AuthService {
    * Get current user profile
    */
   async getProfile(): Promise<User> {
-    const response = await apiClient.get<User>('/auth/profile');
+    const response = await apiClient.get<User>('/api/v1/auth/profile');
     return response.data;
   }
 
