@@ -96,7 +96,8 @@
     "deny": [],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [
-      "C:\\c"
+      "C:\\c",
+      "C:\\"
     ]
   },
   "enableAllProjectMcpServers": true,

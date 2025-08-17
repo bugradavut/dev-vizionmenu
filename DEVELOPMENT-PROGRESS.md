@@ -307,17 +307,305 @@
 
 ## 🔄 CURRENT MAJOR DEVELOPMENT PRIORITY
 
-### **1. Order Page Development - NEW FOCUS 🔥**
+### **1. Customer Order Page Implementation - NEW FOCUS 🔥**
 - **Priority**: 🔥 **CRITICAL** - Next major system for enhanced platform functionality
-- **Timeline**: January 16-23, 2025 (Next development phase)
-- **Status**: 🆕 **STARTING NEW PHASE** - Order page design and functionality implementation
+- **Timeline**: January 17-30, 2025 (Next development phase)
+- **Status**: 🆕 **DETAILED PLANNING COMPLETE** - Ready for step-by-step implementation
 - **Target Areas**: 
-  - 🔄 **Order Page Design**: Create modern UI for order creation and management
-  - 🔄 **Customer-Facing Interface**: Build QR code ordering system
-  - 🔄 **Cart Management**: Shopping cart functionality with item variants
-  - 🔄 **Order Placement**: Customer order placement with real-time updates
-  - 🔄 **Payment Integration**: Prepare payment processing capabilities
-  - 🔄 **Order Tracking**: Customer order status tracking interface
+  - 🔄 **Customer-Facing Order Interface**: Standalone ordering page outside dashboard
+  - 🔄 **QR vs Web Detection System**: Unified page with automatic source detection
+  - 🔄 **Dynamic Menu Integration**: Real menu data from Categories-Items-Presets system
+  - 🔄 **Modern Cart Management**: Professional shopping cart with quantity controls
+  - 🔄 **Order Placement System**: Customer order creation with branch context
+  - 🔄 **Responsive Design**: Perfect mobile/tablet experience matching provided design
+
+## 📋 **DETAILED ORDER PAGE IMPLEMENTATION PLAN**
+
+### **🎯 PHASE 1: Layout & Structure (2-3 days)**
+
+#### **1.1 Page Layout Architecture**
+```typescript
+// /order sayfası standalone layout (dashboard dışı)
+/order/
+├── page.tsx          // Ana order sayfası
+├── layout.tsx        // Order-specific layout (no sidebar)
+└── components/
+    ├── order-header.tsx     // Restaurant branding, branch info
+    ├── category-sidebar.tsx // Sol kategoriler menüsü  
+    ├── menu-grid.tsx        // Ürün grid'i (görseldeki gibi)
+    ├── cart-sidebar.tsx     // Sağ sepet paneli
+    └── order-summary.tsx    // Sipariş özeti ve checkout
+```
+
+#### **1.2 Required ShadCN Components**
+- `Sidebar` - Kategori menüsü için
+- `Card` - Ürün kartları için  
+- `Badge` - Fiyat ve durum etiketleri
+- `Button` - Add to cart, quantity controls
+- `Sheet` - Mobile cart overlay
+- `ScrollArea` - Uzun kategori/ürün listeleri
+- `Avatar` - Kategori ikonları
+
+### **🔍 PHASE 2: QR/Web Detection System (1 gün)**
+
+#### **2.1 URL Parameter Strategy**
+```typescript
+// QR Code URLs:
+/order?source=qr&branch=abc123&table=5
+/order?source=qr&branch=abc123&table=12&zone=outdoor
+
+// Web URLs:
+/order?source=web&branch=abc123
+/order?branch=abc123 (defaults to web)
+
+// Implementation:
+interface OrderContext {
+  source: 'qr' | 'web'
+  branchId: string
+  tableNumber?: number
+  zone?: string
+  isQROrder: boolean
+}
+```
+
+#### **2.2 Detection Logic**
+```typescript
+// app/order/page.tsx
+export default function OrderPage({ searchParams }: {
+  searchParams: { source?: string, branch?: string, table?: string, zone?: string }
+}) {
+  const orderContext: OrderContext = {
+    source: (searchParams.source as 'qr' | 'web') || 'web',
+    branchId: searchParams.branch || '',
+    tableNumber: searchParams.table ? parseInt(searchParams.table) : undefined,
+    zone: searchParams.zone,
+    isQROrder: searchParams.source === 'qr'
+  }
+
+  // Branch validation
+  if (!orderContext.branchId) {
+    redirect('/branch-selection') // Yeni sayfa gerekecek
+  }
+
+  return <OrderPageContent context={orderContext} />
+}
+```
+
+### **🍽️ PHASE 3: Menu Data Integration (2-3 gün)**
+
+#### **3.1 Dynamic Menu Service**
+```typescript
+// services/order-menu.service.ts
+export class OrderMenuService {
+  async getMenuForCustomers(branchId: string, currentTime = new Date()) {
+    // Categories + Items + Active Presets
+    const response = await apiClient.get(`/api/v1/menu/customer/${branchId}`, {
+      params: {
+        time: currentTime.toISOString(),
+        includePresets: true
+      }
+    })
+    return response.data
+  }
+}
+
+// Backend endpoint gerekecek:
+// GET /api/v1/menu/customer/:branchId
+// - Sadece aktif kategoriler (is_active: true)
+// - Sadece aktif ürünler (is_active: true)
+// - Preset filtrelemeleri uygulayarak
+// - Customer-friendly format (admin detayları olmadan)
+```
+
+#### **3.2 Menu Data Structure**
+```typescript
+interface CustomerMenu {
+  categories: CustomerCategory[]
+  metadata: {
+    branchName: string
+    activePreset?: {
+      name: string
+      description: string
+      validUntil: string
+    }
+  }
+}
+
+interface CustomerCategory {
+  id: string
+  name: string
+  icon: string
+  display_order: number
+  items: CustomerMenuItem[]
+}
+
+interface CustomerMenuItem {
+  id: string
+  name: string
+  description: string
+  price: number
+  image_url?: string
+  category_id: string
+  is_available: boolean // real-time availability
+}
+```
+
+### **🛒 PHASE 4: Cart & Checkout System (3-4 gün)**
+
+#### **4.1 Cart Management**
+```typescript
+// contexts/order-cart-context.tsx
+interface CartItem {
+  id: string
+  name: string  
+  price: number
+  quantity: number
+  notes?: string
+  customizations?: CartCustomization[]
+}
+
+interface OrderCartContext {
+  items: CartItem[]
+  addItem: (item: CustomerMenuItem, quantity?: number) => void
+  removeItem: (itemId: string) => void
+  updateQuantity: (itemId: string, quantity: number) => void
+  clearCart: () => void
+  total: number
+  subtotal: number
+  tax: number
+}
+```
+
+#### **4.2 QR vs Web Checkout Differences**
+```typescript
+// QR Checkout (Dine-in):
+interface QRCheckoutData {
+  tableNumber: number
+  zone?: string
+  orderType: 'dine_in'
+  paymentMethod: 'pay_at_table' | 'pay_now'
+  specialInstructions?: string
+}
+
+// Web Checkout (Delivery/Pickup):
+interface WebCheckoutData {
+  orderType: 'delivery' | 'pickup'
+  customerInfo: {
+    name: string
+    phone: string
+    email?: string
+  }
+  deliveryAddress?: Address
+  pickupTime?: Date
+  paymentMethod: 'card' | 'cash'
+}
+```
+
+### **🎨 PHASE 5: UI/UX Implementation (4-5 gün)**
+
+#### **5.1 Layout Components**
+
+**Header Component:**
+```typescript
+// QR Mode: "Table 5 - Outdoor Zone"
+// Web Mode: "VisionMenu - Downtown Branch"
+interface OrderHeaderProps {
+  context: OrderContext
+  branchInfo: {
+    name: string
+    logo?: string
+    address?: string
+  }
+}
+```
+
+**Category Sidebar:**
+```typescript
+// Görseldeki sol panel
+// - All Menu (tüm ürünler)
+// - Set Menu (preset menüler)
+// - Kategoriler (Burger, Juice, Bento, vs.)
+// - Item count per category
+```
+
+**Product Grid:**
+```typescript
+// Görseldeki ana ürün alanı
+// - 2-3 column responsive grid
+// - Product image, name, description, price
+// - Add to cart button
+// - Availability indicators
+```
+
+**Cart Sidebar:**
+```typescript
+// Görseldeki sağ panel (DC, DR sections)
+// - Cart items with quantity controls
+// - Order summary (subtotal, tax, total)
+// - Customer info form (name, phone)
+// - Checkout button
+```
+
+#### **5.2 Mobile Responsive Strategy**
+```typescript
+// Desktop: 3-panel layout (categories | products | cart)
+// Tablet: 2-panel layout (categories+products | cart)
+// Mobile: Single panel with:
+//   - Sticky header
+//   - Category tabs (horizontal scroll)
+//   - Product grid
+//   - Floating cart button (shows count)
+//   - Cart sheet overlay
+```
+
+### **🔧 PHASE 6: Integration & Testing (2-3 gün)**
+
+#### **6.1 Backend API Requirements**
+```typescript
+// Gerekli yeni endpoint'ler:
+POST /api/v1/orders/customer    // QR/Web siparişleri için
+GET  /api/v1/menu/customer/:branchId   // Customer menu
+GET  /api/v1/branches/:branchId/info   // Branch bilgileri
+POST /api/v1/orders/validate   // Sipariş validasyonu
+```
+
+#### **6.2 Error Handling**
+```typescript
+// - Invalid branch ID → Branch selection page
+// - Table already occupied → Error message
+// - Item out of stock → Remove from cart
+// - Network errors → Offline mode with cached data
+// - Payment failures → Retry mechanism
+```
+
+### **📱 PHASE 7: Advanced Features (opsiyonel)**
+
+#### **7.1 Real-time Features**
+- WebSocket connection for real-time menu updates
+- Kitchen availability status
+- Queue position for QR orders
+
+#### **7.2 Progressive Web App**
+- Offline menu browsing
+- Add to home screen prompt
+- Push notifications for order status
+
+---
+
+## 🚀 **Implementation Priority Order**
+
+1. **Week 1**: Phase 1 (Layout) + Phase 2 (QR Detection)
+2. **Week 2**: Phase 3 (Menu Integration) + Phase 4 (Cart System)  
+3. **Week 3**: Phase 5 (UI/UX) + Phase 6 (Integration)
+4. **Week 4**: Testing, bug fixes, performance optimization
+
+## ❓ **Critical Questions to Resolve**
+
+1. **Branch Selection**: QR kodda branch ID yoksa nasıl handle edelim?
+2. **Table Validation**: Masa numarası doğrulaması backend'de mi olacak?
+3. **Payment Integration**: Ödeme sistemi şimdilik simulation mı yoksa gerçek mi?
+4. **Preset Timing**: Real-time preset transitions nasıl handle edilecek?
+5. **Image Storage**: Ürün görselleri Supabase Storage'da mı saklanacak?
 
 ### **🐛 Known Issues - Minor Bug Fixes**
 - 🔄 **Preset One-time Scheduling Bug**: Preset edit modal'da one-time saat seçimleri gelmiyor. Bu bug fixlenecek.
