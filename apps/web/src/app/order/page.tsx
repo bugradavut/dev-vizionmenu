@@ -10,6 +10,7 @@ import { OrderContextProvider } from './contexts/order-context'
 import { CartContextProvider } from './contexts/cart-context'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { customerMenuService, type CustomerMenu } from '@/services/customer-menu.service'
+import { useResponsive, useResponsiveClasses } from '@/hooks/use-responsive'
 
 interface OrderPageProps {
   searchParams: Promise<{
@@ -28,25 +29,14 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
 }> }) {
   const resolvedSearchParams = use(searchParams)
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [isMobile, setIsMobile] = useState(false)
-  const [isTablet, setIsTablet] = useState(false)
   const [customerMenu, setCustomerMenu] = useState<CustomerMenu | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState<string>('')
   
-  // Detect viewport size for responsive layout
-  useEffect(() => {
-    const checkViewport = () => {
-      const width = window.innerWidth
-      setIsMobile(width < 768)
-      setIsTablet(width >= 768 && width < 1024)
-    }
-    
-    checkViewport()
-    window.addEventListener('resize', checkViewport)
-    return () => window.removeEventListener('resize', checkViewport)
-  }, [])
+  // Centralized responsive state management
+  const { isMobile, isTablet, isDesktop } = useResponsive()
+  const responsiveClasses = useResponsiveClasses()
 
   // Create order context from URL parameters with enhanced validation
   const orderContext = {
@@ -133,7 +123,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
     <OrderContextProvider value={orderContext}>
       <CartContextProvider>
         {/* Desktop Layout */}
-        {!isMobile && !isTablet && (
+        {isDesktop && (
           <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
             {/* Header */}
             <div className="flex-shrink-0">
@@ -216,7 +206,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
               </div>
               
               {/* Cart Sidebar - Narrower than desktop */}
-              <div className="w-72 bg-white border-l border-gray-200">
+              <div className={`${responsiveClasses.sidebar.cart} bg-white border-l border-gray-200`}>
                 <ScrollArea className="h-full">
                   <CartSidebar />
                 </ScrollArea>

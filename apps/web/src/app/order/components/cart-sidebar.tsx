@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -15,6 +15,7 @@ import { useCart } from '../contexts/cart-context'
 import { useOrderContext } from '../contexts/order-context'
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
+import { useResponsiveClasses } from '@/hooks/use-responsive'
 
 interface CustomerInfo {
   name: string
@@ -39,19 +40,8 @@ export function CartSidebar() {
   const { language } = useLanguage()
   const t = translations[language] || translations.en
   
-  const [isTablet, setIsTablet] = useState(false)
-  
-  // Detect tablet viewport
-  useEffect(() => {
-    const checkTablet = () => {
-      const width = window.innerWidth
-      setIsTablet(width >= 768 && width < 1024)
-    }
-    
-    checkTablet()
-    window.addEventListener('resize', checkTablet)
-    return () => window.removeEventListener('resize', checkTablet)
-  }, [])
+  // Centralized responsive state
+  const responsiveClasses = useResponsiveClasses()
   
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: '',
@@ -227,7 +217,7 @@ export function CartSidebar() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className={`${isTablet ? 'p-3' : 'p-4'} border-b border-gray-200`}>
+      <div className={`${responsiveClasses.padding.section} border-b border-gray-200`}>
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">
             {t.orderPage.cart.orderSummary}
@@ -242,29 +232,27 @@ export function CartSidebar() {
       </div>
 
       {/* Order Type Selection */}
-      <div className={`${isTablet ? 'px-3 py-2' : 'px-4 py-3'} border-b border-gray-200`}>
+      <div className={`${responsiveClasses.padding.section} border-b border-gray-200`}>
         <div className="grid grid-cols-2 gap-2">
           <Button
             variant={orderType === 'dine_in' ? 'default' : 'outline'}
-            size="sm"
             onClick={() => setOrderType('dine_in')}
-            className={`flex items-center gap-2 ${isTablet ? 'h-9 text-sm' : 'h-10'}`}
+            className="flex items-center gap-2 h-12 text-sm font-medium justify-start px-3"
             // Both QR and Web users can select dine in
           >
-            <MapPin className="w-4 h-4" />
-            <span>{t.orderPage.orderType.dineIn}</span>
-            {orderType === 'dine_in' && <div className="w-2 h-2 bg-white rounded-full ml-auto" />}
+            <MapPin className="w-4 h-4 flex-shrink-0" />
+            <span className="flex-1 text-left">{t.orderPage.orderType.dineIn}</span>
+            {orderType === 'dine_in' && <div className="w-2 h-2 bg-white rounded-full flex-shrink-0" />}
           </Button>
           
           <Button
             variant={orderType === 'takeout' ? 'default' : 'outline'}
-            size="sm"
             onClick={() => setOrderType('takeout')}
-            className={`flex items-center gap-2 ${isTablet ? 'h-9 text-sm' : 'h-10'}`}
+            className="flex items-center gap-2 h-12 text-sm font-medium justify-start px-3"
           >
-            <Package className="w-4 h-4" />
-            <span>{t.orderPage.orderType.takeout}</span>
-            {orderType === 'takeout' && <div className="w-2 h-2 bg-white rounded-full ml-auto" />}
+            <Package className="w-4 h-4 flex-shrink-0" />
+            <span className="flex-1 text-left">{t.orderPage.orderType.takeout}</span>
+            {orderType === 'takeout' && <div className="w-2 h-2 bg-white rounded-full flex-shrink-0" />}
           </Button>
         </div>
         
@@ -309,11 +297,11 @@ export function CartSidebar() {
             <p className="text-gray-400 text-sm">{t.orderPage.cart.emptyMessage}</p>
           </div>
         ) : (
-          <div className={`${isTablet ? 'p-3 space-y-3' : 'p-4 space-y-4'}`}>
+          <div className={`${responsiveClasses.padding.section} space-y-3`}>
             {/* Cart Items */}
             <div className="space-y-3">
               {items.map((item) => (
-                <Card key={item.id} className={isTablet ? 'p-3' : 'p-4'}>
+                <Card key={item.id} className={responsiveClasses.padding.card}>
                   <div className="flex items-start gap-3">
                     {/* Item Image */}
                     <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 relative">
@@ -397,9 +385,9 @@ export function CartSidebar() {
 
       {/* Customer Info & Checkout */}
       {items.length > 0 && (
-        <div className={`border-t border-gray-200 ${isTablet ? 'p-3 space-y-3' : 'p-4 space-y-4'}`}>
+        <div className={`border-t border-gray-200 ${responsiveClasses.padding.section} space-y-3`}>
           {/* Order Summary */}
-          <Card className={`${isTablet ? 'p-3' : 'p-4'} bg-gray-50`}>
+          <Card className={`${responsiveClasses.padding.card} bg-gray-50`}>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>{t.orderPage.pricing.subtotal}</span>
@@ -499,7 +487,7 @@ export function CartSidebar() {
           <Button
             onClick={handleCheckoutClick}
             disabled={isSubmitting || items.length === 0}
-            className={`w-full ${isTablet ? 'h-11 text-sm' : 'h-12 text-base'} font-medium`}
+            className="w-full h-12 text-base font-semibold"
             size="lg"
           >
             {isSubmitting ? t.orderPage.checkout.placingOrder : (language === 'fr' ? `${t.orderPage.checkout.checkout} - ${total.toFixed(2)} $` : `${t.orderPage.checkout.checkout} - $${total.toFixed(2)}`)}
