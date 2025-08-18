@@ -9,9 +9,12 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Minus, ShoppingCart, Trash2, AlertTriangle, MapPin, Package } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Plus, Minus, ShoppingCart, Trash2, AlertTriangle, MapPin, Package, CreditCard, Banknote, CheckCircle } from 'lucide-react'
 import { useCart } from '../contexts/cart-context'
 import { useOrderContext } from '../contexts/order-context'
+import { useLanguage } from '@/contexts/language-context'
+import { translations } from '@/lib/translations'
 
 interface CustomerInfo {
   name: string
@@ -33,6 +36,8 @@ export function CartSidebar() {
   } = useCart()
   
   const { isQROrder, tableNumber, zone } = useOrderContext()
+  const { language } = useLanguage()
+  const t = translations[language] || translations.en
   
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: '',
@@ -48,6 +53,8 @@ export function CartSidebar() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [orderSuccess, setOrderSuccess] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'online'>('cash')
 
   const handleQuantityChange = (itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -57,12 +64,25 @@ export function CartSidebar() {
     }
   }
 
-  const submitOrder = async () => {
+  const handleCheckoutClick = () => {
     // Validate order first
     if (!validateOrder()) return
     
+    // For takeout orders, skip payment modal (always online payment)
+    if (orderType === 'takeout') {
+      setPaymentMethod('online')
+      submitOrder()
+      return
+    }
+    
+    // For dine-in orders, show payment method selection modal
+    setShowPaymentModal(true)
+  }
+
+  const submitOrder = async () => {
     setIsSubmitting(true)
     setError(null)
+    setShowPaymentModal(false)
 
     try {
 
@@ -76,8 +96,9 @@ export function CartSidebar() {
           quantity: item.quantity,
           notes: item.notes || ''
         })),
-        orderType: orderType,
+        orderType: orderType === 'takeout' ? 'takeaway' : orderType,
         source: isQROrder ? 'qr' : 'web',
+        paymentMethod: paymentMethod,
         subtotal,
         tax,
         total,
@@ -130,22 +151,22 @@ export function CartSidebar() {
 
   const validateOrder = () => {
     if (items.length === 0) {
-      setError('Please add items to your cart')
+      setError(t.orderPage.validation.cartEmpty)
       return false
     }
 
     if (orderType === 'takeout') {
       // Takeout orders require complete delivery info
       if (!customerInfo.name.trim()) {
-        setError('Please enter your full name')
+        setError(t.orderPage.validation.nameRequired)
         return false
       }
       if (!customerInfo.phone.trim()) {
-        setError('Please enter your phone number')
+        setError(t.orderPage.validation.phoneRequired)
         return false
       }
       if (!customerInfo.address?.trim()) {
-        setError('Please enter your delivery address')
+        setError(t.orderPage.validation.addressRequired)
         return false
       }
     }
@@ -153,11 +174,11 @@ export function CartSidebar() {
     if (orderType === 'dine_in' && !isQROrder) {
       // Web dine-in orders need customer info for contact (no table number available)
       if (!customerInfo.name.trim()) {
-        setError('Please enter your name for dine-in service')
+        setError(t.orderPage.validation.dineInNameRequired)
         return false
       }
       if (!customerInfo.phone.trim()) {
-        setError('Please enter your phone number for dine-in service')
+        setError(t.orderPage.validation.dineInPhoneRequired)
         return false
       }
     }
@@ -171,17 +192,17 @@ export function CartSidebar() {
         <Card className="w-full">
           <CardContent className="p-6 text-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ShoppingCart className="w-8 h-8 text-green-600" />
+              <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Order Placed!</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{t.orderPage.orderSuccess.title}</h3>
             <p className="text-gray-600 mb-4">
-              Your order has been received and is being prepared.
+              {t.orderPage.orderSuccess.message}
             </p>
             <Button 
               onClick={() => setOrderSuccess(false)} 
               className="w-full"
             >
-              Place Another Order
+              {t.orderPage.orderSuccess.placeAnother}
             </Button>
           </CardContent>
         </Card>
@@ -195,11 +216,11 @@ export function CartSidebar() {
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">
-            Order Summary
+            {t.orderPage.cart.orderSummary}
           </h2>
           {itemCount > 0 && (
             <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-              {itemCount} {itemCount === 1 ? 'item' : 'items'}
+              {itemCount} {itemCount === 1 ? t.orderPage.cart.item : t.orderPage.cart.items}
             </Badge>
           )}
         </div>
@@ -217,7 +238,7 @@ export function CartSidebar() {
             // Both QR and Web users can select dine in
           >
             <MapPin className="w-4 h-4" />
-            <span>Dine In</span>
+            <span>{t.orderPage.orderType.dineIn}</span>
             {orderType === 'dine_in' && <div className="w-2 h-2 bg-white rounded-full ml-auto" />}
           </Button>
           
@@ -228,7 +249,7 @@ export function CartSidebar() {
             className="flex items-center gap-2 h-10"
           >
             <Package className="w-4 h-4" />
-            <span>Takeout</span>
+            <span>{t.orderPage.orderType.takeout}</span>
             {orderType === 'takeout' && <div className="w-2 h-2 bg-white rounded-full ml-auto" />}
           </Button>
         </div>
@@ -239,12 +260,15 @@ export function CartSidebar() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <div className="flex items-center gap-2 text-blue-700 text-sm font-medium">
                 <MapPin className="w-4 h-4" />
-                <span>Dine In Service</span>
+                <span>{t.orderPage.orderType.dineInService}</span>
               </div>
               <p className="text-xs text-blue-600 mt-1">
                 {isQROrder 
-                  ? `Your order will be served to Table ${tableNumber}${zone ? ` in ${zone}` : ''}`
-                  : 'Please let staff know your table number when ordering'
+                  ? (zone 
+                      ? t.orderPage.orderType.tableServiceWithZone.replace('{number}', tableNumber?.toString() || '').replace('{zone}', zone)
+                      : t.orderPage.orderType.tableService.replace('{number}', tableNumber?.toString() || '')
+                    )
+                  : t.orderPage.orderType.tableNumberInfo
                 }
               </p>
             </div>
@@ -252,10 +276,10 @@ export function CartSidebar() {
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
               <div className="flex items-center gap-2 text-orange-700 text-sm font-medium">
                 <Package className="w-4 h-4" />
-                <span>Takeout Order</span>
+                <span>{t.orderPage.orderType.takeoutOrder}</span>
               </div>
               <p className="text-xs text-orange-600 mt-1">
-                Your order will be prepared for pickup/delivery
+                {t.orderPage.orderType.takeoutInfo}
               </p>
             </div>
           )}
@@ -267,8 +291,8 @@ export function CartSidebar() {
         {items.length === 0 ? (
           <div className="p-6 text-center">
             <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-gray-500 font-medium mb-2">Your cart is empty</h3>
-            <p className="text-gray-400 text-sm">Add items from the menu to get started</p>
+            <h3 className="text-gray-500 font-medium mb-2">{t.orderPage.cart.empty}</h3>
+            <p className="text-gray-400 text-sm">{t.orderPage.cart.emptyMessage}</p>
           </div>
         ) : (
           <div className="p-4 space-y-4">
@@ -303,13 +327,13 @@ export function CartSidebar() {
                         {item.name}
                       </h4>
                       <p className="text-sm text-gray-600 mt-1">
-                        ${item.price.toFixed(2)} each
+                        {language === 'fr' ? `${item.price.toFixed(2)} $ ${t.orderPage.cart.each}` : `$${item.price.toFixed(2)} each`}
                       </p>
                       
                       {/* Notes */}
                       {item.notes && (
                         <p className="text-xs text-gray-500 mt-1 italic">
-                          Note: {item.notes}
+                          {t.orderPage.cart.note}: {item.notes}
                         </p>
                       )}
 
@@ -353,24 +377,6 @@ export function CartSidebar() {
               ))}
             </div>
 
-            {/* Order Summary */}
-            <Card className="p-4 bg-gray-50">
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Tax (13%)</span>
-                  <span>${tax.toFixed(2)}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between font-semibold text-base">
-                  <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
-                </div>
-              </div>
-            </Card>
           </div>
         )}
       </div>
@@ -378,21 +384,40 @@ export function CartSidebar() {
       {/* Customer Info & Checkout */}
       {items.length > 0 && (
         <div className="border-t border-gray-200 p-4 space-y-4">
+          {/* Order Summary */}
+          <Card className="p-4 bg-gray-50">
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>{t.orderPage.pricing.subtotal}</span>
+                <span>{language === 'fr' ? `${subtotal.toFixed(2)} $` : `$${subtotal.toFixed(2)}`}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>{t.orderPage.pricing.tax}</span>
+                <span>{language === 'fr' ? `${tax.toFixed(2)} $` : `$${tax.toFixed(2)}`}</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between font-semibold text-base">
+                <span>{t.orderPage.pricing.total}</span>
+                <span>{language === 'fr' ? `${total.toFixed(2)} $` : `$${total.toFixed(2)}`}</span>
+              </div>
+            </div>
+          </Card>
+
           {/* Customer Information - Different fields based on order type */}
           {(orderType === 'takeout' || (orderType === 'dine_in' && !isQROrder)) && (
             <div className="space-y-3">
               <Label className="text-sm font-medium text-gray-900">
-                {orderType === 'takeout' ? 'Delivery Information' : 'Customer Information'}
+                {orderType === 'takeout' ? t.orderPage.customerInfo.deliveryInfo : t.orderPage.customerInfo.customerInfo}
               </Label>
               
               <Input
-                placeholder={orderType === 'takeout' ? "Full Name" : "Your Name"}
+                placeholder={orderType === 'takeout' ? t.orderPage.customerInfo.fullName : t.orderPage.customerInfo.yourName}
                 value={customerInfo.name}
                 onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
               />
               
               <Input
-                placeholder="Phone Number"
+                placeholder={t.orderPage.customerInfo.phoneNumber}
                 type="tel"
                 value={customerInfo.phone}
                 onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
@@ -400,14 +425,14 @@ export function CartSidebar() {
               
               {orderType === 'takeout' && (
                 <Input
-                  placeholder="Delivery Address"
+                  placeholder={t.orderPage.customerInfo.deliveryAddress}
                   value={customerInfo.address}
                   onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
                 />
               )}
               
               <Input
-                placeholder="Email (optional)"
+                placeholder={t.orderPage.customerInfo.email}
                 type="email"
                 value={customerInfo.email}
                 onChange={(e) => setCustomerInfo(prev => ({ ...prev, email: e.target.value }))}
@@ -421,28 +446,28 @@ export function CartSidebar() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-blue-700 text-sm font-medium">
                   <MapPin className="w-4 h-4" />
-                  <span>Table Service Information</span>
+                  <span>{t.orderPage.qrDineIn.tableServiceInfo}</span>
                 </div>
                 
                 <div className="text-sm text-blue-600">
                   <div className="flex justify-between">
-                    <span>Table Number:</span>
+                    <span>{t.orderPage.qrDineIn.tableNumber}:</span>
                     <span className="font-medium">{tableNumber}</span>
                   </div>
                   {zone && (
                     <div className="flex justify-between">
-                      <span>Zone:</span>
+                      <span>{t.orderPage.qrDineIn.zone}:</span>
                       <span className="font-medium">{zone}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span>Order Source:</span>
-                    <span className="font-medium">QR Code</span>
+                    <span>{t.orderPage.qrDineIn.orderSource}:</span>
+                    <span className="font-medium">{t.orderPage.qrDineIn.qrCode}</span>
                   </div>
                 </div>
                 
                 <p className="text-xs text-blue-600 italic">
-                  Your order will be delivered directly to your table. No additional information required.
+                  {t.orderPage.qrDineIn.deliveryInfo}
                 </p>
               </div>
             </div>
@@ -458,15 +483,102 @@ export function CartSidebar() {
 
           {/* Checkout Button */}
           <Button
-            onClick={submitOrder}
+            onClick={handleCheckoutClick}
             disabled={isSubmitting || items.length === 0}
             className="w-full h-12 text-base font-medium"
             size="lg"
           >
-            {isSubmitting ? "Placing Order..." : `Checkout - $${total.toFixed(2)}`}
+            {isSubmitting ? t.orderPage.checkout.placingOrder : (language === 'fr' ? `${t.orderPage.checkout.checkout} - ${total.toFixed(2)} $` : `${t.orderPage.checkout.checkout} - $${total.toFixed(2)}`)}
           </Button>
         </div>
       )}
+
+      {/* Payment Method Modal */}
+      <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
+        <DialogContent className="max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle>{t.orderPage.payment.selectPaymentMethod}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="text-sm text-gray-600 mb-4">
+              {t.orderPage.payment.howToPay}
+            </div>
+            
+            <div className="grid grid-cols-1 gap-3">
+              {/* Cash Payment */}
+              <div
+                onClick={() => setPaymentMethod('cash')}
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  paymentMethod === 'cash'
+                    ? 'border-orange-500 bg-orange-50'
+                    : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <Banknote className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">{t.orderPage.payment.payAtCounter}</div>
+                    <div className="text-sm text-gray-500">
+                      {orderType === 'dine_in' ? t.orderPage.payment.payWhenLeaving : t.orderPage.payment.payWhenPickup}
+                    </div>
+                  </div>
+                  {paymentMethod === 'cash' && (
+                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                  )}
+                </div>
+              </div>
+
+              {/* Online Payment */}
+              <div
+                onClick={() => setPaymentMethod('online')}
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  paymentMethod === 'online'
+                    ? 'border-orange-500 bg-orange-50'
+                    : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">{t.orderPage.payment.payOnline}</div>
+                    <div className="text-sm text-gray-500">
+                      {t.orderPage.payment.creditCardInfo}
+                    </div>
+                  </div>
+                  {paymentMethod === 'online' && (
+                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 space-y-2">
+              <Button
+                onClick={submitOrder}
+                disabled={isSubmitting}
+                className="w-full h-12"
+                size="lg"
+              >
+                {isSubmitting ? t.orderPage.checkout.placingOrder : (language === 'fr' ? `${t.orderPage.checkout.confirmOrder} - ${total.toFixed(2)} $` : `${t.orderPage.checkout.confirmOrder} - $${total.toFixed(2)}`)}
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={() => setShowPaymentModal(false)}
+                disabled={isSubmitting}
+                className="w-full"
+              >
+                {t.orderPage.checkout.backToCart}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

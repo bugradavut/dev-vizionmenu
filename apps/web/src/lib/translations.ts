@@ -692,6 +692,236 @@ export const translations = {
         fileSizeError: "File size cannot exceed 5MB",
         fileTypeError: "Please select a valid image file"
       }
+    },
+    
+    // Customer Order Page
+    orderPage: {
+      // Header
+      branding: "Vizion Menu",
+      searchPlaceholder: "Search menu items...",
+      tableInfo: "Table {number}",
+      tableInfoWithZone: "Table {number} - {zone}",
+      
+      // Language Selection
+      language: "Language",
+      english: "English",
+      french: "Français",
+      
+      // Categories
+      allMenu: "All Menu",
+      setMenu: "Set Menu",
+      noSetMenu: "No Set Menu Available",
+      noSetMenuDesc: "There are no active menu presets at this time.",
+      
+      // Search Results
+      searchResults: "Search Results for \"{query}\"",
+      noItemsFound: "No Items Found",
+      noItemsFoundDesc: "No items found matching \"{query}\"",
+      noItemsAvailable: "No menu items are currently available.",
+      noItemsInCategory: "No menu items available in this category.",
+      itemsAvailable: "{count} items available",
+      
+      // Menu Items
+      item: "item",
+      items: "items",
+      available: "available",
+      unavailable: "Unavailable",
+      noImage: "No Image",
+      each: "each",
+      
+      // Cart
+      orderSummary: "Order Summary",
+      yourCart: "Your Cart",
+      cartEmpty: "Your cart is empty",
+      cartEmptyDesc: "Add items from the menu to get started",
+      
+      // Order Types
+      dineIn: "Dine In",
+      takeout: "Takeout",
+      
+      // Order Type Info
+      dineInService: "Dine In Service",
+      dineInQRDesc: "Your order will be served to Table {number}{zone}",
+      dineInWebDesc: "Please let staff know your table number when ordering",
+      takeoutOrder: "Takeout Order",
+      takeoutDesc: "Your order will be prepared for pickup/delivery",
+      
+      // Customer Information
+      customerInformation: "Customer Information",
+      deliveryInformation: "Delivery Information",
+      fullName: "Full Name",
+      yourName: "Your Name",
+      phoneNumber: "Phone Number",
+      deliveryAddress: "Delivery Address",
+      email: "Email (optional)",
+      
+      // QR Dine-in Info
+      tableServiceInfo: "Table Service Information",
+      tableNumber: "Table Number",
+      zone: "Zone",
+      orderSource: "Order Source",
+      qrCode: "QR Code",
+      qrDineInDesc: "Your order will be delivered directly to your table. No additional information required.",
+      
+      // Payment Methods
+      selectPaymentMethod: "Select Payment Method",
+      paymentQuestion: "How would you like to pay for your order?",
+      payAtCounter: "Pay at Counter",
+      payWhenLeaving: "Pay when leaving",
+      payWhenPickingUp: "Pay when picking up",
+      payOnline: "Pay Online",
+      payOnlineDesc: "Credit card or digital payment",
+      
+      
+      // Item Modal
+      addToCart: "Add to Cart",
+      quantity: "Quantity",
+      notes: "Notes",
+      specialInstructions: "Special instructions (optional)",
+      
+      // Validation Messages
+      nameRequired: "Please enter your full name",
+      phoneRequired: "Please enter your phone number",
+      addressRequired: "Please enter your delivery address",
+      nameRequiredDineIn: "Please enter your name for dine-in service",
+      phoneRequiredDineIn: "Please enter your phone number for dine-in service",
+      addItemsToCart: "Please add items to your cart",
+      
+      // Error Messages
+      failedToLoadMenu: "Unable to Load Menu",
+      tryAgain: "Try Again",
+      
+      // Misc
+      total: "Total",
+      subtotal: "Subtotal",
+      tax: "Tax (13%)",
+      dailySpecial: "Daily Special",
+      limitedTime: "Limited Time",
+      
+      // Validation Messages
+      validation: {
+        cartEmpty: "Please add items to your cart",
+        nameRequired: "Please enter your full name",
+        phoneRequired: "Please enter your phone number", 
+        addressRequired: "Please enter your delivery address",
+        dineInNameRequired: "Please enter your name for dine-in service",
+        dineInPhoneRequired: "Please enter your phone number for dine-in service"
+      },
+      
+      // Order Success
+      orderSuccess: {
+        title: "Order Placed!",
+        message: "Your order has been received and is being prepared.",
+        placeAnother: "Place Another Order"
+      },
+      
+      // Cart Section
+      cart: {
+        orderSummary: "Order Summary",
+        item: "item",
+        items: "items",
+        empty: "Your cart is empty",
+        emptyMessage: "Add items from the menu to get started",
+        each: "each",
+        note: "Note"
+      },
+      
+      // Pricing Section
+      pricing: {
+        subtotal: "Subtotal",
+        tax: "Tax (13%)",
+        total: "Total"
+      },
+      
+      // Customer Info Section
+      customerInfo: {
+        deliveryInfo: "Delivery Information",
+        customerInfo: "Customer Information",
+        fullName: "Full Name",
+        yourName: "Your Name",
+        phoneNumber: "Phone Number",
+        deliveryAddress: "Delivery Address",
+        email: "Email (optional)"
+      },
+      
+      // Order Type Section
+      orderType: {
+        dineIn: "Dine In",
+        takeout: "Takeout",
+        dineInService: "Dine In Service",
+        tableService: "Your order will be served to Table {number}",
+        tableServiceWithZone: "Your order will be served to Table {number} in {zone}",
+        tableNumberInfo: "Please let staff know your table number when ordering",
+        takeoutOrder: "Takeout Order",
+        takeoutInfo: "Your order will be prepared for pickup/delivery"
+      },
+      
+      // QR Dine-in Section
+      qrDineIn: {
+        tableServiceInfo: "Table Service Information",
+        tableNumber: "Table Number",
+        zone: "Zone",
+        orderSource: "Order Source",
+        qrCode: "QR Code",
+        deliveryInfo: "Your order will be delivered directly to your table. No additional information required."
+      },
+      
+      // Checkout Section
+      checkout: {
+        checkout: "Checkout",
+        placingOrder: "Placing Order...",
+        confirmOrder: "Confirm Order",
+        backToCart: "Back to Cart"
+      },
+      
+      // Payment Section
+      payment: {
+        selectPaymentMethod: "Select Payment Method",
+        howToPay: "How would you like to pay for your order?",
+        payAtCounter: "Pay at Counter",
+        payWhenLeaving: "Pay when leaving",
+        payWhenPickup: "Pay when picking up",
+        payOnline: "Pay Online",
+        creditCardInfo: "Credit card or digital payment"
+      },
+      
+      // Menu Section
+      menu: {
+        noSetMenu: "No Set Menu Available",
+        noActivePresets: "There are no active menu presets at this time.",
+        noItemsFound: "No Items Found",
+        noSearchResults: "No items found matching \"{query}\"",
+        noMenuItems: "No menu items are currently available.",
+        noCategoryItems: "No menu items available in this category.",
+        searchResults: "Search Results for \"{query}\"",
+        allMenu: "All Menu",
+        setMenu: "Set Menu",
+        itemsAvailable: "items available",
+        dailySpecial: "Daily Special",
+        limitedTime: "Limited Time",
+        item: "item",
+        items: "items",
+        available: "available",
+        noImage: "No Image",
+        unavailable: "Unavailable"
+      },
+      
+      // Sidebar Section
+      sidebar: {
+        categories: "Categories",
+        item: "Item",
+        items: "Items"
+      },
+      
+      // Item Modal Section
+      itemModal: {
+        allergens: "Allergens",
+        prepTime: "Prep time",
+        minutes: "minutes",
+        unavailable: "Unavailable",
+        addMore: "Add {quantity} More ({current} in cart)",
+        addToCart: "Add {quantity} to Cart"
+      }
     }
   },
   
@@ -1384,6 +1614,236 @@ export const translations = {
         variantNameRequired: "Le nom de la variante est requis",
         fileSizeError: "La taille du fichier ne peut pas dépasser 5 MB",
         fileTypeError: "Veuillez sélectionner un fichier image valide"
+      }
+    },
+    
+    // Customer Order Page - Canadian French
+    orderPage: {
+      // Header
+      branding: "Vizion Menu",
+      searchPlaceholder: "Rechercher des articles du menu...",
+      tableInfo: "Table {number}",
+      tableInfoWithZone: "Table {number} - {zone}",
+      
+      // Language Selection
+      language: "Langue",
+      english: "English",
+      french: "Français",
+      
+      // Categories
+      allMenu: "Tout le menu",
+      setMenu: "Menu prédéfini",
+      noSetMenu: "Aucun menu prédéfini disponible",
+      noSetMenuDesc: "Il n'y a aucun préréglage de menu actif en ce moment.",
+      
+      // Search Results
+      searchResults: "Résultats de recherche pour « {query} »",
+      noItemsFound: "Aucun article trouvé",
+      noItemsFoundDesc: "Aucun article trouvé correspondant à « {query} »",
+      noItemsAvailable: "Aucun article du menu n'est disponible actuellement.",
+      noItemsInCategory: "Aucun article du menu disponible dans cette catégorie.",
+      itemsAvailable: "{count} articles disponibles",
+      
+      // Menu Items
+      item: "article",
+      items: "articles",
+      available: "disponibles",
+      unavailable: "Indisponible",
+      noImage: "Aucune image",
+      each: "chacun",
+      
+      // Cart
+      orderSummary: "Résumé de la commande",
+      yourCart: "Votre panier",
+      cartEmpty: "Votre panier est vide",
+      cartEmptyDesc: "Ajoutez des articles du menu pour commencer",
+      
+      // Order Types - Canadian French restaurant terms
+      dineIn: "Sur place",          // NOT "Salle à manger"
+      takeout: "À emporter",        // NOT "À l'emporter"
+      
+      // Order Type Info
+      dineInService: "Service sur place",
+      dineInQRDesc: "Votre commande sera servie à la Table {number}{zone}",
+      dineInWebDesc: "Veuillez indiquer votre numéro de table au personnel lors de la commande",
+      takeoutOrder: "Commande à emporter",
+      takeoutDesc: "Votre commande sera préparée pour ramassage/livraison",
+      
+      // Customer Information
+      customerInformation: "Informations du client",
+      deliveryInformation: "Informations de livraison",
+      fullName: "Nom complet",
+      yourName: "Votre nom",
+      phoneNumber: "Numéro de téléphone",
+      deliveryAddress: "Adresse de livraison",
+      email: "Courriel (optionnel)",        // Canadian French: "Courriel" NOT "Email"
+      
+      // QR Dine-in Info
+      tableServiceInfo: "Informations du service de table",
+      tableNumber: "Numéro de table",
+      zone: "Zone",
+      orderSource: "Source de la commande",
+      qrCode: "Code QR",
+      qrDineInDesc: "Votre commande sera livrée directement à votre table. Aucune information supplémentaire requise.",
+      
+      // Payment Methods
+      selectPaymentMethod: "Sélectionner le mode de paiement",
+      paymentQuestion: "Comment souhaitez-vous payer votre commande ?",
+      payAtCounter: "Payer au comptoir",
+      payWhenLeaving: "Payer en partant",
+      payWhenPickingUp: "Payer lors du ramassage",
+      payOnline: "Payer en ligne",
+      payOnlineDesc: "Carte de crédit ou paiement numérique",
+      
+      
+      // Item Modal
+      addToCart: "Ajouter au panier",
+      quantity: "Quantité",
+      notes: "Notes",
+      specialInstructions: "Instructions spéciales (optionnel)",
+      
+      // Validation Messages
+      nameRequired: "Veuillez entrer votre nom complet",
+      phoneRequired: "Veuillez entrer votre numéro de téléphone",
+      addressRequired: "Veuillez entrer votre adresse de livraison",
+      nameRequiredDineIn: "Veuillez entrer votre nom pour le service sur place",
+      phoneRequiredDineIn: "Veuillez entrer votre numéro de téléphone pour le service sur place",
+      addItemsToCart: "Veuillez ajouter des articles à votre panier",
+      
+      // Error Messages
+      failedToLoadMenu: "Impossible de charger le menu",
+      tryAgain: "Réessayer",
+      
+      // Misc - Canadian French formatting
+      total: "Total",
+      subtotal: "Sous-total",
+      tax: "Taxe (TVH)",              // Canadian French: "Taxe (TVH)" NOT "Taxe (TPS/TVQ)"
+      dailySpecial: "Spécial du jour",
+      limitedTime: "Temps limité",
+      
+      // Validation Messages - Canadian French
+      validation: {
+        cartEmpty: "Veuillez ajouter des articles à votre panier",
+        nameRequired: "Veuillez entrer votre nom complet",
+        phoneRequired: "Veuillez entrer votre numéro de téléphone", 
+        addressRequired: "Veuillez entrer votre adresse de livraison",
+        dineInNameRequired: "Veuillez entrer votre nom pour le service sur place",
+        dineInPhoneRequired: "Veuillez entrer votre numéro de téléphone pour le service sur place"
+      },
+      
+      // Order Success - Canadian French
+      orderSuccess: {
+        title: "Commande passée !",
+        message: "Votre commande a été reçue et est en cours de préparation.",
+        placeAnother: "Passer une autre commande"
+      },
+      
+      // Cart Section - Canadian French
+      cart: {
+        orderSummary: "Résumé de la commande",
+        item: "article",
+        items: "articles",
+        empty: "Votre panier est vide",
+        emptyMessage: "Ajoutez des articles du menu pour commencer",
+        each: "chacun",
+        note: "Note"
+      },
+      
+      // Pricing Section - Canadian French with proper currency format
+      pricing: {
+        subtotal: "Sous-total",
+        tax: "Taxe (TVH)",  // Canadian French: "Taxe (TVH)" NOT "Taxe (TPS/TVQ)"
+        total: "Total"
+      },
+      
+      // Customer Info Section - Canadian French
+      customerInfo: {
+        deliveryInfo: "Informations de livraison",
+        customerInfo: "Informations du client",
+        fullName: "Nom complet",
+        yourName: "Votre nom",
+        phoneNumber: "Numéro de téléphone",
+        deliveryAddress: "Adresse de livraison",
+        email: "Courriel (optionnel)"  // Canadian French: "Courriel" NOT "Email"
+      },
+      
+      // Order Type Section - Canadian French restaurant terms
+      orderType: {
+        dineIn: "Sur place",          // NOT "Salle à manger"
+        takeout: "À emporter",        // NOT "À l'emporter"
+        dineInService: "Service sur place",
+        tableService: "Votre commande sera servie à la Table {number}",
+        tableServiceWithZone: "Votre commande sera servie à la Table {number} dans {zone}",
+        tableNumberInfo: "Veuillez indiquer votre numéro de table au personnel lors de la commande",
+        takeoutOrder: "Commande à emporter",
+        takeoutInfo: "Votre commande sera préparée pour ramassage/livraison"
+      },
+      
+      // QR Dine-in Section - Canadian French
+      qrDineIn: {
+        tableServiceInfo: "Informations du service de table",
+        tableNumber: "Numéro de table",
+        zone: "Zone",
+        orderSource: "Source de la commande",
+        qrCode: "Code QR",
+        deliveryInfo: "Votre commande sera livrée directement à votre table. Aucune information supplémentaire requise."
+      },
+      
+      // Checkout Section - Canadian French
+      checkout: {
+        checkout: "Finaliser",
+        placingOrder: "Passage de la commande...",
+        confirmOrder: "Confirmer la commande",
+        backToCart: "Retour au panier"
+      },
+      
+      // Payment Section - Canadian French
+      payment: {
+        selectPaymentMethod: "Sélectionner la méthode de paiement",
+        howToPay: "Comment souhaitez-vous payer votre commande ?",
+        payAtCounter: "Payer au comptoir",
+        payWhenLeaving: "Payer en partant",
+        payWhenPickup: "Payer lors du ramassage",
+        payOnline: "Payer en ligne",
+        creditCardInfo: "Carte de crédit ou paiement numérique"
+      },
+      
+      // Menu Section - Canadian French
+      menu: {
+        noSetMenu: "Aucun menu prédéfini disponible",
+        noActivePresets: "Il n'y a aucun préréglage de menu actif en ce moment.",
+        noItemsFound: "Aucun article trouvé",
+        noSearchResults: "Aucun article trouvé correspondant à « {query} »",
+        noMenuItems: "Aucun article du menu n'est disponible actuellement.",
+        noCategoryItems: "Aucun article du menu disponible dans cette catégorie.",
+        searchResults: "Résultats de recherche pour « {query} »",
+        allMenu: "Tout le menu",
+        setMenu: "Menu prédéfini",
+        itemsAvailable: "articles disponibles",
+        dailySpecial: "Spécial du jour",
+        limitedTime: "Temps limité",
+        item: "article",
+        items: "articles",
+        available: "disponibles",
+        noImage: "Aucune image",
+        unavailable: "Indisponible"
+      },
+      
+      // Sidebar Section - Canadian French
+      sidebar: {
+        categories: "Catégories",
+        item: "Article",
+        items: "Articles"
+      },
+      
+      // Item Modal Section - Canadian French
+      itemModal: {
+        allergens: "Allergènes",
+        prepTime: "Temps de préparation",
+        minutes: "minutes",
+        unavailable: "Indisponible",
+        addMore: "Ajouter {quantity} de plus ({current} dans le panier)",
+        addToCart: "Ajouter {quantity} au panier"
       }
     }
   }

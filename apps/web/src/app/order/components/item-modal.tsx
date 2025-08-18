@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Minus } from 'lucide-react'
 import { useCart } from '../contexts/cart-context'
-import { cn } from '@/lib/utils'
+import { useLanguage } from '@/contexts/language-context'
+import { translations } from '@/lib/translations'
 
 interface MenuItemUI {
   id: string;
@@ -31,6 +32,8 @@ interface ItemModalProps {
 export function ItemModal({ item, isOpen, onClose }: ItemModalProps) {
   const [quantity, setQuantity] = useState(1)
   const { addItem, getItemQuantity } = useCart()
+  const { language } = useLanguage()
+  const t = translations[language] || translations.en
 
   if (!item) return null
 
@@ -97,7 +100,7 @@ export function ItemModal({ item, isOpen, onClose }: ItemModalProps) {
           {/* Allergens */}
           {item.allergens && item.allergens.length > 0 && (
             <div>
-              <p className="text-sm font-medium text-gray-900 mb-2">Allergens:</p>
+              <p className="text-sm font-medium text-gray-900 mb-2">{t.orderPage.itemModal.allergens}:</p>
               <div className="flex flex-wrap gap-2">
                 {item.allergens.map((allergen: string) => (
                   <Badge key={allergen} variant="outline" className="text-xs text-red-600 border-red-200">
@@ -111,14 +114,14 @@ export function ItemModal({ item, isOpen, onClose }: ItemModalProps) {
           {/* Preparation Time */}
           {item.preparation_time && (
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>⏱️ Prep time: {item.preparation_time} minutes</span>
+              <span>⏱️ {t.orderPage.itemModal.prepTime}: {item.preparation_time} {t.orderPage.itemModal.minutes}</span>
             </div>
           )}
           
           {/* Price & Quantity Controls */}
           <div className="flex items-center justify-between pt-4 border-t">
             <div className="text-2xl font-bold text-gray-900">
-              ${item.price.toFixed(2)}
+              {language === 'fr' ? `${item.price.toFixed(2)} $` : `$${item.price.toFixed(2)}`}
             </div>
             
             {/* Quantity Controls */}
@@ -156,11 +159,11 @@ export function ItemModal({ item, isOpen, onClose }: ItemModalProps) {
             size="lg"
           >
             {!item.is_available ? (
-              'Unavailable'
+              t.orderPage.itemModal.unavailable
             ) : currentQuantity > 0 ? (
-              `Add ${quantity} More (${currentQuantity} in cart)`
+              t.orderPage.itemModal.addMore.replace('{quantity}', quantity.toString()).replace('{current}', currentQuantity.toString())
             ) : (
-              `Add ${quantity} to Cart`
+              t.orderPage.itemModal.addToCart.replace('{quantity}', quantity.toString())
             )}
           </Button>
         </div>

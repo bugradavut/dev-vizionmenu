@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { LayoutGrid } from 'lucide-react'
+import { useLanguage } from '@/contexts/language-context'
+import { translations } from '@/lib/translations'
 import { customerMenuService, type CustomerMenu } from '@/services/customer-menu.service'
 import { getIconComponent } from '@/lib/category-icons'
 
@@ -32,6 +32,8 @@ export function CategorySidebar({
     item_count: number;
     display_order: number;
   }>>([])
+  const { language } = useLanguage()
+  const t = translations[language] || translations.en
   // const orderContext = useOrderContext() // Future use for branch-specific categories
 
   useEffect(() => {
@@ -90,7 +92,7 @@ export function CategorySidebar({
     <div className="p-4">
       {/* Categories Header with Icon */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-gray-900">Categories</h2>
+        <h2 className="font-semibold text-gray-900">{t.orderPage.sidebar.categories}</h2>
         <LayoutGrid className="w-5 h-5 text-gray-500" />
       </div>
       
@@ -129,7 +131,7 @@ export function CategorySidebar({
                       "text-xs mt-1",
                       isSelected ? "text-white/90" : "text-gray-500"
                     )}>
-                      {category.item_count} Items
+                      {category.item_count} {category.item_count === 1 ? t.orderPage.sidebar.item : t.orderPage.sidebar.items}
                     </div>
                   </div>
                 </div>

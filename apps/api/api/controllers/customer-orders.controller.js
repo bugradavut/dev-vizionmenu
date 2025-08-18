@@ -17,6 +17,7 @@ const createCustomerOrder = async (req, res) => {
       items, 
       orderType,
       source,
+      paymentMethod,
       customerInfo,
       tableNumber,
       zone,
@@ -124,7 +125,7 @@ const createCustomerOrder = async (req, res) => {
       orderType,
       source: source === 'qr' ? 'qr_code' : 'web',
       tableNumber: source === 'qr' ? tableNumber : undefined,
-      notes: notes || '',
+      notes: `Payment: ${paymentMethod === 'cash' ? 'Pay at Counter' : 'Online Payment'}${notes ? ` | ${notes}` : ''}`,
       specialInstructions: '',
       pricing: {
         subtotal: subtotal || 0,

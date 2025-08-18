@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { useOrderContext } from '../contexts/order-context'
 import { useLanguage } from '@/contexts/language-context'
+import { translations } from '@/lib/translations'
 import { MapPin, Store, Search, X, Globe } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -24,6 +25,7 @@ export function OrderHeader({ branchName, onSearch }: OrderHeaderProps) {
   const { tableNumber, zone, isQROrder } = useOrderContext()
   const { language, setLanguage } = useLanguage()
   const [searchQuery, setSearchQuery] = useState('')
+  const t = translations[language] || translations.en
 
   const handleSearch = (value: string) => {
     setSearchQuery(value)
@@ -49,7 +51,7 @@ export function OrderHeader({ branchName, onSearch }: OrderHeaderProps) {
               className="w-full h-full object-contain"
             />
           </div>
-          <span className="font-bold text-lg text-gray-900 hidden sm:block">Vizion Menu</span>
+          <span className="font-bold text-lg text-gray-900 hidden sm:block">{t.orderPage.branding}</span>
           <span className="font-bold text-base text-gray-900 sm:hidden">Vizion</span>
         </div>
         
@@ -68,8 +70,10 @@ export function OrderHeader({ branchName, onSearch }: OrderHeaderProps) {
           <div className="flex items-center gap-2 px-2 md:px-3 py-1 bg-blue-50 border border-blue-200 rounded-md flex-shrink-0">
             <MapPin className="w-4 h-4 text-blue-600" />
             <span className="text-xs md:text-sm font-medium text-blue-900 whitespace-nowrap">
-              Table {tableNumber}
-              {zone && ` - ${zone}`}
+              {zone 
+                ? t.orderPage.tableInfoWithZone.replace('{number}', tableNumber?.toString() || '').replace('{zone}', zone)
+                : t.orderPage.tableInfo.replace('{number}', tableNumber?.toString() || '')
+              }
             </span>
           </div>
         )}
@@ -79,7 +83,7 @@ export function OrderHeader({ branchName, onSearch }: OrderHeaderProps) {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
             type="text"
-            placeholder="Search menu items..."
+            placeholder={t.orderPage.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             className="pl-10 pr-10 h-9 text-sm"
@@ -106,10 +110,10 @@ export function OrderHeader({ branchName, onSearch }: OrderHeaderProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => setLanguage('en')}>
-              English
+              {t.orderPage.english}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setLanguage('fr')}>
-              Français
+              {t.orderPage.french}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

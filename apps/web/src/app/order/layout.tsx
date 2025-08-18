@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { LanguageProvider } from '@/contexts/language-context'
 
 export const metadata: Metadata = {
   title: 'Order Menu | Vision Menu',
@@ -11,8 +12,10 @@ export default function OrderLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-background">
-      {children}
-    </div>
+    <LanguageProvider defaultLanguage="fr" storageKey="order-page-language">
+      <div className="min-h-screen bg-background">
+        {children}
+      </div>
+    </LanguageProvider>
   )
 }

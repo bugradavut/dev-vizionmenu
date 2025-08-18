@@ -3,14 +3,13 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus } from 'lucide-react'
 import { useCart } from '../contexts/cart-context'
+import { useLanguage } from '@/contexts/language-context'
+import { translations } from '@/lib/translations'
 import { customerMenuService, type CustomerMenu } from '@/services/customer-menu.service'
 import { getIconComponent } from '@/lib/category-icons'
 import { ItemModal } from './item-modal'
-import { cn } from '@/lib/utils'
 
 interface MenuGridProps {
   selectedCategory: string
@@ -37,7 +36,9 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
   const [groupedItems, setGroupedItems] = useState<{[categoryId: string]: MenuItemUI[]}>({})
   const [selectedItem, setSelectedItem] = useState<MenuItemUI | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const { addItem, getItemQuantity } = useCart()
+  const { getItemQuantity } = useCart()
+  const { language } = useLanguage()
+  const t = translations[language] || translations.en
 
   // Filter items based on selected category, customer menu, and search query
   useEffect(() => {
@@ -112,8 +113,8 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
     return (
       <div className="p-6 flex items-center justify-center h-64">
         <div className="text-center">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Set Menu Available</h3>
-          <p className="text-gray-600">There are no active menu presets at this time.</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">{t.orderPage.menu.noSetMenu}</h3>
+          <p className="text-gray-600">{t.orderPage.menu.noActivePresets}</p>
         </div>
       </div>
     )
@@ -123,13 +124,13 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
     return (
       <div className="p-6 flex items-center justify-center h-64">
         <div className="text-center">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Items Found</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">{t.orderPage.menu.noItemsFound}</h3>
           <p className="text-gray-600">
             {searchQuery.trim() 
-              ? `No items found matching "${searchQuery}"`
+              ? t.orderPage.menu.noSearchResults.replace('{query}', searchQuery)
               : selectedCategory === 'all' 
-                ? 'No menu items are currently available.'
-                : 'No menu items available in this category.'
+                ? t.orderPage.menu.noMenuItems
+                : t.orderPage.menu.noCategoryItems
             }
           </p>
         </div>
@@ -139,11 +140,11 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
 
   const getCategoryTitle = () => {
     if (searchQuery.trim()) {
-      return `Search Results for "${searchQuery}"`
+      return t.orderPage.menu.searchResults.replace('{query}', searchQuery)
     }
-    if (selectedCategory === 'all') return 'All Menu'
+    if (selectedCategory === 'all') return t.orderPage.menu.allMenu
     if (selectedCategory === 'set') {
-      return customerMenu?.metadata.activePreset?.name || 'Set Menu'
+      return customerMenu?.metadata.activePreset?.name || t.orderPage.menu.setMenu
     }
     const category = customerMenu?.categories.find(cat => cat.id === selectedCategory)
     return category?.name || selectedCategory
@@ -157,11 +158,11 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
           {getCategoryTitle()}
         </h2>
         <div className="flex items-center gap-4 text-gray-600">
-          <span>{filteredItems.length} items available</span>
+          <span>{filteredItems.length} {t.orderPage.menu.itemsAvailable}</span>
           {selectedCategory === 'set' && customerMenu?.metadata.activePreset && (
             <div className="flex items-center gap-2 text-sm">
               <Badge variant="outline" className="text-blue-700 border-blue-300">
-                {customerMenu.metadata.activePreset.schedule_type === 'daily' ? 'Daily Special' : 'Limited Time'}
+                {customerMenu.metadata.activePreset.schedule_type === 'daily' ? t.orderPage.menu.dailySpecial : t.orderPage.menu.limitedTime}
               </Badge>
               {customerMenu.metadata.activePreset.daily_start_time && customerMenu.metadata.activePreset.daily_end_time && (
                 <span className="text-gray-500">
@@ -199,7 +200,7 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                         {category?.name || 'Other'}
                       </h3>
                       <p className="text-sm text-gray-600 -mt-1">
-                        {items.length} {items.length === 1 ? 'item' : 'items'} available
+                        {items.length} {items.length === 1 ? t.orderPage.menu.item : t.orderPage.menu.items} {t.orderPage.menu.available}
                       </p>
                     </div>
                     
@@ -236,24 +237,24 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                                <span className="text-gray-400 text-sm font-medium">No Image</span>
+                                <span className="text-gray-400 text-sm font-medium">{t.orderPage.menu.noImage}</span>
                               </div>
                             )}
                           </div>
 
                           {/* Quantity Badge */}
                           {itemQuantity > 0 && (
-                            <div className="absolute top-2 right-2">
-                              <Badge className="bg-primary text-white">
+                            <div className="absolute top-3 right-3">
+                              <div className="bg-orange-500 text-white text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-lg">
                                 {itemQuantity}
-                              </Badge>
+                              </div>
                             </div>
                           )}
 
                           {/* Availability Status */}
                           {!item.is_available && (
                             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                              <span className="text-white font-medium">Unavailable</span>
+                              <span className="text-white font-medium">{t.orderPage.menu.unavailable}</span>
                             </div>
                           )}
                         </div>
@@ -268,7 +269,7 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                             
                             {/* Price - Right Side */}
                             <div className="text-sm font-semibold text-gray-900 ml-2 flex-shrink-0">
-                              ${item.price.toFixed(2)}
+                              {language === 'fr' ? `${item.price.toFixed(2)} $` : `$${item.price.toFixed(2)}`}
                             </div>
                           </div>
                         </CardContent>
@@ -308,24 +309,24 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                        <span className="text-gray-400 text-sm font-medium">No Image</span>
+                        <span className="text-gray-400 text-sm font-medium">{t.orderPage.menu.noImage}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Quantity Badge */}
                   {itemQuantity > 0 && (
-                    <div className="absolute top-2 right-2">
-                      <Badge className="bg-primary text-white">
+                    <div className="absolute top-3 right-3">
+                      <div className="bg-orange-500 text-white text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-lg">
                         {itemQuantity}
-                      </Badge>
+                      </div>
                     </div>
                   )}
 
                   {/* Availability Status */}
                   {!item.is_available && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                      <span className="text-white font-medium">Unavailable</span>
+                      <span className="text-white font-medium">{t.orderPage.menu.unavailable}</span>
                     </div>
                   )}
                 </div>
@@ -340,7 +341,7 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                     
                     {/* Price - Right Side */}
                     <div className="text-sm font-semibold text-gray-900 ml-2 flex-shrink-0">
-                      ${item.price.toFixed(2)}
+                      {language === 'fr' ? `${item.price.toFixed(2)} $` : `$${item.price.toFixed(2)}`}
                     </div>
                   </div>
                 </CardContent>
