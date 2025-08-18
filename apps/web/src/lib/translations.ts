@@ -823,7 +823,8 @@ export const translations = {
         empty: "Your cart is empty",
         emptyMessage: "Add items from the menu to get started",
         each: "each",
-        note: "Note"
+        note: "Note",
+        viewCart: "View Cart"
       },
       
       // Pricing Section
@@ -1746,7 +1747,8 @@ export const translations = {
         empty: "Votre panier est vide",
         emptyMessage: "Ajoutez des articles du menu pour commencer",
         each: "chacun",
-        note: "Note"
+        note: "Note",
+        viewCart: "Voir le panier"
       },
       
       // Pricing Section - Canadian French with proper currency format

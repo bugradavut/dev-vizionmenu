@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Plus, Minus, ShoppingCart, Trash2, AlertTriangle, MapPin, Package, CreditCard, Banknote, CheckCircle } from 'lucide-react'
 import { useCart } from '../contexts/cart-context'
@@ -32,7 +31,6 @@ export function CartSidebar() {
     subtotal, 
     tax, 
     total, 
-    itemCount,
     clearCart 
   } = useCart()
   

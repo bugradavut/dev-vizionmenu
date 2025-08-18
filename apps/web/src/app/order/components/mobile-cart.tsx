@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import { ShoppingCart } from 'lucide-react'
@@ -9,7 +8,6 @@ import { useCart } from '../contexts/cart-context'
 import { CartSidebar } from './cart-sidebar'
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
-import { cn } from '@/lib/utils'
 
 export function MobileCart() {
   const { itemCount, total } = useCart()
@@ -38,7 +36,7 @@ export function MobileCart() {
                   </Badge>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-gray-600 text-sm font-medium">{t.orderPage.cart.viewCart || 'View Cart'}</span>
+                  <span className="text-gray-600 text-sm font-medium">{t.orderPage.cart.viewCart}</span>
                   <span className="text-gray-400 text-xs">{itemCount} {itemCount === 1 ? t.orderPage.cart.item : t.orderPage.cart.items}</span>
                 </div>
               </div>
