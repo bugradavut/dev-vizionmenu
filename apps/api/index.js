@@ -43,6 +43,8 @@ const branchesRoutes = require('./routes/branches.routes');
 const menuCategoriesRoutes = require('./routes/menu-categories.routes');
 const menuItemsRoutes = require('./routes/menu-items.routes');
 const menuPresetsRoutes = require('./routes/menu-presets.routes');
+const customerMenuRoutes = require('./routes/customer-menu.routes');
+const customerOrdersRoutes = require('./routes/customer-orders.routes');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -91,6 +93,12 @@ app.use('/api/v1/menu/items', menuItemsRoutes);
 // Use menu presets routes
 app.use('/api/v1/menu/presets', menuPresetsRoutes);
 
+// Use customer menu routes (public - no auth required)
+app.use('/api/v1/customer/menu', customerMenuRoutes);
+
+// Use customer orders routes (public - no auth required)
+app.use('/api/v1/customer/orders', customerOrdersRoutes);
+
 // Catch all other routes
 app.use('*', (req, res) => {
   res.status(404).json({
@@ -138,7 +146,11 @@ app.use('*', (req, res) => {
       'POST /api/v1/menu/presets/:id/activate',
       'POST /api/v1/menu/presets/deactivate',
       'POST /api/v1/menu/presets/check-scheduled',
-      'POST /api/v1/menu/presets/current-menu'
+      'POST /api/v1/menu/presets/current-menu',
+      'GET /api/v1/customer/menu/:branchId',
+      'GET /api/v1/customer/menu/:branchId/info',
+      'POST /api/v1/customer/orders',
+      'GET /api/v1/customer/orders/:orderId/status'
     ]
   });
 });

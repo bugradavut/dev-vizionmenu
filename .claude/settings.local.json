@@ -91,7 +91,8 @@
       "Bash(Y)",
       "mcp__supabase__get_project",
       "Bash(NODE_ENV=development node apps/api/api/index.js)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(copy:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

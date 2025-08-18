@@ -1,0 +1,119 @@
+"use client"
+
+import { useState } from 'react'
+import Image from 'next/image'
+import { useOrderContext } from '../contexts/order-context'
+import { useLanguage } from '@/contexts/language-context'
+import { MapPin, Store, Search, X, Globe } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu'
+
+interface OrderHeaderProps {
+  branchName?: string
+  branchAddress?: string
+  onSearch?: (query: string) => void
+}
+
+export function OrderHeader({ branchName, onSearch }: OrderHeaderProps) {
+  const { tableNumber, zone, isQROrder } = useOrderContext()
+  const { language, setLanguage } = useLanguage()
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const handleSearch = (value: string) => {
+    setSearchQuery(value)
+    onSearch?.(value)
+  }
+
+  const clearSearch = () => {
+    setSearchQuery('')
+    onSearch?.('')
+  }
+
+  return (
+    <div className="h-16 bg-white border-b border-gray-200 px-4 flex items-center justify-between">
+      {/* Left - Brand and Location */}
+      <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white">
+            <Image 
+              src="/web.webp"
+              alt="Vizion Menu"
+              width={32}
+              height={32}
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <span className="font-bold text-lg text-gray-900 hidden sm:block">Vizion Menu</span>
+          <span className="font-bold text-base text-gray-900 sm:hidden">Vizion</span>
+        </div>
+        
+        <div className="hidden lg:flex items-center gap-2 text-gray-600 min-w-0">
+          <Store className="w-4 h-4 flex-shrink-0" />
+          <span className="text-sm truncate">
+            {branchName || 'Restaurant'}
+          </span>
+        </div>
+      </div>
+
+      {/* Center/Right - QR Info + Search */}
+      <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+        {/* QR Order Info */}
+        {isQROrder && tableNumber && (
+          <div className="flex items-center gap-2 px-2 md:px-3 py-1 bg-blue-50 border border-blue-200 rounded-md flex-shrink-0">
+            <MapPin className="w-4 h-4 text-blue-600" />
+            <span className="text-xs md:text-sm font-medium text-blue-900 whitespace-nowrap">
+              Table {tableNumber}
+              {zone && ` - ${zone}`}
+            </span>
+          </div>
+        )}
+
+        {/* Search Bar */}
+        <div className="relative w-48 md:w-64">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            type="text"
+            placeholder="Search menu items..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-10 pr-10 h-9 text-sm"
+          />
+          {searchQuery && (
+            <button
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Language Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-9 gap-2">
+              <Globe className="w-4 h-4" />
+              <span className="hidden sm:inline">
+                {language === 'fr' ? 'FR' : 'EN'}
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setLanguage('en')}>
+              English
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLanguage('fr')}>
+              Français
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  )
+}
