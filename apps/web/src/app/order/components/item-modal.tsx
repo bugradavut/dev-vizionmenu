@@ -59,7 +59,7 @@ export function ItemModal({ item, isOpen, onClose }: ItemModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md mx-auto">
+      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md rounded-lg">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">{item.name}</DialogTitle>
         </DialogHeader>

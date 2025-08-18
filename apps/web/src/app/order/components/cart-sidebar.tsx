@@ -216,23 +216,10 @@ export function CartSidebar() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className={`${responsiveClasses.padding.section} border-b border-gray-200`}>
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {t.orderPage.cart.orderSummary}
-          </h2>
-          {itemCount > 0 && (
-            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-              {itemCount} {itemCount === 1 ? t.orderPage.cart.item : t.orderPage.cart.items}
-            </Badge>
-          )}
-        </div>
-        
-      </div>
-
-      {/* Order Type Selection */}
-      <div className={`${responsiveClasses.padding.section} border-b border-gray-200`}>
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Order Type Selection */}
+        <div className={`${responsiveClasses.padding.section} border-b border-gray-200`}>
         <div className="grid grid-cols-2 gap-2">
           <Button
             variant={orderType === 'dine_in' ? 'default' : 'outline'}
@@ -381,13 +368,12 @@ export function CartSidebar() {
 
           </div>
         )}
-      </div>
 
-      {/* Customer Info & Checkout */}
-      {items.length > 0 && (
-        <div className={`border-t border-gray-200 ${responsiveClasses.padding.section} space-y-3`}>
-          {/* Order Summary */}
-          <Card className={`${responsiveClasses.padding.card} bg-gray-50`}>
+        {/* Customer Info Section - Inside Scrollable Area */}
+        {items.length > 0 && (
+          <div className={`${responsiveClasses.padding.section} space-y-3`}>
+            {/* Order Summary */}
+            <Card className={`${responsiveClasses.padding.card} bg-gray-50`}>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>{t.orderPage.pricing.subtotal}</span>
@@ -482,8 +468,13 @@ export function CartSidebar() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+          </div>
+        )}
+      </div>
 
-          {/* Checkout Button */}
+      {/* Sticky Checkout Footer */}
+      {items.length > 0 && (
+        <div className="border-t border-gray-200 bg-white p-4 flex-shrink-0">
           <Button
             onClick={handleCheckoutClick}
             disabled={isSubmitting || items.length === 0}
@@ -494,10 +485,11 @@ export function CartSidebar() {
           </Button>
         </div>
       )}
+    </div>
 
       {/* Payment Method Modal */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="max-w-md mx-auto">
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md rounded-lg">
           <DialogHeader>
             <DialogTitle>{t.orderPage.payment.selectPaymentMethod}</DialogTitle>
           </DialogHeader>
