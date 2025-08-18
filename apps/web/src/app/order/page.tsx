@@ -29,20 +29,23 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
   const resolvedSearchParams = use(searchParams)
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [isMobile, setIsMobile] = useState(false)
+  const [isTablet, setIsTablet] = useState(false)
   const [customerMenu, setCustomerMenu] = useState<CustomerMenu | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState<string>('')
   
-  // Detect mobile viewport
+  // Detect viewport size for responsive layout
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
+    const checkViewport = () => {
+      const width = window.innerWidth
+      setIsMobile(width < 768)
+      setIsTablet(width >= 768 && width < 1024)
     }
     
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
+    checkViewport()
+    window.addEventListener('resize', checkViewport)
+    return () => window.removeEventListener('resize', checkViewport)
   }, [])
 
   // Create order context from URL parameters with enhanced validation
@@ -130,7 +133,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
     <OrderContextProvider value={orderContext}>
       <CartContextProvider>
         {/* Desktop Layout */}
-        {!isMobile && (
+        {!isMobile && !isTablet && (
           <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
             {/* Header */}
             <div className="flex-shrink-0">
@@ -167,6 +170,53 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
               
               {/* Right Sidebar - Cart */}
               <div className="w-80 bg-white border-l border-gray-200">
+                <ScrollArea className="h-full">
+                  <CartSidebar />
+                </ScrollArea>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tablet Layout */}
+        {isTablet && (
+          <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex-shrink-0">
+              <OrderHeader 
+                branchName={customerMenu?.metadata.branchName}
+                branchAddress={customerMenu?.metadata.branchAddress}
+                onSearch={setSearchQuery}
+              />
+            </div>
+            
+            {/* Category Horizontal Tabs */}
+            <div className="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
+              <CategorySidebar 
+                selectedCategory={selectedCategory}
+                onCategorySelect={setSelectedCategory}
+                customerMenu={customerMenu}
+                loading={loading}
+                isMobile={true}
+              />
+            </div>
+            
+            {/* Main Layout - Menu + Cart Side by Side */}
+            <div className="flex flex-1 min-h-0">
+              {/* Menu Grid - Takes more space */}
+              <div className="flex-1">
+                <ScrollArea className="h-full">
+                  <MenuGrid 
+                    selectedCategory={selectedCategory} 
+                    customerMenu={customerMenu}
+                    loading={loading}
+                    searchQuery={searchQuery}
+                  />
+                </ScrollArea>
+              </div>
+              
+              {/* Cart Sidebar - Narrower than desktop */}
+              <div className="w-72 bg-white border-l border-gray-200">
                 <ScrollArea className="h-full">
                   <CartSidebar />
                 </ScrollArea>

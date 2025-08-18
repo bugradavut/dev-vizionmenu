@@ -39,6 +39,20 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
   const { getItemQuantity } = useCart()
   const { language } = useLanguage()
   const t = translations[language] || translations.en
+  
+  const [isTablet, setIsTablet] = useState(false)
+  
+  // Detect tablet viewport
+  useEffect(() => {
+    const checkTablet = () => {
+      const width = window.innerWidth
+      setIsTablet(width >= 768 && width < 1024)
+    }
+    
+    checkTablet()
+    window.addEventListener('resize', checkTablet)
+    return () => window.removeEventListener('resize', checkTablet)
+  }, [])
 
   // Filter items based on selected category, customer menu, and search query
   useEffect(() => {
@@ -151,7 +165,7 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
   }
 
   return (
-    <div className="p-6">
+    <div className={isTablet ? 'p-4' : 'p-6'}>
       {/* Category Title */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900">
@@ -211,7 +225,7 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                 </div>
                 
                 {/* Category Items Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className={`grid grid-cols-1 sm:grid-cols-2 ${isTablet ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} xl:grid-cols-4 ${isTablet ? 'gap-4' : 'gap-6'}`}>
                   {items.map((item) => {
                     const itemQuantity = getItemQuantity(item.id)
                     
@@ -221,7 +235,7 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                         className="rounded-xl border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer group"
                         onClick={() => handleItemClick(item)}
                       >
-                        <div className="relative p-2">
+                        <div className={`relative ${isTablet ? 'p-3' : 'p-2'}`}>
                           {/* Item Image - Smaller */}
                           <div className="aspect-[4/3] bg-gray-100 overflow-hidden relative rounded-xl">
                             {item.image_url ? (
@@ -259,7 +273,7 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                           )}
                         </div>
 
-                        <CardContent className="p-3">
+                        <CardContent className={isTablet ? 'p-4' : 'p-3'}>
                           {/* Item Info - Left/Right Layout */}
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
@@ -283,7 +297,7 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
         </div>
       ) : (
         // Regular Grid View for Specific Categories
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${isTablet ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} xl:grid-cols-4 ${isTablet ? 'gap-4' : 'gap-6'}`}>
           {filteredItems.map((item) => {
             const itemQuantity = getItemQuantity(item.id)
             
@@ -293,7 +307,7 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                 className="rounded-xl border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer group"
                 onClick={() => handleItemClick(item)}
               >
-                <div className="relative p-2">
+                <div className={`relative ${isTablet ? 'p-3' : 'p-2'}`}>
                   {/* Item Image - Smaller */}
                   <div className="aspect-[4/3] bg-gray-100 overflow-hidden relative rounded-xl">
                     {item.image_url ? (
@@ -331,7 +345,7 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                   )}
                 </div>
 
-                <CardContent className="p-3">
+                <CardContent className={isTablet ? 'p-4' : 'p-3'}>
                   {/* Item Info - Left/Right Layout */}
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
