@@ -1,4 +1,4 @@
-# Vision Menu - Development Progress Report
+# Vizion Menu - Development Progress Report
 **Comprehensive overview of completed work and future roadmap**
 
 ---
@@ -490,7 +490,8 @@ GET  /api/v1/menu-presets           // ✅ Active preset integration
 
 ### **🐛 Known Issues - Minor Bug Fixes**
 - 🔄 **Preset One-time Scheduling Bug**: Preset edit modal'da one-time saat seçimleri gelmiyor. Bu bug fixlenecek.
-- **Priority**: ⚡ **LOW** - Functionality works but needs timezone/datetime picker fix
+- 🔄 **Menu Item Photo Update Bug**: /menu sayfasında item editleyip fotoğrafını değiştirdiğimde değişmiyor, ilk eklediğim fotoğraf kalmaya devam ediyor.
+- **Priority**: ⚡ **LOW** - Functionality works but needs timezone/datetime picker fix and photo cache clearing
 - **Status**: Deferred to future maintenance cycle
 
 ### **2. Completed Menu Management System ✅**
@@ -740,4 +741,4 @@ GET  /api/v1/menu-presets           // ✅ Active preset integration
 
 ---
 
-*This document reflects the current state of Vision Menu development as of January 15, 2025. The project has achieved major milestones with complete Order Management API system, Branch Settings API, Menu Categories & Items Frontend implementation. The platform now maintains enterprise-grade code quality, user experience, and technical excellence while actively developing the Menu Presets system to complete the core restaurant platform. **Menu Presets is currently in early development stage and requires substantial additional work to reach production readiness.***
+*This document reflects the current state of Vizion Menu development as of January 15, 2025. The project has achieved major milestones with complete Order Management API system, Branch Settings API, Menu Categories & Items Frontend implementation. The platform now maintains enterprise-grade code quality, user experience, and technical excellence while actively developing the Menu Presets system to complete the core restaurant platform. **Menu Presets is currently in early development stage and requires substantial additional work to reach production readiness.***

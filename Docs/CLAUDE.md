@@ -1,12 +1,12 @@
-# Claude Development Rules - Vision Menu Project
+# Claude Development Rules - Vizion Menu Project
 
-**Comprehensive coding standards and project guidelines for Vision Menu development**
+**Comprehensive coding standards and project guidelines for Vizion Menu development**
 
 ---
 
 ## 🎯 PROJECT OVERVIEW & CONTEXT
 
-**Vision Menu** is a production-ready **multi-tenant restaurant management platform** similar to Adisyo or UEAT. Built with modern TypeScript stack supporting restaurant chains with multiple branches, real-time order management, and comprehensive third-party integrations.
+**Vizion Menu** is a production-ready **multi-tenant restaurant management platform** similar to Adisyo or UEAT. Built with modern TypeScript stack supporting restaurant chains with multiple branches, real-time order management, and comprehensive third-party integrations.
 
 **Architecture**: Monorepo structure with Next.js frontend, Express.js backend, and Supabase database  
 **Current Status**: Production deployment with ongoing feature development  
@@ -14,7 +14,7 @@
 
 ### **🍽️ RESTAURANT ORDER FLOW SYSTEM - CRITICAL BUSINESS LOGIC**
 
-**Vision Menu implements a flexible dual-flow system for order management, allowing restaurants to choose between manual control and automated processing based on their operational preferences.**
+**Vizion Menu implements a flexible dual-flow system for order management, allowing restaurants to choose between manual control and automated processing based on their operational preferences.**
 
 #### **Order Flow Options (Branch Settings)**
 
@@ -73,7 +73,7 @@ This dual-flow system provides competitive advantage over UEAT by offering both 
 
 ### **🇨🇦 Canadian French Language Support - PRODUCTION READY**
 
-**Vision Menu implements a comprehensive bilingual system (English/Canadian French) that is PRODUCTION READY and fully deployed.**
+**Vizion Menu implements a comprehensive bilingual system (English/Canadian French) that is PRODUCTION READY and fully deployed.**
 
 #### **Language Architecture Overview**
 - **Centralized Translation System**: Single `translations.ts` file with all translations
@@ -200,7 +200,7 @@ Before deploying any new feature with text:
 
 ### **1. Monorepo Structure Rules**
 ```
-vision-menu/
+vizion-menu/
 ├── apps/
 │   ├── api/        # Express.js Backend (unified dev/prod)
 │   ├── web/        # Next.js 15 Frontend Application  
@@ -961,7 +961,7 @@ interface UserListTableProps {
 
 ## 🚀 SUMMARY OF CLAUDE'S RESPONSIBILITIES
 
-**Primary Role**: Maintain and enhance Vision Menu platform following established patterns and standards
+**Primary Role**: Maintain and enhance Vizion Menu platform following established patterns and standards
 
 **Key Responsibilities**:
 1. **Code Quality**: Write clean, type-safe, well-documented code
@@ -1135,6 +1135,6 @@ npm run build   # ✅ Must pass
 
 ---
 
-*This document serves as the comprehensive guide for all development work on Vision Menu. Following these rules ensures consistency, quality, and maintainability of the platform.*
+*This document serves as the comprehensive guide for all development work on Vizion Menu. Following these rules ensures consistency, quality, and maintainability of the platform.*
 
 **Last Updated**: January 11, 2025 | **Version**: 3.0.0 - Modern Backend Architecture
