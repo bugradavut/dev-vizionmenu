@@ -45,6 +45,7 @@ const menuItemsRoutes = require('./routes/menu-items.routes');
 const menuPresetsRoutes = require('./routes/menu-presets.routes');
 const customerMenuRoutes = require('./routes/customer-menu.routes');
 const customerOrdersRoutes = require('./routes/customer-orders.routes');
+const platformSyncRoutes = require('./routes/platform-sync.routes');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -99,6 +100,9 @@ app.use('/api/v1/customer/menu', customerMenuRoutes);
 // Use customer orders routes (public - no auth required)
 app.use('/api/v1/customer/orders', customerOrdersRoutes);
 
+// Use platform sync routes (protected - auth required)
+app.use('/api/v1/platform-sync', requireAuthWithBranch, platformSyncRoutes);
+
 // Catch all other routes
 app.use('*', (req, res) => {
   res.status(404).json({
@@ -150,7 +154,20 @@ app.use('*', (req, res) => {
       'GET /api/v1/customer/menu/:branchId',
       'GET /api/v1/customer/menu/:branchId/info',
       'POST /api/v1/customer/orders',
-      'GET /api/v1/customer/orders/:orderId/status'
+      'GET /api/v1/customer/orders/:orderId/status',
+      'GET /api/v1/platform-sync/status',
+      'POST /api/v1/platform-sync/bulk-sync',
+      'POST /api/v1/platform-sync/uber-eats/menu',
+      'POST /api/v1/platform-sync/uber-eats/order',
+      'PUT /api/v1/platform-sync/uber-eats/order/:orderId/status',
+      'POST /api/v1/platform-sync/doordash/menu',
+      'POST /api/v1/platform-sync/doordash/order',
+      'POST /api/v1/platform-sync/doordash/order/:orderId/confirm',
+      'PUT /api/v1/platform-sync/doordash/order/:orderId/status',
+      'POST /api/v1/platform-sync/skipthedishes/menu',
+      'POST /api/v1/platform-sync/skipthedishes/order',
+      'PUT /api/v1/platform-sync/skipthedishes/order/:orderId/status',
+      'GET /api/v1/platform-sync/skipthedishes/export-csv'
     ]
   });
 });
@@ -182,6 +199,10 @@ if (require.main === module) {
     console.log(`   POST /api/v1/menu/categories`);
     console.log(`   PUT  /api/v1/menu/categories/:id`);
     console.log(`   PATCH /api/v1/menu/categories/:id/toggle`);
+    console.log(`   GET  /api/v1/platform-sync/status`);
+    console.log(`   POST /api/v1/platform-sync/uber-eats/menu`);
+    console.log(`   POST /api/v1/platform-sync/doordash/menu`);
+    console.log(`   POST /api/v1/platform-sync/skipthedishes/menu`);
   });
 }
 
