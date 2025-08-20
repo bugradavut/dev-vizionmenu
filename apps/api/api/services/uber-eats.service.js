@@ -111,32 +111,79 @@ async function syncMenuToUberEats(branchId, userBranch) {
 }
 
 /**
+ * Validate Uber Eats webhook signature (2024 security requirement)
+ * @param {string} rawBody - Raw webhook request body
+ * @param {string} signature - X-Uber-Signature header value
+ * @param {string} clientSecret - Uber client secret
+ * @returns {boolean} Signature is valid
+ */
+function validateUberEatsWebhookSignature(rawBody, signature, clientSecret) {
+  const crypto = require('crypto');
+  
+  try {
+    const expectedSignature = crypto
+      .createHmac('sha256', clientSecret)
+      .update(rawBody, 'utf8')
+      .digest('hex')
+      .toLowerCase();
+    
+    return signature.toLowerCase() === expectedSignature;
+  } catch (error) {
+    console.error('Webhook signature validation failed:', error);
+    return false;
+  }
+}
+
+/**
  * Process incoming order from Uber Eats webhook
- * @param {Object} uberEatsOrder - Raw Uber Eats order data
+ * @param {Object} webhookPayload - Uber Eats webhook notification payload
  * @param {string} branchId - Target branch ID
+ * @param {string} rawBody - Raw webhook body for signature validation
+ * @param {string} signature - X-Uber-Signature header
  * @returns {Object} Created Vizion Menu order
  */
-async function processUberEatsOrder(uberEatsOrder, branchId) {
+async function processUberEatsOrder(webhookPayload, branchId, rawBody = null, signature = null) {
   try {
-    // Validate required order data
-    if (!uberEatsOrder.id || !uberEatsOrder.cart || !uberEatsOrder.eater) {
-      throw new Error('Invalid Uber Eats order data - missing required fields');
+    // 2024 Security: Validate webhook signature if provided
+    if (rawBody && signature && process.env.UBER_CLIENT_SECRET) {
+      const isValidSignature = validateUberEatsWebhookSignature(rawBody, signature, process.env.UBER_CLIENT_SECRET);
+      if (!isValidSignature) {
+        throw new Error('Invalid webhook signature - potential security breach');
+      }
     }
+
+    // Validate webhook payload structure
+    if (!webhookPayload.event_type || webhookPayload.event_type !== 'orders.notification') {
+      throw new Error('Invalid webhook payload - not an order notification');
+    }
+
+    if (!webhookPayload.meta?.resource_id) {
+      throw new Error('Invalid webhook payload - missing order resource_id');
+    }
+
+    const orderId = webhookPayload.meta.resource_id;
 
     // Check for duplicate order
     const { data: existingOrder } = await supabase
       .from('orders')
       .select('id')
-      .eq('external_order_id', uberEatsOrder.id)
+      .eq('external_order_id', orderId)
       .eq('third_party_platform', 'uber_eats')
       .single();
 
     if (existingOrder) {
-      throw new Error(`Duplicate order detected: ${uberEatsOrder.id}`);
+      throw new Error(`Duplicate order detected: ${orderId}`);
+    }
+
+    // Fetch full order details from Uber Eats API
+    const orderDetails = await fetchUberEatsOrderDetails(orderId);
+    
+    if (!orderDetails) {
+      throw new Error(`Failed to fetch order details for ${orderId}`);
     }
 
     // Convert to Vizion Menu format
-    const vizionOrder = convertUberEatsOrderToVizion(uberEatsOrder, branchId);
+    const vizionOrder = convertUberEatsOrderToVizion(orderDetails, branchId);
 
     // Validate and map menu items
     const validatedItems = await validateAndMapOrderItems(vizionOrder.items, branchId, 'uber_eats');
@@ -175,6 +222,10 @@ async function processUberEatsOrder(uberEatsOrder, branchId) {
         .insert(orderItems);
     }
 
+    // NOTE: In real implementation, you must call accept/deny within 11.5 minutes
+    // This should be handled by separate auto-accept logic or kitchen staff action
+    console.log(`⏰ [REMINDER] Order ${orderId} must be accepted/denied within 11.5 minutes`);
+
     // Log successful order processing
     await logPlatformSync(
       branchId,
@@ -188,12 +239,14 @@ async function processUberEatsOrder(uberEatsOrder, branchId) {
       null,
       null,
       null,
-      { order_id: createdOrder.id, external_id: uberEatsOrder.id }
+      { order_id: createdOrder.id, external_id: orderId }
     );
 
     return createdOrder;
 
   } catch (error) {
+    const orderId = webhookPayload.meta?.resource_id || 'unknown';
+    
     // Log failed order processing
     await logPlatformSync(
       branchId,
@@ -204,7 +257,7 @@ async function processUberEatsOrder(uberEatsOrder, branchId) {
       1,
       0,
       1,
-      { error: error.message, external_id: uberEatsOrder.id }
+      { error: error.message, external_id: orderId }
     );
 
     throw error;
@@ -349,40 +402,148 @@ async function getMenuWithMappings(branchId, platform) {
 }
 
 /**
- * Convert Vizion Menu data to Uber Eats format
+ * Convert Vizion Menu data to real Uber Eats API format
  * @param {Object} menuData - Vizion menu data
  * @param {Object} branch - Branch information
- * @returns {Object} Uber Eats formatted menu
+ * @returns {Object} Uber Eats formatted menu (real API structure)
  */
 function convertMenuToUberEatsFormat(menuData, branch) {
+  // Convert items to Uber Eats format
+  const items = [];
+  const categories = [];
+  const modifier_groups = [];
+
+  menuData.categories.forEach(category => {
+    // Create category
+    categories.push({
+      id: `cat_${category.id}`,
+      title: {
+        translations: {
+          en_us: category.name
+        }
+      },
+      subtitle: {
+        translations: {
+          en_us: category.description || ''
+        }
+      },
+      items: category.items.map(item => `item_${item.id}`)
+    });
+
+    // Create items
+    category.items.forEach(item => {
+      items.push({
+        id: `item_${item.id}`,
+        external_data: item.platform_mapping.platform_item_id,
+        title: {
+          translations: {
+            en_us: item.name
+          }
+        },
+        description: {
+          translations: {
+            en_us: item.description || ''
+          }
+        },
+        price: Math.round(item.price * 100), // Convert to cents (required by Uber Eats)
+        core_price: Math.round(item.price * 100), // Core price field (2024 requirement)
+        images: item.image_url ? [{
+          url: item.image_url
+        }] : [],
+        quantity_info: {
+          quantity: {
+            max_permitted: 99,
+            min_permitted: 1,
+            default_quantity: 1,
+            increment: 1,
+            overrides: [] // 2024 Enhanced Cart Item Quantity Representation
+          }
+        },
+        suspension_info: {
+          suspension: {
+            suspended_until: item.is_available ? null : Math.floor(Date.now() / 1000) + 86400,
+            reason: item.is_available ? null : 'ITEM_AVAILABILITY'
+          }
+        },
+        price_info: {
+          price: Math.round(item.price * 100),
+          core_price: Math.round(item.price * 100)
+        },
+        tax_info: {
+          tax_rate: 1300 // 13% HST for Canada (in basis points)
+        },
+        nutritional_info: item.allergens ? {
+          allergens: item.allergens.map(allergen => ({
+            type: allergen.toUpperCase().replace(' ', '_')
+          }))
+        } : undefined,
+        modifier_group_ids: {
+          ids: []
+        },
+        bundled_items: [], // 2024 requirement for combo items
+        // 2024 Enhanced features
+        display_options: {
+          disable_item_instructions: false
+        },
+        visibility_info: {
+          hours: [] // Item-specific availability hours
+        }
+      });
+    });
+  });
+
+  // Create main menu structure
   return {
+    items: items,
+    modifier_groups: modifier_groups,
+    categories: categories,
     menus: [{
-      menu_id: `ue_menu_${branch.id}`,
-      title: `${branch.name} Menu`,
-      subtitle: 'Delicious food delivered fresh',
-      sections: menuData.categories.map(category => ({
-        section_id: `ue_cat_${category.id}`,
-        title: category.name,
-        subtitle: category.description || '',
-        items: category.items.map(item => ({
-          id: item.platform_mapping.platform_item_id,
-          external_data: item.id,
-          title: item.name,
-          description: item.description || '',
-          price: Math.round(item.price * 100), // Convert to cents
-          images: item.image_url ? [{
-            url: item.image_url,
-            width: 640,
-            height: 480
-          }] : [],
-          available: item.is_available,
-          preparation_time_seconds: (item.preparation_time || 15) * 60,
-          dietary_info: item.dietary_info || [],
-          allergens: item.allergens || [],
-          max_quantity: 99
-        }))
-      }))
-    }]
+      id: `menu_${branch.id}`,
+      title: {
+        translations: {
+          en_us: `${branch.name} Menu`
+        }
+      },
+      subtitle: {
+        translations: {
+          en_us: 'Fresh food delivered to you'
+        }
+      },
+      service_availability: [
+        {
+          day_of_week: 'monday',
+          time_periods: [{ start_time: '09:00', end_time: '22:00' }]
+        },
+        {
+          day_of_week: 'tuesday', 
+          time_periods: [{ start_time: '09:00', end_time: '22:00' }]
+        },
+        {
+          day_of_week: 'wednesday',
+          time_periods: [{ start_time: '09:00', end_time: '22:00' }]
+        },
+        {
+          day_of_week: 'thursday',
+          time_periods: [{ start_time: '09:00', end_time: '22:00' }]
+        },
+        {
+          day_of_week: 'friday',
+          time_periods: [{ start_time: '09:00', end_time: '22:00' }]
+        },
+        {
+          day_of_week: 'saturday',
+          time_periods: [{ start_time: '09:00', end_time: '22:00' }]
+        },
+        {
+          day_of_week: 'sunday',
+          time_periods: [{ start_time: '09:00', end_time: '22:00' }]
+        }
+      ],
+      category_ids: categories.map(cat => cat.id)
+    }],
+    display_options: {
+      disable_item_instructions: false
+    }
   };
 }
 
@@ -452,13 +613,16 @@ function convertStatusToUberEats(vizionStatus) {
  */
 async function performUberEatsMenuSync(storeId, menuData) {
   if (process.env.NODE_ENV === 'production' && process.env.UBER_EATS_ACCESS_TOKEN) {
-    // Real API call
+    // Real API call to Uber Eats
     try {
-      const response = await fetch(`https://api.uber.com/v1/eats/stores/${storeId}/menus`, {
+      const response = await fetch(`https://api.uber.com/v2/eats/stores/${storeId}/menus`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${process.env.UBER_EATS_ACCESS_TOKEN}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept-Encoding': 'gzip, deflate', // 2024 Uber recommendation for large payloads
+          'User-Agent': 'Vizion-Menu/1.0',
+          'X-API-Version': '2.0' // Specify API version for consistency
         },
         body: JSON.stringify(menuData)
       });
@@ -468,13 +632,13 @@ async function performUberEatsMenuSync(storeId, menuData) {
       if (response.ok) {
         return { 
           success: true, 
-          menu_upload_id: result.menu_upload_id,
+          menu_upload_id: result.menu_upload_id || `upload_${Date.now()}`,
           warnings: result.warnings || []
         };
       } else {
         return { 
           success: false, 
-          error: result.error?.message || 'Menu upload failed' 
+          error: result.error?.message || `HTTP ${response.status}: Menu upload failed` 
         };
       }
     } catch (error) {
@@ -486,14 +650,57 @@ async function performUberEatsMenuSync(storeId, menuData) {
   } else {
     // Mock implementation for development/testing
     console.log(`🍔 [MOCK] Uber Eats Menu Sync for store ${storeId}:`);
-    console.log(`   - Categories: ${menuData.menus[0].sections.length}`);
-    console.log(`   - Items: ${menuData.menus[0].sections.reduce((sum, section) => sum + section.items.length, 0)}`);
+    console.log(`   - Categories: ${menuData.categories.length}`);
+    console.log(`   - Items: ${menuData.items.length}`);
+    console.log(`   - Menus: ${menuData.menus.length}`);
+    console.log(`   - Using real Uber Eats API structure`);
     
     return { 
       success: true, 
       menu_upload_id: `mock_upload_${Date.now()}`,
       warnings: []
     };
+  }
+}
+
+/**
+ * Accept or deny Uber Eats order (real API requirement)
+ * @param {string} orderId - Order ID
+ * @param {boolean} accept - Accept (true) or deny (false)
+ * @param {string} reason - Reason for denial (if deny)
+ * @returns {Object} Accept/deny result
+ */
+async function acceptOrDenyUberEatsOrder(orderId, accept, reason = null) {
+  if (process.env.NODE_ENV === 'production' && process.env.UBER_EATS_ACCESS_TOKEN) {
+    // Real API call - REQUIRED within 11.5 minutes
+    try {
+      const endpoint = accept ? 'accept_pos_order' : 'deny_pos_order';
+      const body = accept ? {} : { reason: reason || 'ITEM_AVAILABILITY' };
+      
+      const response = await fetch(`https://api.uber.com/v1/eats/orders/${orderId}/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.UBER_EATS_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+          'User-Agent': 'Vizion-Menu/1.0',
+          'X-API-Version': '1.0' // Order API version
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (response.ok) {
+        return { success: true, action: accept ? 'accepted' : 'denied' };
+      } else {
+        const error = await response.json();
+        return { success: false, error: error.message || 'Accept/deny failed' };
+      }
+    } catch (error) {
+      return { success: false, error: `API request failed: ${error.message}` };
+    }
+  } else {
+    // Mock implementation
+    console.log(`🚗 [MOCK] Uber Eats Order ${accept ? 'Accept' : 'Deny'}: ${orderId}${reason ? ` (${reason})` : ''}`);
+    return { success: true, action: accept ? 'accepted' : 'denied' };
   }
 }
 
@@ -505,15 +712,38 @@ async function performUberEatsMenuSync(storeId, menuData) {
  */
 async function performUberEatsStatusUpdate(orderId, status) {
   if (process.env.NODE_ENV === 'production' && process.env.UBER_EATS_ACCESS_TOKEN) {
-    // Real API call
+    // Real API call - different endpoint structure
     try {
-      const response = await fetch(`https://api.uber.com/v1/eats/orders/${orderId}/status`, {
+      // Note: Real Uber Eats uses different endpoints for different status updates
+      let endpoint = '';
+      let body = {};
+      
+      switch (status) {
+        case 'preparing':
+          endpoint = 'preparation_time';
+          body = { preparation_time: 15 }; // minutes
+          break;
+        case 'ready_for_pickup':
+          endpoint = 'ready_for_pickup';
+          body = {};
+          break;
+        case 'finished':
+          endpoint = 'finished';
+          body = {};
+          break;
+        default:
+          return { success: false, error: `Unsupported status: ${status}` };
+      }
+
+      const response = await fetch(`https://api.uber.com/v1/eats/orders/${orderId}/${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.UBER_EATS_ACCESS_TOKEN}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'User-Agent': 'Vizion-Menu/1.0',
+          'X-API-Version': '1.0' // Order Status API version
         },
-        body: JSON.stringify({ status })
+        body: JSON.stringify(body)
       });
 
       if (response.ok) {
@@ -529,6 +759,75 @@ async function performUberEatsStatusUpdate(orderId, status) {
     // Mock implementation
     console.log(`🚗 [MOCK] Uber Eats Status Update: ${orderId} -> ${status}`);
     return { success: true };
+  }
+}
+
+/**
+ * Fetch full order details from Uber Eats API
+ * @param {string} orderId - Order ID
+ * @returns {Object} Order details
+ */
+async function fetchUberEatsOrderDetails(orderId) {
+  if (process.env.NODE_ENV === 'production' && process.env.UBER_EATS_ACCESS_TOKEN) {
+    // Real API call
+    try {
+      const response = await fetch(`https://api.uber.com/v2/eats/order/${orderId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${process.env.UBER_EATS_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+          'User-Agent': 'Vizion-Menu/1.0',
+          'X-API-Version': '2.0' // Order Details API version
+        }
+      });
+
+      if (response.ok) {
+        return await response.json();
+      } else {
+        console.error(`Failed to fetch order details for ${orderId}: ${response.status}`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`API request failed: ${error.message}`);
+      return null;
+    }
+  } else {
+    // Mock order details
+    console.log(`🍔 [MOCK] Fetching Uber Eats order details for ${orderId}`);
+    return {
+      id: orderId,
+      display_id: `UE-${orderId.slice(-6)}`,
+      eater: {
+        first_name: 'John',
+        last_name: 'Doe',
+        phone: '+1234567890',
+        email: 'john@example.com'
+      },
+      cart: {
+        items: [
+          {
+            external_data: 'item_1',
+            title: 'Mock Burger',
+            quantity: 1,
+            price: 1299, // cents
+            special_instructions: 'No onions'
+          }
+        ],
+        special_instructions: 'Leave at door'
+      },
+      payment: {
+        charges: {
+          subtotal: 1299,
+          tax: 169,
+          total: 1468
+        }
+      },
+      delivery: {
+        location: {
+          address: '123 Mock Street, Toronto, ON'
+        }
+      }
+    };
   }
 }
 
@@ -650,6 +949,9 @@ module.exports = {
   syncMenuToUberEats,
   processUberEatsOrder,
   updateOrderStatusOnUberEats,
+  acceptOrDenyUberEatsOrder,
+  fetchUberEatsOrderDetails,
+  validateUberEatsWebhookSignature,
   getMenuWithMappings,
   convertMenuToUberEatsFormat,
   convertUberEatsOrderToVizion,

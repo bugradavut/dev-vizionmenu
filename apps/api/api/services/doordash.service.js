@@ -14,7 +14,8 @@ const supabase = createClient(
 );
 
 /**
- * Sync complete menu to DoorDash platform
+ * Trigger DoorDash menu update (PULL-BASED SYSTEM)
+ * DoorDash will pull menu from our exposed endpoint
  * @param {string} branchId - Branch ID
  * @param {Object} userBranch - User branch context
  * @returns {Object} Sync result with status and metadata
@@ -45,12 +46,12 @@ async function syncMenuToDoorDash(branchId, userBranch) {
       throw new Error('No menu categories found for sync');
     }
 
-    // Convert to DoorDash format
-    const doorDashMenu = convertMenuToDoorDashFormat(menuData, branch);
     itemsProcessed = countMenuItems(menuData);
 
-    // Perform API call (mock or real)
-    const syncResult = await performDoorDashMenuSync(branch.id, doorDashMenu);
+    // IMPORTANT: DoorDash uses PULL-BASED system
+    // We don't push menu to DoorDash, they pull it from our endpoint
+    // This function triggers DoorDash to pull updated menu
+    const syncResult = await triggerDoorDashMenuPull(branch.id, branchId);
     
     if (syncResult.success) {
       itemsSucceeded = itemsProcessed;
@@ -67,8 +68,8 @@ async function syncMenuToDoorDash(branchId, userBranch) {
     await logPlatformSync(
       branchId,
       'doordash', 
-      'menu_upload',
-      'sync_menu_to_platform',
+      'menu_sync',
+      'trigger_menu_pull',
       syncResult.success ? 'success' : 'failed',
       itemsProcessed,
       itemsSucceeded,
@@ -81,11 +82,12 @@ async function syncMenuToDoorDash(branchId, userBranch) {
     return {
       success: syncResult.success,
       platform: 'doordash',
+      method: 'pull_based',
       itemsProcessed,
       itemsSucceeded,
       itemsFailed,
       duration,
-      menuId: syncResult.menu_id || `mock_dd_${Date.now()}`,
+      pullEndpoint: syncResult.pull_endpoint,
       errors
     };
 
@@ -96,8 +98,8 @@ async function syncMenuToDoorDash(branchId, userBranch) {
     await logPlatformSync(
       branchId,
       'doordash',
-      'menu_upload', 
-      'sync_menu_to_platform',
+      'menu_sync', 
+      'trigger_menu_pull',
       'failed',
       itemsProcessed,
       0,
@@ -113,33 +115,33 @@ async function syncMenuToDoorDash(branchId, userBranch) {
 
 /**
  * Process incoming order from DoorDash webhook
- * @param {Object} doorDashOrder - Raw DoorDash order data
+ * @param {Object} doorDashOrder - Real DoorDash webhook payload
  * @param {string} branchId - Target branch ID
  * @returns {Object} Created Vizion Menu order
  */
 async function processDoorDashOrder(doorDashOrder, branchId) {
   try {
-    const orderData = doorDashOrder.order || doorDashOrder;
-    
-    // Validate required order data
-    if (!orderData.id || !orderData.items || !orderData.customer) {
-      throw new Error('Invalid DoorDash order data - missing required fields');
+    // Validate real DoorDash webhook payload structure
+    if (!doorDashOrder.external_order_id || !doorDashOrder.items) {
+      throw new Error('Invalid DoorDash webhook payload - missing required fields');
     }
 
+    const externalOrderId = doorDashOrder.external_order_id;
+    
     // Check for duplicate order
     const { data: existingOrder } = await supabase
       .from('orders')
       .select('id')
-      .eq('external_order_id', orderData.id)
+      .eq('external_order_id', externalOrderId)
       .eq('third_party_platform', 'doordash')
       .single();
 
     if (existingOrder) {
-      throw new Error(`Duplicate order detected: ${orderData.id}`);
+      throw new Error(`Duplicate order detected: ${externalOrderId}`);
     }
 
-    // Convert to Vizion Menu format
-    const vizionOrder = convertDoorDashOrderToVizion(orderData, branchId);
+    // Convert to Vizion Menu format using real DoorDash structure
+    const vizionOrder = convertDoorDashOrderToVizion(doorDashOrder, branchId);
 
     // Validate and map menu items
     const validatedItems = await validateAndMapOrderItems(vizionOrder.items, branchId, 'doordash');
@@ -178,6 +180,10 @@ async function processDoorDashOrder(doorDashOrder, branchId) {
         .insert(orderItems);
     }
 
+    // DoorDash expects a 200 response for successful processing
+    // Additional confirmation may be required via API
+    console.log(`✅ DoorDash order ${externalOrderId} processed successfully`);
+
     // Log successful order processing
     await logPlatformSync(
       branchId,
@@ -191,12 +197,14 @@ async function processDoorDashOrder(doorDashOrder, branchId) {
       null,
       null,
       null,
-      { order_id: createdOrder.id, external_id: orderData.id }
+      { order_id: createdOrder.id, external_id: externalOrderId }
     );
 
     return createdOrder;
 
   } catch (error) {
+    const externalOrderId = doorDashOrder.external_order_id || 'unknown';
+    
     // Log failed order processing
     await logPlatformSync(
       branchId,
@@ -207,7 +215,7 @@ async function processDoorDashOrder(doorDashOrder, branchId) {
       1,
       0,
       1,
-      { error: error.message, external_id: doorDashOrder.order?.id || doorDashOrder.id }
+      { error: error.message, external_id: externalOrderId }
     );
 
     throw error;
@@ -419,70 +427,90 @@ async function getMenuWithMappings(branchId, platform) {
 }
 
 /**
- * Convert Vizion Menu data to DoorDash format
+ * Convert Vizion Menu data to real DoorDash format (FOR PULL ENDPOINT)
+ * DoorDash will call our endpoint to get this data
  * @param {Object} menuData - Vizion menu data
  * @param {Object} branch - Branch information
- * @returns {Object} DoorDash formatted menu
+ * @returns {Object} DoorDash formatted menu (real API structure)
  */
 function convertMenuToDoorDashFormat(menuData, branch) {
   return {
-    menu: {
-      categories: menuData.categories.map((category, index) => ({
-        name: category.name,
-        active: category.is_active,
-        sort_order: category.display_order || index + 1,
-        items: category.items.map(item => ({
-          external_id: item.platform_mapping.platform_item_id,
-          name: item.name,
-          description: item.description || '',
-          price: item.price, // DoorDash uses dollars
-          is_active: item.is_available,
-          image_url: item.image_url || null,
-          tags: item.dietary_info || [],
-          allergens: item.allergens || [],
-          modifiers: [] // TODO: Add modifier support if needed
+    menus: [
+      {
+        id: `menu_${branch.id}`, // Required UUID for updates
+        name: `${branch.name} Menu`,
+        active: true,
+        categories: menuData.categories.map((category, catIndex) => ({
+          name: category.name,
+          merchant_supplied_id: `cat_${category.id}`,
+          active: category.is_active,
+          sort_id: category.display_order || catIndex + 1,
+          subtitle: category.description || '',
+          items: category.items.map((item, itemIndex) => ({
+            merchant_supplied_id: item.platform_mapping.platform_item_id,
+            name: item.name,
+            description: item.description || '',
+            base_price: Math.round(item.price * 100), // Convert to cents
+            active: item.is_available,
+            sort_id: item.display_order || itemIndex + 1,
+            original_image_url: item.image_url || null,
+            extras: [], // Modifiers - TODO: implement if needed
+            // DoorDash specific fields
+            tax_rate: 1300, // 13% HST for Canada (in basis points)
+            allergen_info: item.allergens ? item.allergens.join(', ') : '',
+            nutritional_info: item.dietary_info ? {
+              dietary_flags: item.dietary_info
+            } : undefined
+          }))
         }))
-      }))
-    }
+      }
+    ]
   };
 }
 
 /**
- * Convert DoorDash order to Vizion Menu format
- * @param {Object} doorDashOrder - DoorDash order data
+ * Convert real DoorDash webhook order to Vizion Menu format
+ * @param {Object} doorDashOrder - Real DoorDash webhook payload
  * @param {string} branchId - Branch ID
  * @returns {Object} Vizion Menu formatted order
  */
 function convertDoorDashOrderToVizion(doorDashOrder, branchId) {
   return {
-    external_order_id: doorDashOrder.id,
-    order_number: doorDashOrder.display_id || `DD-${doorDashOrder.id.slice(-8)}`,
-    customer_name: doorDashOrder.customer?.name || 'DoorDash Customer',
-    customer_phone: doorDashOrder.customer?.phone_number || '',
-    customer_email: doorDashOrder.customer?.email || '',
-    order_type: 'takeaway',
+    external_order_id: doorDashOrder.external_order_id,
+    order_number: doorDashOrder.client_order_id || `DD-${doorDashOrder.external_order_id.slice(-8)}`,
+    customer_name: doorDashOrder.consumer?.first_name ? 
+      `${doorDashOrder.consumer.first_name} ${doorDashOrder.consumer.last_name || ''}`.trim() : 
+      'DoorDash Customer',
+    customer_phone: doorDashOrder.consumer?.phone_number || '',
+    customer_email: doorDashOrder.consumer?.email || '',
+    order_type: doorDashOrder.fulfillment_type === 'pickup' ? 'takeaway' : 'delivery',
     third_party_platform: 'doordash',
-    source: 'doordash',
-    subtotal: doorDashOrder.subtotal || 0,
-    tax: doorDashOrder.tax || 0,
-    total: doorDashOrder.total || 0,
+    source: doorDashOrder.experience || 'doordash', // doordash, caviar, or storefront
+    subtotal: (doorDashOrder.subtotal_cents || 0) / 100,
+    tax: (doorDashOrder.tax_cents || 0) / 100,
+    total: (doorDashOrder.total_cents || 0) / 100,
     special_instructions: doorDashOrder.special_instructions || '',
     delivery_address: formatDoorDashAddress(doorDashOrder.delivery_address),
+    delivery_short_code: doorDashOrder.delivery_short_code || '',
+    merchant_tip: (doorDashOrder.merchant_tip_amount || 0) / 100,
     items: (doorDashOrder.items || []).map(item => ({
-      external_id: item.external_id,
+      external_id: item.merchant_supplied_id,
       name: item.name,
       quantity: item.quantity,
-      unit_price: item.unit_price,
-      total_price: item.total_price,
+      unit_price: (item.price_cents || 0) / 100,
+      total_price: ((item.price_cents || 0) * item.quantity) / 100,
       special_instructions: item.special_instructions || '',
-      modifiers: (item.modifiers || []).map(mod => ({
-        name: mod.name,
-        option: mod.option,
-        price: mod.price
+      modifiers: (item.extras || []).map(extra => ({
+        name: extra.name,
+        options: extra.options.map(option => ({
+          name: option.name,
+          price: (option.price_cents || 0) / 100
+        }))
       }))
     })),
     payment_method: 'online',
-    payment_status: 'paid'
+    payment_status: 'paid',
+    is_asap: doorDashOrder.is_asap || true
   };
 }
 
@@ -506,7 +534,7 @@ function convertStatusToDoorDash(vizionStatus) {
 }
 
 /**
- * Generate DoorDash JWT token for authentication
+ * Generate real DoorDash JWT token for authentication
  * @returns {string} JWT token
  */
 function generateDoorDashToken() {
@@ -518,48 +546,61 @@ function generateDoorDashToken() {
     aud: 'doordash',
     iss: process.env.DOORDASH_DEVELOPER_ID,
     kid: process.env.DOORDASH_KEY_ID,
-    exp: Math.floor(Date.now() / 1000) + 300, // 5 minutes
+    exp: Math.floor(Date.now() / 1000) + 1800, // 30 minutes (max allowed)
     iat: Math.floor(Date.now() / 1000)
+  };
+
+  // Real DoorDash JWT requires specific header
+  const header = {
+    alg: 'HS256',
+    typ: 'JWT',
+    'dd-ver': 'DD-JWT-V1' // DoorDash specific header
   };
   
   return jwt.sign(payload, process.env.DOORDASH_SIGNING_SECRET, {
-    algorithm: 'HS256'
+    algorithm: 'HS256',
+    header: header
   });
 }
 
 /**
- * Perform actual DoorDash menu sync (mock or real)
- * @param {string} storeId - Store ID
- * @param {Object} menuData - Formatted menu data
+ * Trigger DoorDash menu pull (PULL-BASED SYSTEM)
+ * Notifies DoorDash to pull menu from our endpoint
+ * @param {string} storeId - Store ID  
+ * @param {string} branchId - Branch ID
  * @returns {Object} Sync result
  */
-async function performDoorDashMenuSync(storeId, menuData) {
+async function triggerDoorDashMenuPull(storeId, branchId) {
   if (process.env.NODE_ENV === 'production' && process.env.DOORDASH_DEVELOPER_ID) {
-    // Real API call
+    // Real API call to trigger menu pull
     try {
       const token = generateDoorDashToken();
       
-      const response = await fetch(`https://openapi.doordash.com/developer/v1/stores/${storeId}/menu`, {
-        method: 'PUT',
+      // DoorDash uses menu pull trigger - they pull from our endpoint
+      const response = await fetch(`https://openapi.doordash.com/developer/v1/stores/${storeId}/menu_update`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(menuData)
+        body: JSON.stringify({
+          trigger_type: 'menu_change',
+          pull_endpoint: `${process.env.BASE_URL}/api/v1/doordash/menu/${branchId}`
+        })
       });
 
-      const result = await response.json();
-      
       if (response.ok) {
+        const result = await response.json();
         return { 
           success: true, 
-          menu_id: result.menu_id,
-          validation_errors: result.validation_errors || []
+          pull_endpoint: `${process.env.BASE_URL}/api/v1/doordash/menu/${branchId}`,
+          trigger_id: result.trigger_id || Date.now()
         };
       } else {
+        const error = await response.json();
         return { 
           success: false, 
-          error: result.error?.message || 'Menu update failed' 
+          error: error.message || 'Menu pull trigger failed' 
         };
       }
     } catch (error) {
@@ -570,15 +611,80 @@ async function performDoorDashMenuSync(storeId, menuData) {
     }
   } else {
     // Mock implementation for development/testing
-    console.log(`🚪 [MOCK] DoorDash Menu Sync for store ${storeId}:`);
-    console.log(`   - Categories: ${menuData.menu.categories.length}`);
-    console.log(`   - Items: ${menuData.menu.categories.reduce((sum, cat) => sum + cat.items.length, 0)}`);
+    console.log(`🚪 [MOCK] DoorDash Menu Pull Trigger for store ${storeId}:`);
+    console.log(`   - Pull endpoint: /api/v1/doordash/menu/${branchId}`);
+    console.log(`   - DoorDash will call our endpoint to get menu`);
     
     return { 
       success: true, 
-      menu_id: `mock_dd_menu_${Date.now()}`,
-      validation_errors: []
+      pull_endpoint: `/api/v1/doordash/menu/${branchId}`,
+      trigger_id: `mock_trigger_${Date.now()}`
     };
+  }
+}
+
+/**
+ * Get menu for DoorDash pull request (ENDPOINT FOR DOORDASH TO CALL)
+ * This is called BY DoorDash when they want to pull our menu
+ * @param {string} branchId - Branch ID
+ * @returns {Object} Menu data in DoorDash format
+ */
+async function getMenuForDoorDashPull(branchId) {
+  try {
+    // Get menu data with mappings
+    const menuData = await getMenuWithMappings(branchId, 'doordash');
+    
+    if (!menuData.categories || menuData.categories.length === 0) {
+      throw new Error('No menu categories found');
+    }
+
+    // Get branch information
+    const { data: branch, error: branchError } = await supabase
+      .from('branches')
+      .select('id, name, chain_id')
+      .eq('id', branchId)
+      .single();
+
+    if (branchError || !branch) {
+      throw new Error('Branch not found');
+    }
+
+    // Convert to DoorDash format
+    const doorDashMenu = convertMenuToDoorDashFormat(menuData, branch);
+
+    // Log pull request
+    await logPlatformSync(
+      branchId,
+      'doordash',
+      'menu_sync',
+      'menu_pull_request',
+      'success',
+      countMenuItems(menuData),
+      countMenuItems(menuData),
+      0,
+      null,
+      null,
+      null,
+      { pull_endpoint: 'doordash_menu_pull' }
+    );
+
+    return doorDashMenu;
+
+  } catch (error) {
+    // Log failed pull request
+    await logPlatformSync(
+      branchId,
+      'doordash',
+      'menu_sync',
+      'menu_pull_request',
+      'failed',
+      0,
+      0,
+      0,
+      { error: error.message }
+    );
+
+    throw error;
   }
 }
 
@@ -794,6 +900,8 @@ module.exports = {
   processDoorDashOrder,
   updateOrderStatusOnDoorDash,
   confirmDoorDashOrder,
+  triggerDoorDashMenuPull,
+  getMenuForDoorDashPull,
   getMenuWithMappings,
   convertMenuToDoorDashFormat,
   convertDoorDashOrderToVizion,
