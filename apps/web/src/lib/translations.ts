@@ -831,7 +831,8 @@ export const translations = {
       pricing: {
         subtotal: "Subtotal",
         tax: "Tax (13%)",
-        total: "Total"
+        total: "Total",
+        orderTotal: "Order Total"
       },
       
       // Customer Info Section
@@ -874,6 +875,13 @@ export const translations = {
         placingOrder: "Placing Order...",
         confirmOrder: "Confirm Order",
         backToCart: "Back to Cart"
+      },
+
+      // Review Section
+      review: {
+        title: "Review Your Order",
+        subtitle: "Please review your order details before confirming",
+        orderSummary: "Order Summary"
       },
       
       // Payment Section
@@ -1756,7 +1764,8 @@ export const translations = {
       pricing: {
         subtotal: "Sous-total",
         tax: "Taxe (TVH)",  // Canadian French: "Taxe (TVH)" NOT "Taxe (TPS/TVQ)"
-        total: "Total"
+        total: "Total",
+        orderTotal: "Total de la commande"
       },
       
       // Customer Info Section - Canadian French
@@ -1799,6 +1808,13 @@ export const translations = {
         placingOrder: "Passage de la commande...",
         confirmOrder: "Confirmer la commande",
         backToCart: "Retour au panier"
+      },
+
+      // Review Section - Canadian French
+      review: {
+        title: "Réviser votre commande",
+        subtitle: "Veuillez réviser les détails de votre commande avant de confirmer",
+        orderSummary: "Résumé de la commande"
       },
       
       // Payment Section - Canadian French

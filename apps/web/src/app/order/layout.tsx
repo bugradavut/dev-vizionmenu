@@ -1,10 +1,7 @@
-import { Metadata } from 'next'
-import { LanguageProvider } from '@/contexts/language-context'
+"use client"
 
-export const metadata: Metadata = {
-  title: 'Order Menu | Vision Menu',
-  description: 'Place your order from our delicious menu',
-}
+import { LanguageProvider } from '@/contexts/language-context'
+import { CartContextProvider } from './contexts/cart-context'
 
 export default function OrderLayout({
   children,
@@ -13,9 +10,11 @@ export default function OrderLayout({
 }) {
   return (
     <LanguageProvider defaultLanguage="fr" storageKey="order-page-language">
-      <div className="min-h-screen bg-background">
-        {children}
-      </div>
+      <CartContextProvider>
+        <div className="min-h-screen bg-background">
+          {children}
+        </div>
+      </CartContextProvider>
     </LanguageProvider>
   )
 }

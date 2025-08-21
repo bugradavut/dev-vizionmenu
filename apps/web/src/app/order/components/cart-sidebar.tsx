@@ -2,14 +2,13 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, Minus, ShoppingCart, Trash2, AlertTriangle, MapPin, Package, CreditCard, Banknote, CheckCircle, ShoppingBag } from 'lucide-react'
+import { Plus, Minus, Trash2, AlertTriangle, MapPin, Package, CreditCard, Banknote, CheckCircle, ShoppingBag, Loader2 } from 'lucide-react'
 import { useCart } from '../contexts/cart-context'
 import { useOrderContext } from '../contexts/order-context'
 import { useLanguage } from '@/contexts/language-context'
@@ -24,6 +23,7 @@ interface CustomerInfo {
 }
 
 export function CartSidebar() {
+  const router = useRouter()
   const { 
     items, 
     updateQuantity, 
@@ -41,7 +41,7 @@ export function CartSidebar() {
   // Centralized responsive state
   const responsiveClasses = useResponsiveClasses()
   
-  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
+  const [customerInfo] = useState<CustomerInfo>({
     name: '',
     phone: '',
     email: '',
@@ -53,6 +53,7 @@ export function CartSidebar() {
   )
   
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [orderSuccess, setOrderSuccess] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
@@ -66,19 +67,23 @@ export function CartSidebar() {
     }
   }
 
-  const handleCheckoutClick = () => {
-    // Validate order first
-    if (!validateOrder()) return
-    
-    // For takeout orders, skip payment modal (always online payment)
-    if (orderType === 'takeout') {
-      setPaymentMethod('online')
-      submitOrder()
+  const handleCheckoutClick = async () => {
+    // Simple validation: just check if cart has items
+    if (items.length === 0) {
       return
     }
     
-    // For dine-in orders, show payment method selection modal
-    setShowPaymentModal(true)
+    // Set loading state
+    setIsNavigating(true)
+    
+    // Small delay for better UX
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    // Navigate to review page
+    router.push('/order/review')
+    
+    // Reset loading state after navigation
+    setTimeout(() => setIsNavigating(false), 500)
   }
 
   const submitOrder = async () => {
@@ -151,42 +156,6 @@ export function CartSidebar() {
     }
   }
 
-  const validateOrder = () => {
-    if (items.length === 0) {
-      setError(t.orderPage.validation.cartEmpty)
-      return false
-    }
-
-    if (orderType === 'takeout') {
-      // Takeout orders require complete delivery info
-      if (!customerInfo.name.trim()) {
-        setError(t.orderPage.validation.nameRequired)
-        return false
-      }
-      if (!customerInfo.phone.trim()) {
-        setError(t.orderPage.validation.phoneRequired)
-        return false
-      }
-      if (!customerInfo.address?.trim()) {
-        setError(t.orderPage.validation.addressRequired)
-        return false
-      }
-    }
-    
-    if (orderType === 'dine_in' && !isQROrder) {
-      // Web dine-in orders need customer info for contact (no table number available)
-      if (!customerInfo.name.trim()) {
-        setError(t.orderPage.validation.dineInNameRequired)
-        return false
-      }
-      if (!customerInfo.phone.trim()) {
-        setError(t.orderPage.validation.dineInPhoneRequired)
-        return false
-      }
-    }
-
-    return true
-  }
 
   if (orderSuccess) {
     return (
@@ -362,75 +331,6 @@ export function CartSidebar() {
             </div>
           </Card>
 
-          {/* Customer Information - Different fields based on order type */}
-          {(orderType === 'takeout' || (orderType === 'dine_in' && !isQROrder)) && (
-            <div className="space-y-3">
-              <Label className="text-sm font-medium text-foreground">
-                {orderType === 'takeout' ? t.orderPage.customerInfo.deliveryInfo : t.orderPage.customerInfo.customerInfo}
-              </Label>
-              
-              <Input
-                placeholder={orderType === 'takeout' ? t.orderPage.customerInfo.fullName : t.orderPage.customerInfo.yourName}
-                value={customerInfo.name}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
-              />
-              
-              <Input
-                placeholder={t.orderPage.customerInfo.phoneNumber}
-                type="tel"
-                value={customerInfo.phone}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
-              />
-              
-              {orderType === 'takeout' && (
-                <Input
-                  placeholder={t.orderPage.customerInfo.deliveryAddress}
-                  value={customerInfo.address}
-                  onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
-                />
-              )}
-              
-              <Input
-                placeholder={t.orderPage.customerInfo.email}
-                type="email"
-                value={customerInfo.email}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, email: e.target.value }))}
-              />
-            </div>
-          )}
-
-          {/* QR Dine-in Info Display */}
-          {orderType === 'dine_in' && isQROrder && (
-            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 rounded-lg p-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 text-sm font-medium">
-                  <MapPin className="w-4 h-4" />
-                  <span>{t.orderPage.qrDineIn.tableServiceInfo}</span>
-                </div>
-                
-                <div className="text-sm text-blue-600 dark:text-blue-400">
-                  <div className="flex justify-between">
-                    <span>{t.orderPage.qrDineIn.tableNumber}:</span>
-                    <span className="font-medium">{tableNumber}</span>
-                  </div>
-                  {zone && (
-                    <div className="flex justify-between">
-                      <span>{t.orderPage.qrDineIn.zone}:</span>
-                      <span className="font-medium">{zone}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span>{t.orderPage.qrDineIn.orderSource}:</span>
-                    <span className="font-medium">{t.orderPage.qrDineIn.qrCode}</span>
-                  </div>
-                </div>
-                
-                <p className="text-xs text-blue-600 dark:text-blue-400 italic">
-                  {t.orderPage.qrDineIn.deliveryInfo}
-                </p>
-              </div>
-            </div>
-          )}
 
           {/* Error Message */}
           {error && (
@@ -447,15 +347,20 @@ export function CartSidebar() {
       <div className="border-t border-border bg-card p-4 flex-shrink-0 absolute bottom-0 w-full">
         <Button
           onClick={handleCheckoutClick}
-          disabled={isSubmitting || items.length === 0}
+          disabled={isSubmitting || isNavigating || items.length === 0}
           className="w-full h-12 text-base font-semibold"
           size="lg"
         >
           {items.length === 0 
             ? t.orderPage.checkout.checkout
-            : isSubmitting 
-              ? t.orderPage.checkout.placingOrder 
-              : (language === 'fr' ? `${t.orderPage.checkout.checkout} - ${total.toFixed(2)} $` : `${t.orderPage.checkout.checkout} - $${total.toFixed(2)}`)
+            : isNavigating
+              ? <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Loading...
+                </>
+              : isSubmitting 
+                ? t.orderPage.checkout.placingOrder 
+                : (language === 'fr' ? `${t.orderPage.checkout.checkout} - ${total.toFixed(2)} $` : `${t.orderPage.checkout.checkout} - $${total.toFixed(2)}`)
           }
         </Button>
       </div>

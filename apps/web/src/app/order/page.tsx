@@ -6,11 +6,10 @@ import { CategorySidebar } from './components/category-sidebar'
 import { MenuGrid } from './components/menu-grid'
 import { CartSidebar } from './components/cart-sidebar'
 import { MobileCart } from './components/mobile-cart'
-import { OrderContextProvider } from './contexts/order-context'
-import { CartContextProvider } from './contexts/cart-context'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { customerMenuService, type CustomerMenu } from '@/services/customer-menu.service'
 import { useResponsive, useResponsiveClasses } from '@/hooks/use-responsive'
+import { OrderContextProvider } from './contexts/order-context'
 
 interface OrderPageProps {
   searchParams: Promise<{
@@ -121,7 +120,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
 
   return (
     <OrderContextProvider value={orderContext}>
-      <CartContextProvider>
+      <>
         {/* Desktop Layout */}
         {isDesktop && (
           <div className="h-screen bg-background flex flex-col overflow-hidden">
@@ -250,7 +249,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
             <MobileCart />
           </div>
         )}
-      </CartContextProvider>
+      </>
     </OrderContextProvider>
   )
 }
