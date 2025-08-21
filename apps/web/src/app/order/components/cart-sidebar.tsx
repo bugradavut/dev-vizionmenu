@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, Minus, ShoppingCart, Trash2, AlertTriangle, MapPin, Package, CreditCard, Banknote, CheckCircle } from 'lucide-react'
+import { Plus, Minus, ShoppingCart, Trash2, AlertTriangle, MapPin, Package, CreditCard, Banknote, CheckCircle, ShoppingBag } from 'lucide-react'
 import { useCart } from '../contexts/cart-context'
 import { useOrderContext } from '../contexts/order-context'
 import { useLanguage } from '@/contexts/language-context'
@@ -243,12 +243,16 @@ export function CartSidebar() {
       </div>
 
       {/* Cart Items or Empty State */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-[100px]">
         {items.length === 0 ? (
-          <div className="p-6 text-center">
-            <ShoppingCart className="w-12 h-12 text-muted-foreground/40 dark:text-muted-foreground/20 mx-auto mb-4" />
-            <h3 className="text-muted-foreground font-medium mb-2">{t.orderPage.cart.empty}</h3>
-            <p className="text-muted-foreground/80 text-sm">{t.orderPage.cart.emptyMessage}</p>
+          <div className="h-full flex items-center justify-center pt-16">
+            <div className="text-center px-6">
+              <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto">
+                <ShoppingBag className="w-10 h-10 text-muted-foreground/40" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-3">{t.orderPage.cart.empty}</h3>
+              <p className="text-base text-muted-foreground/80 leading-relaxed">{t.orderPage.cart.emptyMessage}</p>
+            </div>
           </div>
         ) : (
           <div className={`${responsiveClasses.padding.section} space-y-3`}>
@@ -440,18 +444,21 @@ export function CartSidebar() {
       </div>
 
       {/* Sticky Checkout Footer */}
-      {items.length > 0 && (
-        <div className="border-t border-border bg-card p-4 flex-shrink-0">
-          <Button
-            onClick={handleCheckoutClick}
-            disabled={isSubmitting || items.length === 0}
-            className="w-full h-12 text-base font-semibold"
-            size="lg"
-          >
-            {isSubmitting ? t.orderPage.checkout.placingOrder : (language === 'fr' ? `${t.orderPage.checkout.checkout} - ${total.toFixed(2)} $` : `${t.orderPage.checkout.checkout} - $${total.toFixed(2)}`)}
-          </Button>
-        </div>
-      )}
+      <div className="border-t border-border bg-card p-4 flex-shrink-0 absolute bottom-0 w-full">
+        <Button
+          onClick={handleCheckoutClick}
+          disabled={isSubmitting || items.length === 0}
+          className="w-full h-12 text-base font-semibold"
+          size="lg"
+        >
+          {items.length === 0 
+            ? t.orderPage.checkout.checkout
+            : isSubmitting 
+              ? t.orderPage.checkout.placingOrder 
+              : (language === 'fr' ? `${t.orderPage.checkout.checkout} - ${total.toFixed(2)} $` : `${t.orderPage.checkout.checkout} - $${total.toFixed(2)}`)
+          }
+        </Button>
+      </div>
     </div>
 
       {/* Payment Method Modal */}

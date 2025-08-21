@@ -1,356 +1,327 @@
-# Customer Feedback & Enhancement Requests - Vizion Menu
 
-**Feedback Date**: January 2025  
-**Source**: Restaurant Owner Feedback Sessions  
-**Project**: Customer Order Page (QR Code Ordering System)  
-**Priority**: High - Customer Experience Improvements
 
----
+## 🚀 **ORDER CONFIRMATION ENHANCEMENT PLAN (January 2025)**
 
-## 🚨 CRITICAL BUG FIXES (Priority 1 - Immediate Fix Required)
+### **NEW REQUIREMENTS ANALYSIS**
 
-### 1. **Dark Mode Display Issues** ⭐⭐⭐⭐⭐ ✅ **COMPLETED** (January 21, 2025)
-**Location**: `/order` page (Customer order interface)  
-**Status**: **FULLY IMPLEMENTED** - All components now support proper dark mode  
-**Impact**: Customers can now read menu items and prices perfectly in dark mode  
+Based on latest customer feedback, the current checkout flow needs comprehensive redesign:
 
-**Completed Fixes**:
-- ✅ **Main Layout**: Updated all `bg-gray-50` to `bg-background` for proper theme switching
-- ✅ **Header Component**: Fixed brand colors, search bar, and language selector for dark mode
-- ✅ **Menu Grid**: Updated all item cards, loading states, and text colors to semantic classes
-- ✅ **Category Sidebar**: Fixed category icons, selection states, and text contrast
-- ✅ **Cart Sidebar**: Updated cart items, order summaries, and info cards for dark compatibility
-- ✅ **All borders**: Converted to `border-border` for consistent theming across modes
-
-**Technical Implementation**:
-- **Color System**: Completely migrated from hardcoded gray colors to semantic Tailwind CSS classes
-- **Dark Mode Support**: All components now use `text-foreground/muted-foreground` and `bg-background/card/muted`
-- **Interactive Elements**: Buttons, form inputs, and modals properly adapt to theme changes
-- **Information Cards**: Blue and orange notification cards include dark mode variants
-- **Build Verification**: Code passes ESLint validation and builds successfully for production
-
-**Result**: Order page now provides seamless experience in both light and dark themes with proper contrast ratios and accessibility compliance.
+**Current Issues:**
+- Direct order submission without review opportunity
+- No customer order tracking after confirmation  
+- Missing delivery instructions and address types
+- No smart address validation (Canadian addresses)
+- Limited customer control over order details
 
 ---
 
-## 🛒 ORDER FLOW ENHANCEMENTS (Priority 2 - Customer Experience)
+### **📋 NEW IMPLEMENTATION PLAN**
 
-### 2. **Order Confirmation Flow Redesign** ⭐⭐⭐⭐ ✅ **COMPLETED**
-**Status**: **IMPLEMENTED** - Multi-step confirmation process now active  
-**Implementation**: Full screen modal approach with comprehensive order review
+#### **PHASE 1: Order Review Screen (Priority 1 - Week 1)**
 
-**Completed Features**:
-- ✅ **New Flow Implemented**: [Add to Cart] → [Review Order] → [Order Confirmation Screen] → [Confirm Order] → [Order Success View]
-- ✅ **Detailed Order Review**: Full screen modal with comprehensive order breakdown
-- ✅ **Edit Capability**: Users can modify quantities, remove items, and update details before confirmation
-- ✅ **Order Summary**: Complete item breakdown with images, quantities, and pricing
-- ✅ **Pricing Breakdown**: Clear display of subtotal, taxes, and total
-- ✅ **Order Success Tracking**: Post-order confirmation with order ID and estimated times
-- ✅ **Multi-language Support**: Available in both English and Canadian French
+**Current Flow:** `[Checkout Button] → [Payment Modal] → [Submit Order]`
+**New Flow:** `[Checkout Button] → [Order Review Page] → [Confirm & Pay] → [Order Success]`
 
-**Technical Implementation**:
-- Full screen modal for immersive confirmation experience (mobile + desktop)
-- Smart state management with React context preservation
-- Responsive design supporting all device sizes
-- Complete order validation before submission
-- Order success modal with tracking information and receipt options
+**Technical Implementation:**
+```typescript
+// New route structure
+/order                 // Current cart page
+/order/review         // New comprehensive review page  
+/order/success/:id    // Order confirmation with tracking
+/order/track/:id      // Order tracking page
+```
 
-### 3. **Post-Order Customer Access** ⭐⭐⭐⭐
-**Customer Request**: Access to order details after confirmation  
-**Reference**: Image #3 (order tracking example)
+**Features to Implement:**
+- ✅ **Full Page Order Review** - Complete order breakdown with editing capability
+- ✅ **Customer Information Validation** - Form validation for all required fields
+- ✅ **Order Summary** - Detailed item list with images, quantities, pricing
+- ✅ **Payment Method Confirmation** - Final payment selection and confirmation
+- ✅ **Order Notes Field** - Free text area for special instructions and requests
 
-**Implementation Required**:
-- Order tracking page with unique order ID
-- Real-time order status updates
-- Estimated pickup/delivery time
-- Order modification window (if within time limit)
-- Receipt generation and download option
-
----
-
-## 📝 DELIVERY & CUSTOMER INFORMATION (Priority 2)
-
-### 4. **Enhanced Delivery Instructions** ⭐⭐⭐
-**Customer Request**: Detailed delivery notes and address specifications
-
-**Features to Implement**:
-- **Order Notes Field**: Free text area for special instructions
-- **Delivery Address Type**: Dropdown selection
-  - Home
-  - Office  
-  - Apartment
-  - Hotel
-  - Other (with custom input)
-- **Special Instructions**: 
-  - Buzzer/Apartment number
-  - Parking instructions
-  - Contact preferences
-  - Delivery location details
-
-### 5. **Smart Address Autocomplete** ⭐⭐⭐⭐
-**Customer Request**: Intelligent address suggestions to reduce input errors
-
-**Implementation Required**:
-- Integration with Google Places API or similar
-- Real-time address validation
-- Dropdown suggestions based on typing
-- Address format standardization
-- Distance-based delivery zone validation
-
-**Technical Implementation**:
-```javascript
-// Address autocomplete component
-<AddressAutocomplete
-  onAddressSelect={(address) => setDeliveryAddress(address)}
-  validationRadius={10} // km from restaurant
-  countryCode="CA" // Canada-specific
-  language={currentLanguage} // EN/FR support
-/>
+**Components Structure:**
+```
+apps/web/src/app/order/review/
+├── page.tsx                     // Main order review page
+├── components/
+│   ├── OrderReviewContainer.tsx // Main container component
+│   ├── OrderSummary.tsx         // Items + pricing breakdown
+│   ├── CustomerInfoSection.tsx  // Customer details validation
+│   ├── DeliverySection.tsx      // Address + delivery instructions
+│   └── PaymentConfirmation.tsx  // Final payment step
+└── hooks/
+    └── useOrderPersistence.ts   // State management + localStorage
 ```
 
 ---
 
-## 💳 PAYMENT ENHANCEMENTS (Priority 3)
+#### **PHASE 2: Enhanced Delivery Features (Priority 1 - Week 1-2)**
 
-### 6. **Flexible Payment Options** ⭐⭐⭐
-**Current Issue**: "Pay at counter" option completely removed  
-**Customer Request**: Configurable payment methods
+**Delivery Instructions Enhancement:**
+- **Order Notes Field**: Multi-line textarea for special delivery instructions
+- **Address Type Selection**: Dropdown with Canadian-specific options
+  - Home/House
+  - Apartment/Condo  
+  - Office/Commercial
+  - Hotel/Temporary
+  - Other (custom input)
 
-**Implementation Required**:
-- **Restaurant Dashboard Setting**: Toggle for payment methods
-- **Pay at Counter**: Available but disabled by default (greyed out)
-- **Restaurant Control**: Enable/disable payment methods per location
-- **Visual Feedback**: Clear indication of available payment methods
-
-**Dashboard Configuration**:
-```javascript
-// Payment method settings in restaurant dashboard
-paymentMethods: {
-  onlinePayment: { enabled: true, default: true },
-  payAtCounter: { enabled: false, label: "Pay at Pickup" },
-  cashOnDelivery: { enabled: false, label: "Cash on Delivery" }
+**Canadian Address Requirements:**
+```typescript
+interface CanadianDeliveryAddress {
+  streetNumber: string
+  streetName: string
+  unitNumber?: string      // Apartment/unit number
+  city: string
+  province: CanadianProvince
+  postalCode: string       // A1A 1A1 format validation
+  addressType: 'home' | 'apartment' | 'office' | 'hotel' | 'other'
+  buzzerCode?: string      // For apartment buildings
+  deliveryInstructions?: string // Special delivery notes
 }
 ```
 
-### 7. **Coupon and Promotion System** ⭐⭐⭐
-**Customer Request**: Promotional code entry in order flow
+**Implementation:**
+- Address type selector with icons
+- Conditional fields (buzzer for apartments, floor for offices)
+- Delivery instruction textarea with character limit
+- Address validation for Canadian postal codes
 
-**Features to Implement**:
-- **Promo Code Field**: Input field in cart/checkout
-- **Discount Application**: Real-time price calculation
-- **Coupon Validation**: Backend validation for valid codes
-- **Visual Feedback**: Clear display of applied discounts
-- **Coupon Types**:
-  - Percentage discounts
-  - Fixed amount discounts
-  - Free delivery
-  - Buy-one-get-one offers
+---
 
-**UI Implementation**:
-```javascript
-// Coupon section in order summary
-<PromoCodeSection>
-  <input placeholder="Enter promo code" />
-  <button>Apply</button>
-  {appliedDiscount && (
-    <div className="discount-applied">
-      Discount: -{formatCurrency(discount)}
-    </div>
-  )}
-</PromoCodeSection>
+#### **PHASE 3: Smart Address Autocomplete (Priority 2 - Week 2)**
+
+**Free Address Autocomplete Service Research:**
+
+**Option 1: Mapbox (RECOMMENDED)**
+- ✅ **100,000 requests/month FREE**
+- ✅ Excellent Canadian address coverage
+- ✅ Real-time suggestions with postal code validation
+- ✅ Professional API with good documentation
+
+**Option 2: Nominatim (OpenStreetMap)**  
+- ✅ Completely free, no API key required
+- ⚠️ Rate limited (1 request/second)
+- ⚠️ Less accurate for Canadian addresses
+
+**Option 3: Canada Post AddressComplete**
+- ✅ Official Canadian postal service
+- ✅ Most accurate for Canadian addresses  
+- ⚠️ Limited free tier (1,000 lookups/month)
+
+**Selected Solution: Mapbox Free Tier**
+
+**Technical Implementation:**
+```typescript
+// Smart address autocomplete component
+<AddressAutocomplete
+  apiKey={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+  country="CA"
+  language={language} // en/fr support
+  onAddressSelect={(address) => {
+    setDeliveryAddress(formatCanadianAddress(address))
+  }}
+  placeholder={t.orderPage.address.enterAddress}
+  className="w-full"
+/>
+```
+
+**Features:**
+- Real-time address suggestions as user types
+- Canadian postal code format validation (A1A 1A1)
+- Province abbreviation standardization  
+- Distance validation from restaurant location
+- Fallback to manual entry if autocomplete fails
+
+---
+
+#### **PHASE 4: Order Tracking System (Priority 2 - Week 2-3)**
+
+**Post-Order Customer Access:**
+- **Order Success Page**: Immediate confirmation with order details
+- **Order Tracking Page**: Real-time status updates  
+- **Order History**: Access to previous orders
+- **Receipt Generation**: Downloadable/printable receipts
+
+**Order Status Flow:**
+```typescript
+type OrderStatus = 
+  | 'confirmed'     // Order received and confirmed
+  | 'preparing'     // Kitchen is preparing order  
+  | 'ready'         // Order ready for pickup/delivery
+  | 'completed'     // Order fulfilled
+  | 'cancelled'     // Order cancelled
+
+interface OrderTrackingInfo {
+  orderId: string
+  status: OrderStatus
+  estimatedReadyTime: Date
+  actualReadyTime?: Date
+  orderItems: OrderItem[]
+  totalAmount: number
+  customerInfo: CustomerInfo
+  deliveryInfo: DeliveryInfo
+}
+```
+
+**Implementation:**
+- Order tracking page with real-time updates
+- SMS/email notifications for status changes
+- Order modification window (5-10 minute window)
+- Receipt download functionality
+
+---
+
+### **🔧 STATE MANAGEMENT & PERSISTENCE STRATEGY**
+
+**Best Practice Approach: Hybrid Persistence**
+
+```typescript
+// Order session management
+interface OrderSession {
+  // Core order data
+  cartItems: CartItem[]
+  customerInfo: Partial<CustomerInfo>
+  deliveryInfo: Partial<DeliveryInfo>
+  paymentMethod?: PaymentMethod
+  orderNotes?: string
+  
+  // Session management
+  sessionId: string
+  timestamp: number
+  expiresAt: number        // 30 minute session timeout
+  currentStep: OrderStep   // track user progress
+}
+
+// Implementation strategy
+const useOrderPersistence = () => {
+  // 1. React Context for runtime state management
+  // 2. sessionStorage for browser session persistence  
+  // 3. Auto-save on every form change
+  // 4. Auto-restore on page reload
+  // 5. Auto-expire after 30 minutes of inactivity
+  // 6. Clear on successful order completion
+}
+```
+
+**Benefits:**
+- ✅ Survives browser refresh/navigation
+- ✅ Automatic cleanup prevents stale data
+- ✅ Session-based (more secure than localStorage)
+- ✅ Progressive form saving reduces data loss
+- ✅ Cross-tab synchronization
+
+---
+
+### **📱 MOBILE-FIRST IMPLEMENTATION**
+
+**Responsive Design Priority:**
+- **Mobile Portrait**: 320px-480px (Primary focus)
+- **Mobile Landscape**: 481px-767px  
+- **Tablet**: 768px-1024px
+- **Desktop**: 1025px+
+
+**Mobile UX Considerations:**
+- Large touch targets (minimum 48px)
+- Single-column layouts for forms
+- Sticky checkout button on mobile
+- Progressive disclosure for complex forms
+- Swipe gestures for order review navigation
+
+---
+
+### **🎯 DEVELOPMENT MILESTONES**
+
+**Week 1: Core Review Page**
+- [ ] Create `/order/review` route and page structure
+- [ ] Implement OrderReviewContainer with basic layout
+- [ ] Build OrderSummary component with item editing
+- [ ] Add CustomerInfoSection with form validation
+- [ ] Implement basic order persistence with sessionStorage
+
+**Week 2: Enhanced Features**
+- [ ] Add DeliverySection with address type selection
+- [ ] Implement order notes and delivery instructions
+- [ ] Integrate Mapbox address autocomplete
+- [ ] Add Canadian postal code validation
+- [ ] Create PaymentConfirmation component
+
+**Week 3: Order Tracking**
+- [ ] Build order success page with tracking info
+- [ ] Create order tracking page with status updates
+- [ ] Implement receipt generation and download
+- [ ] Add order history access
+- [ ] Set up real-time status update system
+
+**Week 4: Polish & Testing**  
+- [ ] Mobile responsive testing across devices
+- [ ] Performance optimization and loading states
+- [ ] Error handling and edge case management
+- [ ] Cross-browser compatibility testing
+- [ ] User acceptance testing with feedback incorporation
+
+---
+
+### **🔗 INTEGRATION POINTS**
+
+**Frontend Changes:**
+- Update checkout button to navigate to `/order/review`  
+- Modify cart context to support order session persistence
+- Add new translation keys for enhanced features
+- Update responsive design system for new components
+
+**Backend Requirements:**
+- Order session API endpoints for saving/loading drafts
+- Enhanced order creation endpoint with new fields  
+- Order tracking status update endpoints
+- Address validation service integration
+- Receipt generation service
+
+**Database Schema Updates:**
+```sql
+-- Add new fields to orders table
+ALTER TABLE orders ADD COLUMN order_notes TEXT;
+ALTER TABLE orders ADD COLUMN address_type VARCHAR(50);
+ALTER TABLE orders ADD COLUMN buzzer_code VARCHAR(50);
+ALTER TABLE orders ADD COLUMN delivery_instructions TEXT;
+ALTER TABLE orders ADD COLUMN estimated_ready_time TIMESTAMP;
+
+-- Create order sessions table for persistence
+CREATE TABLE order_sessions (
+  session_id UUID PRIMARY KEY,
+  cart_data JSONB,
+  customer_info JSONB,
+  delivery_info JSONB,
+  created_at TIMESTAMP DEFAULT NOW(),
+  expires_at TIMESTAMP,
+  user_agent TEXT
+);
 ```
 
 ---
 
-## 🏪 RESTAURANT SELECTION & LOCATION (Priority 3)
+### **⚡ SUCCESS METRICS & KPIs**
 
-### 8. **Multi-Branch Restaurant Selection** ⭐⭐⭐
-**Customer Request**: Branch selection during ordering process
+**Customer Experience:**
+- Order abandonment rate reduction (target: -25%)
+- Order accuracy improvement (target: +15%)  
+- Customer satisfaction score increase (target: +20%)
+- Average order value increase (target: +10%)
 
-**Implementation Required**:
-- **Branch Selection Modal**: Choose restaurant location before ordering
-- **Distance Calculation**: Show distance from customer location
-- **Branch Information**: Address, phone, operating hours
-- **Delivery Zone Validation**: Check if address is in delivery range
+**Technical Performance:**
+- Page load time < 2 seconds on mobile
+- Address autocomplete response time < 500ms
+- Order submission success rate > 99%
+- Session persistence reliability > 99.5%
 
-### 9. **Location-Based Restaurant Recommendations** ⭐⭐⭐⭐
-**Customer Request**: Automatic restaurant suggestions based on delivery address
-
-**Features to Implement**:
-- **Geolocation Integration**: Detect customer location
-- **Distance-Based Filtering**: Show restaurants within delivery radius
-- **Sort by Distance**: Closest restaurants first
-- **Delivery Fee Calculation**: Based on distance
-- **Availability Check**: Only show restaurants currently accepting orders
-
----
-
-## ⏰ SCHEDULING & TIMING (Priority 2)
-
-### 10. **Pre-Order Scheduling** ⭐⭐⭐⭐
-**Customer Request**: Schedule orders for future pickup/delivery
-
-**Implementation Required**:
-- **Date/Time Picker**: Select future order time
-- **Restaurant Hours Validation**: Only allow ordering during operating hours
-- **Preparation Time Consideration**: Account for prep time in scheduling
-- **Pre-order Notifications**: Remind customers of upcoming orders
-
-**UI Components**:
-```javascript
-<PreOrderScheduler>
-  <DatePicker 
-    minDate={new Date()}
-    maxDate={addDays(new Date(), 7)}
-    excludeDates={getRestaurantClosedDates()}
-  />
-  <TimePicker 
-    minTime={getRestaurantOpenTime()}
-    maxTime={getRestaurantCloseTime()}
-    interval={15} // 15-minute intervals
-  />
-</PreOrderScheduler>
-```
-
-### 11. **Real-Time Preparation Time Display** ⭐⭐⭐⭐
-**Customer Request**: Show estimated ready time on order page  
-**Current Status**: Available in dashboard, needs customer-facing implementation
-
-**Implementation Required**:
-- **Preparation Time API**: Get restaurant's current prep time
-- **Real-Time Calculation**: Current time + prep time = ready time
-- **Dynamic Updates**: Adjust based on current kitchen load
-- **Visual Display**: Clear "Ready by XX:XX" message
-
-**Example Implementation**:
-```javascript
-// Display preparation time to customer
-const orderTime = new Date();
-const prepTime = restaurantData.currentPrepTime; // minutes
-const readyTime = addMinutes(orderTime, prepTime);
-
-<OrderTimingDisplay>
-  <p>Order placed at: {format(orderTime, 'HH:mm')}</p>
-  <p>Estimated ready time: {format(readyTime, 'HH:mm')}</p>
-  <p>Preparation time: {prepTime} minutes</p>
-</OrderTimingDisplay>
-```
+**Business Impact:**
+- Reduced customer support tickets related to orders
+- Increased customer retention rate
+- Enhanced restaurant operational efficiency
+- Improved order fulfillment accuracy
 
 ---
 
-## 💰 TIP SYSTEM (Priority 3)
-
-### 12. **Enhanced Tipping Interface** ⭐⭐⭐
-**Customer Request**: Easy tip addition during order process  
-**Reference**: Uber Eats tip interface (Image #4)
-
-**Features to Implement**:
-- **Preset Tip Amounts**: 10%, 15%, 18%, Custom
-- **Tip Calculation**: Based on subtotal (before taxes)
-- **Tip Distribution Info**: "100% of tip goes to restaurant staff"
-- **Optional Tip**: Clearly indicate tips are optional
-- **Custom Amount**: Allow manual tip entry
-
-**UI Design Reference**:
-```javascript
-<TipSection>
-  <h3>Add a tip</h3>
-  <TipOptions>
-    <TipButton value={0}>None ($0.00)</TipButton>
-    <TipButton value={0.10}>10% ($X.XX)</TipButton>
-    <TipButton value={0.15}>15% ($X.XX)</TipButton>
-    <TipButton value={0.18}>18% ($X.XX)</TipButton>
-    <TipButton value="custom">Other</TipButton>
-  </TipOptions>
-  <p>100% of the tip supports the restaurant and its staff who prepare and pack your order.</p>
-</TipSection>
-```
-
----
-
-## 📋 IMPLEMENTATION ROADMAP
-
-### Phase 1: Critical Fixes (Week 1)
-- [x] **Fix dark mode display issues on order page** ✅ **COMPLETED**
-- [x] **Implement order confirmation flow redesign** ✅ **COMPLETED**
-- [ ] **Add post-order customer access page**
-
-### Phase 2: Core Features (Week 2-3)
-- [ ] **Enhanced delivery instructions and notes**
-- [ ] **Smart address autocomplete integration**
-- [ ] **Real-time preparation time display**
-- [ ] **Flexible payment method configuration**
-
-### Phase 3: Advanced Features (Week 4-5)
-- [ ] **Pre-order scheduling system**
-- [ ] **Coupon and promotion code system**
-- [ ] **Enhanced tipping interface**
-
-### Phase 4: Location Features (Week 6)
-- [ ] **Multi-branch restaurant selection**
-- [ ] **Location-based restaurant recommendations**
-
----
-
-## 🎯 SUCCESS METRICS
-
-**Customer Experience Improvements**:
-- Reduced order abandonment rate
-- Increased average order value
-- Higher customer satisfaction scores
-- Reduced customer support tickets
-
-**Business Impact**:
-- Increased tip revenue for restaurants
-- Better order accuracy through confirmations
-- Improved customer retention
-- Enhanced restaurant operations efficiency
-
----
-
-## 📱 MOBILE-FIRST CONSIDERATIONS
-
-All implementations must prioritize mobile experience:
-- **Touch-Friendly**: Large tap targets for buttons
-- **Responsive Design**: Optimal viewing on all screen sizes
-- **Fast Loading**: Minimize API calls and optimize images
-- **Offline Capability**: Handle poor network conditions gracefully
-- **Accessibility**: Screen reader compatible, high contrast ratios
-
----
-
-## 🔧 TECHNICAL IMPLEMENTATION NOTES
-
-### Required API Endpoints:
-- `POST /api/v1/orders/confirmation` - Order confirmation flow
-- `GET /api/v1/orders/:orderId/track` - Order tracking
-- `POST /api/v1/coupons/validate` - Promo code validation
-- `GET /api/v1/restaurants/nearby` - Location-based search
-- `POST /api/v1/orders/schedule` - Pre-order scheduling
-
-### Required Database Tables:
-- `promo_codes` - Coupon management
-- `order_schedules` - Pre-order scheduling
-- `delivery_instructions` - Customer delivery notes
-- `tip_transactions` - Tip tracking
-
-### Third-Party Integrations:
-- **Google Places API** - Address autocomplete
-- **Stripe Payment Links** - Enhanced payment processing
-- **Twilio SMS** - Order notifications
-- **Google Maps API** - Distance calculations
-
----
-
-## 📞 NEXT STEPS
-
-1. **Prioritize dark mode fixes** - Immediate customer impact
-2. **Design order confirmation flow** - Map out user journey
-3. **Set up address autocomplete** - Research Google Places integration
-4. **Create payment method configuration** - Restaurant dashboard updates
-5. **Plan tip system architecture** - Ensure proper tip distribution
-
-**Next Review**: February 2025
+*This enhanced plan will be implemented in phases to ensure quality and minimize customer disruption. Each phase will include comprehensive testing and user feedback collection.*
 
 ---
 
