@@ -870,6 +870,7 @@ export const translations = {
       // Checkout Section
       checkout: {
         checkout: "Checkout",
+        reviewOrder: "Review Order",
         placingOrder: "Placing Order...",
         confirmOrder: "Confirm Order",
         backToCart: "Back to Cart"
@@ -1794,6 +1795,7 @@ export const translations = {
       // Checkout Section - Canadian French
       checkout: {
         checkout: "Finaliser",
+        reviewOrder: "Réviser la commande",
         placingOrder: "Passage de la commande...",
         confirmOrder: "Confirmer la commande",
         backToCart: "Retour au panier"

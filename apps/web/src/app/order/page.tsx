@@ -104,13 +104,13 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
   // Handle menu loading error
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Unable to Load Menu</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <h1 className="text-2xl font-bold text-foreground mb-4">Unable to Load Menu</h1>
+          <p className="text-muted-foreground mb-4">{error}</p>
           <button 
             onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
           >
             Try Again
           </button>
@@ -124,7 +124,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
       <CartContextProvider>
         {/* Desktop Layout */}
         {isDesktop && (
-          <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+          <div className="h-screen bg-background flex flex-col overflow-hidden">
             {/* Header */}
             <div className="flex-shrink-0">
               <OrderHeader 
@@ -137,7 +137,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
             {/* Main Layout */}
             <div className="flex flex-1 min-h-0">
               {/* Left Sidebar - Categories */}
-              <div className="w-64 bg-white border-r border-gray-200">
+              <div className="w-64 bg-card border-r border-border">
                 <CategorySidebar 
                   selectedCategory={selectedCategory}
                   onCategorySelect={setSelectedCategory}
@@ -159,7 +159,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
               </div>
               
               {/* Right Sidebar - Cart */}
-              <div className="w-80 bg-white border-l border-gray-200">
+              <div className="w-80 bg-card border-l border-border">
                 <ScrollArea className="h-full">
                   <CartSidebar />
                 </ScrollArea>
@@ -170,7 +170,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
 
         {/* Tablet Layout */}
         {isTablet && (
-          <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+          <div className="h-screen bg-background flex flex-col overflow-hidden">
             {/* Header */}
             <div className="flex-shrink-0">
               <OrderHeader 
@@ -181,7 +181,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
             </div>
             
             {/* Category Horizontal Tabs */}
-            <div className="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
+            <div className="bg-card border-b border-border px-4 py-3 flex-shrink-0">
               <CategorySidebar 
                 selectedCategory={selectedCategory}
                 onCategorySelect={setSelectedCategory}
@@ -206,7 +206,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
               </div>
               
               {/* Cart Sidebar - Narrower than desktop */}
-              <div className={`${responsiveClasses.sidebar.cart} bg-white border-l border-gray-200`}>
+              <div className={`${responsiveClasses.sidebar.cart} bg-card border-l border-border`}>
                 <ScrollArea className="h-full">
                   <CartSidebar />
                 </ScrollArea>
@@ -217,7 +217,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
 
         {/* Mobile Layout */}
         {isMobile && (
-          <div className="min-h-screen bg-gray-50 flex flex-col">
+          <div className="min-h-screen bg-background flex flex-col">
             {/* Header */}
             <OrderHeader 
               branchName={customerMenu?.metadata.branchName}
@@ -226,7 +226,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
             />
             
             {/* Category tabs */}
-            <div className="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
+            <div className="bg-card border-b border-border px-4 py-3 flex-shrink-0">
               <CategorySidebar 
                 selectedCategory={selectedCategory}
                 onCategorySelect={setSelectedCategory}

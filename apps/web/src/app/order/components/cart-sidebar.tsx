@@ -193,11 +193,11 @@ export function CartSidebar() {
       <div className="p-6 flex items-center justify-center h-full">
         <Card className="w-full">
           <CardContent className="p-6 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-green-600" />
+            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">{t.orderPage.orderSuccess.title}</h3>
-            <p className="text-gray-600 mb-4">
+            <h3 className="text-lg font-semibold text-foreground mb-2">{t.orderPage.orderSuccess.title}</h3>
+            <p className="text-muted-foreground mb-4">
               {t.orderPage.orderSuccess.message}
             </p>
             <Button 
@@ -217,7 +217,7 @@ export function CartSidebar() {
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
         {/* Order Type Selection */}
-        <div className={`${responsiveClasses.padding.section} border-b border-gray-200`}>
+        <div className={`${responsiveClasses.padding.section} border-b border-border`}>
         <div className="grid grid-cols-2 gap-2">
           <Button
             variant={orderType === 'dine_in' ? 'default' : 'outline'}
@@ -244,12 +244,12 @@ export function CartSidebar() {
         {/* Order Type Info */}
         <div className="mt-3">
           {orderType === 'dine_in' ? (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-blue-700 text-sm font-medium">
+            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 text-sm font-medium">
                 <MapPin className="w-4 h-4" />
                 <span>{t.orderPage.orderType.dineInService}</span>
               </div>
-              <p className="text-xs text-blue-600 mt-1">
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                 {isQROrder 
                   ? (zone 
                       ? t.orderPage.orderType.tableServiceWithZone.replace('{number}', tableNumber?.toString() || '').replace('{zone}', zone)
@@ -260,12 +260,12 @@ export function CartSidebar() {
               </p>
             </div>
           ) : (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-orange-700 text-sm font-medium">
+            <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/40 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300 text-sm font-medium">
                 <Package className="w-4 h-4" />
                 <span>{t.orderPage.orderType.takeoutOrder}</span>
               </div>
-              <p className="text-xs text-orange-600 mt-1">
+              <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
                 {t.orderPage.orderType.takeoutInfo}
               </p>
             </div>
@@ -277,9 +277,9 @@ export function CartSidebar() {
       <div className="flex-1 overflow-y-auto">
         {items.length === 0 ? (
           <div className="p-6 text-center">
-            <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-gray-500 font-medium mb-2">{t.orderPage.cart.empty}</h3>
-            <p className="text-gray-400 text-sm">{t.orderPage.cart.emptyMessage}</p>
+            <ShoppingCart className="w-12 h-12 text-muted-foreground/40 dark:text-muted-foreground/20 mx-auto mb-4" />
+            <h3 className="text-muted-foreground font-medium mb-2">{t.orderPage.cart.empty}</h3>
+            <p className="text-muted-foreground/80 text-sm">{t.orderPage.cart.emptyMessage}</p>
           </div>
         ) : (
           <div className={`${responsiveClasses.padding.section} space-y-3`}>
@@ -289,7 +289,7 @@ export function CartSidebar() {
                 <Card key={item.id} className={responsiveClasses.padding.card}>
                   <div className="flex items-start gap-3">
                     {/* Item Image */}
-                    <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 relative">
+                    <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden flex-shrink-0 relative">
                       {item.image_url ? (
                         <Image
                           src={item.image_url}
@@ -302,24 +302,24 @@ export function CartSidebar() {
                           }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                          <span className="text-gray-400 text-xs">No Image</span>
+                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                          <span className="text-muted-foreground text-xs">No Image</span>
                         </div>
                       )}
                     </div>
 
                     {/* Item Details */}
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-base text-gray-900 line-clamp-1">
+                      <h4 className="font-medium text-base text-foreground line-clamp-1">
                         {item.name}
                       </h4>
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         {language === 'fr' ? `${item.price.toFixed(2)} $ ${t.orderPage.cart.each}` : `$${item.price.toFixed(2)} each`}
                       </p>
                       
                       {/* Notes */}
                       {item.notes && (
-                        <p className="text-xs text-gray-500 mt-1 italic">
+                        <p className="text-xs text-muted-foreground mt-1 italic">
                           {t.orderPage.cart.note}: {item.notes}
                         </p>
                       )}
@@ -371,7 +371,7 @@ export function CartSidebar() {
         {items.length > 0 && (
           <div className={`${responsiveClasses.padding.section} space-y-3`}>
             {/* Order Summary */}
-            <Card className={`${responsiveClasses.padding.card} bg-gray-50`}>
+            <Card className={`${responsiveClasses.padding.card} bg-muted`}>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>{t.orderPage.pricing.subtotal}</span>
@@ -392,7 +392,7 @@ export function CartSidebar() {
           {/* Customer Information - Different fields based on order type */}
           {(orderType === 'takeout' || (orderType === 'dine_in' && !isQROrder)) && (
             <div className="space-y-3">
-              <Label className="text-sm font-medium text-gray-900">
+              <Label className="text-sm font-medium text-foreground">
                 {orderType === 'takeout' ? t.orderPage.customerInfo.deliveryInfo : t.orderPage.customerInfo.customerInfo}
               </Label>
               
@@ -428,14 +428,14 @@ export function CartSidebar() {
 
           {/* QR Dine-in Info Display */}
           {orderType === 'dine_in' && isQROrder && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 rounded-lg p-4">
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-blue-700 text-sm font-medium">
+                <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 text-sm font-medium">
                   <MapPin className="w-4 h-4" />
                   <span>{t.orderPage.qrDineIn.tableServiceInfo}</span>
                 </div>
                 
-                <div className="text-sm text-blue-600">
+                <div className="text-sm text-blue-600 dark:text-blue-400">
                   <div className="flex justify-between">
                     <span>{t.orderPage.qrDineIn.tableNumber}:</span>
                     <span className="font-medium">{tableNumber}</span>
@@ -452,7 +452,7 @@ export function CartSidebar() {
                   </div>
                 </div>
                 
-                <p className="text-xs text-blue-600 italic">
+                <p className="text-xs text-blue-600 dark:text-blue-400 italic">
                   {t.orderPage.qrDineIn.deliveryInfo}
                 </p>
               </div>
@@ -472,7 +472,7 @@ export function CartSidebar() {
 
       {/* Sticky Checkout Footer */}
       {items.length > 0 && (
-        <div className="border-t border-gray-200 bg-white p-4 flex-shrink-0">
+        <div className="border-t border-border bg-card p-4 flex-shrink-0">
           <Button
             onClick={handleCheckoutClick}
             disabled={isSubmitting || items.length === 0}

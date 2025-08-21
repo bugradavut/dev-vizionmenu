@@ -48,7 +48,7 @@ export function CategorySidebar({
       <div className="p-4">
         <div className="animate-pulse space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-12 bg-gray-200 rounded"></div>
+            <div key={i} className="h-12 bg-muted rounded"></div>
           ))}
         </div>
       </div>
@@ -72,8 +72,8 @@ export function CategorySidebar({
               className={cn(
                 "flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
                 isSelected 
-                  ? "bg-primary text-white" 
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
               )}
             >
               <Icon className="w-4 h-4" />
@@ -92,8 +92,8 @@ export function CategorySidebar({
     <div className="p-4">
       {/* Categories Header with Icon */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-gray-900">{t.orderPage.sidebar.categories}</h2>
-        <LayoutGrid className="w-5 h-5 text-gray-500" />
+        <h2 className="font-semibold text-foreground">{t.orderPage.sidebar.categories}</h2>
+        <LayoutGrid className="w-5 h-5 text-muted-foreground" />
       </div>
       
       <ScrollArea className="h-[calc(100vh-8rem)]">
@@ -109,27 +109,27 @@ export function CategorySidebar({
                   "p-4 cursor-pointer transition-all border",
                   isSelected 
                     ? "bg-primary border-primary" 
-                    : "bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                    : "bg-card border-border hover:bg-muted/50 hover:border-border/80"
                 )}
                 onClick={() => onCategorySelect(category.id)}
               >
                 <div className="flex items-center gap-3">
                   {/* Category Icon with Background */}
                   <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center shrink-0">
-                    <Icon className="w-8 h-8 text-orange-500" />
+                    <Icon className={cn("w-8 h-8", isSelected ? "text-orange-500 dark:text-white" : "text-orange-500")} />
                   </div>
                   
                   {/* Category Info */}
                   <div className="flex-1 min-w-0">
                     <div className={cn(
                       "font-medium text-sm truncate",
-                      isSelected ? "text-white" : "text-gray-900"
+                      isSelected ? "text-white" : "text-foreground"
                     )}>
                       {category.name}
                     </div>
                     <div className={cn(
                       "text-xs mt-1",
-                      isSelected ? "text-white/90" : "text-gray-500"
+                      isSelected ? "text-white/90" : "text-muted-foreground"
                     )}>
                       {category.item_count} {category.item_count === 1 ? t.orderPage.sidebar.item : t.orderPage.sidebar.items}
                     </div>

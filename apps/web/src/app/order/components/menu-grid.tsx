@@ -96,15 +96,15 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
     return (
       <div className="p-6">
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-48 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-32 mb-6"></div>
+          <div className="h-6 bg-muted rounded w-48 mb-2"></div>
+          <div className="h-4 bg-muted rounded w-32 mb-6"></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="space-y-3">
-                <div className="aspect-square bg-gray-200 rounded"></div>
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                <div className="h-8 bg-gray-200 rounded"></div>
+                <div className="aspect-square bg-muted rounded"></div>
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="h-3 bg-muted rounded w-1/2"></div>
+                <div className="h-8 bg-muted rounded"></div>
               </div>
             ))}
           </div>
@@ -117,8 +117,8 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
     return (
       <div className="p-6 flex items-center justify-center h-64">
         <div className="text-center">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">{t.orderPage.menu.noSetMenu}</h3>
-          <p className="text-gray-600">{t.orderPage.menu.noActivePresets}</p>
+          <h3 className="text-lg font-medium text-foreground mb-2">{t.orderPage.menu.noSetMenu}</h3>
+          <p className="text-muted-foreground">{t.orderPage.menu.noActivePresets}</p>
         </div>
       </div>
     )
@@ -128,8 +128,8 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
     return (
       <div className="p-6 flex items-center justify-center h-64">
         <div className="text-center">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">{t.orderPage.menu.noItemsFound}</h3>
-          <p className="text-gray-600">
+          <h3 className="text-lg font-medium text-foreground mb-2">{t.orderPage.menu.noItemsFound}</h3>
+          <p className="text-muted-foreground">
             {searchQuery.trim() 
               ? t.orderPage.menu.noSearchResults.replace('{query}', searchQuery)
               : selectedCategory === 'all' 
@@ -158,18 +158,18 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
     <div className={responsiveClasses.padding.container}>
       {/* Category Title */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="text-2xl font-bold text-foreground">
           {getCategoryTitle()}
         </h2>
-        <div className="flex items-center gap-4 text-gray-600">
+        <div className="flex items-center gap-4 text-muted-foreground">
           <span>{filteredItems.length} {t.orderPage.menu.itemsAvailable}</span>
           {selectedCategory === 'set' && customerMenu?.metadata.activePreset && (
             <div className="flex items-center gap-2 text-sm">
-              <Badge variant="outline" className="text-blue-700 border-blue-300">
+              <Badge variant="outline" className="text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700">
                 {customerMenu.metadata.activePreset.schedule_type === 'daily' ? t.orderPage.menu.dailySpecial : t.orderPage.menu.limitedTime}
               </Badge>
               {customerMenu.metadata.activePreset.daily_start_time && customerMenu.metadata.activePreset.daily_end_time && (
-                <span className="text-gray-500">
+                <span className="text-muted-foreground">
                   {customerMenu.metadata.activePreset.daily_start_time} - {customerMenu.metadata.activePreset.daily_end_time}
                 </span>
               )}
@@ -200,10 +200,10 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                     
                     {/* Category Title & Item Count */}
                     <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-gray-900">
+                      <h3 className="text-2xl font-bold text-foreground">
                         {category?.name || 'Other'}
                       </h3>
-                      <p className="text-sm text-gray-600 -mt-1">
+                      <p className="text-sm text-muted-foreground -mt-1">
                         {items.length} {items.length === 1 ? t.orderPage.menu.item : t.orderPage.menu.items} {t.orderPage.menu.available}
                       </p>
                     </div>
@@ -211,7 +211,7 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                   </div>
                   
                   {/* Gradient Divider */}
-                  <div className="h-px bg-gradient-to-r from-orange-200 via-gray-200 to-transparent"></div>
+                  <div className="h-px bg-gradient-to-r from-orange-200 via-border to-transparent"></div>
                 </div>
                 
                 {/* Category Items Grid */}
@@ -222,12 +222,12 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                     return (
                       <Card 
                         key={item.id} 
-                        className="rounded-xl border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer group"
+                        className="rounded-xl border border-border hover:border-border/80 transition-colors cursor-pointer group bg-card"
                         onClick={() => handleItemClick(item)}
                       >
                         <div className="relative p-2">
                           {/* Item Image - Smaller */}
-                          <div className="aspect-[4/3] bg-gray-100 overflow-hidden relative rounded-xl">
+                          <div className="aspect-[4/3] bg-muted overflow-hidden relative rounded-xl">
                             {item.image_url ? (
                               <Image
                                 src={item.image_url}
@@ -240,8 +240,8 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                                 }}
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                                <span className="text-gray-400 text-sm font-medium">{t.orderPage.menu.noImage}</span>
+                              <div className="w-full h-full flex items-center justify-center bg-muted">
+                                <span className="text-muted-foreground text-sm font-medium">{t.orderPage.menu.noImage}</span>
                               </div>
                             )}
                           </div>
@@ -267,12 +267,12 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                           {/* Item Info - Left/Right Layout */}
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-medium text-gray-900 mb-1 line-clamp-1">{item.name}</h3>
-                              <p className="text-xs text-gray-600 line-clamp-2">{item.description}</p>
+                              <h3 className="font-medium text-foreground mb-1 line-clamp-1">{item.name}</h3>
+                              <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
                             </div>
                             
                             {/* Price - Right Side */}
-                            <div className="text-sm font-semibold text-gray-900 ml-2 flex-shrink-0">
+                            <div className="text-sm font-semibold text-foreground ml-2 flex-shrink-0">
                               {language === 'fr' ? `${item.price.toFixed(2)} $` : `$${item.price.toFixed(2)}`}
                             </div>
                           </div>
@@ -294,12 +294,12 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
             return (
               <Card 
                 key={item.id} 
-                className="rounded-xl border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer group"
+                className="rounded-xl border border-border hover:border-border/80 transition-colors cursor-pointer group bg-card"
                 onClick={() => handleItemClick(item)}
               >
                 <div className="relative p-2">
                   {/* Item Image - Smaller */}
-                  <div className="aspect-[4/3] bg-gray-100 overflow-hidden relative rounded-xl">
+                  <div className="aspect-[4/3] bg-muted overflow-hidden relative rounded-xl">
                     {item.image_url ? (
                       <Image
                         src={item.image_url}
@@ -312,8 +312,8 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                         }}
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                        <span className="text-gray-400 text-sm font-medium">{t.orderPage.menu.noImage}</span>
+                      <div className="w-full h-full flex items-center justify-center bg-muted">
+                        <span className="text-muted-foreground text-sm font-medium">{t.orderPage.menu.noImage}</span>
                       </div>
                     )}
                   </div>
@@ -339,12 +339,12 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                   {/* Item Info - Left/Right Layout */}
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-900 mb-1 line-clamp-1">{item.name}</h3>
-                      <p className="text-xs text-gray-600 line-clamp-2">{item.description}</p>
+                      <h3 className="font-medium text-foreground mb-1 line-clamp-1">{item.name}</h3>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
                     </div>
                     
                     {/* Price - Right Side */}
-                    <div className="text-sm font-semibold text-gray-900 ml-2 flex-shrink-0">
+                    <div className="text-sm font-semibold text-foreground ml-2 flex-shrink-0">
                       {language === 'fr' ? `${item.price.toFixed(2)} $` : `$${item.price.toFixed(2)}`}
                     </div>
                   </div>
