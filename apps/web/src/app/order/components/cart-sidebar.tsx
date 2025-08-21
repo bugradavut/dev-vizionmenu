@@ -240,37 +240,6 @@ export function CartSidebar() {
             {orderType === 'takeout' && <div className="w-2 h-2 bg-white rounded-full flex-shrink-0" />}
           </Button>
         </div>
-        
-        {/* Order Type Info */}
-        <div className="mt-3">
-          {orderType === 'dine_in' ? (
-            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 text-sm font-medium">
-                <MapPin className="w-4 h-4" />
-                <span>{t.orderPage.orderType.dineInService}</span>
-              </div>
-              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                {isQROrder 
-                  ? (zone 
-                      ? t.orderPage.orderType.tableServiceWithZone.replace('{number}', tableNumber?.toString() || '').replace('{zone}', zone)
-                      : t.orderPage.orderType.tableService.replace('{number}', tableNumber?.toString() || '')
-                    )
-                  : t.orderPage.orderType.tableNumberInfo
-                }
-              </p>
-            </div>
-          ) : (
-            <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/40 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300 text-sm font-medium">
-                <Package className="w-4 h-4" />
-                <span>{t.orderPage.orderType.takeoutOrder}</span>
-              </div>
-              <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                {t.orderPage.orderType.takeoutInfo}
-              </p>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Cart Items or Empty State */}
