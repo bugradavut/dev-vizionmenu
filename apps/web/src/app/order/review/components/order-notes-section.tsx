@@ -12,7 +12,7 @@ export function OrderNotesSection() {
         <h3 className="text-lg font-semibold text-foreground">
           Other information
         </h3>
-        <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+        <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-md">
           Optional
         </span>
       </div>

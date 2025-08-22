@@ -13,7 +13,11 @@ export function PaymentMethodSection() {
         <Button
           variant={paymentMethod === 'online' ? 'default' : 'outline'}
           onClick={() => setPaymentMethod('online')}
-          className="w-full"
+          className={`w-full h-11 rounded-lg transition-all ${
+            paymentMethod === 'online' 
+              ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922] hover:bg-orange-100' 
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+          }`}
         >
           Pay online
         </Button>
@@ -21,7 +25,13 @@ export function PaymentMethodSection() {
           variant={paymentMethod === 'counter' ? 'default' : 'outline'}
           onClick={() => setPaymentMethod('counter')}
           disabled={!isCounterPaymentEnabled}
-          className={`w-full ${!isCounterPaymentEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`w-full h-11 rounded-lg transition-all ${
+            !isCounterPaymentEnabled 
+              ? 'cursor-not-allowed bg-gray-50 text-gray-500 border-2 border-gray-200' 
+              : paymentMethod === 'counter'
+                ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922] hover:bg-orange-100'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+          }`}
         >
           Pay at the counter
         </Button>

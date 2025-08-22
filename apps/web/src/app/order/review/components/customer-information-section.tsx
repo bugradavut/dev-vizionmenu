@@ -5,7 +5,29 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Home, Building, Building2, Hotel, MapPin, Package } from 'lucide-react'
+import { Home, Building, Building2, Hotel, MapPin, Package, Utensils } from 'lucide-react'
+import { AddressAutocomplete } from '@/components/address-autocomplete'
+
+// Canadian postal code utilities
+function formatCanadianPostalCode(input: string): string {
+  // Remove all non-alphanumeric characters
+  const cleaned = input.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
+  
+  // Apply H1A 1A1 format
+  if (cleaned.length <= 3) {
+    return cleaned
+  } else if (cleaned.length <= 6) {
+    return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`
+  }
+  
+  return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)}`
+}
+
+function isValidCanadianPostalCode(postalCode: string): boolean {
+  // Canadian postal code regex: Letter-Number-Letter Number-Letter-Number
+  const canadianPostalRegex = /^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$/
+  return canadianPostalRegex.test(postalCode)
+}
 
 type OrderType = 'dine_in' | 'takeaway'
 type AddressType = 'home' | 'apartment' | 'office' | 'hotel' | 'other'
@@ -29,7 +51,11 @@ interface DeliveryAddress {
   deliveryInstructions: string
 }
 
-export function CustomerInformationSection() {
+interface CustomerInformationSectionProps {
+  language?: string
+}
+
+export function CustomerInformationSection({ language = 'en' }: CustomerInformationSectionProps) {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: '',
     phone: '',
@@ -50,11 +76,6 @@ export function CustomerInformationSection() {
   })
 
   const [errors, setErrors] = useState<{[key: string]: string}>({})
-
-  const orderTypes = [
-    { value: 'takeaway', label: 'To take away', icon: Package },
-    { value: 'dine_in', label: 'Dine in', icon: Package },
-  ]
 
   const addressTypes = [
     { value: 'home', label: 'Home/House', icon: Home },
@@ -92,104 +113,116 @@ export function CustomerInformationSection() {
   }
 
   return (
-    <div className="bg-card rounded-lg border border-border p-6">
-      <h2 className="text-lg font-semibold text-foreground mb-6">
+    <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+      <h2 className="text-lg font-semibold text-gray-900 mb-5">
         Customer Information
       </h2>
       
-      {/* Customer Details */}
+      {/* Customer Details - Compact Layout */}
       <div className="space-y-4 mb-6">
-        {/* Name */}
-        <div className="space-y-2">
-          <Label htmlFor="customer-name" className="text-sm font-medium">
-            Full Name *
-          </Label>
-          <Input
-            id="customer-name"
-            type="text"
-            placeholder="Enter your full name"
-            value={customerInfo.name}
-            onChange={(e) => handleCustomerChange('name', e.target.value)}
-            className={errors.name ? 'border-red-500' : ''}
-          />
-          {errors.name && (
-            <p className="text-sm text-red-500">{errors.name}</p>
-          )}
+        {/* Name & Phone - Side by side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="customer-name" className="text-sm font-medium text-gray-700">
+              Full Name *
+            </Label>
+            <Input
+              id="customer-name"
+              type="text"
+              placeholder="John Doe"
+              value={customerInfo.name}
+              onChange={(e) => handleCustomerChange('name', e.target.value)}
+              className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${errors.name ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
+            />
+            {errors.name && (
+              <p className="text-sm text-red-600">{errors.name}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="customer-phone" className="text-sm font-medium text-gray-700">
+              Phone Number *
+            </Label>
+            <Input
+              id="customer-phone"
+              type="tel"
+              placeholder="(555) 123-4567"
+              value={customerInfo.phone}
+              onChange={(e) => handleCustomerChange('phone', e.target.value)}
+              className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${errors.phone ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
+            />
+            {errors.phone && (
+              <p className="text-sm text-red-600">{errors.phone}</p>
+            )}
+          </div>
         </div>
 
-        {/* Phone */}
+        {/* Email - Full width */}
         <div className="space-y-2">
-          <Label htmlFor="customer-phone" className="text-sm font-medium">
-            Phone Number *
-          </Label>
-          <Input
-            id="customer-phone"
-            type="tel"
-            placeholder="+1 (555) 123-4567"
-            value={customerInfo.phone}
-            onChange={(e) => handleCustomerChange('phone', e.target.value)}
-            className={errors.phone ? 'border-red-500' : ''}
-          />
-          {errors.phone && (
-            <p className="text-sm text-red-500">{errors.phone}</p>
-          )}
-        </div>
-
-        {/* Email */}
-        <div className="space-y-2">
-          <Label htmlFor="customer-email" className="text-sm font-medium">
+          <Label htmlFor="customer-email" className="text-sm font-medium text-gray-700">
             Email Address (Optional)
           </Label>
           <Input
             id="customer-email"
             type="email"
-            placeholder="your.email@example.com"
+            placeholder="john@example.com"
             value={customerInfo.email}
             onChange={(e) => handleCustomerChange('email', e.target.value)}
-            className={errors.email ? 'border-red-500' : ''}
+            className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${errors.email ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
           />
           {errors.email && (
-            <p className="text-sm text-red-500">{errors.email}</p>
+            <p className="text-sm text-red-600">{errors.email}</p>
           )}
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-gray-500">
             We&apos;ll use this to send you order updates
           </p>
         </div>
       </div>
 
-      {/* Order Type Selection */}
+      {/* Order Type Selection - Clean buttons */}
       <div className="mb-6">
-        <Label className="text-sm font-medium mb-3 block">Order Type</Label>
+        <Label className="text-sm font-medium text-gray-700 mb-3 block">Order Type</Label>
         <div className="grid grid-cols-2 gap-3">
-          {orderTypes.map((type) => {
-            const IconComponent = type.icon
-            return (
-              <Button
-                key={type.value}
-                variant={customerInfo.orderType === type.value ? 'default' : 'outline'}
-                onClick={() => handleCustomerChange('orderType', type.value as OrderType)}
-                className="flex items-center gap-2 h-auto py-3"
-              >
-                <IconComponent className="h-4 w-4" />
-                <span>{type.label}</span>
-              </Button>
-            )
-          })}
+          <Button
+            variant={customerInfo.orderType === 'takeaway' ? 'default' : 'outline'}
+            onClick={() => handleCustomerChange('orderType', 'takeaway')}
+            className={`flex items-center justify-center gap-2 h-11 rounded-lg transition-all ${
+              customerInfo.orderType === 'takeaway' 
+                ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922] hover:bg-orange-100' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            <Package className="h-4 w-4" />
+            <span className="font-medium">Takeaway</span>
+          </Button>
+          
+          <Button
+            variant={customerInfo.orderType === 'dine_in' ? 'default' : 'outline'}
+            onClick={() => handleCustomerChange('orderType', 'dine_in')}
+            className={`flex items-center justify-center gap-2 h-11 rounded-lg transition-all ${
+              customerInfo.orderType === 'dine_in' 
+                ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922] hover:bg-orange-100' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            <Utensils className="h-4 w-4" />
+            <span className="font-medium">Dine in</span>
+          </Button>
         </div>
       </div>
 
-      {/* Delivery Address (only for takeaway) */}
+      {/* Delivery Address (only for takeaway) - More compact */}
       {customerInfo.orderType === 'takeaway' && (
         <>
-          <div className="border-t border-border pt-6">
-            <h3 className="text-md font-semibold text-foreground mb-4">
+          <div className="border-t border-gray-200 pt-6">
+            <h3 className="text-md font-semibold text-gray-900 mb-4">
               Delivery Address
             </h3>
             
-            {/* Address Type Selection */}
+            {/* Address Type Selection - Smaller buttons */}
             <div className="mb-4">
-              <Label className="text-sm font-medium mb-3 block">Address Type</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">Address Type</Label>
+              <div className="grid grid-cols-5 gap-2">
                 {addressTypes.map((type) => {
                   const IconComponent = type.icon
                   return (
@@ -197,94 +230,157 @@ export function CustomerInformationSection() {
                       key={type.value}
                       variant={address.type === type.value ? 'default' : 'outline'}
                       onClick={() => handleAddressChange('type', type.value)}
-                      className="flex flex-col items-center gap-1 h-auto py-2"
+                      className={`flex flex-col items-center gap-1 h-14 p-2 text-xs rounded-lg transition-all ${
+                        address.type === type.value
+                          ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922]' 
+                          : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                      }`}
                     >
                       <IconComponent className="h-3 w-3" />
-                      <span className="text-xs">{type.label}</span>
+                      <span className="leading-tight">{type.label.split('/')[0]}</span>
                     </Button>
                   )
                 })}
               </div>
             </div>
 
-            {/* Address Fields */}
-            <div className="space-y-4">
-              {/* Street Address */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="street-number" className="text-sm font-medium">
-                    Street Number *
-                  </Label>
-                  <Input
-                    id="street-number"
-                    placeholder="123"
-                    value={address.streetNumber}
-                    onChange={(e) => handleAddressChange('streetNumber', e.target.value)}
-                  />
-                </div>
-                <div className="col-span-2 space-y-2">
-                  <Label htmlFor="street-name" className="text-sm font-medium">
-                    Street Name *
-                  </Label>
-                  <Input
-                    id="street-name"
-                    placeholder="Main Street"
-                    value={address.streetName}
-                    onChange={(e) => handleAddressChange('streetName', e.target.value)}
-                  />
-                </div>
-              </div>
+            {/* Address Fields - Compact grid */}
+            <div className="space-y-3">
+              {/* For Office: Number + Suite in first row, Street Name in second row */}
+              {address.type === 'office' ? (
+                <>
+                  {/* Number + Suite Number */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="street-number" className="text-sm font-medium text-gray-700">
+                        Number *
+                      </Label>
+                      <Input
+                        id="street-number"
+                        placeholder="123"
+                        value={address.streetNumber}
+                        onChange={(e) => handleAddressChange('streetNumber', e.target.value)}
+                        className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="unit-number" className="text-sm font-medium text-gray-700">
+                        Suite Number *
+                      </Label>
+                      <Input
+                        id="unit-number"
+                        placeholder="201"
+                        value={address.unitNumber}
+                        onChange={(e) => handleAddressChange('unitNumber', e.target.value)}
+                        className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Street Name - Full width */}
+                  <div className="space-y-1">
+                    <Label htmlFor="street-name" className="text-sm font-medium text-gray-700">
+                      Street Name *
+                    </Label>
+                    <AddressAutocomplete
+                      value={address.streetName}
+                      onChange={(value) => handleAddressChange('streetName', value)}
+                      placeholder="Main Street"
+                      className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
+                      language={language}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Default: Number + Street Name */}
+                  <div className="grid grid-cols-4 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="street-number" className="text-sm font-medium text-gray-700">
+                        Number *
+                      </Label>
+                      <Input
+                        id="street-number"
+                        placeholder="123"
+                        value={address.streetNumber}
+                        onChange={(e) => handleAddressChange('streetNumber', e.target.value)}
+                        className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
+                      />
+                    </div>
+                    <div className="col-span-3 space-y-1">
+                      <Label htmlFor="street-name" className="text-sm font-medium text-gray-700">
+                        Street Name *
+                      </Label>
+                      <AddressAutocomplete
+                        value={address.streetName}
+                        onChange={(value) => handleAddressChange('streetName', value)}
+                        placeholder="Main Street"
+                        className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
+                        language={language}
+                      />
+                    </div>
+                  </div>
 
-              {/* Unit Number (for apartments/offices) */}
-              {(address.type === 'apartment' || address.type === 'office') && (
-                <div className="space-y-2">
-                  <Label htmlFor="unit-number" className="text-sm font-medium">
-                    {address.type === 'apartment' ? 'Apartment/Unit Number' : 'Suite/Office Number'} *
-                  </Label>
-                  <Input
-                    id="unit-number"
-                    placeholder={address.type === 'apartment' ? "Apt 4B" : "Suite 201"}
-                    value={address.unitNumber}
-                    onChange={(e) => handleAddressChange('unitNumber', e.target.value)}
-                  />
-                </div>
-              )}
-
-              {/* Buzzer Code (for apartments) */}
-              {address.type === 'apartment' && (
-                <div className="space-y-2">
-                  <Label htmlFor="buzzer-code" className="text-sm font-medium">
-                    Buzzer Code (Optional)
-                  </Label>
-                  <Input
-                    id="buzzer-code"
-                    placeholder="1234 or #4B"
-                    value={address.buzzerCode}
-                    onChange={(e) => handleAddressChange('buzzerCode', e.target.value)}
-                  />
-                </div>
+                  {/* Unit Number & Buzzer Code (for apartments only) */}
+                  {address.type === 'apartment' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="unit-number" className="text-sm font-medium text-gray-700">
+                          Unit Number *
+                        </Label>
+                        <Input
+                          id="unit-number"
+                          placeholder="4B"
+                          value={address.unitNumber}
+                          onChange={(e) => handleAddressChange('unitNumber', e.target.value)}
+                          className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="buzzer-code" className="text-sm font-medium text-gray-700">
+                          Buzzer Code (Optional)
+                        </Label>
+                        <Input
+                          id="buzzer-code"
+                          placeholder="1234 or #4B"
+                          value={address.buzzerCode}
+                          onChange={(e) => handleAddressChange('buzzerCode', e.target.value)}
+                          className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* City, Province, Postal Code */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="city" className="text-sm font-medium">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="city" className="text-sm font-medium text-gray-700">
                     City *
                   </Label>
-                  <Input
-                    id="city"
-                    placeholder="Montreal"
+                  <AddressAutocomplete
                     value={address.city}
-                    onChange={(e) => handleAddressChange('city', e.target.value)}
+                    onChange={(value) => handleAddressChange('city', value)}
+                    onAddressSelect={(addressData) => {
+                      // Auto-fill province when city is selected
+                      if (addressData.mappedProvinceCode) {
+                        handleAddressChange('province', addressData.mappedProvinceCode)
+                      }
+                    }}
+                    placeholder="Montreal"
+                    className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
+                    language={language}
+                    searchType="city"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="province" className="text-sm font-medium">
+                <div className="space-y-1">
+                  <Label htmlFor="province" className="text-sm font-medium text-gray-700">
                     Province *
                   </Label>
                   <Select value={address.province} onValueChange={(value) => handleAddressChange('province', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select province" />
+                    <SelectTrigger className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg">
+                      <SelectValue placeholder="QC" />
                     </SelectTrigger>
                     <SelectContent>
                       {canadianProvinces.map((province) => (
@@ -295,23 +391,36 @@ export function CustomerInformationSection() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="postal-code" className="text-sm font-medium">
+                <div className="space-y-1">
+                  <Label htmlFor="postal-code" className="text-sm font-medium text-gray-700">
                     Postal Code *
                   </Label>
                   <Input
                     id="postal-code"
                     placeholder="H1A 1A1"
                     value={address.postalCode}
-                    onChange={(e) => handleAddressChange('postalCode', e.target.value.toUpperCase())}
+                    onChange={(e) => {
+                      const formatted = formatCanadianPostalCode(e.target.value)
+                      handleAddressChange('postalCode', formatted)
+                    }}
                     maxLength={7}
+                    className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${
+                      address.postalCode && !isValidCanadianPostalCode(address.postalCode) 
+                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500' 
+                        : ''
+                    }`}
                   />
+                  {address.postalCode && !isValidCanadianPostalCode(address.postalCode) && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Please enter a valid Canadian postal code (e.g., H1A 1A1)
+                    </p>
+                  )}
                 </div>
               </div>
 
               {/* Delivery Instructions */}
-              <div className="space-y-2">
-                <Label htmlFor="delivery-instructions" className="text-sm font-medium">
+              <div className="space-y-1">
+                <Label htmlFor="delivery-instructions" className="text-sm font-medium text-gray-700">
                   Delivery Instructions (Optional)
                 </Label>
                 <Input
@@ -319,6 +428,7 @@ export function CustomerInformationSection() {
                   placeholder="Ring doorbell, leave at door, etc."
                   value={address.deliveryInstructions}
                   onChange={(e) => handleAddressChange('deliveryInstructions', e.target.value)}
+                  className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
                 />
               </div>
             </div>

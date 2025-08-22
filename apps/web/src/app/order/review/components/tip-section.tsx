@@ -27,7 +27,7 @@ export function TipSection() {
         Add a tip
       </h3>
       
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-5 gap-3 mb-4">
         {tipOptions.map((option) => (
           <Button
             key={option.id}
@@ -36,32 +36,42 @@ export function TipSection() {
               setSelectedTip(option.id as typeof selectedTip)
               setCustomTip('')
             }}
-            className="flex flex-col h-auto py-3"
+            className={`flex flex-col h-auto py-3 rounded-lg ${
+              selectedTip === option.id
+                ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922]'
+                : 'bg-white text-gray-700 border-gray-300'
+            }`}
           >
-            <span className="font-medium">{option.label}</span>
+            <span className="font-bold">{option.label}</span>
             <span className="text-xs">${option.amount}</span>
           </Button>
         ))}
-      </div>
-
-      <div className="mb-4">
+        
         <Button
           variant={selectedTip === 'other' ? 'default' : 'outline'}
           onClick={() => setSelectedTip('other')}
-          className="w-full mb-2"
+          className={`flex flex-col h-auto py-3 rounded-lg ${
+            selectedTip === 'other'
+              ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922]'
+              : 'bg-white text-gray-700 border-gray-300'
+          }`}
         >
-          Other
+          <span className="font-bold">Other</span>
+          <span className="text-xs">Custom</span>
         </Button>
-        {selectedTip === 'other' && (
+      </div>
+
+      {selectedTip === 'other' && (
+        <div className="mb-4">
           <Input
             type="number"
             placeholder="Enter custom tip amount"
             value={customTip}
             onChange={(e) => setCustomTip(e.target.value)}
-            className="w-full"
+            className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg w-full"
           />
-        )}
-      </div>
+        </div>
+      )}
 
       <p className="text-sm text-muted-foreground">
         100% of the tip supports the restaurant and its staff who prepare and pack your order.

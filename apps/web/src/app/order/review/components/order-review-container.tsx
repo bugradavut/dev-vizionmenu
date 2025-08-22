@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from 'next/navigation'
 import { useCart } from '../../contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
@@ -10,9 +11,12 @@ import { TipSection } from './tip-section'
 import { OrderNotesSection } from './order-notes-section'
 import { PriceDetailsSection } from './price-details-section'
 import { OrderTotalSidebar } from './order-total-sidebar'
+import { ArrowLeft } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 export function OrderReviewContainer() {
-  const { items, total } = useCart()
+  const router = useRouter()
+  const { items } = useCart()
   const { language } = useLanguage()
   const t = translations[language] || translations.en
 
@@ -20,18 +24,27 @@ export function OrderReviewContainer() {
     <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-foreground mb-2">
-            {t.orderPage.review.title || "Review Your Order"}
-          </h1>
-          <p className="text-muted-foreground">
-            {t.orderPage.review.subtitle || "Please review your order details before confirming"}
-          </p>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={() => router.back()}
+              className="flex items-center gap-2 px-3 py-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">
+                {t.orderPage.review.title || "Review Your Order"}
+              </h1>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Side - Customer Information & Preferences */}
           <div className="space-y-6">
-            <CustomerInformationSection />
+            <CustomerInformationSection language={language} />
             <PaymentMethodSection />
             <TipSection />
           </div>
@@ -39,9 +52,9 @@ export function OrderReviewContainer() {
           {/* Right Side - Order Summary & Details */}
           <div className="space-y-6">
             <OrderSummary items={items} language={language} />
-            <PriceDetailsSection subtotal={total} language={language} />
+            <PriceDetailsSection items={items} language={language} />
             <OrderNotesSection />
-            <OrderTotalSidebar total={total} language={language} />
+            <OrderTotalSidebar language={language} />
           </div>
         </div>
       </div>
