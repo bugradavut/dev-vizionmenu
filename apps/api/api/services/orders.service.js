@@ -187,7 +187,7 @@ async function getOrderDetail(orderId, userBranch) {
 
   // First try as UUID
   if (orderId.length === 36 && orderId.includes('-')) {
-    const { data, error } = await supabase
+    let query = supabase
       .from('orders')
       .select(`
         *,
@@ -196,17 +196,28 @@ async function getOrderDetail(orderId, userBranch) {
           order_item_variants(*)
         )
       `)
-      .eq('id', orderId)
-      .eq('branch_id', userBranch.branch_id)
-      .single();
+      .eq('id', orderId);
+      
+    // Only filter by branch_id if userBranch is provided (for authenticated requests)
+    if (userBranch && userBranch.branch_id) {
+      query = query.eq('branch_id', userBranch.branch_id);
+    }
+    
+    const { data, error } = await query.single();
     existingOrder = data;
     findError = error;
   } else {
     // Try as short order number (ORDER-XXXXX format)
-    const { data: orders, error } = await supabase
+    let query = supabase
       .from('orders')
-      .select('id')
-      .eq('branch_id', userBranch.branch_id);
+      .select('id');
+      
+    // Only filter by branch_id if userBranch is provided
+    if (userBranch && userBranch.branch_id) {
+      query = query.eq('branch_id', userBranch.branch_id);
+    }
+    
+    const { data: orders, error } = await query;
 
     if (!error && orders) {
       // Find order by short ID pattern matching
@@ -219,7 +230,7 @@ async function getOrderDetail(orderId, userBranch) {
       if (matchingOrder) {
         actualOrderId = matchingOrder.id;
         // Get full order details
-        const result = await supabase
+        let detailQuery = supabase
           .from('orders')
           .select(`
             *,
@@ -228,9 +239,14 @@ async function getOrderDetail(orderId, userBranch) {
               order_item_variants(*)
             )
           `)
-          .eq('id', matchingOrder.id)
-          .eq('branch_id', userBranch.branch_id)
-          .single();
+          .eq('id', matchingOrder.id);
+          
+        // Only filter by branch_id if userBranch is provided
+        if (userBranch && userBranch.branch_id) {
+          detailQuery = detailQuery.eq('branch_id', userBranch.branch_id);
+        }
+        
+        const result = await detailQuery.single();
         
         existingOrder = result.data;
         findError = result.error;

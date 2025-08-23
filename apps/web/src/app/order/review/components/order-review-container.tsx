@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCart } from '../../contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
@@ -28,6 +29,24 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   const { items } = useCart()
   const { language } = useLanguage()
   const t = translations[language] || translations.en
+  
+  // Form validation state
+  const [isFormValid, setIsFormValid] = useState(false)
+  const [formData, setFormData] = useState<any>(null)
+  const customerInfoRef = useRef<any>(null)
+  
+  const handleValidationChange = (isValid: boolean, data: any) => {
+    setIsFormValid(isValid)
+    setFormData(data)
+  }
+  
+  // Function to trigger validation from child components
+  const triggerFormValidation = () => {
+    if (customerInfoRef.current && customerInfoRef.current.triggerValidation) {
+      return customerInfoRef.current.triggerValidation()
+    }
+    return false
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -53,7 +72,12 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Side - Customer Information & Preferences */}
           <div className="space-y-6">
-            <CustomerInformationSection language={language} orderContext={orderContext} />
+            <CustomerInformationSection 
+              ref={customerInfoRef}
+              language={language} 
+              orderContext={orderContext}
+              onValidationChange={handleValidationChange}
+            />
             <PaymentMethodSection />
             <TipSection />
           </div>
@@ -63,7 +87,13 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
             <OrderSummary items={items} language={language} />
             <PriceDetailsSection items={items} language={language} />
             <OrderNotesSection />
-            <OrderTotalSidebar language={language} />
+            <OrderTotalSidebar 
+              language={language}
+              isFormValid={isFormValid}
+              formData={formData}
+              orderContext={orderContext}
+              onTriggerValidation={triggerFormValidation}
+            />
           </div>
         </div>
       </div>

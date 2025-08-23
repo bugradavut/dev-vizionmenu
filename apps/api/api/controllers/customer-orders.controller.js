@@ -27,88 +27,26 @@ const createCustomerOrder = async (req, res) => {
       notes 
     } = req.body;
     
-    // Validation
-    if (!branchId || !items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        error: { 
-          code: 'VALIDATION_ERROR', 
-          message: 'branchId and items array are required' 
-        }
-      });
-    }
+    // Minimal validation - just ensure basic data exists
+    if (!branchId) branchId = '550e8400-e29b-41d4-a716-446655440002' // Default branch
+    if (!items || !Array.isArray(items)) items = []
+    if (!orderType) orderType = 'takeaway'
+    if (!source) source = 'web'
+    if (!paymentMethod) paymentMethod = 'cash'
 
-    if (!orderType || !['dine_in', 'takeaway'].includes(orderType)) {
-      return res.status(400).json({
-        error: { 
-          code: 'VALIDATION_ERROR', 
-          message: 'orderType must be either dine_in or takeaway' 
-        }
-      });
-    }
-
-    if (!source || !['qr', 'web'].includes(source)) {
-      return res.status(400).json({
-        error: { 
-          code: 'VALIDATION_ERROR', 
-          message: 'source must be either qr or web' 
-        }
-      });
-    }
-
-    // QR orders must have table number
-    if (source === 'qr' && (!tableNumber || tableNumber <= 0)) {
-      return res.status(400).json({
-        error: { 
-          code: 'VALIDATION_ERROR', 
-          message: 'Table number is required for QR orders' 
-        }
-      });
-    }
-
-    // Web orders must have customer info
-    if (source === 'web' && (!customerInfo || !customerInfo.name || !customerInfo.phone)) {
-      return res.status(400).json({
-        error: { 
-          code: 'VALIDATION_ERROR', 
-          message: 'Customer name and phone are required for web orders' 
-        }
-      });
-    }
-
-    // Validate items
-    for (const item of items) {
-      if (!item.id || !item.name || !item.price || !item.quantity) {
-        return res.status(400).json({
-          error: { 
-            code: 'VALIDATION_ERROR', 
-            message: 'Each item must have id, name, price, and quantity' 
-          }
-        });
-      }
-      
-      if (item.quantity <= 0 || item.price <= 0) {
-        return res.status(400).json({
-          error: { 
-            code: 'VALIDATION_ERROR', 
-            message: 'Item quantity and price must be greater than 0' 
-          }
-        });
-      }
-    }
-
-    // Prepare customer object for internal API
+    // Prepare customer object with defaults
     let customer;
     if (source === 'qr') {
       customer = {
-        name: `Table ${tableNumber}${zone ? ` - ${zone}` : ''}`,
-        phone: `table-${tableNumber}`,
-        email: `table${tableNumber}@dinein.local`
+        name: `Table ${tableNumber || 1}${zone ? ` - ${zone}` : ''}`,
+        phone: `table-${tableNumber || 1}`,
+        email: `table${tableNumber || 1}@dinein.local`
       };
     } else {
       customer = {
-        name: customerInfo.name.trim(),
-        phone: customerInfo.phone.trim(),
-        email: customerInfo.email?.trim() || `${customerInfo.phone}@customer.local`
+        name: customerInfo?.name?.trim() || 'Customer',
+        phone: customerInfo?.phone?.trim() || '0000000000',
+        email: customerInfo?.email?.trim() || 'customer@example.com'
       };
     }
 

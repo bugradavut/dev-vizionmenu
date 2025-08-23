@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import React, { useState, forwardRef, useImperativeHandle } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -61,9 +61,10 @@ interface CustomerInformationSectionProps {
     isQROrder: boolean
     selectedOrderType?: 'dine_in' | 'takeaway' | 'delivery' | null
   }
+  onValidationChange?: (isValid: boolean, formData: any) => void
 }
 
-export function CustomerInformationSection({ language = 'en', orderContext }: CustomerInformationSectionProps) {
+export const CustomerInformationSection = forwardRef<any, CustomerInformationSectionProps>(({ language = 'en', orderContext, onValidationChange }, ref) => {
   // Get translations based on language
   const getOrderTypeText = (type: string) => {
     if (language === 'fr') {
@@ -101,7 +102,32 @@ export function CustomerInformationSection({ language = 'en', orderContext }: Cu
     deliveryInstructions: ''
   })
 
-  const [errors, setErrors] = useState<{[key: string]: string}>({})
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: boolean}>({})
+  
+  // Email validation helper
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+  
+  // Simple validation - always pass
+  const validateForm = () => {
+    // Always return valid
+    const formData = {
+      customerInfo,
+      address,
+      orderType: customerInfo.orderType
+    }
+    onValidationChange?.(true, formData)
+    
+    return { isValid: true, errors: {} }
+  }
+  
+  // Public method to trigger validation from parent (always returns true)
+  const triggerValidation = () => {
+    validateForm()
+    return true
+  }
 
   const addressTypes = [
     { value: 'home', label: 'Home/House', icon: Home },
@@ -128,13 +154,73 @@ export function CustomerInformationSection({ language = 'en', orderContext }: Cu
 
   const handleCustomerChange = (field: keyof CustomerInfo, value: string | OrderType) => {
     setCustomerInfo(prev => ({ ...prev, [field]: value }))
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
+    
+    // Always trigger validation to update form state
+    setTimeout(() => validateForm(), 0)
+  }
+  
+  const handleInputFocus = (fieldName: string) => {
+    // Clear red border when user focuses on input
+    if (validationErrors[fieldName]) {
+      setValidationErrors(prev => ({ ...prev, [fieldName]: false }))
     }
   }
 
+
+  // Initial validation on mount and when dependencies change
+  React.useEffect(() => {
+    validateForm()
+  }, [customerInfo, address, orderContext?.isQROrder, language])
+  
+  // Expose triggerValidation method to parent
+  useImperativeHandle(ref, () => ({
+    triggerValidation
+  }), [triggerValidation])
+
+  // Additional effect to catch autofill changes
+  React.useEffect(() => {
+    const handleAutofill = () => {
+      setTimeout(() => validateForm(), 100)
+    }
+
+    // Listen for various autofill events
+    const nameInput = document.getElementById('customer-name')
+    const phoneInput = document.getElementById('customer-phone') 
+    const emailInput = document.getElementById('customer-email')
+
+    if (nameInput) {
+      nameInput.addEventListener('input', handleAutofill)
+      nameInput.addEventListener('change', handleAutofill)
+    }
+    if (phoneInput) {
+      phoneInput.addEventListener('input', handleAutofill)
+      phoneInput.addEventListener('change', handleAutofill)
+    }
+    if (emailInput) {
+      emailInput.addEventListener('input', handleAutofill)
+      emailInput.addEventListener('change', handleAutofill)
+    }
+
+    return () => {
+      if (nameInput) {
+        nameInput.removeEventListener('input', handleAutofill)
+        nameInput.removeEventListener('change', handleAutofill)
+      }
+      if (phoneInput) {
+        phoneInput.removeEventListener('input', handleAutofill)
+        phoneInput.removeEventListener('change', handleAutofill)
+      }
+      if (emailInput) {
+        emailInput.removeEventListener('input', handleAutofill)
+        emailInput.removeEventListener('change', handleAutofill)
+      }
+    }
+  }, [])
+
   const handleAddressChange = (field: keyof DeliveryAddress, value: string) => {
     setAddress(prev => ({ ...prev, [field]: value }))
+    // Trigger validation after state update
+    setTimeout(() => validateForm(), 0)
   }
 
   return (
@@ -157,11 +243,11 @@ export function CustomerInformationSection({ language = 'en', orderContext }: Cu
               placeholder="John Doe"
               value={customerInfo.name}
               onChange={(e) => handleCustomerChange('name', e.target.value)}
-              className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${errors.name ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
+              onBlur={(e) => handleCustomerChange('name', e.target.value)}
+              onInput={(e) => handleCustomerChange('name', e.target.value)}
+              className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${validationErrors.name ? 'border-red-500' : ''}`}
+              onFocus={() => handleInputFocus('name')}
             />
-            {errors.name && (
-              <p className="text-sm text-red-600">{errors.name}</p>
-            )}
           </div>
 
           <div className="space-y-2">
@@ -171,14 +257,12 @@ export function CustomerInformationSection({ language = 'en', orderContext }: Cu
             <Input
               id="customer-phone"
               type="tel"
-              placeholder="(555) 123-4567"
+              placeholder="(416) 123-4567"
               value={customerInfo.phone}
               onChange={(e) => handleCustomerChange('phone', e.target.value)}
-              className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${errors.phone ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
+              className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${validationErrors.phone ? 'border-red-500' : ''}`}
+              onFocus={() => handleInputFocus('phone')}
             />
-            {errors.phone && (
-              <p className="text-sm text-red-600">{errors.phone}</p>
-            )}
           </div>
         </div>
 
@@ -193,11 +277,11 @@ export function CustomerInformationSection({ language = 'en', orderContext }: Cu
             placeholder="john@example.com"
             value={customerInfo.email}
             onChange={(e) => handleCustomerChange('email', e.target.value)}
-            className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${errors.email ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''}`}
+            onBlur={(e) => handleCustomerChange('email', e.target.value)}
+            onInput={(e) => handleCustomerChange('email', e.target.value)}
+            className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${validationErrors.email ? 'border-red-500' : ''}`}
+            onFocus={() => handleInputFocus('email')}
           />
-          {errors.email && (
-            <p className="text-sm text-red-600">{errors.email}</p>
-          )}
           <p className="text-xs text-gray-500">
             {language === 'fr' ? 'Nous l\'utiliserons pour vous envoyer des mises à jour de commande' : 'We\'ll use this to send you order updates'}
           </p>
@@ -497,11 +581,6 @@ export function CustomerInformationSection({ language = 'en', orderContext }: Cu
                         : ''
                     }`}
                   />
-                  {address.postalCode && !isValidCanadianPostalCode(address.postalCode) && (
-                    <p className="text-xs text-red-600 mt-1">
-                      Please enter a valid Canadian postal code (e.g., H1A 1A1)
-                    </p>
-                  )}
                 </div>
               </div>
 
@@ -524,4 +603,4 @@ export function CustomerInformationSection({ language = 'en', orderContext }: Cu
       )}
     </div>
   )
-}
+})

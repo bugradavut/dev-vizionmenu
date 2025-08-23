@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { orderService } from '@/services/order-service';
 import { useLanguage } from '@/contexts/language-context';
 import { translations } from '@/lib/translations';
+import { useCart } from '../contexts/cart-context';
+import { Check, Package, Clock, CheckCircle2, ShoppingCart, Wallet } from 'lucide-react';
 
 interface OrderDetails {
   orderId: string;
@@ -14,6 +16,37 @@ interface OrderDetails {
   createdAt: string;
 }
 
+// Simplified 3-step progress
+const getProgressSteps = (currentStatus: string, language: string) => {
+  const isEnglish = language === 'en';
+  
+  const steps = [
+    {
+      key: 'received',
+      label: isEnglish ? 'Order Received' : 'Commande reçue',
+      icon: CheckCircle2,
+      completed: true, // Always completed by default
+      time: '12:20'
+    },
+    {
+      key: 'preparing', 
+      label: isEnglish ? 'Preparing' : 'Préparation',
+      icon: Package,
+      completed: ['preparing', 'ready', 'completed'].includes(currentStatus),
+      time: currentStatus === 'preparing' ? '08:45' : null
+    },
+    {
+      key: 'completed',
+      label: isEnglish ? 'Completed' : 'Terminé',
+      icon: Check,
+      completed: ['completed'].includes(currentStatus),
+      time: currentStatus === 'completed' ? '10:12' : null
+    }
+  ];
+  
+  return steps;
+};
+
 export default function OrderConfirmationPage() {
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,11 +55,21 @@ export default function OrderConfirmationPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { language } = useLanguage();
+  const { items, subtotal, tax, total, clearCart } = useCart();
   const t = translations[language] || translations.en;
   
   const orderId = searchParams.get('orderId');
   const orderNumber = searchParams.get('orderNumber');
   const message = searchParams.get('message');
+  
+  // Extract customer info from URL params (passed from review page)
+  const customerName = searchParams.get('customerName') || 'Customer';
+  const customerPhone = searchParams.get('customerPhone') || 'N/A';
+  const customerEmail = searchParams.get('customerEmail') || '';
+  const orderType = searchParams.get('orderType') || 'takeaway';
+  const source = searchParams.get('source') as 'qr' | 'web' || 'web';
+  const tableNumber = searchParams.get('table');
+  const zone = searchParams.get('zone');
 
   useEffect(() => {
     const fetchOrderStatus = async () => {
@@ -56,10 +99,10 @@ export default function OrderConfirmationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading order details...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading order details...</p>
         </div>
       </div>
     );
@@ -67,139 +110,340 @@ export default function OrderConfirmationPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            {t.orderConfirmation?.errorTitle || 'Order Not Found'}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Order Not Found</h1>
+          <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={() => router.push('/order')}
-            className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+            className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
           >
-            {t.orderConfirmation?.backToOrder || 'Back to Order'}
+            Back to Order
           </button>
         </div>
       </div>
     );
   }
 
+  const progressSteps = getProgressSteps(orderDetails?.status || 'pending', language);
+  const currentDate = new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA', {
+    day: 'numeric',
+    month: 'long', 
+    year: 'numeric'
+  });
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-2xl mx-auto p-6 pt-12">
-        {/* Success Icon and Title */}
-        <div className="text-center mb-8">
-          <div className="text-green-500 text-8xl mb-4">✅</div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {t.orderConfirmation?.title || 'Order Confirmed!'}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            {message || t.orderConfirmation?.subtitle || 'Your order has been successfully placed'}
-          </p>
-        </div>
-
-        {/* Order Details Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {t.orderConfirmation?.orderDetails || 'Order Details'}
-            </h2>
-            <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
-              #{orderNumber || orderDetails?.orderNumber}
-            </span>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">
-                {t.orderConfirmation?.orderId || 'Order ID'}
-              </span>
-              <span className="font-medium text-gray-900 dark:text-white">
-                {orderDetails?.orderId || orderId}
-              </span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">
-                {t.orderConfirmation?.status || 'Status'}
-              </span>
-              <span className="font-medium text-gray-900 dark:text-white capitalize">
-                {orderDetails?.status || 'Preparing'}
-              </span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">
-                {t.orderConfirmation?.estimatedTime || 'Estimated Time'}
-              </span>
-              <span className="font-medium text-gray-900 dark:text-white">
-                {orderDetails?.estimatedTime || '20-30 minutes'}
-              </span>
-            </div>
-
-            {orderDetails?.createdAt && (
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">
-                  {t.orderConfirmation?.orderTime || 'Order Time'}
-                </span>
-                <span className="font-medium text-gray-900 dark:text-white">
-                  {new Date(orderDetails.createdAt).toLocaleString()}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* What's Next Card */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-6 mb-6">
-          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-3">
-            {t.orderConfirmation?.whatsNext || "What's Next?"}
-          </h3>
-          <ul className="space-y-2 text-blue-800 dark:text-blue-200">
-            <li className="flex items-center">
-              <span className="text-blue-500 mr-2">🍳</span>
-              {t.orderConfirmation?.step1 || 'Your order is being prepared'}
-            </li>
-            <li className="flex items-center">
-              <span className="text-blue-500 mr-2">📱</span>
-              {t.orderConfirmation?.step2 || 'You can track your order status anytime'}
-            </li>
-            <li className="flex items-center">
-              <span className="text-blue-500 mr-2">🚗</span>
-              {t.orderConfirmation?.step3 || 'We will notify you when ready for pickup/delivery'}
-            </li>
-          </ul>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="space-y-3">
-          <button
-            onClick={() => router.push(`/order/track?orderId=${orderId}`)}
-            className="w-full bg-primary text-white py-3 px-6 rounded-lg font-medium hover:bg-primary/90 transition-colors"
-          >
-            {t.orderConfirmation?.trackOrder || 'Track Your Order'}
-          </button>
+    <div className="min-h-screen bg-white py-6">
+      <div className="max-w-6xl mx-auto px-4">
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          <button
-            onClick={() => router.push('/order')}
-            className="w-full bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white py-3 px-6 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-          >
-            {t.orderConfirmation?.placeAnother || 'Place Another Order'}
-          </button>
-        </div>
+          {/* LEFT COLUMN - Order Information (2/3 width) */}
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-300 p-8 h-fit">
+            
+            {/* Success Header */}
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+                <Check className="w-7 h-7 text-green-600" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 mb-3">
+                  {language === 'fr' ? 'Commande confirmée' : 'Order Confirmed'}
+                </h1>
+                <p className="text-gray-500 text-sm">
+                  Order No: <span className="text-primary font-semibold bg-orange-50 border border-orange-200 px-3 py-1 rounded-lg uppercase">{orderNumber || orderDetails?.orderNumber || orderId?.substring(0, 8)?.toUpperCase()}</span>
+                </p>
+              </div>
+            </div>
+            
+            {/* Order Details - Badge Style */}
+            <div className="space-y-4 mb-8">
+              <div className="flex items-center py-2">
+                <span className="text-gray-500 text-sm">{language === 'fr' ? 'Date' : 'Date'}</span>
+                <div className="flex-1 border-b border-dotted border-gray-300 mx-3"></div>
+                <span className="font-medium text-gray-900 bg-gray-50 border border-gray-200 px-3 py-1 rounded-lg">{currentDate}</span>
+              </div>
+              
+              <div className="flex items-center py-2">
+                <span className="text-gray-500 text-sm">{language === 'fr' ? 'Client' : 'Customer'}</span>
+                <div className="flex-1 border-b border-dotted border-gray-300 mx-3"></div>
+                <span className="font-medium text-gray-900 bg-gray-50 border border-gray-200 px-3 py-1 rounded-lg">{customerName}</span>
+              </div>
+              
+              <div className="flex items-center py-2">
+                <span className="text-gray-500 text-sm">{language === 'fr' ? 'Téléphone' : 'Phone'}</span>
+                <div className="flex-1 border-b border-dotted border-gray-300 mx-3"></div>
+                <span className="font-medium text-gray-900 bg-gray-50 border border-gray-200 px-3 py-1 rounded-lg">{customerPhone}</span>
+              </div>
+              
+              {customerEmail && (
+                <div className="flex items-center py-2">
+                  <span className="text-gray-500 text-sm">{language === 'fr' ? 'Courriel' : 'Email'}</span>
+                  <div className="flex-1 border-b border-dotted border-gray-300 mx-3"></div>
+                  <span className="font-medium text-gray-900 bg-gray-50 border border-gray-200 px-3 py-1 rounded-lg">{customerEmail}</span>
+                </div>
+              )}
+            </div>
 
-        {/* Contact Support */}
-        <div className="text-center mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            {t.orderConfirmation?.needHelp || 'Need help with your order?'}
-          </p>
-          <button
-            onClick={() => window.location.href = 'tel:+1-800-RESTAURANT'}
-            className="text-primary hover:text-primary/80 text-sm font-medium"
-          >
-            {t.orderConfirmation?.contactSupport || 'Contact Support'}
-          </button>
+            {/* Delivery Information */}
+            <div className="border-t border-gray-200 pt-6 mb-8">
+              <h2 className="font-semibold text-gray-900 mb-4">
+                {language === 'fr' ? 'Type de commande' : 'Order Type'}
+              </h2>
+              
+              <div className="space-y-3">
+                <div className="flex items-center py-2">
+                  <span className="text-gray-500 text-sm">{language === 'fr' ? 'Méthode' : 'Method'}</span>
+                  <div className="flex-1 border-b border-dotted border-gray-300 mx-3"></div>
+                  <span className="font-medium text-gray-900 bg-gray-50 border border-gray-200 px-3 py-1 rounded-lg">
+                    {(() => {
+                      if (language === 'fr') {
+                        switch (orderType) {
+                          case 'dine_in': return 'Sur place';
+                          case 'takeaway': return 'À emporter';
+                          case 'delivery': return 'Livraison';
+                          default: return 'À emporter';
+                        }
+                      } else {
+                        switch (orderType) {
+                          case 'dine_in': return 'Dine In';
+                          case 'takeaway': return 'Takeaway';
+                          case 'delivery': return 'Delivery';
+                          default: return 'Takeaway';
+                        }
+                      }
+                    })()}
+                    {source === 'qr' && tableNumber && (
+                      <span className="ml-2 text-xs text-gray-600">
+                        ({zone === 'Screen' ? 'Screen' : `Table ${tableNumber}`})
+                      </span>
+                    )}
+                  </span>
+                </div>
+                
+                <div className="flex items-center py-2">
+                  <span className="text-gray-500 text-sm">{language === 'fr' ? 'Heure' : 'Time'}</span>
+                  <div className="flex-1 border-b border-dotted border-gray-300 mx-3"></div>
+                  <span className="font-medium text-gray-900 bg-gray-50 border border-gray-200 px-3 py-1 rounded-lg">
+                    {new Date().toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      timeZone: 'America/Toronto'
+                    })}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Progress Timeline - Vertical on Mobile, Horizontal on Desktop */}
+            <div className="pt-6 bg-gray-50 rounded-2xl mt-6">
+              <div className="relative p-6">
+                
+                {/* Mobile Layout - Vertical */}
+                <div className="md:hidden">
+                  {progressSteps.map((step, index) => {
+                    const Icon = step.icon;
+                    const isLast = index === progressSteps.length - 1;
+                    return (
+                      <div key={step.key} className="relative">
+                        <div className="flex items-center gap-4">
+                          {/* Circle */}
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 bg-white transition-colors flex-shrink-0 ${
+                            step.completed 
+                              ? 'border-primary text-primary' 
+                              : 'border-gray-300 text-gray-400'
+                          }`}>
+                            {step.completed ? (
+                              <Check className="w-4 h-4" />
+                            ) : (
+                              <Icon className="w-4 h-4" />
+                            )}
+                          </div>
+                          
+                          {/* Content */}
+                          <div className="flex-1">
+                            <p className={`text-sm font-medium ${
+                              step.completed ? 'text-gray-900' : 'text-gray-400'
+                            }`}>
+                              {step.label}
+                            </p>
+                            {step.time && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA', {
+                                  day: 'numeric', 
+                                  month: 'short',
+                                  timeZone: 'America/Toronto'
+                                })} {step.time}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Vertical Line */}
+                        {!isLast && (
+                          <div className={`w-0.5 h-8 ml-5 mt-2 mb-2 transition-colors ${
+                            step.completed ? 'bg-primary' : 'bg-gray-200'
+                          }`}></div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop Layout - Horizontal */}
+                <div className="hidden md:block">
+                  <div className="flex justify-between items-start relative px-12">
+                    {/* Progress Line */}
+                    <div className="absolute top-6 left-[calc(12%+24px)] right-[calc(12%+24px)] h-0.5 bg-gray-200">
+                      <div 
+                        className="bg-primary h-full transition-all duration-500"
+                        style={{ 
+                          width: `${(progressSteps.filter(s => s.completed).length - 1) / (progressSteps.length - 1) * 100}%` 
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Progress Steps */}
+                    {progressSteps.map((step, index) => {
+                      const Icon = step.icon;
+                      return (
+                        <div key={step.key} className="flex flex-col items-center relative z-10">
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 bg-white transition-colors ${
+                            step.completed 
+                              ? 'border-primary text-primary' 
+                              : 'border-gray-300 text-gray-400'
+                          }`}>
+                            {step.completed ? (
+                              <Check className="w-5 h-5" />
+                            ) : (
+                              <Icon className="w-5 h-5" />
+                            )}
+                          </div>
+                          
+                          <div className="mt-3 text-center">
+                            <p className={`text-xs font-medium whitespace-nowrap ${
+                              step.completed ? 'text-gray-900' : 'text-gray-400'
+                            }`}>
+                              {step.label}
+                            </p>
+                            {step.time && (
+                              <p className="text-xs text-gray-500 mt-1 whitespace-nowrap">
+                                {new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA', {
+                                  day: 'numeric', 
+                                  month: 'short',
+                                  timeZone: 'America/Toronto'
+                                })} {step.time}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN - Order Items & Summary (1/3 width) */}
+          <div className="lg:col-span-1 bg-white rounded-2xl border border-gray-300 p-6 h-fit">
+            
+            
+            {/* Order Items */}
+            <div className="mb-6">
+              <div className="divide-y divide-dotted divide-gray-300">
+                {items.map((item, index) => (
+                  <div key={item.id} className={`flex items-start gap-4 ${index === 0 ? 'pb-4' : 'py-4'}`}>
+                    <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {item.image_url ? (
+                        <img 
+                          src={item.image_url} 
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Package className="w-8 h-8 text-gray-400" />
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 text-base mb-1 leading-tight">{item.name}</h3>
+                      {item.description && (
+                        <p className="text-sm text-gray-500 mb-2 line-clamp-2">{item.description}</p>
+                      )}
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">
+                            {item.quantity}
+                          </span>
+                          <span className="text-sm text-gray-400">×</span>
+                          <span className="text-sm text-gray-600">
+                            {language === 'fr' ? 
+                              `${item.price.toFixed(2).replace('.', ',')} $` : 
+                              `$${item.price.toFixed(2)}`
+                            }
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-gray-900">
+                            {language === 'fr' ? 
+                              `${(item.price * item.quantity).toFixed(2).replace('.', ',')} $` : 
+                              `$${(item.price * item.quantity).toFixed(2)}`
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Order Summary */}
+            <div className="border-t border-gray-200 pt-4">
+              <div className="space-y-2 text-sm mb-4">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">
+                    {language === 'fr' ? 'Articles' : 'Items'}
+                  </span>
+                  <span className="font-medium text-gray-900">
+                    {language === 'fr' ? 
+                      `${subtotal.toFixed(2).replace('.', ',')} $` : 
+                      `$${subtotal.toFixed(2)}`
+                    }
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-600">
+                    {language === 'fr' ? 'Taxe (TVH)' : 'Tax (HST)'}
+                  </span>
+                  <span className="font-medium text-gray-900">
+                    {language === 'fr' ? 
+                      `${tax.toFixed(2).replace('.', ',')} $` : 
+                      `$${tax.toFixed(2)}`
+                    }
+                  </span>
+                </div>
+              </div>
+              
+              <div className="border-t border-gray-200 pt-3 mt-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-gray-900">
+                    {language === 'fr' ? 'Total' : 'Total'}
+                  </span>
+                  <span className="font-bold text-2xl text-gray-900">
+                    {language === 'fr' ? 
+                      `${total.toFixed(2).replace('.', ',')} $` : 
+                      `$${total.toFixed(2)}`
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -23,8 +23,8 @@ export interface FrontendAddressInfo {
 
 export interface FrontendOrderData {
   customerInfo: FrontendCustomerInfo;
-  addressInfo: FrontendAddressInfo;
-  orderType: 'dine_in' | 'takeaway';
+  addressInfo?: FrontendAddressInfo;
+  orderType: 'dine_in' | 'takeaway' | 'delivery';
   paymentMethod: 'cash' | 'online';
   items: Array<{
     id: string;
@@ -49,7 +49,7 @@ export interface BackendOrderData {
     quantity: number;
     notes: string;
   }>;
-  orderType: 'dine_in' | 'takeaway';
+  orderType: 'dine_in' | 'takeaway' | 'delivery';
   source: 'qr' | 'web';
   paymentMethod: 'cash' | 'online';
   customerInfo: {
@@ -76,22 +76,22 @@ export function mapOrderDataForAPI(
 ): BackendOrderData {
   const { customerInfo, addressInfo, items, orderType, paymentMethod, subtotal, tax, total, tip, notes } = frontendData;
 
-  // Format full address for notes
-  const fullAddress = [
+  // Format full address for notes (only if addressInfo exists)
+  const fullAddress = addressInfo ? [
     addressInfo.streetAddress,
     addressInfo.unitNumber && `Unit ${addressInfo.unitNumber}`,
     addressInfo.city,
     addressInfo.province,
     addressInfo.postalCode
-  ].filter(Boolean).join(', ');
+  ].filter(Boolean).join(', ') : '';
 
   // Combine all notes
   const combinedNotes = [
     `Payment: ${paymentMethod === 'cash' ? 'Pay at Counter' : 'Online Payment'}`,
-    orderType === 'takeaway' && `Delivery Address: ${fullAddress}`,
-    addressInfo.addressType !== 'home' && `Address Type: ${addressInfo.addressType}`,
-    addressInfo.buzzerCode && `Buzzer: ${addressInfo.buzzerCode}`,
-    addressInfo.deliveryInstructions && `Instructions: ${addressInfo.deliveryInstructions}`,
+    orderType === 'delivery' && fullAddress && `Delivery Address: ${fullAddress}`,
+    addressInfo?.addressType !== 'home' && addressInfo?.addressType && `Address Type: ${addressInfo.addressType}`,
+    addressInfo?.buzzerCode && `Buzzer: ${addressInfo.buzzerCode}`,
+    addressInfo?.deliveryInstructions && `Instructions: ${addressInfo.deliveryInstructions}`,
     tip && tip > 0 && `Tip: $${tip.toFixed(2)}`,
     notes && notes.trim()
   ].filter(Boolean).join(' | ');
@@ -137,14 +137,21 @@ export function validateOrderData(data: FrontendOrderData): { isValid: boolean; 
     errors.push('Phone number is required');
   }
 
-  // Phone format validation (basic)
-  const phoneRegex = /^[\+]?[1-9]?[\d\s\-\(\)]{10,}$/;
-  if (data.customerInfo.phone && !phoneRegex.test(data.customerInfo.phone)) {
-    errors.push('Please enter a valid phone number');
+  // Canadian phone validation - minimum 10 digits (like Turkish format)
+  if (data.customerInfo.phone) {
+    const phoneDigits = data.customerInfo.phone.replace(/\D/g, '');
+    
+    if (phoneDigits.length < 10) {
+      errors.push('Phone number must have at least 10 digits');
+    } else if (phoneDigits.length === 11 && !phoneDigits.startsWith('1')) {
+      errors.push('11-digit phone numbers must start with 1');
+    } else if (phoneDigits.length > 11) {
+      errors.push('Phone number has too many digits');
+    }
   }
 
-  // Address validation for takeaway orders
-  if (data.orderType === 'takeaway') {
+  // Address validation for delivery orders only
+  if (data.orderType === 'delivery' && data.addressInfo) {
     if (!data.addressInfo.streetAddress?.trim()) {
       errors.push('Street address is required for delivery');
     }
