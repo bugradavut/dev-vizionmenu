@@ -15,9 +15,24 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('system')
   const [actualTheme, setActualTheme] = useState<'dark' | 'light'>('light')
+  
+  // Check if this is a customer page
+  const isCustomerPage = typeof window !== 'undefined' && (
+    window.location.pathname.startsWith('/order') ||
+    window.location.pathname.startsWith('/review') ||
+    window.location.pathname.startsWith('/confirmation') ||
+    window.location.pathname.startsWith('/track')
+  )
 
   useEffect(() => {
-    // Get saved theme from localStorage and sync with DOM
+    if (isCustomerPage) {
+      // Customer pages: always light theme, don't read from localStorage
+      setTheme('light')
+      setActualTheme('light')
+      return
+    }
+    
+    // Dashboard pages: Get saved theme from localStorage and sync with DOM
     const savedTheme = localStorage.getItem('vizion-menu-theme') as Theme
     const root = window.document.documentElement
     
@@ -39,9 +54,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setTheme('light')
       }
     }
-  }, [])
+  }, [isCustomerPage])
 
   useEffect(() => {
+    if (isCustomerPage) {
+      // Customer pages: don't apply theme changes or save to localStorage
+      return
+    }
+    
     const root = window.document.documentElement
     
     let resolvedTheme: 'dark' | 'light'
@@ -65,9 +85,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     
     setActualTheme(resolvedTheme)
 
-    // Save to localStorage
+    // Save to localStorage (only for dashboard pages)
     localStorage.setItem('vizion-menu-theme', theme)
-  }, [theme])
+  }, [theme, isCustomerPage])
 
   const value = {
     theme,

@@ -22,19 +22,32 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const stored = localStorage.getItem('vizion-menu-theme') || 'system';
-                const isValidTheme = ['dark', 'light', 'system'].includes(stored);
-                const theme = isValidTheme ? stored : 'system';
+                // Check if this is a customer-facing page
+                const isCustomerPage = window.location.pathname.startsWith('/order') || 
+                                      window.location.pathname.startsWith('/review') ||
+                                      window.location.pathname.startsWith('/confirmation') ||
+                                      window.location.pathname.startsWith('/track');
                 
-                let resolvedTheme;
-                if (theme === 'system') {
-                  resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                if (isCustomerPage) {
+                  // Force light theme for customer pages
+                  document.documentElement.classList.add('light');
+                  document.documentElement.style.setProperty('color-scheme', 'light');
                 } else {
-                  resolvedTheme = theme;
+                  // Dashboard pages: use stored theme preference
+                  const stored = localStorage.getItem('vizion-menu-theme') || 'system';
+                  const isValidTheme = ['dark', 'light', 'system'].includes(stored);
+                  const theme = isValidTheme ? stored : 'system';
+                  
+                  let resolvedTheme;
+                  if (theme === 'system') {
+                    resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  } else {
+                    resolvedTheme = theme;
+                  }
+                  
+                  document.documentElement.classList.add(resolvedTheme);
+                  document.documentElement.style.setProperty('color-scheme', resolvedTheme);
                 }
-                
-                document.documentElement.classList.add(resolvedTheme);
-                document.documentElement.style.setProperty('color-scheme', resolvedTheme);
               } catch (e) {
                 // Fallback to light theme if localStorage is not available
                 document.documentElement.classList.add('light');

@@ -371,9 +371,13 @@ export function CartSidebar() {
                         }
                       </div>
                     </div>
-                    {selectedOrderType === 'dine_in' && (
-                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                    )}
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      selectedOrderType === 'dine_in' ? 'border-orange-500' : 'border-gray-300'
+                    }`}>
+                      {selectedOrderType === 'dine_in' && (
+                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                      )}
+                    </div>
                   </div>
                 </button>
                 
@@ -400,9 +404,13 @@ export function CartSidebar() {
                         }
                       </div>
                     </div>
-                    {selectedOrderType === 'takeaway' && (
-                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                    )}
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      selectedOrderType === 'takeaway' ? 'border-orange-500' : 'border-gray-300'
+                    }`}>
+                      {selectedOrderType === 'takeaway' && (
+                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                      )}
+                    </div>
                   </div>
                 </button>
               </>
@@ -432,9 +440,13 @@ export function CartSidebar() {
                         }
                       </div>
                     </div>
-                    {selectedOrderType === 'takeaway' && (
-                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                    )}
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      selectedOrderType === 'takeaway' ? 'border-orange-500' : 'border-gray-300'
+                    }`}>
+                      {selectedOrderType === 'takeaway' && (
+                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                      )}
+                    </div>
                   </div>
                 </button>
                 
@@ -461,9 +473,13 @@ export function CartSidebar() {
                         }
                       </div>
                     </div>
-                    {selectedOrderType === 'delivery' && (
-                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                    )}
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      selectedOrderType === 'delivery' ? 'border-orange-500' : 'border-gray-300'
+                    }`}>
+                      {selectedOrderType === 'delivery' && (
+                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                      )}
+                    </div>
                   </div>
                 </button>
               </>
