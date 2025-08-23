@@ -20,6 +20,7 @@ interface OrderContext {
   tableNumber?: number
   zone?: string
   isQROrder: boolean
+  selectedOrderType?: 'dine_in' | 'takeaway' | 'delivery' | null
 }
 
 export function OrderReviewContainer({ orderContext }: { orderContext: OrderContext }) {

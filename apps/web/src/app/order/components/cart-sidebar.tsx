@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Plus, Minus, Trash2, AlertTriangle, ShoppingBag, Loader2 } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Plus, Minus, Trash2, AlertTriangle, ShoppingBag, Loader2, Utensils, Bike, MapPin } from 'lucide-react'
 import { useCart } from '../contexts/cart-context'
 import { useOrderContext } from '../contexts/order-context'
 import { useLanguage } from '@/contexts/language-context'
@@ -50,6 +51,10 @@ export function CartSidebar() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isNavigating, setIsNavigating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showOrderTypeModal, setShowOrderTypeModal] = useState(false)
+  const [selectedOrderType, setSelectedOrderType] = useState<'dine_in' | 'takeaway' | 'delivery'>(
+    isQROrder ? 'dine_in' : 'takeaway'
+  )
 
   const handleQuantityChange = (itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -59,24 +64,31 @@ export function CartSidebar() {
     }
   }
 
-  const handleCheckoutClick = async () => {
+  const handleCheckoutClick = () => {
     // Simple validation: just check if cart has items
     if (items.length === 0) {
       return
     }
     
+    // Open order type selection modal
+    setShowOrderTypeModal(true)
+  }
+
+  const handleOrderTypeConfirm = async () => {
     // Set loading state
     setIsNavigating(true)
+    setShowOrderTypeModal(false)
     
     // Small delay for better UX
     await new Promise(resolve => setTimeout(resolve, 300))
     
-    // Preserve URL parameters when navigating to review page
+    // Preserve URL parameters and add selected order type
     const searchParams = new URLSearchParams()
     if (source) searchParams.set('source', source)
     if (branchId) searchParams.set('branch', branchId)
     if (tableNumber) searchParams.set('table', tableNumber.toString())
     if (zone) searchParams.set('zone', zone)
+    searchParams.set('orderType', selectedOrderType)
     
     const reviewUrl = `/order/review?${searchParams.toString()}`
     router.push(reviewUrl)
@@ -314,6 +326,179 @@ export function CartSidebar() {
         </Button>
       </div>
     </div>
+    
+    {/* Order Type Selection Modal */}
+    <Dialog open={showOrderTypeModal} onOpenChange={setShowOrderTypeModal}>
+      <DialogContent className="max-w-md mx-auto">
+        <DialogHeader>
+          <DialogTitle className="text-center">
+            {language === 'fr' ? 'Type de commande' : 'Order Type'}
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          <p className="text-sm text-gray-600 text-center mb-6">
+            {language === 'fr' 
+              ? 'Comment souhaitez-vous recevoir votre commande?' 
+              : 'How would you like to receive your order?'
+            }
+          </p>
+          
+          <div className="space-y-3">
+            {/* QR Users: Dine In + Takeaway */}
+            {isQROrder ? (
+              <>
+                <button
+                  onClick={() => setSelectedOrderType('dine_in')}
+                  className={`w-full p-4 rounded-lg border-2 transition-all ${
+                    selectedOrderType === 'dine_in'
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Utensils className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-medium text-gray-900">
+                        {language === 'fr' ? 'Sur place' : 'Dine In'}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {language === 'fr' 
+                          ? 'Servir directement à votre table' 
+                          : 'Served directly to your table'
+                        }
+                      </div>
+                    </div>
+                    {selectedOrderType === 'dine_in' && (
+                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                    )}
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => setSelectedOrderType('takeaway')}
+                  className={`w-full p-4 rounded-lg border-2 transition-all ${
+                    selectedOrderType === 'takeaway'
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <ShoppingBag className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-medium text-gray-900">
+                        {language === 'fr' ? 'À emporter' : 'Takeaway'}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {language === 'fr' 
+                          ? 'Récupérer au comptoir' 
+                          : 'Pick up at counter'
+                        }
+                      </div>
+                    </div>
+                    {selectedOrderType === 'takeaway' && (
+                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                    )}
+                  </div>
+                </button>
+              </>
+            ) : (
+              /* Web Users: Takeaway + Delivery */
+              <>
+                <button
+                  onClick={() => setSelectedOrderType('takeaway')}
+                  className={`w-full p-4 rounded-lg border-2 transition-all ${
+                    selectedOrderType === 'takeaway'
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <ShoppingBag className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-medium text-gray-900">
+                        {language === 'fr' ? 'À emporter' : 'Takeaway'}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {language === 'fr' 
+                          ? 'Récupérer au restaurant' 
+                          : 'Pick up at restaurant'
+                        }
+                      </div>
+                    </div>
+                    {selectedOrderType === 'takeaway' && (
+                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                    )}
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => setSelectedOrderType('delivery')}
+                  className={`w-full p-4 rounded-lg border-2 transition-all ${
+                    selectedOrderType === 'delivery'
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                      <Bike className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-medium text-gray-900">
+                        {language === 'fr' ? 'Livraison' : 'Delivery'}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {language === 'fr' 
+                          ? 'Livrer à votre adresse' 
+                          : 'Deliver to your address'
+                        }
+                      </div>
+                    </div>
+                    {selectedOrderType === 'delivery' && (
+                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                    )}
+                  </div>
+                </button>
+              </>
+            )}
+          </div>
+
+          <div className="pt-4 space-y-2">
+            <Button
+              onClick={handleOrderTypeConfirm}
+              disabled={isNavigating}
+              className="w-full h-12"
+              size="lg"
+            >
+              {isNavigating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {language === 'fr' ? 'Chargement...' : 'Loading...'}
+                </>
+              ) : (
+                language === 'fr' ? 'Continuer' : 'Continue'
+              )}
+            </Button>
+            
+            <Button
+              variant="outline"
+              onClick={() => setShowOrderTypeModal(false)}
+              disabled={isNavigating}
+              className="w-full"
+            >
+              {language === 'fr' ? 'Annuler' : 'Cancel'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
     </div>
   )
 }

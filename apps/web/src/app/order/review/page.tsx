@@ -16,7 +16,8 @@ export default function OrderReviewPage() {
     branchId: searchParams.get('branch') || '550e8400-e29b-41d4-a716-446655440002',
     tableNumber: searchParams.get('table') ? parseInt(searchParams.get('table')!) : undefined,
     zone: searchParams.get('zone'),
-    isQROrder: searchParams.get('source') === 'qr'
+    isQROrder: searchParams.get('source') === 'qr',
+    selectedOrderType: searchParams.get('orderType') as 'dine_in' | 'takeaway' | 'delivery' | null
   }
 
   // Redirect if cart is empty

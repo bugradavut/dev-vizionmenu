@@ -59,6 +59,7 @@ interface CustomerInformationSectionProps {
     tableNumber?: number
     zone?: string
     isQROrder: boolean
+    selectedOrderType?: 'dine_in' | 'takeaway' | 'delivery' | null
   }
 }
 
@@ -85,7 +86,7 @@ export function CustomerInformationSection({ language = 'en', orderContext }: Cu
     name: '',
     phone: '',
     email: '',
-    orderType: orderContext?.isQROrder ? 'dine_in' : 'takeaway'
+    orderType: orderContext?.selectedOrderType || (orderContext?.isQROrder ? 'dine_in' : 'takeaway')
   })
 
   const [address, setAddress] = useState<DeliveryAddress>({
