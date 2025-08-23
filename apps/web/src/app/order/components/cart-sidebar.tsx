@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Plus, Minus, Trash2, AlertTriangle, CheckCircle, ShoppingBag, Loader2 } from 'lucide-react'
+import { Plus, Minus, Trash2, AlertTriangle, ShoppingBag, Loader2 } from 'lucide-react'
 import { useCart } from '../contexts/cart-context'
 import { useOrderContext } from '../contexts/order-context'
 import { useLanguage } from '@/contexts/language-context'
@@ -155,30 +155,6 @@ export function CartSidebar() {
     }
   }
 
-
-  if (orderSuccess) {
-    return (
-      <div className="p-6 flex items-center justify-center h-full">
-        <Card className="w-full">
-          <CardContent className="p-6 text-center">
-            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">{t.orderPage.orderSuccess.title}</h3>
-            <p className="text-muted-foreground mb-4">
-              {t.orderPage.orderSuccess.message}
-            </p>
-            <Button 
-              onClick={() => setOrderSuccess(false)} 
-              className="w-full"
-            >
-              {t.orderPage.orderSuccess.placeAnother}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
 
   return (
     <div className="flex flex-col h-full">
