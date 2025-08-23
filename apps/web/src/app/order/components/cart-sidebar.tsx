@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, Minus, Trash2, AlertTriangle, MapPin, Package, CreditCard, Banknote, CheckCircle, ShoppingBag, Loader2 } from 'lucide-react'
+import { Plus, Minus, Trash2, AlertTriangle, CheckCircle, ShoppingBag, Loader2 } from 'lucide-react'
 import { useCart } from '../contexts/cart-context'
 import { useOrderContext } from '../contexts/order-context'
 import { useLanguage } from '@/contexts/language-context'
@@ -48,16 +47,9 @@ export function CartSidebar() {
     address: ''
   })
   
-  const [orderType, setOrderType] = useState<'dine_in' | 'takeout'>(
-    isQROrder ? 'dine_in' : 'takeout'
-  )
-  
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isNavigating, setIsNavigating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [orderSuccess, setOrderSuccess] = useState(false)
-  const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'online'>('cash')
 
   const handleQuantityChange = (itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -346,93 +338,6 @@ export function CartSidebar() {
         </Button>
       </div>
     </div>
-
-      {/* Payment Method Modal */}
-      <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md rounded-lg">
-          <DialogHeader>
-            <DialogTitle>{t.orderPage.payment.selectPaymentMethod}</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="text-sm text-gray-600 mb-4">
-              {t.orderPage.payment.howToPay}
-            </div>
-            
-            <div className="grid grid-cols-1 gap-3">
-              {/* Cash Payment */}
-              <div
-                onClick={() => setPaymentMethod('cash')}
-                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                  paymentMethod === 'cash'
-                    ? 'border-orange-500 bg-orange-50'
-                    : 'border-gray-200 bg-white hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <Banknote className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">{t.orderPage.payment.payAtCounter}</div>
-                    <div className="text-sm text-gray-500">
-                      {orderType === 'dine_in' ? t.orderPage.payment.payWhenLeaving : t.orderPage.payment.payWhenPickup}
-                    </div>
-                  </div>
-                  {paymentMethod === 'cash' && (
-                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                  )}
-                </div>
-              </div>
-
-              {/* Online Payment */}
-              <div
-                onClick={() => setPaymentMethod('online')}
-                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                  paymentMethod === 'online'
-                    ? 'border-orange-500 bg-orange-50'
-                    : 'border-gray-200 bg-white hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <CreditCard className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">{t.orderPage.payment.payOnline}</div>
-                    <div className="text-sm text-gray-500">
-                      {t.orderPage.payment.creditCardInfo}
-                    </div>
-                  </div>
-                  {paymentMethod === 'online' && (
-                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 space-y-2">
-              <Button
-                onClick={submitOrder}
-                disabled={isSubmitting}
-                className="w-full h-12"
-                size="lg"
-              >
-                {isSubmitting ? t.orderPage.checkout.placingOrder : (language === 'fr' ? `${t.orderPage.checkout.confirmOrder} - ${total.toFixed(2)} $` : `${t.orderPage.checkout.confirmOrder} - $${total.toFixed(2)}`)}
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={() => setShowPaymentModal(false)}
-                disabled={isSubmitting}
-                className="w-full"
-              >
-                {t.orderPage.checkout.backToCart}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
