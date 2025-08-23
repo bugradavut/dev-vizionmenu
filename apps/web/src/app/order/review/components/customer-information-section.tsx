@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Home, Building, Building2, Hotel, MapPin, Package, Utensils } from 'lucide-react'
+import { Home, Building, Building2, MapPin, Package, Utensils, Truck, Car, ShoppingBag, Bike } from 'lucide-react'
 import { AddressAutocomplete } from '@/components/address-autocomplete'
 
 // Canadian postal code utilities
@@ -29,7 +29,7 @@ function isValidCanadianPostalCode(postalCode: string): boolean {
   return canadianPostalRegex.test(postalCode)
 }
 
-type OrderType = 'dine_in' | 'takeaway'
+type OrderType = 'dine_in' | 'takeaway' | 'delivery'
 type AddressType = 'home' | 'apartment' | 'office' | 'hotel' | 'other'
 
 interface CustomerInfo {
@@ -53,14 +53,39 @@ interface DeliveryAddress {
 
 interface CustomerInformationSectionProps {
   language?: string
+  orderContext?: {
+    source: 'qr' | 'web'
+    branchId: string
+    tableNumber?: number
+    zone?: string
+    isQROrder: boolean
+  }
 }
 
-export function CustomerInformationSection({ language = 'en' }: CustomerInformationSectionProps) {
+export function CustomerInformationSection({ language = 'en', orderContext }: CustomerInformationSectionProps) {
+  // Get translations based on language
+  const getOrderTypeText = (type: string) => {
+    if (language === 'fr') {
+      switch (type) {
+        case 'dineIn': return 'Sur place'
+        case 'takeaway': return 'À emporter'
+        case 'delivery': return 'Livraison'
+        default: return type
+      }
+    } else {
+      switch (type) {
+        case 'dineIn': return 'Dine In'
+        case 'takeaway': return 'Takeaway'
+        case 'delivery': return 'Delivery'
+        default: return type
+      }
+    }
+  }
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: '',
     phone: '',
     email: '',
-    orderType: 'takeaway'
+    orderType: orderContext?.isQROrder ? 'dine_in' : 'takeaway'
   })
 
   const [address, setAddress] = useState<DeliveryAddress>({
@@ -81,7 +106,6 @@ export function CustomerInformationSection({ language = 'en' }: CustomerInformat
     { value: 'home', label: 'Home/House', icon: Home },
     { value: 'apartment', label: 'Apartment/Condo', icon: Building },
     { value: 'office', label: 'Office/Commercial', icon: Building2 },
-    { value: 'hotel', label: 'Hotel/Temporary', icon: Hotel },
     { value: 'other', label: 'Other', icon: MapPin },
   ]
 
@@ -115,7 +139,7 @@ export function CustomerInformationSection({ language = 'en' }: CustomerInformat
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
       <h2 className="text-lg font-semibold text-gray-900 mb-5">
-        Customer Information
+        {language === 'fr' ? 'Informations du client' : 'Customer Information'}
       </h2>
       
       {/* Customer Details - Compact Layout */}
@@ -124,7 +148,7 @@ export function CustomerInformationSection({ language = 'en' }: CustomerInformat
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="customer-name" className="text-sm font-medium text-gray-700">
-              Full Name *
+              {language === 'fr' ? 'Nom complet *' : 'Full Name *'}
             </Label>
             <Input
               id="customer-name"
@@ -141,7 +165,7 @@ export function CustomerInformationSection({ language = 'en' }: CustomerInformat
 
           <div className="space-y-2">
             <Label htmlFor="customer-phone" className="text-sm font-medium text-gray-700">
-              Phone Number *
+              {language === 'fr' ? 'Numéro de téléphone *' : 'Phone Number *'}
             </Label>
             <Input
               id="customer-phone"
@@ -160,7 +184,7 @@ export function CustomerInformationSection({ language = 'en' }: CustomerInformat
         {/* Email - Full width */}
         <div className="space-y-2">
           <Label htmlFor="customer-email" className="text-sm font-medium text-gray-700">
-            Email Address (Optional)
+            {language === 'fr' ? 'Adresse courriel (Optionnel)' : 'Email Address (Optional)'}
           </Label>
           <Input
             id="customer-email"
@@ -174,55 +198,117 @@ export function CustomerInformationSection({ language = 'en' }: CustomerInformat
             <p className="text-sm text-red-600">{errors.email}</p>
           )}
           <p className="text-xs text-gray-500">
-            We&apos;ll use this to send you order updates
+            {language === 'fr' ? 'Nous l\'utiliserons pour vous envoyer des mises à jour de commande' : 'We\'ll use this to send you order updates'}
           </p>
         </div>
       </div>
 
-      {/* Order Type Selection - Clean buttons */}
+      {/* Order Type Selection - Dynamic based on source */}
       <div className="mb-6">
-        <Label className="text-sm font-medium text-gray-700 mb-3 block">Order Type</Label>
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            variant={customerInfo.orderType === 'takeaway' ? 'default' : 'outline'}
-            onClick={() => handleCustomerChange('orderType', 'takeaway')}
-            className={`flex items-center justify-center gap-2 h-11 rounded-lg transition-all ${
-              customerInfo.orderType === 'takeaway' 
-                ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922] hover:bg-orange-100' 
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            <Package className="h-4 w-4" />
-            <span className="font-medium">Takeaway</span>
-          </Button>
-          
-          <Button
-            variant={customerInfo.orderType === 'dine_in' ? 'default' : 'outline'}
-            onClick={() => handleCustomerChange('orderType', 'dine_in')}
-            className={`flex items-center justify-center gap-2 h-11 rounded-lg transition-all ${
-              customerInfo.orderType === 'dine_in' 
-                ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922] hover:bg-orange-100' 
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            <Utensils className="h-4 w-4" />
-            <span className="font-medium">Dine in</span>
-          </Button>
-        </div>
+        {(orderContext?.isQROrder && orderContext?.source === 'qr') ? (
+          // QR Users: Show table info + Dine In/Takeaway choice
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <MapPin className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-sm font-medium text-blue-900">
+                      {language === 'fr' ? 'Commande code QR' : 'QR Code Order'} (
+                      {orderContext.zone === 'Screen' 
+                        ? 'Screen'
+                        : `${language === 'fr' ? 'Table' : 'Table'} ${orderContext.tableNumber}`
+                      })
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                {language === 'fr' ? 'Type de commande' : 'Order Type'}
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant={customerInfo.orderType === 'dine_in' ? 'default' : 'outline'}
+                  onClick={() => handleCustomerChange('orderType', 'dine_in')}
+                  className={`flex items-center justify-center gap-2 h-11 rounded-lg transition-all ${
+                    customerInfo.orderType === 'dine_in' 
+                      ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922] hover:bg-orange-100' 
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <Utensils className="h-4 w-4" />
+                  <span className="font-medium">{getOrderTypeText('dineIn')}</span>
+                </Button>
+                
+                <Button
+                  variant={customerInfo.orderType === 'takeaway' ? 'default' : 'outline'}
+                  onClick={() => handleCustomerChange('orderType', 'takeaway')}
+                  className={`flex items-center justify-center gap-2 h-11 rounded-lg transition-all ${
+                    customerInfo.orderType === 'takeaway' 
+                      ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922] hover:bg-orange-100' 
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  <span className="font-medium">{getOrderTypeText('takeaway')}</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Web Users: Takeaway + Delivery choice
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-3 block">
+              {language === 'fr' ? 'Type de commande' : 'Order Type'}
+            </Label>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant={customerInfo.orderType === 'takeaway' ? 'default' : 'outline'}
+                onClick={() => handleCustomerChange('orderType', 'takeaway')}
+                className={`flex items-center justify-center gap-2 h-11 rounded-lg transition-all ${
+                  customerInfo.orderType === 'takeaway' 
+                    ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922] hover:bg-orange-100' 
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <ShoppingBag className="h-4 w-4" />
+                <span className="font-medium">{getOrderTypeText('takeaway')}</span>
+              </Button>
+              
+              <Button
+                variant={customerInfo.orderType === 'delivery' ? 'default' : 'outline'}
+                onClick={() => handleCustomerChange('orderType', 'delivery')}
+                className={`flex items-center justify-center gap-2 h-11 rounded-lg transition-all ${
+                  customerInfo.orderType === 'delivery' 
+                    ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922] hover:bg-orange-100' 
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <Bike className="h-4 w-4" />
+                <span className="font-medium">{getOrderTypeText('delivery')}</span>
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Delivery Address (only for takeaway) - More compact */}
-      {customerInfo.orderType === 'takeaway' && (
+      {/* Delivery Address (only for web delivery users) */}
+      {!orderContext?.isQROrder && customerInfo.orderType === 'delivery' && (
         <>
           <div className="border-t border-gray-200 pt-6">
             <h3 className="text-md font-semibold text-gray-900 mb-4">
-              Delivery Address
+              {language === 'fr' ? 'Adresse de livraison' : 'Delivery Address'}
             </h3>
             
             {/* Address Type Selection - Smaller buttons */}
             <div className="mb-4">
-              <Label className="text-sm font-medium text-gray-700 mb-2 block">Address Type</Label>
-              <div className="grid grid-cols-5 gap-2">
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                {language === 'fr' ? 'Type d\'adresse' : 'Address Type'}
+              </Label>
+              <div className="grid grid-cols-4 gap-3">
                 {addressTypes.map((type) => {
                   const IconComponent = type.icon
                   return (
@@ -265,7 +351,7 @@ export function CustomerInformationSection({ language = 'en' }: CustomerInformat
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor="unit-number" className="text-sm font-medium text-gray-700">
-                        Suite Number *
+                        Suite Number (Optional)
                       </Label>
                       <Input
                         id="unit-number"

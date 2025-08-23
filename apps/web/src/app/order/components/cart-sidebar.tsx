@@ -34,7 +34,7 @@ export function CartSidebar() {
     clearCart 
   } = useCart()
   
-  const { isQROrder, tableNumber, zone } = useOrderContext()
+  const { isQROrder, tableNumber, zone, source, branchId } = useOrderContext()
   const { language } = useLanguage()
   const t = translations[language] || translations.en
   
@@ -79,8 +79,15 @@ export function CartSidebar() {
     // Small delay for better UX
     await new Promise(resolve => setTimeout(resolve, 300))
     
-    // Navigate to review page
-    router.push('/order/review')
+    // Preserve URL parameters when navigating to review page
+    const searchParams = new URLSearchParams()
+    if (source) searchParams.set('source', source)
+    if (branchId) searchParams.set('branch', branchId)
+    if (tableNumber) searchParams.set('table', tableNumber.toString())
+    if (zone) searchParams.set('zone', zone)
+    
+    const reviewUrl = `/order/review?${searchParams.toString()}`
+    router.push(reviewUrl)
     
     // Reset loading state after navigation
     setTimeout(() => setIsNavigating(false), 500)
@@ -185,33 +192,7 @@ export function CartSidebar() {
     <div className="flex flex-col h-full">
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
-        {/* Order Type Selection */}
-        <div className={`${responsiveClasses.padding.section} border-b border-border`}>
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant={orderType === 'dine_in' ? 'default' : 'outline'}
-            onClick={() => setOrderType('dine_in')}
-            className="flex items-center gap-2 h-12 text-sm font-medium justify-start px-3"
-            // Both QR and Web users can select dine in
-          >
-            <MapPin className="w-4 h-4 flex-shrink-0" />
-            <span className="flex-1 text-left">{t.orderPage.orderType.dineIn}</span>
-            {orderType === 'dine_in' && <div className="w-2 h-2 bg-white rounded-full flex-shrink-0" />}
-          </Button>
-          
-          <Button
-            variant={orderType === 'takeout' ? 'default' : 'outline'}
-            onClick={() => setOrderType('takeout')}
-            className="flex items-center gap-2 h-12 text-sm font-medium justify-start px-3"
-          >
-            <Package className="w-4 h-4 flex-shrink-0" />
-            <span className="flex-1 text-left">{t.orderPage.orderType.takeout}</span>
-            {orderType === 'takeout' && <div className="w-2 h-2 bg-white rounded-full flex-shrink-0" />}
-          </Button>
-        </div>
-      </div>
-
-      {/* Cart Items or Empty State */}
+        {/* Cart Items or Empty State */}
       <div className="flex-1 overflow-y-auto pb-[100px]">
         {items.length === 0 ? (
           <div className="h-full flex items-center justify-center pt-16">

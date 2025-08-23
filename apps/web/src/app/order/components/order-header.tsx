@@ -70,7 +70,9 @@ export function OrderHeader({ branchName, onSearch }: OrderHeaderProps) {
           <div className="flex items-center gap-2 px-2 md:px-3 py-1 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-md flex-shrink-0">
             <MapPin className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span className="text-xs md:text-sm font-medium text-blue-900 dark:text-blue-100 whitespace-nowrap">
-              {zone 
+              {zone === 'Screen' 
+                ? 'Screen'
+                : zone 
                 ? t.orderPage.tableInfoWithZone.replace('{number}', tableNumber?.toString() || '').replace('{zone}', zone)
                 : t.orderPage.tableInfo.replace('{number}', tableNumber?.toString() || '')
               }

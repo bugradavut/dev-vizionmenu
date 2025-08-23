@@ -14,7 +14,15 @@ import { OrderTotalSidebar } from './order-total-sidebar'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-export function OrderReviewContainer() {
+interface OrderContext {
+  source: 'qr' | 'web'
+  branchId: string
+  tableNumber?: number
+  zone?: string
+  isQROrder: boolean
+}
+
+export function OrderReviewContainer({ orderContext }: { orderContext: OrderContext }) {
   const router = useRouter()
   const { items } = useCart()
   const { language } = useLanguage()
@@ -44,7 +52,7 @@ export function OrderReviewContainer() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Side - Customer Information & Preferences */}
           <div className="space-y-6">
-            <CustomerInformationSection language={language} />
+            <CustomerInformationSection language={language} orderContext={orderContext} />
             <PaymentMethodSection />
             <TipSection />
           </div>
