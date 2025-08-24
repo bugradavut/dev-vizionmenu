@@ -35,15 +35,15 @@ interface OrderTotalSidebarProps {
 
 export function OrderTotalSidebar({ language, formData, orderContext, onTriggerValidation }: OrderTotalSidebarProps) {
   const router = useRouter()
-  const { items, subtotal, tax, total, clearCart } = useCart()
+  const { items, subtotal, tax, total } = useCart()
   const t = translations[language as keyof typeof translations] || translations.en
   const [isSubmitting, setIsSubmitting] = useState(false)
   
   const handleConfirmOrder = async () => {
     if (isSubmitting) return
     
-    // Trigger validation and wait for result
-    const validationResult = onTriggerValidation()
+    // Trigger validation
+    onTriggerValidation()
     
     setIsSubmitting(true)
     
@@ -115,7 +115,7 @@ export function OrderTotalSidebar({ language, formData, orderContext, onTriggerV
         // Handle error
         alert(result.error.message) // Replace with proper error handling later
       }
-    } catch (error) {
+    } catch {
       alert('Failed to submit order. Please try again.') // Replace with proper error handling later
     } finally {
       setIsSubmitting(false)

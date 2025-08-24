@@ -13,6 +13,20 @@ export interface OrderSubmissionResponse {
   estimatedTime: string;
   message: string;
   createdAt: string;
+  items?: Array<{
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    total: number;
+    image_url?: string;
+    description?: string;
+  }>;
+  pricing?: {
+    subtotal: number;
+    taxAmount: number;
+    total: number;
+  };
 }
 
 export interface OrderSubmissionError {

@@ -116,6 +116,29 @@ const getOrderStatus = async (req, res) => {
     // Get order details without authentication (public endpoint)
     const order = await ordersService.getOrderDetail(orderId, null);
 
+    // Check if order is expired (completed orders older than 10 minutes)
+    const isOrderExpired = (order) => {
+      const currentStatus = order.status || order.order_status;
+      if (currentStatus !== 'completed') return false;
+      
+      const completedAt = order.completed_at || order.updated_at;
+      if (!completedAt) return false;
+      
+      const completionTime = new Date(completedAt);
+      const expirationTime = new Date(completionTime.getTime() + 10 * 60 * 1000); // +10 minutes
+      return new Date() > expirationTime;
+    };
+
+    // Return 404 for expired completed orders
+    if (isOrderExpired(order)) {
+      return res.status(404).json({
+        error: { 
+          code: 'ORDER_EXPIRED', 
+          message: 'Order confirmation link has expired' 
+        }
+      });
+    }
+
     // Return public information including order items for confirmation page
     res.json({ 
       data: {

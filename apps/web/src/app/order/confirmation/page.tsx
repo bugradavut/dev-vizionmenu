@@ -13,20 +13,60 @@ interface OrderDetails {
   status: string;
   estimatedTime?: string;
   createdAt?: string;
+  pricing?: {
+    subtotal: number;
+    taxAmount: number;
+    total: number;
+  };
+  items?: OrderItem[];
 }
 
-// Simplified 3-step progress with dynamic time display
-const getProgressSteps = (currentStatus: string, language: string) => {
+interface OrderItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  total: number;
+  image_url?: string;
+  description?: string;
+}
+
+interface OrderSession {
+  orderId: string;
+  orderNumber?: string;
+  customerInfo: {
+    name: string;
+    phone: string;
+    email?: string;
+  };
+  items: OrderItem[];
+  pricing: {
+    subtotal: number;
+    taxAmount: number;
+    total: number;
+  };
+  orderType?: string;
+  source?: string;
+  tableNumber?: number;
+  zone?: string;
+  timestamp?: number;
+}
+
+// Simplified 3-step progress with correct timestamps
+const getProgressSteps = (currentStatus: string, language: string, orderCreatedAt?: string) => {
   const isEnglish = language === 'en';
   
-  // Get current time in Canada timezone
-  const getCurrentCanadaTime = () => {
-    return new Date().toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', {
+  // Format timestamp to Canada timezone
+  const formatCanadaTime = (timestamp: string) => {
+    return new Date(timestamp).toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', {
       hour: '2-digit',
       minute: '2-digit',
       timeZone: 'America/Toronto'
     });
   };
+  
+  // Use order creation time as base time for timeline
+  const baseTime = orderCreatedAt ? formatCanadaTime(orderCreatedAt) : null;
   
   const steps = [
     {
@@ -34,21 +74,21 @@ const getProgressSteps = (currentStatus: string, language: string) => {
       label: isEnglish ? 'Order Received' : 'Commande reçue',
       icon: CheckCircle2,
       completed: true, // Always completed
-      time: getCurrentCanadaTime() // Show current time when order was received
+      time: baseTime // Show actual order creation time
     },
     {
       key: 'preparing', 
       label: isEnglish ? 'Preparing' : 'Préparation',
       icon: Package,
       completed: ['confirmed', 'preparing', 'ready', 'completed'].includes(currentStatus),
-      time: ['confirmed', 'preparing', 'ready', 'completed'].includes(currentStatus) ? getCurrentCanadaTime() : null
+      time: ['confirmed', 'preparing', 'ready', 'completed'].includes(currentStatus) ? baseTime : null
     },
     {
       key: 'completed',
       label: isEnglish ? 'Completed' : 'Terminé',
       icon: Check,
       completed: ['completed'].includes(currentStatus),
-      time: currentStatus === 'completed' ? getCurrentCanadaTime() : null
+      time: currentStatus === 'completed' ? baseTime : null
     }
   ];
   
@@ -57,8 +97,8 @@ const getProgressSteps = (currentStatus: string, language: string) => {
 
 function OrderConfirmationContent() {
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
-  const [orderItems, setOrderItems] = useState<any[]>([]);
-  const [sessionData, setSessionData] = useState<any>(null);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [sessionData, setSessionData] = useState<OrderSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -85,7 +125,7 @@ function OrderConfirmationContent() {
           } else {
             sessionStorage.removeItem('vizion-order-confirmation');
           }
-        } catch (e) {
+        } catch {
           // Silently fail and continue without session data
         }
       }
@@ -97,14 +137,14 @@ function OrderConfirmationContent() {
   const apiTax = orderDetails?.pricing?.taxAmount || 0  
   const apiTotal = orderDetails?.pricing?.total || 0
   
-  const subtotal = apiSubtotal || parseFloat(sessionData?.subtotalAmount || '0') || items.reduce((total, item) => total + (item.price * item.quantity), 0)
-  const tax = apiTax || parseFloat(sessionData?.taxAmount || '0') || subtotal * 0.13
-  const total = apiTotal || parseFloat(sessionData?.totalAmount || '0') || subtotal + tax
+  const subtotal = apiSubtotal || sessionData?.pricing?.subtotal || items.reduce((total, item) => total + (item.price * item.quantity), 0)
+  const tax = apiTax || sessionData?.pricing?.taxAmount || subtotal * 0.13
+  const total = apiTotal || sessionData?.pricing?.total || subtotal + tax
   
   // Extract customer info from sessionStorage with fallbacks
-  const customerName = sessionData?.customerName || 'Customer';
-  const customerPhone = sessionData?.customerPhone || 'N/A';
-  const customerEmail = sessionData?.customerEmail || '';
+  const customerName = sessionData?.customerInfo?.name || 'Customer';
+  const customerPhone = sessionData?.customerInfo?.phone || 'N/A';
+  const customerEmail = sessionData?.customerInfo?.email || '';
   const orderType = sessionData?.orderType || 'takeaway';
   const source = sessionData?.source as 'qr' | 'web' || 'web';
   const tableNumber = sessionData?.tableNumber;
@@ -151,9 +191,19 @@ function OrderConfirmationContent() {
             setOrderItems(result.data.items);
           }
         } else {
-          setError(result.error.message);
+          // Handle order expiration specifically
+          if (result.error.code === 'ORDER_EXPIRED') {
+            // Clear session storage for expired order
+            sessionStorage.removeItem('vizion-order-confirmation');
+            setError(language === 'fr' 
+              ? 'Le lien de confirmation de commande a expiré.' 
+              : 'Order confirmation link has expired.'
+            );
+          } else {
+            setError(result.error.message);
+          }
         }
-      } catch (error) {
+      } catch {
         // Don't set error if we have sessionStorage data
         if (!sessionData) {
           setError('Failed to load order details');
@@ -164,7 +214,7 @@ function OrderConfirmationContent() {
     };
 
     fetchOrderStatus();
-  }, [orderId]);
+  }, [orderId, sessionData, language]);
 
   if (loading) {
     return (
@@ -182,13 +232,15 @@ function OrderConfirmationContent() {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Order Not Found</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            {language === 'fr' ? 'Commande introuvable' : 'Order Not Found'}
+          </h1>
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={() => router.push('/order')}
-            className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors"
           >
-            Back to Order
+            {language === 'fr' ? 'Retour aux commandes' : 'Back to Order'}
           </button>
         </div>
       </div>
@@ -196,7 +248,7 @@ function OrderConfirmationContent() {
   }
 
   const currentStatus = orderDetails?.status || 'pending';
-  const progressSteps = getProgressSteps(currentStatus, language);
+  const progressSteps = getProgressSteps(currentStatus, language, orderDetails?.createdAt);
   const currentDate = new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA', {
     day: 'numeric',
     month: 'long', 
