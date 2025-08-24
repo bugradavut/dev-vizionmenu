@@ -35,6 +35,17 @@ export interface OrderPricing {
   total: number;
 }
 
+export interface DeliveryAddress {
+  street: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  unitNumber?: string;
+  buzzerCode?: string;
+  deliveryInstructions?: string;
+  addressType?: string;
+}
+
 export interface Order {
   id: string;
   orderNumber: string;
@@ -48,6 +59,7 @@ export interface Order {
   notes?: string;
   special_instructions?: string;
   estimated_ready_time?: string;
+  delivery_address?: DeliveryAddress;
   third_party_order_id?: string;
   third_party_platform?: string;
   created_at: string;
@@ -201,6 +213,7 @@ class OrdersService {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   transformOrder(apiOrder: any): Order {
+    
     return {
       id: apiOrder.id,
       orderNumber: apiOrder.orderNumber || apiOrder.order_number || `ORDER-${apiOrder.id.slice(-6).toUpperCase()}`,
@@ -224,6 +237,7 @@ class OrdersService {
       notes: apiOrder.notes || undefined,
       special_instructions: apiOrder.specialInstructions || apiOrder.special_instructions || undefined,
       estimated_ready_time: apiOrder.estimatedReadyTime || apiOrder.estimated_ready_time || undefined,
+      delivery_address: apiOrder.delivery_address || undefined, // Add delivery address mapping
       third_party_order_id: apiOrder.third_party_order_id || undefined,
       third_party_platform: apiOrder.third_party_platform || undefined,
       created_at: apiOrder.timestamps?.createdAt || apiOrder.created_at,

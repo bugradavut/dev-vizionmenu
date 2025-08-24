@@ -764,42 +764,50 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         </AccordionTrigger>
                         <AccordionContent className="px-0 pb-0">
                           <Separator />
-                          <CardContent className="p-6">
+                          <CardContent className="px-6 py-2">
                             <div className="space-y-0">
                               {/* Customer Name Row */}
                               <div className="flex items-center justify-between py-3 border-b border-border/40">
                                 <label className="text-sm text-muted-foreground">{t.orderDetail.customerName}</label>
-                                <p className="font-medium">{order.customer?.name || t.orderDetail.walkInCustomer}</p>
+                                <p className="text-md font-medium">{order.customer?.name || t.orderDetail.walkInCustomer}</p>
                               </div>
                               
                               {/* Contact Row */}
                               <div className="flex items-center justify-between py-3 border-b border-border/40">
                                 <label className="text-sm text-muted-foreground">{t.orderDetail.contact}</label>
-                                <p className="text-sm">{order.customer?.phone || t.orderDetail.notProvided}</p>
+                                <p className="text-md font-medium">{order.customer?.phone || t.orderDetail.notProvided}</p>
                               </div>
                               
                               {/* Email Row */}
                               <div className="flex items-center justify-between py-3 border-b border-border/40">
                                 <label className="text-sm text-muted-foreground">{t.orderDetail.emailAddress}</label>
-                                <p className="text-sm">{order.customer.email || t.orderDetail.notProvided}</p>
+                                <p className="text-md font-medium">{order.customer.email || t.orderDetail.notProvided}</p>
                               </div>
                               
                               {/* Order Type Row */}
-                              <div className="flex items-center justify-between py-3">
+                              <div className={`flex items-center justify-between py-3 ${order.delivery_address ? 'border-b border-border/40' : ''}`}>
                                 <label className="text-sm text-muted-foreground">{t.orderDetail.orderType}</label>
-                                <p className="text-sm">{getOrderTypeLabel(order.order_type)}</p>
+                                <p className="text-md font-medium">{getOrderTypeLabel(order.order_type)}</p>
                               </div>
                               
                               {/* Delivery Address Row */}
-                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                              {(order as any).deliveryAddress && (
+                              {order.delivery_address && (
                                 <div className="flex items-start justify-between py-3">
                                   <label className="text-sm text-muted-foreground">{t.orderDetail.deliveryAddress}</label>
                                   <div className="text-right text-sm">
-                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                    <p>{(order as any).deliveryAddress.street}</p>
-                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                    <p>{(order as any).deliveryAddress.city}, {(order as any).deliveryAddress.province} {(order as any).deliveryAddress.postalCode}</p>
+                                    <p className="text-md font-medium">
+                                      {order.delivery_address.street || 'Address not provided'}
+                                    </p>
+                                    {order.delivery_address.unitNumber && (
+                                      <p className="text-md font-medium">Unit {order.delivery_address.unitNumber}</p>
+                                    )}
+                                    <p className="text-sm font-medium">{order.delivery_address.city}, {order.delivery_address.province} {order.delivery_address.postalCode}</p>
+                                    {order.delivery_address.buzzerCode && (
+                                      <p className="text-md text-muted-foreground mt-1">Buzzer: {order.delivery_address.buzzerCode}</p>
+                                    )}
+                                    {order.delivery_address.deliveryInstructions && (
+                                      <p className="text-md text-muted-foreground mt-1 italic">{order.delivery_address.deliveryInstructions}</p>
+                                    )}
                                   </div>
                                 </div>
                               )}
