@@ -1,19 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { orderService } from '@/services/order-service';
 import { useLanguage } from '@/contexts/language-context';
-import { translations } from '@/lib/translations';
 import { useCart } from '../contexts/cart-context';
-import { Check, Package, Clock, CheckCircle2, ShoppingCart, Wallet } from 'lucide-react';
+import { Check, Package, CheckCircle2 } from 'lucide-react';
 
 interface OrderDetails {
   orderId: string;
   orderNumber: string;
   status: string;
-  estimatedTime: string;
-  createdAt: string;
+  estimatedTime?: string;
+  createdAt?: string;
 }
 
 // Simplified 3-step progress
@@ -47,7 +46,7 @@ const getProgressSteps = (currentStatus: string, language: string) => {
   return steps;
 };
 
-export default function OrderConfirmationPage() {
+function OrderConfirmationContent() {
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,12 +54,10 @@ export default function OrderConfirmationPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { language } = useLanguage();
-  const { items, subtotal, tax, total, clearCart } = useCart();
-  const t = translations[language] || translations.en;
+  const { items, subtotal, tax, total } = useCart();
   
   const orderId = searchParams.get('orderId');
   const orderNumber = searchParams.get('orderNumber');
-  const message = searchParams.get('message');
   
   // Extract customer info from URL params (passed from review page)
   const customerName = searchParams.get('customerName') || 'Customer';
@@ -87,7 +84,7 @@ export default function OrderConfirmationPage() {
         } else {
           setError(result.error.message);
         }
-      } catch (err) {
+      } catch {
         setError('Failed to load order details');
       } finally {
         setLoading(false);
@@ -305,7 +302,7 @@ export default function OrderConfirmationPage() {
                     </div>
                     
                     {/* Progress Steps */}
-                    {progressSteps.map((step, index) => {
+                    {progressSteps.map((step) => {
                       const Icon = step.icon;
                       return (
                         <div key={step.key} className="flex flex-col items-center relative z-10">
@@ -447,5 +444,17 @@ export default function OrderConfirmationPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OrderConfirmationPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[--primary]"></div>
+      </div>
+    }>
+      <OrderConfirmationContent />
+    </Suspense>
   );
 }

@@ -8,10 +8,20 @@ import { orderService } from '@/services/order-service'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
 
+interface OrderFormData {
+  customerInfo?: {
+    name: string;
+    phone: string;
+    email?: string;
+  };
+  orderType?: string;
+  address?: object;
+}
+
 interface OrderTotalSidebarProps {
   language: string
   isFormValid: boolean
-  formData: any
+  formData: OrderFormData
   orderContext: {
     source: 'qr' | 'web'
     branchId: string
@@ -23,7 +33,7 @@ interface OrderTotalSidebarProps {
   onTriggerValidation: () => boolean
 }
 
-export function OrderTotalSidebar({ language, isFormValid, formData, orderContext, onTriggerValidation }: OrderTotalSidebarProps) {
+export function OrderTotalSidebar({ language, formData, orderContext, onTriggerValidation }: OrderTotalSidebarProps) {
   const router = useRouter()
   const { items, subtotal, tax, total } = useCart()
   const t = translations[language as keyof typeof translations] || translations.en
@@ -43,9 +53,10 @@ export function OrderTotalSidebar({ language, isFormValid, formData, orderContex
       
       // Prepare order data
       const orderData = {
-        customerInfo: formData.customerInfo,
-        addressInfo: formData.orderType === 'delivery' ? formData.address : undefined,
-        orderType: formData.orderType,
+        customerInfo: formData.customerInfo || { name: 'Customer', phone: '0000000000' },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        addressInfo: formData.orderType === 'delivery' ? (formData.address as any) : undefined,
+        orderType: (formData.orderType as 'dine_in' | 'takeaway' | 'delivery') || 'takeaway',
         paymentMethod: 'cash' as const, // Default for now
         items: items.map(item => ({
           id: item.id,

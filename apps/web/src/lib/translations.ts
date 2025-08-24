@@ -693,6 +693,22 @@ export const translations = {
         fileTypeError: "Please select a valid image file"
       }
     },
+
+    // Order Tracking
+    orderTracking: {
+      title: "Track Your Order",
+      back: "Back",
+      errorTitle: "Unable to Load Order",
+      backToOrder: "Back to Order",
+      orderPlaced: "Order Placed",
+      preparing: "Preparing",
+      estimatedTime: "Estimated time",
+      ready: "Ready for Pickup/Delivery",
+      contactTitle: "Need Help?",
+      callRestaurant: "Call Restaurant",
+      callForUpdates: "For order updates and questions",
+      refresh: "Refresh Status"
+    },
     
     // Customer Order Page
     orderPage: {
@@ -1625,6 +1641,22 @@ export const translations = {
         fileSizeError: "La taille du fichier ne peut pas dépasser 5 MB",
         fileTypeError: "Veuillez sélectionner un fichier image valide"
       }
+    },
+
+    // Order Tracking - Canadian French
+    orderTracking: {
+      title: "Suivre votre commande",
+      back: "Retour",
+      errorTitle: "Impossible de charger la commande",
+      backToOrder: "Retour à la commande",
+      orderPlaced: "Commande passée",
+      preparing: "Préparation",
+      estimatedTime: "Temps estimé",
+      ready: "Prêt pour ramassage/livraison",
+      contactTitle: "Besoin d'aide?",
+      callRestaurant: "Appeler le restaurant",
+      callForUpdates: "Pour les mises à jour et questions",
+      refresh: "Actualiser le statut"
     },
     
     // Customer Order Page - Canadian French

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(data, { status: 201 });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: { code: 'PROXY_ERROR', message: 'Failed to process request' } },
       { status: 500 }

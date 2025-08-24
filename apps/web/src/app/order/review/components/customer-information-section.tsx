@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Home, Building, Building2, MapPin, Package, Utensils, Truck, Car, ShoppingBag, Bike } from 'lucide-react'
+import { Home, Building, Building2, MapPin, Utensils, ShoppingBag, Bike } from 'lucide-react'
 import { AddressAutocomplete } from '@/components/address-autocomplete'
 
 // Canadian postal code utilities
@@ -51,6 +51,12 @@ interface DeliveryAddress {
   deliveryInstructions: string
 }
 
+interface ValidationData {
+  customerInfo: CustomerInfo;
+  address: DeliveryAddress;
+  orderType: OrderType;
+}
+
 interface CustomerInformationSectionProps {
   language?: string
   orderContext?: {
@@ -61,10 +67,10 @@ interface CustomerInformationSectionProps {
     isQROrder: boolean
     selectedOrderType?: 'dine_in' | 'takeaway' | 'delivery' | null
   }
-  onValidationChange?: (isValid: boolean, formData: any) => void
+  onValidationChange?: (isValid: boolean, formData: ValidationData) => void
 }
 
-export const CustomerInformationSection = forwardRef<any, CustomerInformationSectionProps>(({ language = 'en', orderContext, onValidationChange }, ref) => {
+const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () => boolean }, CustomerInformationSectionProps>(({ language = 'en', orderContext, onValidationChange }, ref) => {
   // Get translations based on language
   const getOrderTypeText = (type: string) => {
     if (language === 'fr') {
@@ -103,12 +109,6 @@ export const CustomerInformationSection = forwardRef<any, CustomerInformationSec
   })
 
   const [validationErrors, setValidationErrors] = useState<{[key: string]: boolean}>({})
-  
-  // Email validation helper
-  const isValidEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emailRegex.test(email)
-  }
   
   // Simple validation - always pass
   const validateForm = () => {
@@ -242,9 +242,9 @@ export const CustomerInformationSection = forwardRef<any, CustomerInformationSec
               type="text"
               placeholder="John Doe"
               value={customerInfo.name}
-              onChange={(e) => handleCustomerChange('name', e.target.value)}
-              onBlur={(e) => handleCustomerChange('name', e.target.value)}
-              onInput={(e) => handleCustomerChange('name', e.target.value)}
+              onChange={(e) => handleCustomerChange('name', (e.target as HTMLInputElement).value)}
+              onBlur={(e) => handleCustomerChange('name', (e.target as HTMLInputElement).value)}
+              onInput={(e) => handleCustomerChange('name', (e.target as HTMLInputElement).value)}
               className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${validationErrors.name ? 'border-red-500' : ''}`}
               onFocus={() => handleInputFocus('name')}
             />
@@ -259,7 +259,7 @@ export const CustomerInformationSection = forwardRef<any, CustomerInformationSec
               type="tel"
               placeholder="(416) 123-4567"
               value={customerInfo.phone}
-              onChange={(e) => handleCustomerChange('phone', e.target.value)}
+              onChange={(e) => handleCustomerChange('phone', (e.target as HTMLInputElement).value)}
               className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${validationErrors.phone ? 'border-red-500' : ''}`}
               onFocus={() => handleInputFocus('phone')}
             />
@@ -276,9 +276,9 @@ export const CustomerInformationSection = forwardRef<any, CustomerInformationSec
             type="email"
             placeholder="john@example.com"
             value={customerInfo.email}
-            onChange={(e) => handleCustomerChange('email', e.target.value)}
-            onBlur={(e) => handleCustomerChange('email', e.target.value)}
-            onInput={(e) => handleCustomerChange('email', e.target.value)}
+            onChange={(e) => handleCustomerChange('email', (e.target as HTMLInputElement).value)}
+            onBlur={(e) => handleCustomerChange('email', (e.target as HTMLInputElement).value)}
+            onInput={(e) => handleCustomerChange('email', (e.target as HTMLInputElement).value)}
             className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${validationErrors.email ? 'border-red-500' : ''}`}
             onFocus={() => handleInputFocus('email')}
           />
@@ -604,3 +604,6 @@ export const CustomerInformationSection = forwardRef<any, CustomerInformationSec
     </div>
   )
 })
+
+CustomerInformationSectionComponent.displayName = 'CustomerInformationSection'
+export const CustomerInformationSection = CustomerInformationSectionComponent

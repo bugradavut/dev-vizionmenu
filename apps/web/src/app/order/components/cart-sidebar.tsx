@@ -4,23 +4,16 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, Minus, Trash2, AlertTriangle, ShoppingBag, Loader2, Utensils, Bike, MapPin } from 'lucide-react'
+import { Plus, Minus, Trash2, ShoppingBag, Loader2, Utensils, Bike } from 'lucide-react'
 import { useCart } from '../contexts/cart-context'
 import { useOrderContext } from '../contexts/order-context'
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 import { useResponsiveClasses } from '@/hooks/use-responsive'
 
-interface CustomerInfo {
-  name: string
-  phone: string
-  email?: string
-  address?: string
-}
 
 export function CartSidebar() {
   const router = useRouter()
@@ -30,8 +23,7 @@ export function CartSidebar() {
     removeItem, 
     subtotal, 
     tax, 
-    total, 
-    clearCart 
+    total 
   } = useCart()
   
   const { isQROrder, tableNumber, zone, source, branchId } = useOrderContext()
@@ -41,16 +33,7 @@ export function CartSidebar() {
   // Centralized responsive state
   const responsiveClasses = useResponsiveClasses()
   
-  const [customerInfo] = useState<CustomerInfo>({
-    name: '',
-    phone: '',
-    email: '',
-    address: ''
-  })
-  
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [isNavigating, setIsNavigating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [showOrderTypeModal, setShowOrderTypeModal] = useState(false)
   const [selectedOrderType, setSelectedOrderType] = useState<'dine_in' | 'takeaway' | 'delivery'>(
     isQROrder ? 'dine_in' : 'takeaway'
@@ -97,75 +80,6 @@ export function CartSidebar() {
     setTimeout(() => setIsNavigating(false), 500)
   }
 
-  const submitOrder = async () => {
-    setIsSubmitting(true)
-    setError(null)
-    setShowPaymentModal(false)
-
-    try {
-
-      // Prepare order data for customer API
-      const orderData = {
-        branchId: '550e8400-e29b-41d4-a716-446655440002', // MVP default branch
-        items: items.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          notes: item.notes || ''
-        })),
-        orderType: orderType === 'takeout' ? 'takeaway' : orderType,
-        source: isQROrder ? 'qr' : 'web',
-        paymentMethod: paymentMethod,
-        subtotal,
-        tax,
-        total,
-        ...(isQROrder && orderType === 'dine_in' ? {
-          // QR Dine-in: Table info only, no customer details needed
-          tableNumber,
-          zone: zone || undefined
-        } : {
-          // All other cases: Customer info required
-          customerInfo: {
-            name: customerInfo.name.trim(),
-            phone: customerInfo.phone.trim(),
-            email: customerInfo.email?.trim() || undefined,
-            ...(orderType === 'takeout' ? {
-              address: customerInfo.address?.trim()
-            } : {})
-          }
-        })
-      }
-
-      // Make API call to place order
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-      const response = await fetch(`${apiUrl}/api/v1/customer/orders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData)
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error?.message || `HTTP ${response.status}: Failed to place order`)
-      }
-
-      const result = await response.json()
-      
-      // Success
-      setOrderSuccess(true)
-      clearCart()
-      
-      console.log('Order placed successfully:', result.data)
-      
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to place order')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
 
 
   return (
@@ -293,13 +207,6 @@ export function CartSidebar() {
           </Card>
 
 
-          {/* Error Message */}
-          {error && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
           </div>
         )}
       </div>
@@ -308,7 +215,7 @@ export function CartSidebar() {
       <div className="border-t border-border bg-card p-4 flex-shrink-0 absolute bottom-0 w-full">
         <Button
           onClick={handleCheckoutClick}
-          disabled={isSubmitting || isNavigating || items.length === 0}
+          disabled={isNavigating || items.length === 0}
           className="w-full h-12 text-base font-semibold"
           size="lg"
         >
@@ -319,9 +226,7 @@ export function CartSidebar() {
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   Loading...
                 </>
-              : isSubmitting 
-                ? t.orderPage.checkout.placingOrder 
-                : (language === 'fr' ? `${t.orderPage.checkout.checkout} - ${total.toFixed(2)} $` : `${t.orderPage.checkout.checkout} - $${total.toFixed(2)}`)
+              : (language === 'fr' ? `${t.orderPage.checkout.checkout} - ${total.toFixed(2)} $` : `${t.orderPage.checkout.checkout} - $${total.toFixed(2)}`)
           }
         </Button>
       </div>

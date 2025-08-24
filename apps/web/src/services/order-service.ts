@@ -3,7 +3,7 @@
  * Handles API communication for order creation and status tracking
  */
 
-import { mapOrderDataForAPI, validateOrderData, type FrontendOrderData } from '@/utils/order-mapper';
+import { mapOrderDataForAPI, type FrontendOrderData } from '@/utils/order-mapper';
 
 export interface OrderSubmissionResponse {
   orderId: string;
@@ -12,6 +12,7 @@ export interface OrderSubmissionResponse {
   total: number;
   estimatedTime: string;
   message: string;
+  createdAt: string;
 }
 
 export interface OrderSubmissionError {
@@ -97,7 +98,7 @@ export class OrderSubmissionService {
   /**
    * Get order status for tracking
    */
-  async getOrderStatus(orderId: string): Promise<{ success: true; data: any } | { success: false; error: OrderSubmissionError }> {
+  async getOrderStatus(orderId: string): Promise<{ success: true; data: OrderSubmissionResponse } | { success: false; error: OrderSubmissionError }> {
     try {
       const response = await fetch(`${this.baseUrl}/customer/orders/${orderId}/status`);
       const result = await response.json();

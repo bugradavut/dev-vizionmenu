@@ -18,7 +18,7 @@ export async function GET(
     }
 
     return NextResponse.json(data);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: { code: 'PROXY_ERROR', message: 'Failed to process request' } },
       { status: 500 }
