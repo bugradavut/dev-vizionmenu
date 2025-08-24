@@ -287,6 +287,7 @@ async function getOrderDetail(orderId, userBranch) {
     notes: existingOrder.notes,
     special_instructions: existingOrder.special_instructions,
     estimated_ready_time: existingOrder.estimated_ready_time,
+    delivery_address: existingOrder.delivery_address, // Add delivery_address field
     third_party_order_id: existingOrder.third_party_order_id,
     third_party_platform: existingOrder.third_party_platform,
     created_at: existingOrder.created_at,
@@ -420,7 +421,7 @@ async function updateOrderStatus(orderId, updateData, userBranch) {
  * @returns {Object} Created order data
  */
 async function createOrder(orderData, branchId) {
-  const { customer, items, orderType, source, tableNumber, notes, specialInstructions } = orderData;
+  const { customer, items, orderType, source, tableNumber, notes, specialInstructions, deliveryAddress } = orderData;
   
   // Only allow internal orders for now (third-party will be added in 2 weeks)
   if (!['qr_code', 'web'].includes(source)) {
@@ -441,6 +442,7 @@ async function createOrder(orderData, branchId) {
     customer_email: customer.email || null,
     order_type: orderType,
     table_number: tableNumber || null,
+    delivery_address: deliveryAddress || null, // Add delivery address
     order_status: 'preparing', // New flow: auto-accept all orders
     payment_status: 'pending',
     subtotal: subtotal,

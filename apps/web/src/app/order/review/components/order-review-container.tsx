@@ -33,6 +33,7 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   // Form validation state
   const [isFormValid, setIsFormValid] = useState(false)
   const [formData, setFormData] = useState<object | null>(null)
+  const [orderNotes, setOrderNotes] = useState<string>('')
   const customerInfoRef = useRef<{ triggerValidation: () => boolean } | null>(null)
   
   const handleValidationChange = (isValid: boolean, data: object) => {
@@ -86,11 +87,15 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
           <div className="space-y-6">
             <OrderSummary items={items} language={language} />
             <PriceDetailsSection items={items} language={language} />
-            <OrderNotesSection />
+            <OrderNotesSection 
+              value={orderNotes}
+              onChange={setOrderNotes}
+            />
             <OrderTotalSidebar 
               language={language}
               isFormValid={isFormValid}
               formData={formData || {}}
+              orderNotes={orderNotes}
               orderContext={orderContext}
               onTriggerValidation={triggerFormValidation}
             />

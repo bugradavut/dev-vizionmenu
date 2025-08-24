@@ -897,7 +897,11 @@ export const translations = {
       review: {
         title: "Review Your Order",
         subtitle: "Please review your order details before confirming",
-        orderSummary: "Order Summary"
+        orderSummary: "Order Summary",
+        otherInformation: "Other information",
+        optional: "Optional",
+        noteForOrder: "Note for the order",
+        notePlaceholder: "Ex: Put the sauce separately"
       },
       
       // Payment Section
@@ -1846,7 +1850,11 @@ export const translations = {
       review: {
         title: "Réviser votre commande",
         subtitle: "Veuillez réviser les détails de votre commande avant de confirmer",
-        orderSummary: "Résumé de la commande"
+        orderSummary: "Résumé de la commande",
+        otherInformation: "Autres informations",
+        optional: "Optionnel",
+        noteForOrder: "Note pour la commande",
+        notePlaceholder: "Ex: Mettre la sauce séparément"
       },
       
       // Payment Section - Canadian French

@@ -38,6 +38,7 @@ export interface FrontendOrderData {
   total: number;
   tip?: number;
   notes?: string;
+  deliveryAddress?: FrontendAddressInfo; // Add separate delivery address field
 }
 
 export interface BackendOrderData {
@@ -63,6 +64,7 @@ export interface BackendOrderData {
   tax: number;
   total: number;
   notes: string;
+  deliveryAddress?: FrontendAddressInfo; // Add separate delivery address field
 }
 
 /**
@@ -76,25 +78,24 @@ export function mapOrderDataForAPI(
 ): BackendOrderData {
   const { customerInfo, addressInfo, items, orderType, paymentMethod, subtotal, tax, total, tip, notes } = frontendData;
 
-  // Format full address for notes (only if addressInfo exists)
-  const fullAddress = addressInfo ? [
-    addressInfo.streetAddress,
-    addressInfo.unitNumber && `Unit ${addressInfo.unitNumber}`,
-    addressInfo.city,
-    addressInfo.province,
-    addressInfo.postalCode
-  ].filter(Boolean).join(', ') : '';
-
-  // Combine all notes
+  // Combine order notes (NO delivery address in notes anymore!)
   const combinedNotes = [
-    `Payment: ${paymentMethod === 'cash' ? 'Pay at Counter' : 'Online Payment'}`,
-    orderType === 'delivery' && fullAddress && `Delivery Address: ${fullAddress}`,
-    addressInfo?.addressType !== 'home' && addressInfo?.addressType && `Address Type: ${addressInfo.addressType}`,
-    addressInfo?.buzzerCode && `Buzzer: ${addressInfo.buzzerCode}`,
-    addressInfo?.deliveryInstructions && `Instructions: ${addressInfo.deliveryInstructions}`,
     tip && tip > 0 && `Tip: $${tip.toFixed(2)}`,
     notes && notes.trim()
   ].filter(Boolean).join(' | ');
+
+  // Handle delivery address separately
+  const deliveryAddress = (orderType === 'delivery' && addressInfo) ? {
+    addressType: addressInfo.addressType,
+    streetAddress: addressInfo.streetAddress,
+    city: addressInfo.city,
+    province: addressInfo.province,
+    postalCode: addressInfo.postalCode,
+    unitNumber: addressInfo.unitNumber,
+    buzzerCode: addressInfo.buzzerCode,
+    suiteNumber: addressInfo.suiteNumber,
+    deliveryInstructions: addressInfo.deliveryInstructions
+  } : undefined;
 
   return {
     branchId,
@@ -111,14 +112,15 @@ export function mapOrderDataForAPI(
     customerInfo: {
       name: customerInfo.name.trim(),
       phone: customerInfo.phone.trim(),
-      email: customerInfo.email?.trim() || `${customerInfo.phone}@customer.local`
+      email: customerInfo.email?.trim() || '-'
     },
     tableNumber,
     zone,
     subtotal: subtotal + (tip || 0), // Include tip in subtotal for now
     tax,
     total: total + (tip || 0), // Include tip in total
-    notes: combinedNotes
+    notes: combinedNotes,
+    deliveryAddress // Send delivery address separately
   };
 }
 

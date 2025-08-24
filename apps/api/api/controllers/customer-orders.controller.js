@@ -52,7 +52,8 @@ const createCustomerOrder = async (req, res) => {
       subtotal,
       tax,
       total,
-      notes 
+      notes,
+      deliveryAddress 
     } = req.body;
     
     // Minimal validation - just ensure basic data exists
@@ -91,8 +92,18 @@ const createCustomerOrder = async (req, res) => {
       orderType,
       source: source === 'qr' ? 'qr_code' : 'web',
       tableNumber: source === 'qr' ? tableNumber : undefined,
-      notes: `Payment: ${paymentMethod === 'cash' ? 'Pay at Counter' : 'Online Payment'}${notes ? ` | ${notes}` : ''}`,
+      notes: notes || '',
       specialInstructions: '',
+      deliveryAddress: orderType === 'delivery' && deliveryAddress ? {
+        street: deliveryAddress.streetAddress || '',
+        city: deliveryAddress.city || '',
+        province: deliveryAddress.province || '',
+        postalCode: deliveryAddress.postalCode || '',
+        unitNumber: deliveryAddress.unitNumber || '',
+        buzzerCode: deliveryAddress.buzzerCode || '',
+        deliveryInstructions: deliveryAddress.deliveryInstructions || '',
+        addressType: deliveryAddress.addressType || 'home'
+      } : null,
       pricing: {
         subtotal: subtotal || 0,
         tax_amount: tax || 0,

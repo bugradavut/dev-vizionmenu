@@ -22,6 +22,7 @@ interface OrderTotalSidebarProps {
   language: string
   isFormValid: boolean
   formData: OrderFormData
+  orderNotes?: string
   orderContext: {
     source: 'qr' | 'web'
     branchId: string
@@ -33,7 +34,7 @@ interface OrderTotalSidebarProps {
   onTriggerValidation: () => boolean
 }
 
-export function OrderTotalSidebar({ language, formData, orderContext, onTriggerValidation }: OrderTotalSidebarProps) {
+export function OrderTotalSidebar({ language, formData, orderNotes = '', orderContext, onTriggerValidation }: OrderTotalSidebarProps) {
   const router = useRouter()
   const { items, subtotal, tax, total } = useCart()
   const t = translations[language as keyof typeof translations] || translations.en
@@ -51,10 +52,29 @@ export function OrderTotalSidebar({ language, formData, orderContext, onTriggerV
       // Prepare order data - ensure we have the latest formData
       const customerInfo = formData?.customerInfo || { name: 'Customer', phone: '0000000000' }
       
+      // Map delivery address from frontend format to backend format
+      const addressInfo = formData.orderType === 'delivery' && formData.address ? {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        addressType: (formData.address as any).type || 'home',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        streetAddress: `${(formData.address as any).streetNumber || ''} ${(formData.address as any).streetName || ''}`.trim(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        city: (formData.address as any).city || '',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        province: (formData.address as any).province || '',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        postalCode: (formData.address as any).postalCode || '',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        unitNumber: (formData.address as any).unitNumber || undefined,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        buzzerCode: (formData.address as any).buzzerCode || undefined,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        deliveryInstructions: (formData.address as any).deliveryInstructions || undefined
+      } : undefined
+
       const orderData = {
         customerInfo,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        addressInfo: formData.orderType === 'delivery' ? (formData.address as any) : undefined,
+        addressInfo,
         orderType: (formData.orderType as 'dine_in' | 'takeaway' | 'delivery') || 'takeaway',
         paymentMethod: 'cash' as const, // Default for now
         items: items.map(item => ({
@@ -66,7 +86,8 @@ export function OrderTotalSidebar({ language, formData, orderContext, onTriggerV
         })),
         subtotal,
         tax,
-        total
+        total,
+        notes: orderNotes.trim() || undefined // Add order notes
       }
       
       // Submit order
@@ -101,6 +122,17 @@ export function OrderTotalSidebar({ language, formData, orderContext, onTriggerV
           })),
           tableNumber: orderContext.tableNumber,
           zone: orderContext.zone,
+          orderNotes: orderNotes.trim() || '',  // Add order notes to sessionStorage
+          deliveryAddress: addressInfo ? {
+            addressType: addressInfo.addressType,
+            streetAddress: addressInfo.streetAddress,
+            city: addressInfo.city,
+            province: addressInfo.province,
+            postalCode: addressInfo.postalCode,
+            unitNumber: addressInfo.unitNumber,
+            buzzerCode: addressInfo.buzzerCode,
+            deliveryInstructions: addressInfo.deliveryInstructions
+          } : undefined,
           timestamp: Date.now() // For cleanup
         };
         

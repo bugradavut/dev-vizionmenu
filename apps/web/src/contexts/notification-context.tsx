@@ -351,7 +351,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         }
       }, 15000);
       
-      console.debug('🔄 Started background notification polling');
     };
 
     const stopPolling = () => {
@@ -359,7 +358,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         clearInterval(intervalId);
         intervalId = undefined;
       }
-      console.debug('⏸️ Stopped background notification polling');
     };
 
     // Handle visibility changes

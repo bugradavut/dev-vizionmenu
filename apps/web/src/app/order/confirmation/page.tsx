@@ -32,6 +32,17 @@ interface OrderItem {
   description?: string;
 }
 
+interface DeliveryAddress {
+  addressType: string;
+  streetAddress: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  unitNumber?: string;
+  buzzerCode?: string;
+  deliveryInstructions?: string;
+}
+
 interface OrderSession {
   orderId: string;
   orderNumber?: string;
@@ -48,6 +59,8 @@ interface OrderSession {
   source?: string;
   tableNumber?: number;
   zone?: string;
+  orderNotes?: string;
+  deliveryAddress?: DeliveryAddress;
   timestamp?: number;
 }
 
@@ -154,6 +167,8 @@ function OrderConfirmationContent() {
   const tableNumber = sessionData?.tableNumber;
   const zone = sessionData?.zone;
   const orderNumber = sessionData?.orderNumber;
+  const orderNotes = sessionData?.orderNotes || '';
+  const deliveryAddress = sessionData?.deliveryAddress;
 
   // Clear cart when confirmation page loads (order is successful)
   useEffect(() => {
@@ -393,6 +408,44 @@ function OrderConfirmationContent() {
                     </span>
                   </div>
                 )}
+                
+                {/* Order Notes */}
+                {orderNotes && (
+                  <div className="flex items-center py-2">
+                    <span className="text-gray-500 text-sm">
+                      {language === 'fr' ? 'Note de commande' : 'Order Notes'}
+                    </span>
+                    <div className="flex-1 border-b border-dotted border-gray-300 mx-3"></div>
+                    <span className="font-medium text-gray-900 bg-gray-50 border border-gray-200 px-3 py-1 rounded-lg">
+                      {orderNotes}
+                    </span>
+                  </div>
+                )}
+
+                {/* Delivery Address */}
+                {deliveryAddress && orderType === 'delivery' && (
+                  <div className="flex items-start py-2">
+                    <span className="text-gray-500 text-sm mt-1">
+                      {language === 'fr' ? 'Adresse de livraison' : 'Delivery Address'}
+                    </span>
+                    <div className="flex-1 border-b border-dotted border-gray-300 mx-3 mt-3"></div>
+                    <div className="font-medium text-gray-900 bg-green-50 border border-green-200 px-3 py-2 rounded-lg max-w-sm">
+                      <div className="text-sm">
+                        <div>{deliveryAddress.streetAddress}</div>
+                        {deliveryAddress.unitNumber && (
+                          <div>Unit {deliveryAddress.unitNumber}</div>
+                        )}
+                        <div>{deliveryAddress.city}, {deliveryAddress.province} {deliveryAddress.postalCode}</div>
+                        {deliveryAddress.buzzerCode && (
+                          <div className="text-xs text-gray-600 mt-1">Buzzer: {deliveryAddress.buzzerCode}</div>
+                        )}
+                        {deliveryAddress.deliveryInstructions && (
+                          <div className="text-xs text-gray-600 mt-1 italic">{deliveryAddress.deliveryInstructions}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -601,20 +654,20 @@ function OrderConfirmationContent() {
             {/* Action Buttons - Separate card in right column */}
             <div className="bg-white rounded-2xl border border-gray-300 p-4">
               <div className="grid grid-cols-2 gap-3">
-                {/* Update Status */}
+                {/* Check Status */}
                 <button
                   onClick={handleRefreshStatus}
                   disabled={refreshing}
                   className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                  {language === 'fr' ? 'Actualiser statut' : 'Update Status'}
+                  {language === 'fr' ? 'Vérifier statut' : 'Check Status'}
                 </button>
 
                 {/* New Order - Always visible */}
                 <button
                   onClick={handleBackToMenu}
-                  className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-primary border border-primary rounded-lg hover:bg-primary/90 transition-colors"
+                  className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-primary border border-primary rounded-lg hover:opacity-90 transition-all"
                 >
                   <Package className="h-4 w-4" />
                   {language === 'fr' ? 'Nouvelle commande' : 'New Order'}
