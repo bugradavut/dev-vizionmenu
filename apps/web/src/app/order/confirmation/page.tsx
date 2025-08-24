@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { orderService } from '@/services/order-service';
 import { useLanguage } from '@/contexts/language-context';
 import { useCart } from '../contexts/cart-context';
-import { Check, Package, CheckCircle2 } from 'lucide-react';
+import { Check, Package, CheckCircle2, RefreshCw } from 'lucide-react';
 
 interface OrderDetails {
   orderId: string;
@@ -13,6 +13,7 @@ interface OrderDetails {
   status: string;
   estimatedTime?: string;
   createdAt?: string;
+  completedAt?: string;
   pricing?: {
     subtotal: number;
     taxAmount: number;
@@ -99,13 +100,20 @@ function OrderConfirmationContent() {
   const [sessionData, setSessionData] = useState<OrderSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   
   const searchParams = useSearchParams();
   const router = useRouter();
   const { language } = useLanguage();
-  const { items, clearCart } = useCart()
+  const { items, clearCart } = useCart();
   
   const orderId = searchParams.get('orderId');
+
+  // Action handlers will be defined after fetchOrderStatus
+
+  const handleBackToMenu = () => {
+    window.open('/order', '_blank');
+  };
 
   // Load data from sessionStorage on mount
   useEffect(() => {
@@ -115,14 +123,9 @@ function OrderConfirmationContent() {
         try {
           const data = JSON.parse(stored);
           
-          // Check if data is not too old (10 minutes)
-          const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
-          if (data.timestamp && data.timestamp > tenMinutesAgo) {
-            setSessionData(data);
-            setOrderItems(data.items || []);
-          } else {
-            sessionStorage.removeItem('vizion-order-confirmation');
-          }
+          // Keep session data - expiration will be based on order completion status from API
+          setSessionData(data);
+          setOrderItems(data.items || []);
         } catch {
           // Silently fail and continue without session data
         }
@@ -131,11 +134,14 @@ function OrderConfirmationContent() {
   }, []);
 
   // Use sessionStorage data with API fallback
-  const apiSubtotal = orderDetails?.pricing?.subtotal || 0
-  const apiTax = orderDetails?.pricing?.taxAmount || 0  
-  const apiTotal = orderDetails?.pricing?.total || 0
+  // Get API pricing values (only use if they're greater than 0)
+  const apiSubtotal = (orderDetails?.pricing?.subtotal && orderDetails.pricing.subtotal > 0) ? orderDetails.pricing.subtotal : 0
+  const apiTax = (orderDetails?.pricing?.taxAmount && orderDetails.pricing.taxAmount > 0) ? orderDetails.pricing.taxAmount : 0
+  const apiTotal = (orderDetails?.pricing?.total && orderDetails.pricing.total > 0) ? orderDetails.pricing.total : 0
   
-  const subtotal = apiSubtotal || sessionData?.pricing?.subtotal || items.reduce((total, item) => total + (item.price * item.quantity), 0)
+  // Calculate pricing with proper fallback logic using the actual displayed items
+  const displayedItems = orderItems.length > 0 ? orderItems : items;
+  const subtotal = apiSubtotal || sessionData?.pricing?.subtotal || displayedItems.reduce((total, item) => total + (item.price * item.quantity), 0)
   const tax = apiTax || sessionData?.pricing?.taxAmount || subtotal * 0.13
   const total = apiTotal || sessionData?.pricing?.total || subtotal + tax
   
@@ -154,65 +160,94 @@ function OrderConfirmationContent() {
     clearCart();
   }, [clearCart]);
 
-  // Auto cleanup sessionStorage after 10 minutes
+  // Cleanup sessionStorage based on order completion status
   useEffect(() => {
-    if (sessionData && sessionData.timestamp) {
-      const cleanupTime = sessionData.timestamp + (10 * 60 * 1000); // 10 minutes
-      const timeUntilCleanup = cleanupTime - Date.now();
+    if (orderDetails?.status === 'completed' && orderDetails?.completedAt) {
+      // Check if order was completed more than 10 minutes ago
+      const completionTime = new Date(orderDetails.completedAt).getTime();
+      const tenMinutesLater = completionTime + (10 * 60 * 1000);
+      const now = Date.now();
       
-      if (timeUntilCleanup > 0) {
+      if (now > tenMinutesLater) {
+        // Order expired - cleanup immediately
+        sessionStorage.removeItem('vizion-order-confirmation');
+        setSessionData(null);
+        // Redirect user as data is no longer valid
+        console.log('Order confirmation has expired');
+      } else {
+        // Set timer for future cleanup
+        const timeUntilCleanup = tenMinutesLater - now;
         const timeoutId = setTimeout(() => {
           sessionStorage.removeItem('vizion-order-confirmation');
           setSessionData(null);
+          console.log('Order confirmation expired via timer');
         }, timeUntilCleanup);
         
         return () => clearTimeout(timeoutId);
       }
     }
-  }, [sessionData]);
+  }, [orderDetails]);
+
+  // Action handlers
+  // Move fetchOrderStatus function here to fix scope issue
+  const fetchOrderStatus = useCallback(async () => {
+    if (!orderId) {
+      setError('Order ID not found');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const result = await orderService.getOrderStatus(orderId);
+      
+      if (result.success) {
+        setOrderDetails(result.data);
+        // Set order items from API response
+        if (result.data.items && result.data.items.length > 0) {
+          setOrderItems(result.data.items);
+        }
+      } else {
+        // Handle order expiration specifically
+        if (result.error.code === 'ORDER_EXPIRED') {
+          // Clear session storage for expired order
+          sessionStorage.removeItem('vizion-order-confirmation');
+          setError(language === 'fr' 
+            ? 'Le lien de confirmation de commande a expiré.' 
+            : 'Order confirmation link has expired.'
+          );
+        } else {
+          setError(result.error.message);
+        }
+      }
+    } catch {
+      // Don't set error if we have sessionStorage data
+      if (!sessionData) {
+        setError('Failed to load order details');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [orderId, sessionData, language]);
 
   useEffect(() => {
-    const fetchOrderStatus = async () => {
-      if (!orderId) {
-        setError('Order ID not found');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const result = await orderService.getOrderStatus(orderId);
-        
-        if (result.success) {
-          setOrderDetails(result.data);
-          // Set order items from API response
-          if (result.data.items && result.data.items.length > 0) {
-            setOrderItems(result.data.items);
-          }
-        } else {
-          // Handle order expiration specifically
-          if (result.error.code === 'ORDER_EXPIRED') {
-            // Clear session storage for expired order
-            sessionStorage.removeItem('vizion-order-confirmation');
-            setError(language === 'fr' 
-              ? 'Le lien de confirmation de commande a expiré.' 
-              : 'Order confirmation link has expired.'
-            );
-          } else {
-            setError(result.error.message);
-          }
-        }
-      } catch {
-        // Don't set error if we have sessionStorage data
-        if (!sessionData) {
-          setError('Failed to load order details');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchOrderStatus();
-  }, [orderId, sessionData, language]);
+  }, [fetchOrderStatus]);
+
+  const handleRefreshStatus = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    await fetchOrderStatus();
+    setRefreshing(false);
+  };
+
+  // Declare variables at the top before any return statements
+  const currentStatus = orderDetails?.status || 'pending';
+  const progressSteps = getProgressSteps(currentStatus, language, orderDetails?.createdAt);
+  const currentDate = new Date().toLocaleDateString((language === 'fr') ? 'fr-CA' : 'en-CA', {
+    day: 'numeric',
+    month: 'long', 
+    year: 'numeric'
+  });
 
   if (loading) {
     return (
@@ -244,14 +279,6 @@ function OrderConfirmationContent() {
       </div>
     );
   }
-
-  const currentStatus = orderDetails?.status || 'pending';
-  const progressSteps = getProgressSteps(currentStatus, language, orderDetails?.createdAt);
-  const currentDate = new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA', {
-    day: 'numeric',
-    month: 'long', 
-    year: 'numeric'
-  });
 
   return (
     <div className="min-h-screen bg-white py-6">
@@ -473,100 +500,125 @@ function OrderConfirmationContent() {
           </div>
 
           {/* RIGHT COLUMN - Order Items & Summary (1/3 width) */}
-          <div className="lg:col-span-1 bg-white rounded-2xl border border-gray-300 p-6 h-fit">
-            
-            
-            {/* Order Items */}
-            <div className="mb-6">
-              <div className="divide-y divide-dotted divide-gray-300">
-                {(orderItems.length > 0 ? orderItems : items).map((item, index) => (
-                  <div key={item.id} className={`flex items-start gap-4 ${index === 0 ? 'pb-4' : 'py-4'}`}>
-                    <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
-                      {item.image_url ? (
-                        <img 
-                          src={item.image_url} 
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Package className="w-8 h-8 text-gray-400" />
-                      )}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 text-base mb-1 leading-tight">{item.name}</h3>
-                      {item.description && (
-                        <p className="text-sm text-gray-500 mb-2 line-clamp-2">{item.description}</p>
-                      )}
+          <div className="lg:col-span-1 space-y-4">
+            {/* Cart Summary Card */}
+            <div className="bg-white rounded-2xl border border-gray-300 p-6 h-fit">
+              {/* Order Items */}
+              <div className="mb-6">
+                <div className="divide-y divide-dotted divide-gray-300">
+                  {(orderItems.length > 0 ? orderItems : items).map((item, index) => (
+                    <div key={item.id} className={`flex items-start gap-4 ${index === 0 ? 'pb-4' : 'py-4'}`}>
+                      <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {item.image_url ? (
+                          <img 
+                            src={item.image_url} 
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Package className="w-8 h-8 text-gray-400" />
+                        )}
+                      </div>
                       
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600">
-                            {item.quantity}
-                          </span>
-                          <span className="text-sm text-gray-400">×</span>
-                          <span className="text-sm text-gray-600">
-                            {language === 'fr' ? 
-                              `${item.price.toFixed(2).replace('.', ',')} $` : 
-                              `$${item.price.toFixed(2)}`
-                            }
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-gray-900">
-                            {language === 'fr' ? 
-                              `${(item.price * item.quantity).toFixed(2).replace('.', ',')} $` : 
-                              `$${(item.price * item.quantity).toFixed(2)}`
-                            }
-                          </p>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 text-base mb-1 leading-tight">{item.name}</h3>
+                        {item.description && (
+                          <p className="text-sm text-gray-500 mb-2 line-clamp-2">{item.description}</p>
+                        )}
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-600">
+                              {item.quantity}
+                            </span>
+                            <span className="text-sm text-gray-400">×</span>
+                            <span className="text-sm text-gray-600">
+                              {language === 'fr' ? 
+                                `${item.price.toFixed(2).replace('.', ',')} $` : 
+                                `$${item.price.toFixed(2)}`
+                              }
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-gray-900">
+                              {language === 'fr' ? 
+                                `${(item.price * item.quantity).toFixed(2).replace('.', ',')} $` : 
+                                `$${(item.price * item.quantity).toFixed(2)}`
+                              }
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Order Summary */}
+              <div className="border-t border-gray-200 pt-4">
+                <div className="space-y-2 text-sm mb-4">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">
+                      {language === 'fr' ? 'Articles' : 'Items'}
+                    </span>
+                    <span className="font-medium text-gray-900">
+                      {language === 'fr' ? 
+                        `${subtotal.toFixed(2).replace('.', ',')} $` : 
+                        `$${subtotal.toFixed(2)}`
+                      }
+                    </span>
                   </div>
-                ))}
+                  
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">
+                      {language === 'fr' ? 'Taxe (TVH)' : 'Tax (HST)'}
+                    </span>
+                    <span className="font-medium text-gray-900">
+                      {language === 'fr' ? 
+                        `${tax.toFixed(2).replace('.', ',')} $` : 
+                        `$${tax.toFixed(2)}`
+                      }
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="border-t border-gray-200 pt-3 mt-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-gray-900">
+                      {language === 'fr' ? 'Total' : 'Total'}
+                    </span>
+                    <span className="font-bold text-2xl text-gray-900">
+                      {language === 'fr' ? 
+                        `${total.toFixed(2).replace('.', ',')} $` : 
+                        `$${total.toFixed(2)}`
+                      }
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Order Summary */}
-            <div className="border-t border-gray-200 pt-4">
-              <div className="space-y-2 text-sm mb-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">
-                    {language === 'fr' ? 'Articles' : 'Items'}
-                  </span>
-                  <span className="font-medium text-gray-900">
-                    {language === 'fr' ? 
-                      `${subtotal.toFixed(2).replace('.', ',')} $` : 
-                      `$${subtotal.toFixed(2)}`
-                    }
-                  </span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-gray-600">
-                    {language === 'fr' ? 'Taxe (TVH)' : 'Tax (HST)'}
-                  </span>
-                  <span className="font-medium text-gray-900">
-                    {language === 'fr' ? 
-                      `${tax.toFixed(2).replace('.', ',')} $` : 
-                      `$${tax.toFixed(2)}`
-                    }
-                  </span>
-                </div>
-              </div>
-              
-              <div className="border-t border-gray-200 pt-3 mt-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-900">
-                    {language === 'fr' ? 'Total' : 'Total'}
-                  </span>
-                  <span className="font-bold text-2xl text-gray-900">
-                    {language === 'fr' ? 
-                      `${total.toFixed(2).replace('.', ',')} $` : 
-                      `$${total.toFixed(2)}`
-                    }
-                  </span>
-                </div>
+            {/* Action Buttons - Separate card in right column */}
+            <div className="bg-white rounded-2xl border border-gray-300 p-4">
+              <div className="grid grid-cols-2 gap-3">
+                {/* Update Status */}
+                <button
+                  onClick={handleRefreshStatus}
+                  disabled={refreshing}
+                  className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  {language === 'fr' ? 'Actualiser statut' : 'Update Status'}
+                </button>
+
+                {/* New Order - Always visible */}
+                <button
+                  onClick={handleBackToMenu}
+                  className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-primary border border-primary rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  <Package className="h-4 w-4" />
+                  {language === 'fr' ? 'Nouvelle commande' : 'New Order'}
+                </button>
               </div>
             </div>
           </div>

@@ -207,6 +207,7 @@ const getOrderStatus = async (req, res) => {
         status: order.status || order.order_status,
         estimatedTime: estimatedTime,
         createdAt: order.created_at,
+        completedAt: order.completed_at, // Add completion time for expiration logic
         // Include order items and pricing for confirmation page
         items: (order.order_items || []).map(item => ({
           id: item.id,
