@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, ReactNode, useCallback } from 'react'
+import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react'
 
 export interface CartItem {
   id: string
@@ -41,9 +41,48 @@ interface CartContextProviderProps {
 }
 
 const TAX_RATE = 0.13 // 13% HST (Canadian tax)
+const CART_STORAGE_KEY = 'vizion-menu-cart'
+
+// Helper functions for localStorage
+const loadCartFromStorage = (): CartItem[] => {
+  if (typeof window === 'undefined') return []
+  
+  try {
+    const stored = localStorage.getItem(CART_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch (error) {
+    console.error('Failed to load cart from localStorage:', error)
+    return []
+  }
+}
+
+const saveCartToStorage = (items: CartItem[]) => {
+  if (typeof window === 'undefined') return
+  
+  try {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
+  } catch (error) {
+    console.error('Failed to save cart to localStorage:', error)
+  }
+}
 
 export function CartContextProvider({ children }: CartContextProviderProps) {
   const [items, setItems] = useState<CartItem[]>([])
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Load cart from localStorage on mount
+  useEffect(() => {
+    const savedCart = loadCartFromStorage()
+    setItems(savedCart)
+    setIsLoaded(true)
+  }, [])
+
+  // Save cart to localStorage whenever items change (but not on initial load)
+  useEffect(() => {
+    if (isLoaded) {
+      saveCartToStorage(items)
+    }
+  }, [items, isLoaded])
 
   const addItem = useCallback((item: Omit<CartItem, 'quantity'>, quantity = 1) => {
     setItems(prev => {
@@ -95,6 +134,10 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
 
   const clearCart = useCallback(() => {
     setItems([])
+    // Also clear from localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(CART_STORAGE_KEY)
+    }
   }, [])
 
   const getItemQuantity = useCallback((itemId: string) => {

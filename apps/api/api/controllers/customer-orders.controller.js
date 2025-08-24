@@ -116,14 +116,29 @@ const getOrderStatus = async (req, res) => {
     // Get order details without authentication (public endpoint)
     const order = await ordersService.getOrderDetail(orderId, null);
 
-    // Return limited public information
+    // Return public information including order items for confirmation page
     res.json({ 
       data: {
         orderId: order.id,
         orderNumber: order.order_number,
-        status: order.status,
+        status: order.order_status,
         estimatedTime: order.estimated_completion_time,
-        createdAt: order.created_at
+        createdAt: order.created_at,
+        // Include order items and pricing for confirmation page
+        items: (order.order_items || []).map(item => ({
+          id: item.id,
+          name: item.menu_item_name,
+          price: parseFloat(item.menu_item_price || 0),
+          quantity: item.quantity || 1,
+          total: parseFloat(item.item_total || 0),
+          image_url: item.image_url || null,
+          description: item.description || ''
+        })),
+        pricing: {
+          subtotal: parseFloat(order.subtotal || 0),
+          taxAmount: parseFloat(order.tax_amount || 0),
+          total: parseFloat(order.total_amount || 0)
+        }
       }
     });
     

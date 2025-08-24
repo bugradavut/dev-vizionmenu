@@ -112,19 +112,26 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
   
   // Simple validation - always pass
   const validateForm = () => {
-    // Always return valid
     const formData = {
       customerInfo,
       address,
       orderType: customerInfo.orderType
     }
-    onValidationChange?.(true, formData)
     
+    onValidationChange?.(true, formData)
     return { isValid: true, errors: {} }
   }
   
   // Public method to trigger validation from parent (always returns true)
   const triggerValidation = () => {
+    // Send current form data to parent immediately
+    const currentFormData = {
+      customerInfo,
+      address,
+      orderType: customerInfo.orderType
+    }
+    
+    onValidationChange?.(true, currentFormData)
     validateForm()
     return true
   }
@@ -153,10 +160,17 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
   ]
 
   const handleCustomerChange = (field: keyof CustomerInfo, value: string | OrderType) => {
-    setCustomerInfo(prev => ({ ...prev, [field]: value }))
+    const newCustomerInfo = { ...customerInfo, [field]: value }
+    setCustomerInfo(newCustomerInfo)
     
-    // Always trigger validation to update form state
-    setTimeout(() => validateForm(), 0)
+    // Trigger validation immediately with the new data
+    const formData = {
+      customerInfo: newCustomerInfo,
+      address,
+      orderType: newCustomerInfo.orderType
+    }
+    
+    onValidationChange?.(true, formData)
   }
   
   const handleInputFocus = (fieldName: string) => {
@@ -260,6 +274,8 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
               placeholder="(416) 123-4567"
               value={customerInfo.phone}
               onChange={(e) => handleCustomerChange('phone', (e.target as HTMLInputElement).value)}
+              onBlur={(e) => handleCustomerChange('phone', (e.target as HTMLInputElement).value)}
+              onInput={(e) => handleCustomerChange('phone', (e.target as HTMLInputElement).value)}
               className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${validationErrors.phone ? 'border-red-500' : ''}`}
               onFocus={() => handleInputFocus('phone')}
             />

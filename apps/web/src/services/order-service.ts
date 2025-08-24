@@ -47,14 +47,8 @@ export class OrderSubmissionService {
     zone?: string
   ): Promise<{ success: true; data: OrderSubmissionResponse } | { success: false; error: OrderSubmissionError }> {
     try {
-      // Skip validation for now
-      console.log('Skipping validation, sending orderData:', orderData);
-
       // Map data to API format
       const apiData = mapOrderDataForAPI(orderData, branchId, tableNumber, zone);
-      
-      // Debug: Log what we're sending to API
-      console.log('API Data being sent to backend:', apiData)
 
       // Submit to API
       const response = await fetch(`${this.baseUrl}/customer/orders`, {

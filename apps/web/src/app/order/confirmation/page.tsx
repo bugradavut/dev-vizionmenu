@@ -48,25 +48,81 @@ const getProgressSteps = (currentStatus: string, language: string) => {
 
 function OrderConfirmationContent() {
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
+  const [orderItems, setOrderItems] = useState<any[]>([]);
+  const [sessionData, setSessionData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   const searchParams = useSearchParams();
   const router = useRouter();
   const { language } = useLanguage();
-  const { items, subtotal, tax, total } = useCart();
+  const { items, clearCart } = useCart()
   
   const orderId = searchParams.get('orderId');
-  const orderNumber = searchParams.get('orderNumber');
+
+  // Load data from sessionStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = sessionStorage.getItem('vizion-order-confirmation');
+      if (stored) {
+        try {
+          const data = JSON.parse(stored);
+          
+          // Check if data is not too old (10 minutes)
+          const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+          if (data.timestamp && data.timestamp > tenMinutesAgo) {
+            setSessionData(data);
+            setOrderItems(data.items || []);
+          } else {
+            sessionStorage.removeItem('vizion-order-confirmation');
+          }
+        } catch (e) {
+          // Silently fail and continue without session data
+        }
+      }
+    }
+  }, []);
+
+  // Use sessionStorage data with API fallback
+  const apiSubtotal = orderDetails?.pricing?.subtotal || 0
+  const apiTax = orderDetails?.pricing?.taxAmount || 0  
+  const apiTotal = orderDetails?.pricing?.total || 0
   
-  // Extract customer info from URL params (passed from review page)
-  const customerName = searchParams.get('customerName') || 'Customer';
-  const customerPhone = searchParams.get('customerPhone') || 'N/A';
-  const customerEmail = searchParams.get('customerEmail') || '';
-  const orderType = searchParams.get('orderType') || 'takeaway';
-  const source = searchParams.get('source') as 'qr' | 'web' || 'web';
-  const tableNumber = searchParams.get('table');
-  const zone = searchParams.get('zone');
+  const subtotal = apiSubtotal || parseFloat(sessionData?.subtotalAmount || '0') || items.reduce((total, item) => total + (item.price * item.quantity), 0)
+  const tax = apiTax || parseFloat(sessionData?.taxAmount || '0') || subtotal * 0.13
+  const total = apiTotal || parseFloat(sessionData?.totalAmount || '0') || subtotal + tax
+  
+  // Extract customer info from sessionStorage with fallbacks
+  const customerName = sessionData?.customerName || 'Customer';
+  const customerPhone = sessionData?.customerPhone || 'N/A';
+  const customerEmail = sessionData?.customerEmail || '';
+  const orderType = sessionData?.orderType || 'takeaway';
+  const source = sessionData?.source as 'qr' | 'web' || 'web';
+  const tableNumber = sessionData?.tableNumber;
+  const zone = sessionData?.zone;
+  const orderNumber = sessionData?.orderNumber;
+
+  // Clear cart when confirmation page loads (order is successful)
+  useEffect(() => {
+    clearCart();
+  }, [clearCart]);
+
+  // Auto cleanup sessionStorage after 10 minutes
+  useEffect(() => {
+    if (sessionData && sessionData.timestamp) {
+      const cleanupTime = sessionData.timestamp + (10 * 60 * 1000); // 10 minutes
+      const timeUntilCleanup = cleanupTime - Date.now();
+      
+      if (timeUntilCleanup > 0) {
+        const timeoutId = setTimeout(() => {
+          sessionStorage.removeItem('vizion-order-confirmation');
+          setSessionData(null);
+        }, timeUntilCleanup);
+        
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [sessionData]);
 
   useEffect(() => {
     const fetchOrderStatus = async () => {
@@ -81,11 +137,18 @@ function OrderConfirmationContent() {
         
         if (result.success) {
           setOrderDetails(result.data);
+          // Set order items from API response
+          if (result.data.items && result.data.items.length > 0) {
+            setOrderItems(result.data.items);
+          }
         } else {
           setError(result.error.message);
         }
-      } catch {
-        setError('Failed to load order details');
+      } catch (error) {
+        // Don't set error if we have sessionStorage data
+        if (!sessionData) {
+          setError('Failed to load order details');
+        }
       } finally {
         setLoading(false);
       }
@@ -123,7 +186,8 @@ function OrderConfirmationContent() {
     );
   }
 
-  const progressSteps = getProgressSteps(orderDetails?.status || 'pending', language);
+  const currentStatus = orderDetails?.status || 'pending';
+  const progressSteps = getProgressSteps(currentStatus, language);
   const currentDate = new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA', {
     day: 'numeric',
     month: 'long', 
@@ -141,7 +205,7 @@ function OrderConfirmationContent() {
             
             {/* Success Header */}
             <div className="flex items-center gap-4 mb-8">
-              <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+              <div className="w-14 h-14 bg-green-100 border-2 border-green-600 rounded-full flex items-center justify-center">
                 <Check className="w-7 h-7 text-green-600" />
               </div>
               <div>
@@ -350,7 +414,7 @@ function OrderConfirmationContent() {
             {/* Order Items */}
             <div className="mb-6">
               <div className="divide-y divide-dotted divide-gray-300">
-                {items.map((item, index) => (
+                {(orderItems.length > 0 ? orderItems : items).map((item, index) => (
                   <div key={item.id} className={`flex items-start gap-4 ${index === 0 ? 'pb-4' : 'py-4'}`}>
                     <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {item.image_url ? (
