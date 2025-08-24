@@ -225,7 +225,7 @@ export default function BranchSettingsPage() {
                     </div>
 
                     {/* Timing Settings Section */}
-                    <div className={`space-y-6 transition-all duration-300 ${!settings.timingSettings?.autoReady ? 'opacity-50' : ''}`}>
+                    <div className="space-y-6 transition-all duration-300">
                       <div className="flex items-center gap-3">
                         <Timer className="h-5 w-5 text-primary" />
                         <h3 className="text-lg font-semibold">Timing Configuration</h3>
@@ -249,7 +249,6 @@ export default function BranchSettingsPage() {
                               className="h-10"
                               min="0"
                               max="120"
-                              disabled={!settings.timingSettings?.autoReady}
                             />
                           </div>
                           
@@ -261,8 +260,7 @@ export default function BranchSettingsPage() {
                                 size="sm"
                                 onClick={() => handleTimingChange('temporaryBaseDelay', Math.max(-60, settings.timingSettings.temporaryBaseDelay - 5))}
                                 className="h-10 w-10 p-0"
-                                disabled={!settings.timingSettings?.autoReady}
-                              >
+                                >
                                 <Minus className="h-4 w-4" />
                               </Button>
                               <Input
@@ -273,15 +271,13 @@ export default function BranchSettingsPage() {
                                 className="h-10 text-center"
                                 min="-60"
                                 max="60"
-                                disabled={!settings.timingSettings?.autoReady}
-                              />
+                                />
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleTimingChange('temporaryBaseDelay', Math.min(60, settings.timingSettings.temporaryBaseDelay + 5))}
                                 className="h-10 w-10 p-0"
-                                disabled={!settings.timingSettings?.autoReady}
-                              >
+                                >
                                 <Plus className="h-4 w-4" />
                               </Button>
                             </div>
@@ -318,7 +314,6 @@ export default function BranchSettingsPage() {
                               className="h-10"
                               min="0"
                               max="120"
-                              disabled={!settings.timingSettings?.autoReady}
                             />
                           </div>
                           
@@ -330,8 +325,7 @@ export default function BranchSettingsPage() {
                                 size="sm"
                                 onClick={() => handleTimingChange('temporaryDeliveryDelay', Math.max(-60, settings.timingSettings.temporaryDeliveryDelay - 5))}
                                 className="h-10 w-10 p-0"
-                                disabled={!settings.timingSettings?.autoReady}
-                              >
+                                >
                                 <Minus className="h-4 w-4" />
                               </Button>
                               <Input
@@ -342,15 +336,13 @@ export default function BranchSettingsPage() {
                                 className="h-10 text-center"
                                 min="-60"
                                 max="60"
-                                disabled={!settings.timingSettings?.autoReady}
-                              />
+                                />
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleTimingChange('temporaryDeliveryDelay', Math.min(60, settings.timingSettings.temporaryDeliveryDelay + 5))}
                                 className="h-10 w-10 p-0"
-                                disabled={!settings.timingSettings?.autoReady}
-                              >
+                                >
                                 <Plus className="h-4 w-4" />
                               </Button>
                             </div>

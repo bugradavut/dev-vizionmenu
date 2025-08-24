@@ -4,7 +4,35 @@
 // =====================================================
 
 const ordersService = require('../services/orders.service');
+const branchesService = require('../services/branches.service');
 const { handleControllerError } = require('../helpers/error-handler');
+
+/**
+ * Calculate estimated time based on order type and branch timing settings
+ * @param {string} orderType - 'takeaway', 'dine_in', or 'delivery'
+ * @param {Object} timingSettings - Branch timing configuration
+ * @returns {string} Estimated time string (e.g., "20-25 minutes")
+ */
+function calculateEstimatedTime(orderType, timingSettings) {
+  const kitchenTime = (timingSettings.baseDelay || 20) + (timingSettings.temporaryBaseDelay || 0);
+  
+  if (orderType === 'takeaway' || orderType === 'dine_in') {
+    // Takeaway/Dine-in: Only kitchen preparation time
+    const minTime = Math.max(5, kitchenTime);
+    const maxTime = minTime + 5;
+    return `${minTime}-${maxTime} minutes`;
+  } else if (orderType === 'delivery') {
+    // Delivery: Kitchen + delivery time
+    const deliveryTime = (timingSettings.deliveryDelay || 15) + (timingSettings.temporaryDeliveryDelay || 0);
+    const totalTime = Math.max(10, kitchenTime + deliveryTime);
+    const minTime = totalTime;
+    const maxTime = totalTime + 5;
+    return `${minTime}-${maxTime} minutes`;
+  } else {
+    // Fallback for unknown order types
+    return '20-25 minutes';
+  }
+}
 
 /**
  * POST /api/v1/customer/orders
@@ -75,6 +103,16 @@ const createCustomerOrder = async (req, res) => {
     // Create order using existing orders service
     const createResult = await ordersService.createOrder(orderData, branchId);
 
+    // Get branch timing settings for estimated time calculation
+    let estimatedTime = '20-25 minutes'; // Default fallback
+    try {
+      const branchSettings = await branchesService.getBranchSettings(branchId);
+      const timingSettings = branchSettings.settings?.timingSettings || {};
+      estimatedTime = calculateEstimatedTime(orderType, timingSettings);
+    } catch (timingError) {
+      console.warn('Failed to get branch timing settings, using default:', timingError.message);
+    }
+
     // Trigger auto-accept check for Simplified Flow
     try {
       await ordersService.checkAutoAccept(createResult.order.id, branchId);
@@ -89,7 +127,7 @@ const createCustomerOrder = async (req, res) => {
         orderNumber: createResult.order.order_number,
         status: createResult.order.status,
         total: createResult.order.total_amount,
-        estimatedTime: '20-30 minutes',
+        estimatedTime: estimatedTime,
         message: `Order placed successfully! ${source === 'qr' ? `Table ${tableNumber}` : 'Takeaway order'}`
       }
     });
@@ -139,13 +177,35 @@ const getOrderStatus = async (req, res) => {
       });
     }
 
+    // Get branch timing settings for estimated time calculation
+    let estimatedTime = null;
+    try {
+      // Extract branch_id from order (try multiple possible field names)
+      const branchId = order.branch_id || req.params.branchId;
+      const orderType = order.order_type || order.orderType || 'takeaway';
+      
+      if (branchId) {
+        const branchSettings = await branchesService.getBranchSettings(branchId);
+        const timingSettings = branchSettings.settings?.timingSettings || {};
+        estimatedTime = calculateEstimatedTime(orderType, timingSettings);
+      } else {
+        // Fallback estimated time
+        estimatedTime = orderType === 'delivery' ? '35-40 minutes' : '20-25 minutes';
+      }
+    } catch (timingError) {
+      console.warn('Failed to calculate estimated time for order status:', timingError.message);
+      // Fallback estimated time
+      const orderType = order.order_type || order.orderType || 'takeaway';
+      estimatedTime = orderType === 'delivery' ? '35-40 minutes' : '20-25 minutes';
+    }
+
     // Return public information including order items for confirmation page
     res.json({ 
       data: {
         orderId: order.id,
         orderNumber: order.orderNumber || order.id.split('-')[0].toUpperCase(),
         status: order.status || order.order_status,
-        estimatedTime: order.estimated_completion_time,
+        estimatedTime: estimatedTime,
         createdAt: order.created_at,
         // Include order items and pricing for confirmation page
         items: (order.order_items || []).map(item => ({

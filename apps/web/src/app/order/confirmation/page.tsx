@@ -34,11 +34,9 @@ interface OrderItem {
 interface OrderSession {
   orderId: string;
   orderNumber?: string;
-  customerInfo: {
-    name: string;
-    phone: string;
-    email?: string;
-  };
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string;
   items: OrderItem[];
   pricing: {
     subtotal: number;
@@ -142,9 +140,9 @@ function OrderConfirmationContent() {
   const total = apiTotal || sessionData?.pricing?.total || subtotal + tax
   
   // Extract customer info from sessionStorage with fallbacks
-  const customerName = sessionData?.customerInfo?.name || 'Customer';
-  const customerPhone = sessionData?.customerInfo?.phone || 'N/A';
-  const customerEmail = sessionData?.customerInfo?.email || '';
+  const customerName = sessionData?.customerName || 'Customer';
+  const customerPhone = sessionData?.customerPhone || 'N/A';
+  const customerEmail = sessionData?.customerEmail || '';
   const orderType = sessionData?.orderType || 'takeaway';
   const source = sessionData?.source as 'qr' | 'web' || 'web';
   const tableNumber = sessionData?.tableNumber;
@@ -355,8 +353,22 @@ function OrderConfirmationContent() {
                     })}
                   </span>
                 </div>
+                
+                {/* Estimated Completion Time */}
+                {orderDetails?.estimatedTime && (
+                  <div className="flex items-center py-2">
+                    <span className="text-gray-500 text-sm">
+                      {language === 'fr' ? 'Temps estimé' : 'Estimated Time'}
+                    </span>
+                    <div className="flex-1 border-b border-dotted border-gray-300 mx-3"></div>
+                    <span className="font-medium text-orange-600 bg-orange-50 border border-orange-200 px-3 py-1 rounded-lg">
+                      {orderDetails.estimatedTime}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
+
 
             {/* Progress Timeline - Vertical on Mobile, Horizontal on Desktop */}
             <div className="pt-6 bg-gray-50 rounded-2xl mt-6">

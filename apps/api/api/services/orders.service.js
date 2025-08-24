@@ -266,6 +266,7 @@ async function getOrderDetail(orderId, userBranch) {
   const formattedOrder = {
     id: existingOrder.id,
     orderNumber: existingOrder.id.split('-')[0].toUpperCase(),
+    branch_id: existingOrder.branch_id, // Add branch_id for timing calculations
     customer: {
       name: existingOrder.customer_name || 'Walk-in Customer',
       phone: existingOrder.customer_phone || '',

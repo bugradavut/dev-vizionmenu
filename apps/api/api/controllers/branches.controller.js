@@ -79,13 +79,8 @@ const updateBranchSettings = async (req, res) => {
       });
     }
 
-    // Validate timingSettings if orderFlow is simplified
-    if (orderFlow === 'simplified') {
-      if (!timingSettings || typeof timingSettings !== 'object') {
-        return res.status(400).json({
-          error: { code: 'MISSING_TIMING_SETTINGS', message: 'timingSettings is required for simplified flow' }
-        });
-      }
+    // Validate timingSettings if provided (timing settings are always optional but validated when present)
+    if (timingSettings && typeof timingSettings === 'object') {
       
       const { baseDelay, temporaryBaseDelay, deliveryDelay, temporaryDeliveryDelay } = timingSettings;
       
