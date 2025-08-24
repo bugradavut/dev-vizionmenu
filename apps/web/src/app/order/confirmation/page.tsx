@@ -15,31 +15,40 @@ interface OrderDetails {
   createdAt?: string;
 }
 
-// Simplified 3-step progress
+// Simplified 3-step progress with dynamic time display
 const getProgressSteps = (currentStatus: string, language: string) => {
   const isEnglish = language === 'en';
+  
+  // Get current time in Canada timezone
+  const getCurrentCanadaTime = () => {
+    return new Date().toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'America/Toronto'
+    });
+  };
   
   const steps = [
     {
       key: 'received',
       label: isEnglish ? 'Order Received' : 'Commande reçue',
       icon: CheckCircle2,
-      completed: true, // Always completed by default
-      time: '12:20'
+      completed: true, // Always completed
+      time: getCurrentCanadaTime() // Show current time when order was received
     },
     {
       key: 'preparing', 
       label: isEnglish ? 'Preparing' : 'Préparation',
       icon: Package,
-      completed: ['preparing', 'ready', 'completed'].includes(currentStatus),
-      time: currentStatus === 'preparing' ? '08:45' : null
+      completed: ['confirmed', 'preparing', 'ready', 'completed'].includes(currentStatus),
+      time: ['confirmed', 'preparing', 'ready', 'completed'].includes(currentStatus) ? getCurrentCanadaTime() : null
     },
     {
       key: 'completed',
       label: isEnglish ? 'Completed' : 'Terminé',
       icon: Check,
       completed: ['completed'].includes(currentStatus),
-      time: currentStatus === 'completed' ? '10:12' : null
+      time: currentStatus === 'completed' ? getCurrentCanadaTime() : null
     }
   ];
   
@@ -331,11 +340,7 @@ function OrderConfirmationContent() {
                             </p>
                             {step.time && (
                               <p className="text-xs text-gray-500 mt-1">
-                                {new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA', {
-                                  day: 'numeric', 
-                                  month: 'short',
-                                  timeZone: 'America/Toronto'
-                                })} {step.time}
+                                {step.time}
                               </p>
                             )}
                           </div>
@@ -390,11 +395,7 @@ function OrderConfirmationContent() {
                             </p>
                             {step.time && (
                               <p className="text-xs text-gray-500 mt-1 whitespace-nowrap">
-                                {new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA', {
-                                  day: 'numeric', 
-                                  month: 'short',
-                                  timeZone: 'America/Toronto'
-                                })} {step.time}
+                                {step.time}
                               </p>
                             )}
                           </div>

@@ -69,6 +69,166 @@ This dual-flow system provides competitive advantage over UEAT by offering both 
 
 ---
 
+## 🛒 CUSTOMER ORDER FLOW SYSTEM - FRONTEND IMPLEMENTATION
+
+**Vizion Menu implements a comprehensive customer-facing order system that handles QR code orders, web orders, and seamless checkout experience.**
+
+### **Customer Order Journey**
+
+**Complete Flow Path:**
+```
+/order → /order/review → /order/confirmation → (optional) /order/track
+```
+
+#### **1. Order Page (`/order`) - Menu & Cart**
+- **Purpose**: Menu browsing and cart management
+- **Context**: QR code scanning or direct web access
+- **Key Features**: Category filtering, item customization, responsive cart
+- **Data Storage**: Cart items in localStorage for persistence
+
+```typescript
+// URL Parameters for Order Context
+interface OrderContext {
+  source: 'qr' | 'web';           // Order source type
+  branchId: string;               // Restaurant branch ID
+  tableNumber?: number;           // Table number (QR only)
+  zone?: string;                  // Zone/area (QR only)
+}
+
+// Example URLs:
+// QR Code: /order?source=qr&branch=BRANCH_ID&table=5&zone=Patio
+// Web: /order?source=web&branch=BRANCH_ID
+```
+
+#### **2. Review Page (`/order/review`) - Customer Info & Checkout**
+- **Purpose**: Customer information collection and order review
+- **Validation**: Form validation with error handling
+- **Payment**: Payment method selection (cash/online)
+- **Data Transfer**: SessionStorage for order confirmation data
+
+```typescript
+// Customer Information Structure
+interface CustomerInfo {
+  name: string;
+  phone: string;
+  email?: string;
+  orderType: 'dine_in' | 'takeaway' | 'delivery';
+}
+
+// Order Review Data Transfer
+const confirmationData = {
+  orderId: string;
+  customerInfo: CustomerInfo;
+  items: CartItem[];
+  pricing: OrderPricing;
+  timestamp: number; // For cleanup
+};
+```
+
+#### **3. Confirmation Page (`/order/confirmation`) - Order Status & Tracking**
+- **Purpose**: Order confirmation and real-time status tracking
+- **Data Sources**: SessionStorage (immediate) + API (persistent)
+- **Progress Tracking**: 3-step visual timeline (Received → Preparing → Completed)
+- **Cleanup**: Automatic sessionStorage cleanup after 10 minutes
+
+```typescript
+// Progress Timeline Statuses
+type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+
+// Progress Step Mapping
+const progressSteps = [
+  'received': Always completed,
+  'preparing': Active when status in ['confirmed', 'preparing', 'ready', 'completed'],
+  'completed': Active when status === 'completed'
+];
+```
+
+### **Data Management Patterns**
+
+#### **Cart Management (localStorage)**
+```typescript
+// Persistent cart storage
+const CART_STORAGE_KEY = 'vizion-menu-cart';
+- Auto-save on cart changes
+- Load on page refresh
+- Clear on order completion
+```
+
+#### **Session Management (sessionStorage)**
+```typescript
+// Temporary order data for confirmation
+const SESSION_STORAGE_KEY = 'vizion-order-confirmation';
+- Auto-cleanup after 10 minutes
+- Fallback when API unavailable
+- Cross-page data transfer
+```
+
+#### **API Integration**
+```typescript
+// Public Customer API Endpoints
+POST /api/v1/customer/orders          // Order submission
+GET /api/v1/customer/orders/:id/status // Status tracking
+```
+
+### **Key Technical Patterns**
+
+#### **1. Responsive Design Implementation**
+```typescript
+// Order page layout patterns
+Desktop: Sidebar + Grid + Cart (3-column)
+Tablet: Tabs + Grid + Sidebar (2-column)  
+Mobile: Stacked + Bottom Cart (1-column)
+```
+
+#### **2. Error Handling Strategy**
+```typescript
+// Graceful degradation
+API Available: Full real-time tracking
+API Unavailable: SessionStorage fallback
+No Data: Redirect to menu with error message
+```
+
+#### **3. Multi-Language Customer Experience**
+```typescript
+// Customer-facing translations
+orderConfirmation: {
+  title: "Order Confirmed" | "Commande confirmée",
+  progress: {
+    received: "Order Received" | "Commande reçue", 
+    preparing: "Preparing" | "Préparation",
+    completed: "Completed" | "Terminé"
+  }
+}
+```
+
+### **Order Confirmation Best Practices**
+
+#### **Link Permanency Policy**
+- **Completed Orders**: Permanent access (industry standard)
+- **Rationale**: Digital receipt, reorder functionality, customer service
+- **Performance**: Minimal database impact (~500 bytes per order)
+- **Competitive**: Matches Uber Eats, DoorDash standards
+
+#### **Progress Timeline Rules**
+```typescript
+// Time Display Standards
+- Canada timezone: 'America/Toronto'
+- Format: 'HH:mm' (no date in timeline)
+- Real-time updates: Current Canada time for active steps
+- Language-aware: fr-CA vs en-CA formatting
+```
+
+#### **Status Synchronization**
+```typescript
+// API Response Mapping
+Database: order_status field
+API Response: status field  
+Frontend: OrderStatus type with proper mapping
+Real-time: WebSocket updates (future enhancement)
+```
+
+---
+
 ## 🌍 MULTI-LANGUAGE SYSTEM - CRITICAL IMPLEMENTATION RULES
 
 ### **🇨🇦 Canadian French Language Support - PRODUCTION READY**
@@ -193,6 +353,151 @@ Before deploying any new feature with text:
 4. **Restaurant Terms**: Verify Canadian French restaurant terminology
 5. **Mobile Responsive**: Test translation lengths on mobile devices
 6. **Build Success**: Ensure `npm run build` passes with new translations
+
+---
+
+## 🌐 PUBLIC API ENDPOINTS - CUSTOMER-FACING OPERATIONS
+
+**Vizion Menu implements public API endpoints for customer order operations that require no authentication, optimized for QR code and web orders.**
+
+### **Customer Order Endpoints**
+
+#### **POST `/api/v1/customer/orders` - Create Customer Order**
+```javascript
+// Request Body Structure
+{
+  "branchId": "550e8400-e29b-41d4-a716-446655440002",
+  "items": [
+    {
+      "id": "item-uuid",
+      "name": "Sucuklu Pizza",
+      "price": 21.90,
+      "quantity": 1,
+      "notes": "Extra cheese"
+    }
+  ],
+  "orderType": "takeaway" | "dine_in" | "delivery",
+  "source": "web" | "qr",
+  "paymentMethod": "cash" | "online",
+  "customerInfo": {
+    "name": "Customer Name",
+    "phone": "5398487416",
+    "email": "customer@email.com"
+  },
+  "tableNumber": 5, // QR orders only
+  "zone": "Patio", // QR orders only
+  "subtotal": 21.90,
+  "tax": 2.85,
+  "total": 24.75,
+  "notes": "Special instructions"
+}
+
+// Response Structure
+{
+  "data": {
+    "orderId": "7f4bc935-b46d-40db-a9fd-7f293e5891d2",
+    "orderNumber": "7F4BC935",
+    "status": "pending",
+    "total": 24.75,
+    "estimatedTime": "20-30 minutes",
+    "message": "Order placed successfully!"
+  }
+}
+```
+
+#### **GET `/api/v1/customer/orders/:orderId/status` - Order Status Tracking**
+```javascript
+// Response Structure
+{
+  "data": {
+    "orderId": "7f4bc935-b46d-40db-a9fd-7f293e5891d2",
+    "orderNumber": "7F4BC935", 
+    "status": "preparing",
+    "estimatedTime": "15-20 minutes",
+    "createdAt": "2025-01-24T09:53:00Z",
+    "items": [
+      {
+        "id": "item-id",
+        "name": "Sucuklu Pizza",
+        "price": 21.90,
+        "quantity": 1,
+        "total": 21.90,
+        "image_url": "https://...",
+        "description": "Turkish Pizza"
+      }
+    ],
+    "pricing": {
+      "subtotal": 21.90,
+      "taxAmount": 2.85,
+      "total": 24.75
+    }
+  }
+}
+```
+
+### **Authentication-Free Patterns**
+
+#### **Public Endpoint Security**
+```javascript
+// No authentication required for customer operations
+// Rate limiting applied per IP
+// Branch-scoped data access only
+// No sensitive restaurant data exposed
+
+// Controller Pattern
+const createCustomerOrder = async (req, res) => {
+  try {
+    // Input validation without auth
+    const orderData = validateCustomerOrderInput(req.body);
+    
+    // Create order using service layer
+    const result = await ordersService.createOrder(orderData, branchId);
+    
+    // Public response (no sensitive data)
+    res.status(201).json({ data: publicOrderInfo });
+  } catch (error) {
+    handleControllerError(error, 'create customer order', res);
+  }
+};
+```
+
+#### **Data Privacy & Security**
+```typescript
+// Public endpoint data exposure rules
+✅ Allowed: Order status, items, pricing, estimated time
+❌ Forbidden: Staff info, branch settings, payment details, other customers' data
+✅ Branch isolation: RLS policies ensure branch-scoped access
+❌ Cross-branch access: Impossible via public endpoints
+```
+
+### **Session & Cart Management Standards**
+
+#### **LocalStorage vs SessionStorage Strategy**
+```typescript
+// LocalStorage (Persistent)
+- Cart items: Survives browser restart
+- Language preference: User settings
+- Theme preference: UI customization
+
+// SessionStorage (Temporary)  
+- Order confirmation data: Single browser session
+- Form validation state: Page-specific
+- API fallback data: Temporary reliability
+```
+
+#### **Cleanup Policies**
+```typescript
+// Cart Management
+clearCart() on order completion
+Auto-save on every cart change
+Restore on page refresh
+
+// Session Management  
+10-minute auto-cleanup after order completion (status: completed)
+Manual cleanup on page navigation
+Order link expiration after completion for memory optimization
+Graceful degradation when expired
+```
 
 ---
 
@@ -1135,6 +1440,46 @@ npm run build   # ✅ Must pass
 
 ---
 
+## 📋 ORDER CONFIRMATION LINK EXPIRATION POLICY
+
+### **Customer Order Link Management**
+
+**Expiration Rules:**
+- **Active Orders** (pending/confirmed/preparing/ready): Permanent access
+- **Completed Orders**: 10-minute grace period after completion
+- **Post-Expiration**: Link returns 404, session cleared
+
+**Technical Implementation:**
+```typescript
+// Customer endpoint expiration check
+const isOrderExpired = (order) => {
+  if (order.status !== 'completed') return false;
+  const completionTime = new Date(order.completed_at);
+  const expirationTime = new Date(completionTime.getTime() + 10 * 60 * 1000);
+  return new Date() > expirationTime;
+};
+
+// API Response for expired orders
+if (isOrderExpired(order)) {
+  return res.status(404).json({
+    error: { code: 'ORDER_EXPIRED', message: 'Order confirmation link has expired' }
+  });
+}
+```
+
+**Business Rationale:**
+- **Memory optimization**: Prevents database bloat and session accumulation
+- **Customer behavior**: Customers rarely revisit completed orders
+- **Performance**: Reduces API load and storage requirements
+- **Privacy**: Automatic cleanup of customer data after reasonable grace period
+
+**Dashboard Impact:** 
+- **No effect** on restaurant dashboard or admin endpoints
+- **Staff access**: Unlimited historical order access via admin panels
+- **Only affects**: Customer-facing confirmation links (`/api/v1/customer/*`)
+
+---
+
 *This document serves as the comprehensive guide for all development work on Vizion Menu. Following these rules ensures consistency, quality, and maintainability of the platform.*
 
-**Last Updated**: January 11, 2025 | **Version**: 3.0.0 - Modern Backend Architecture
+**Last Updated**: January 24, 2025 | **Version**: 3.1.0 - Customer Order Expiration Policy

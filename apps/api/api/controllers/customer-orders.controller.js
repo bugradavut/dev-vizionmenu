@@ -120,8 +120,8 @@ const getOrderStatus = async (req, res) => {
     res.json({ 
       data: {
         orderId: order.id,
-        orderNumber: order.order_number,
-        status: order.order_status,
+        orderNumber: order.orderNumber || order.id.split('-')[0].toUpperCase(),
+        status: order.status || order.order_status,
         estimatedTime: order.estimated_completion_time,
         createdAt: order.created_at,
         // Include order items and pricing for confirmation page
