@@ -20,6 +20,7 @@ export interface CreateCampaignData {
   valid_from?: string;
   valid_until: string;
   applicable_categories?: string[] | null;
+  applicable_items?: string[] | null;
 }
 
 export interface UpdateCampaignData {

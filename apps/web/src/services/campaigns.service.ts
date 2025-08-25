@@ -9,9 +9,20 @@ export interface MenuCategory {
   is_active: boolean
 }
 
+export interface MenuItem {
+  id: string
+  name: string
+  category_id: string
+  is_available: boolean
+}
+
 class CampaignsService {
   async getCategories(): Promise<ApiResponse<MenuCategory[]>> {
     return apiClient.get<MenuCategory[]>('/api/v1/menu/categories');
+  }
+
+  async getMenuItems(): Promise<ApiResponse<MenuItem[]>> {
+    return apiClient.get<MenuItem[]>('/api/v1/menu/items');
   }
 
   async getCampaigns(): Promise<ApiResponse<{ campaigns: Campaign[], total: number, page: number, limit: number }>> {

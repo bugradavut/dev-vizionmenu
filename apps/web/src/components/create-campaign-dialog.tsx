@@ -24,7 +24,7 @@ import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 
 // Services
-import { campaignsService, MenuCategory } from '@/services/campaigns.service'
+import { campaignsService, MenuCategory, MenuItem } from '@/services/campaigns.service'
 
 // Types
 import { CreateCampaignData } from '@/types/campaign'
@@ -44,7 +44,9 @@ const createCampaignSchema = z.object({
   validFrom: z.string().optional(),
   validUntil: z.string().min(1, 'Valid until date is required'),
   applicableCategories: z.array(z.string()).optional(),
-  allCategories: z.boolean()
+  applicableItems: z.array(z.string()).optional(),
+  allCategories: z.boolean(),
+  allItems: z.boolean()
 })
 
 type CreateCampaignFormData = z.infer<typeof createCampaignSchema>
@@ -62,6 +64,8 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
   const [isLoading, setIsLoading] = useState(false)
   const [categories, setCategories] = useState<MenuCategory[]>([])
   const [loadingCategories, setLoadingCategories] = useState(true)
+  const [items, setItems] = useState<MenuItem[]>([])
+  const [loadingItems, setLoadingItems] = useState(true)
   const [validFromDate, setValidFromDate] = useState<Date>()
   const [validUntilDate, setValidUntilDate] = useState<Date>()
 
@@ -78,7 +82,9 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
     resolver: zodResolver(createCampaignSchema),
     defaultValues: {
       allCategories: true,
+      allItems: true,
       applicableCategories: [],
+      applicableItems: [],
       validFrom: new Date().toISOString().split('T')[0]
     }
   })
@@ -86,23 +92,31 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
   const watchedType = watch('type')
   const watchedValue = watch('value')
   const watchedAllCategories = watch('allCategories')
+  const watchedAllItems = watch('allItems')
 
-  // Fetch menu categories
+  // Fetch menu categories and items
   useEffect(() => {
     if (open) {
-      const fetchCategories = async () => {
+      const fetchData = async () => {
         try {
-          const response = await campaignsService.getCategories()
-          const activeCategories = response.data?.filter((cat: MenuCategory) => cat.is_active) || []
+          // Fetch categories
+          const categoriesResponse = await campaignsService.getCategories()
+          const activeCategories = categoriesResponse.data?.filter((cat: MenuCategory) => cat.is_active) || []
           setCategories(activeCategories)
+          
+          // Fetch menu items
+          const itemsResponse = await campaignsService.getMenuItems()
+          const availableItems = itemsResponse.data?.filter((item: MenuItem) => item.is_available) || []
+          setItems(availableItems)
         } catch (error) {
-          console.error('Failed to fetch categories:', error)
+          console.error('Failed to fetch data:', error)
         } finally {
           setLoadingCategories(false)
+          setLoadingItems(false)
         }
       }
 
-      fetchCategories()
+      fetchData()
     }
   }, [open])
 
@@ -120,6 +134,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
       setValidFromDate(undefined)
       setValidUntilDate(undefined)
       setLoadingCategories(true)
+      setLoadingItems(true)
     }
   }, [open, reset])
 
@@ -134,7 +149,8 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
         value: data.value,
         valid_until: data.validUntil,
         ...(data.validFrom && { valid_from: data.validFrom }),
-        applicable_categories: data.allCategories ? null : data.applicableCategories
+        applicable_categories: data.allCategories ? null : data.applicableCategories,
+        applicable_items: data.allItems ? null : data.applicableItems
       }
 
       await campaignsService.createCampaign(campaignData)
@@ -328,38 +344,95 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
                 </div>
 
                 {!watchedAllCategories && (
-                  <div className="ml-6 space-y-2 max-h-32 overflow-y-auto">
-                    <p className="text-sm text-muted-foreground">
+                  <div className="mt-3 p-4 border border-border rounded-lg bg-muted/30">
+                    <p className="text-sm font-medium text-foreground mb-3">
                       {t.campaigns.selectCategories}:
                     </p>
-                    {loadingCategories ? (
-                      <p className="text-sm text-muted-foreground">Loading categories...</p>
-                    ) : categories.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        {language === 'fr' ? 'Aucune catégorie trouvée' : 'No categories found'}
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-2">
-                        {categories.map((category) => (
-                          <div key={category.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`category-${category.id}`}
-                              onCheckedChange={(checked) => {
-                                const currentCategories = getValues('applicableCategories') || []
-                                if (checked) {
-                                  setValue('applicableCategories', [...currentCategories, category.id])
-                                } else {
-                                  setValue('applicableCategories', currentCategories.filter(id => id !== category.id))
-                                }
-                              }}
-                            />
-                            <Label htmlFor={`category-${category.id}`} className="text-sm">
-                              {category.name}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div className="max-h-32 overflow-y-auto space-y-2">
+                      {loadingCategories ? (
+                        <p className="text-sm text-muted-foreground">Loading categories...</p>
+                      ) : categories.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          {language === 'fr' ? 'Aucune catégorie trouvée' : 'No categories found'}
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-2">
+                          {categories.map((category) => (
+                            <div key={category.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`category-${category.id}`}
+                                onCheckedChange={(checked) => {
+                                  const currentCategories = getValues('applicableCategories') || []
+                                  if (checked) {
+                                    setValue('applicableCategories', [...currentCategories, category.id])
+                                  } else {
+                                    setValue('applicableCategories', currentCategories.filter(id => id !== category.id))
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`category-${category.id}`} className="text-sm">
+                                {category.name}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Items */}
+            <div className="space-y-3">
+              <Label>{language === 'fr' ? 'Articles applicables' : 'Applicable Items'}</Label>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <Switch
+                    id="allItems"
+                    checked={watchedAllItems}
+                    onCheckedChange={(checked) => setValue('allItems', checked)}
+                  />
+                  <Label htmlFor="allItems" className="text-sm font-medium">
+                    {language === 'fr' ? 'Tous les articles' : 'All menu items'}
+                  </Label>
+                </div>
+
+                {!watchedAllItems && (
+                  <div className="mt-3 p-4 border border-border rounded-lg bg-muted/30">
+                    <p className="text-sm font-medium text-foreground mb-3">
+                      {language === 'fr' ? 'Sélectionner des articles:' : 'Select specific items:'}
+                    </p>
+                    <div className="max-h-32 overflow-y-auto space-y-2">
+                      {loadingItems ? (
+                        <p className="text-sm text-muted-foreground">{language === 'fr' ? 'Chargement des articles...' : 'Loading items...'}</p>
+                      ) : items.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          {language === 'fr' ? 'Aucun article trouvé' : 'No items found'}
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-2">
+                          {items.map((item) => (
+                            <div key={item.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`item-${item.id}`}
+                                onCheckedChange={(checked) => {
+                                  const currentItems = getValues('applicableItems') || []
+                                  if (checked) {
+                                    setValue('applicableItems', [...currentItems, item.id])
+                                  } else {
+                                    setValue('applicableItems', currentItems.filter(id => id !== item.id))
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`item-${item.id}`} className="text-sm">
+                                {item.name}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

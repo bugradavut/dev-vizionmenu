@@ -86,7 +86,7 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
           {/* Right Side - Order Summary & Details */}
           <div className="space-y-6">
             <OrderSummary items={items} language={language} />
-            <PriceDetailsSection items={items} language={language} />
+            <PriceDetailsSection items={items} language={language} branchId={orderContext.branchId} />
             <OrderNotesSection 
               value={orderNotes}
               onChange={setOrderNotes}
