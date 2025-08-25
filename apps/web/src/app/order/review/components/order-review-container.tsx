@@ -11,6 +11,7 @@ import { PaymentMethodSection } from './payment-method-section'
 import { TipSection } from './tip-section'
 import { OrderNotesSection } from './order-notes-section'
 import { PriceDetailsSection } from './price-details-section'
+import { PromoCodeSection } from './promo-code-section'
 import { OrderTotalSidebar } from './order-total-sidebar'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -34,6 +35,12 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   const [isFormValid, setIsFormValid] = useState(false)
   const [formData, setFormData] = useState<object | null>(null)
   const [orderNotes, setOrderNotes] = useState<string>('')
+  const [appliedDiscount, setAppliedDiscount] = useState<{
+    code: string
+    discountAmount: number
+    campaignType: 'percentage' | 'fixed_amount'
+    campaignValue: number
+  } | null>(null)
   const customerInfoRef = useRef<{ triggerValidation: () => boolean } | null>(null)
   
   const handleValidationChange = (isValid: boolean, data: object) => {
@@ -86,7 +93,13 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
           {/* Right Side - Order Summary & Details */}
           <div className="space-y-6">
             <OrderSummary items={items} language={language} />
-            <PriceDetailsSection items={items} language={language} branchId={orderContext.branchId} />
+            <PriceDetailsSection items={items} language={language} appliedDiscount={appliedDiscount} />
+            <PromoCodeSection 
+              items={items} 
+              language={language} 
+              branchId={orderContext.branchId}
+              onDiscountChange={setAppliedDiscount}
+            />
             <OrderNotesSection 
               value={orderNotes}
               onChange={setOrderNotes}
