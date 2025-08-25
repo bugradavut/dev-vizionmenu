@@ -86,6 +86,8 @@ const updateCampaign = async (req, res) => {
     const userBranch = req.userBranch;
     const updateData = req.body;
 
+    console.log('Update campaign request:', { id, updateData, branchId: userBranch?.branch_id });
+
     if (!userBranch || !userBranch.branch_id) {
       return res.status(400).json({
         error: { code: 'MISSING_BRANCH_CONTEXT', message: 'Branch context is required' }

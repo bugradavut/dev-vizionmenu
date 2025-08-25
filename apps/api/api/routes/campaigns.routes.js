@@ -9,6 +9,7 @@ router.get('/', requireAuthWithBranch, campaignsController.getCampaigns);
 router.get('/:id', requireAuthWithBranch, campaignsController.getCampaignById);
 router.post('/', requireAuthWithBranch, campaignsController.createCampaign);
 router.put('/:id', requireAuthWithBranch, campaignsController.updateCampaign);
+router.patch('/:id', requireAuthWithBranch, campaignsController.updateCampaign);
 router.delete('/:id', requireAuthWithBranch, campaignsController.deleteCampaign);
 
 // Public route for campaign validation (no auth required - for customer orders)

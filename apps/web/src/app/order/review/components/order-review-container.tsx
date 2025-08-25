@@ -15,6 +15,7 @@ import { PromoCodeSection } from './promo-code-section'
 import { OrderTotalSidebar } from './order-total-sidebar'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Toaster } from '@/components/ui/toaster'
 
 interface OrderContext {
   source: 'qr' | 'web'
@@ -115,6 +116,7 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
           </div>
         </div>
       </div>
+      <Toaster />
     </div>
   )
 }

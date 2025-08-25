@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Plus, Tag, Calendar, Percent, DollarSign } from 'lucide-react'
+import { Plus, Tag } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 // Components
 import { AuthGuard } from '@/components/auth-guard'
@@ -13,6 +14,9 @@ import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
 import { DynamicBreadcrumb } from '@/components/dynamic-breadcrumb'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { CreateCampaignDialog } from '@/components/create-campaign-dialog'
+import { EditCampaignDialog } from '@/components/edit-campaign-dialog'
+import { DeleteCampaignDialog } from '@/components/delete-campaign-dialog'
+import { CampaignCard } from '@/components/campaign-card'
 
 // Contexts & Utils
 import { useLanguage } from '@/contexts/language-context'
@@ -29,8 +33,10 @@ export default function CreateCampaignPage() {
   const t = translations[language] || translations.en
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
 
   // Fetch campaigns
   useEffect(() => {
@@ -40,8 +46,6 @@ export default function CreateCampaignPage() {
         setCampaigns(response.data?.campaigns || [])
       } catch (error) {
         console.error('Failed to fetch campaigns:', error)
-      } finally {
-        setIsLoading(false)
       }
     }
 
@@ -50,28 +54,41 @@ export default function CreateCampaignPage() {
 
   const handleCampaignCreated = async () => {
     // Refresh campaigns list
-    setIsLoading(true)
     try {
       const response = await campaignsService.getCampaigns()
       setCampaigns(response.data?.campaigns || [])
     } catch (error) {
       console.error('Failed to fetch campaigns:', error)
-    } finally {
-      setIsLoading(false)
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA')
+  const handleEditCampaign = (campaign: Campaign) => {
+    setSelectedCampaign(campaign)
+    setIsEditDialogOpen(true)
   }
 
-  const formatDiscount = (type: string, value: number) => {
-    if (type === 'percentage') {
-      return `${value}%`
-    } else {
-      return language === 'fr' ? `${value.toFixed(2)} $` : `$${value.toFixed(2)}`
+  const handleDeleteCampaign = (campaign: Campaign) => {
+    setSelectedCampaign(campaign)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleToggleStatus = async (campaignId: string) => {
+    try {
+      const campaign = campaigns.find(c => c.id === campaignId)
+      if (!campaign) return
+      
+      await campaignsService.updateCampaign(campaignId, {
+        is_active: !campaign.is_active
+      })
+      
+      // Refresh campaigns list
+      handleCampaignCreated()
+    } catch (error) {
+      console.error('Toggle status error:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to toggle status')
     }
   }
+
 
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
@@ -111,18 +128,7 @@ export default function CreateCampaignPage() {
             <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-12">
-                  {isLoading ? (
-                    <div className="space-y-4">
-                      {[1, 2, 3].map((i) => (
-                        <Card key={i} className="animate-pulse">
-                          <CardContent className="p-6">
-                            <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
-                            <div className="h-3 bg-muted rounded w-1/2"></div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : campaigns.length === 0 ? (
+                  {campaigns.length === 0 ? (
                     <Card className="text-center py-12">
                       <CardContent>
                         <Tag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -152,69 +158,18 @@ export default function CreateCampaignPage() {
                         </p>
                       </div>
                       
-                      {campaigns.map((campaign) => (
-                        <Card key={campaign.id} className="group hover:shadow-lg transition-all duration-200">
-                          <CardContent className="p-6">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className={`p-2 rounded-lg ${
-                                    campaign.type === 'percentage' 
-                                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' 
-                                      : 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400'
-                                  }`}>
-                                    {campaign.type === 'percentage' ? (
-                                      <Percent className="h-4 w-4" />
-                                    ) : (
-                                      <DollarSign className="h-4 w-4" />
-                                    )}
-                                  </div>
-                                  <div>
-                                    <h3 className="text-lg font-semibold">{campaign.code}</h3>
-                                    <p className="text-sm text-muted-foreground">
-                                      {campaign.type === 'percentage' ? t.campaigns.percentage : t.campaigns.fixedAmount}
-                                    </p>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center gap-6 mt-4 text-sm text-muted-foreground">
-                                  <div className="flex items-center gap-2">
-                                    <Tag className="h-4 w-4" />
-                                    <span>{formatDiscount(campaign.type, campaign.value)} {language === 'fr' ? 'de remise' : 'discount'}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4" />
-                                    <span>
-                                      {language === 'fr' ? 'Valide jusqu\'au' : 'Valid until'} {formatDate(campaign.valid_until)}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {campaign.applicable_categories && (
-                                  <div className="mt-3">
-                                    <p className="text-xs text-muted-foreground">
-                                      {language === 'fr' ? 'Catégories spécifiques seulement' : 'Specific categories only'}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="flex items-center gap-2 ml-4">
-                                <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  campaign.is_active 
-                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                                    : 'bg-gray-100 text-gray-700 dark:bg-gray-900/20 dark:text-gray-400'
-                                }`}>
-                                  {campaign.is_active 
-                                    ? (language === 'fr' ? 'Actif' : 'Active')
-                                    : (language === 'fr' ? 'Inactif' : 'Inactive')
-                                  }
-                                </div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {campaigns.map((campaign) => (
+                          <CampaignCard
+                            key={campaign.id}
+                            campaign={campaign}
+                            onEdit={handleEditCampaign}
+                            onDelete={handleDeleteCampaign}
+                            onToggleStatus={handleToggleStatus}
+                            isLoading={false}
+                          />
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -227,6 +182,20 @@ export default function CreateCampaignPage() {
       <CreateCampaignDialog 
         open={isCreateDialogOpen} 
         onOpenChange={setIsCreateDialogOpen}
+        onSuccess={handleCampaignCreated}
+      />
+
+      <EditCampaignDialog 
+        campaign={selectedCampaign}
+        open={isEditDialogOpen} 
+        onOpenChange={setIsEditDialogOpen}
+        onSuccess={handleCampaignCreated}
+      />
+
+      <DeleteCampaignDialog 
+        campaign={selectedCampaign}
+        open={isDeleteDialogOpen} 
+        onOpenChange={setIsDeleteDialogOpen}
         onSuccess={handleCampaignCreated}
       />
     </AuthGuard>

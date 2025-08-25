@@ -1,7 +1,7 @@
 "use client";
 
 import { apiClient, ApiResponse } from './api-client';
-import { Campaign, CreateCampaignData } from '@/types/campaign';
+import { Campaign, CreateCampaignData, UpdateCampaignData } from '@/types/campaign';
 
 export interface MenuCategory {
   id: string
@@ -37,7 +37,7 @@ class CampaignsService {
     return apiClient.get<Campaign>(`/api/v1/campaigns/${id}`);
   }
 
-  async updateCampaign(id: string, data: Partial<CreateCampaignData>): Promise<ApiResponse<Campaign>> {
+  async updateCampaign(id: string, data: UpdateCampaignData): Promise<ApiResponse<Campaign>> {
     return apiClient.patch<Campaign>(`/api/v1/campaigns/${id}`, data);
   }
 

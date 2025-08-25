@@ -43,8 +43,12 @@ export function OrderTotalSidebar({ language, formData, orderNotes = '', orderCo
   const handleConfirmOrder = async () => {
     if (isSubmitting) return
     
-    // Trigger validation
-    onTriggerValidation()
+    // Trigger validation and check if it passes
+    const isValid = onTriggerValidation()
+    
+    if (!isValid) {
+      return // Don't proceed if validation fails
+    }
     
     setIsSubmitting(true)
     

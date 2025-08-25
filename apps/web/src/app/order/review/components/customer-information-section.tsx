@@ -1,12 +1,15 @@
 "use client"
 
 import React, { useState, forwardRef, useImperativeHandle } from 'react'
+import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Home, Building, Building2, MapPin, Utensils, ShoppingBag, Bike } from 'lucide-react'
 import { AddressAutocomplete } from '@/components/address-autocomplete'
+import { useLanguage } from '@/contexts/language-context'
+import { translations } from '@/lib/translations'
 
 // Canadian postal code utilities
 function formatCanadianPostalCode(input: string): string {
@@ -71,9 +74,14 @@ interface CustomerInformationSectionProps {
 }
 
 const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () => boolean }, CustomerInformationSectionProps>(({ language = 'en', orderContext, onValidationChange }, ref) => {
+  const { language: contextLanguage } = useLanguage()
+  const t = translations[contextLanguage] || translations.en
+  const currentLanguage = language || contextLanguage
+  const { toast } = useToast()
+
   // Get translations based on language
   const getOrderTypeText = (type: string) => {
-    if (language === 'fr') {
+    if (currentLanguage === 'fr') {
       switch (type) {
         case 'dineIn': return 'Sur place'
         case 'takeaway': return 'À emporter'
@@ -109,30 +117,67 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
   })
 
   const [validationErrors, setValidationErrors] = useState<{[key: string]: boolean}>({})
+  const [showValidationErrors, setShowValidationErrors] = useState(false)
   
-  // Simple validation - always pass
-  const validateForm = () => {
+  // Required field validation 
+  const validateForm = (showErrors: boolean = false) => {
+    const errors: {[key: string]: boolean} = {}
+    
+    // Check required fields: name, phone, email
+    if (!customerInfo.name.trim()) {
+      errors.name = true
+    }
+    if (!customerInfo.phone.trim()) {
+      errors.phone = true
+    }
+    if (!customerInfo.email.trim()) {
+      errors.email = true
+    }
+    
+    const isValid = Object.keys(errors).length === 0
+    
+    if (showErrors) {
+      setValidationErrors(errors)
+      setShowValidationErrors(true)
+    }
+    
     const formData = {
       customerInfo,
       address,
       orderType: customerInfo.orderType
     }
     
-    onValidationChange?.(true, formData)
-    return { isValid: true, errors: {} }
+    onValidationChange?.(isValid, formData)
+    return { isValid, errors }
   }
   
-  // Public method to trigger validation from parent (always returns true)
+  // Public method to trigger validation from parent
   const triggerValidation = () => {
-    // Send current form data to parent immediately
-    const currentFormData = {
-      customerInfo,
-      address,
-      orderType: customerInfo.orderType
+    const validation = validateForm(true) // Show errors when called from confirm button
+    
+    if (!validation.isValid) {
+      // Show toast notification for missing fields
+      toast({
+        variant: "destructive",
+        description: t.orderPage.review.validationError,
+      })
+      
+      // Scroll to first empty field
+      const firstEmptyField = Object.keys(validation.errors)[0]
+      if (firstEmptyField) {
+        const element = document.getElementById(`customer-${firstEmptyField}`)
+        if (element) {
+          element.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          })
+          element.focus()
+        }
+      }
+      
+      return false
     }
     
-    onValidationChange?.(true, currentFormData)
-    validateForm()
     return true
   }
 
@@ -163,28 +208,40 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
     const newCustomerInfo = { ...customerInfo, [field]: value }
     setCustomerInfo(newCustomerInfo)
     
-    // Trigger validation immediately with the new data
+    // Clear validation error for this field when user types (only if errors are being shown)
+    if (showValidationErrors && validationErrors[field]) {
+      setValidationErrors(prev => ({ ...prev, [field]: false }))
+    }
+    
+    // Always update parent with current form data
     const formData = {
       customerInfo: newCustomerInfo,
       address,
       orderType: newCustomerInfo.orderType
     }
     
-    onValidationChange?.(true, formData)
+    // Check if form is valid (but don't show errors yet)
+    const errors: {[key: string]: boolean} = {}
+    if (!newCustomerInfo.name.trim()) errors.name = true
+    if (!newCustomerInfo.phone.trim()) errors.phone = true  
+    if (!newCustomerInfo.email.trim()) errors.email = true
+    const isValid = Object.keys(errors).length === 0
+    
+    onValidationChange?.(isValid, formData)
   }
   
   const handleInputFocus = (fieldName: string) => {
-    // Clear red border when user focuses on input
-    if (validationErrors[fieldName]) {
+    // Clear red border when user focuses on input (only if errors are being shown)
+    if (showValidationErrors && validationErrors[fieldName]) {
       setValidationErrors(prev => ({ ...prev, [fieldName]: false }))
     }
   }
 
 
-  // Initial validation on mount and when dependencies change
+  // Initial validation on mount and when dependencies change (but don't show errors)
   React.useEffect(() => {
-    validateForm()
-  }, [customerInfo, address, orderContext?.isQROrder, language])
+    validateForm(false) // Don't show errors on initial load
+  }, [customerInfo, address, orderContext?.isQROrder, currentLanguage])
   
   // Expose triggerValidation method to parent
   useImperativeHandle(ref, () => ({
@@ -194,7 +251,7 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
   // Additional effect to catch autofill changes
   React.useEffect(() => {
     const handleAutofill = () => {
-      setTimeout(() => validateForm(), 100)
+      setTimeout(() => validateForm(false), 100) // Don't show errors for autofill
     }
 
     // Listen for various autofill events
@@ -233,14 +290,14 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
 
   const handleAddressChange = (field: keyof DeliveryAddress, value: string) => {
     setAddress(prev => ({ ...prev, [field]: value }))
-    // Trigger validation after state update
-    setTimeout(() => validateForm(), 0)
+    // Trigger validation after state update (but don't show errors)
+    setTimeout(() => validateForm(false), 0)
   }
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
       <h2 className="text-lg font-semibold text-gray-900 mb-5">
-        {language === 'fr' ? 'Informations du client' : 'Customer Information'}
+        {currentLanguage === 'fr' ? 'Informations du client' : 'Customer Information'}
       </h2>
       
       {/* Customer Details - Compact Layout */}
@@ -249,7 +306,7 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="customer-name" className="text-sm font-medium text-gray-700">
-              {language === 'fr' ? 'Nom complet *' : 'Full Name *'}
+              {currentLanguage === 'fr' ? 'Nom complet *' : 'Full Name *'}
             </Label>
             <Input
               id="customer-name"
@@ -259,14 +316,14 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
               onChange={(e) => handleCustomerChange('name', (e.target as HTMLInputElement).value)}
               onBlur={(e) => handleCustomerChange('name', (e.target as HTMLInputElement).value)}
               onInput={(e) => handleCustomerChange('name', (e.target as HTMLInputElement).value)}
-              className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${validationErrors.name ? 'border-red-500' : ''}`}
+              className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${showValidationErrors && validationErrors.name ? 'border-red-500 border-2' : ''}`}
               onFocus={() => handleInputFocus('name')}
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="customer-phone" className="text-sm font-medium text-gray-700">
-              {language === 'fr' ? 'Numéro de téléphone *' : 'Phone Number *'}
+              {currentLanguage === 'fr' ? 'Numéro de téléphone *' : 'Phone Number *'}
             </Label>
             <Input
               id="customer-phone"
@@ -276,7 +333,7 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
               onChange={(e) => handleCustomerChange('phone', (e.target as HTMLInputElement).value)}
               onBlur={(e) => handleCustomerChange('phone', (e.target as HTMLInputElement).value)}
               onInput={(e) => handleCustomerChange('phone', (e.target as HTMLInputElement).value)}
-              className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${validationErrors.phone ? 'border-red-500' : ''}`}
+              className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${showValidationErrors && validationErrors.phone ? 'border-red-500 border-2' : ''}`}
               onFocus={() => handleInputFocus('phone')}
             />
           </div>
@@ -285,7 +342,7 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
         {/* Email - Full width */}
         <div className="space-y-2">
           <Label htmlFor="customer-email" className="text-sm font-medium text-gray-700">
-            {language === 'fr' ? 'Adresse courriel (Optionnel)' : 'Email Address (Optional)'}
+            {currentLanguage === 'fr' ? 'Adresse courriel *' : 'Email Address *'}
           </Label>
           <Input
             id="customer-email"
@@ -295,11 +352,11 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
             onChange={(e) => handleCustomerChange('email', (e.target as HTMLInputElement).value)}
             onBlur={(e) => handleCustomerChange('email', (e.target as HTMLInputElement).value)}
             onInput={(e) => handleCustomerChange('email', (e.target as HTMLInputElement).value)}
-            className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${validationErrors.email ? 'border-red-500' : ''}`}
+            className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${showValidationErrors && validationErrors.email ? 'border-red-500 border-2' : ''}`}
             onFocus={() => handleInputFocus('email')}
           />
           <p className="text-xs text-gray-500">
-            {language === 'fr' ? 'Nous l\'utiliserons pour vous envoyer des mises à jour de commande' : 'We\'ll use this to send you order updates'}
+            {currentLanguage === 'fr' ? 'Nous l\'utiliserons pour vous envoyer des mises à jour de commande' : 'We\'ll use this to send you order updates'}
           </p>
         </div>
       </div>
@@ -315,10 +372,10 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
                 <div className="space-y-2">
                   <div>
                     <span className="text-sm font-medium text-blue-900">
-                      {language === 'fr' ? 'Commande code QR' : 'QR Code Order'} (
+                      {currentLanguage === 'fr' ? 'Commande code QR' : 'QR Code Order'} (
                       {orderContext.zone === 'Screen' 
                         ? 'Screen'
-                        : `${language === 'fr' ? 'Table' : 'Table'} ${orderContext.tableNumber}`
+                        : `${currentLanguage === 'fr' ? 'Table' : 'Table'} ${orderContext.tableNumber}`
                       })
                     </span>
                   </div>
@@ -328,7 +385,7 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
             
             <div>
               <Label className="text-sm font-medium text-gray-700 mb-3 block">
-                {language === 'fr' ? 'Type de commande' : 'Order Type'}
+                {currentLanguage === 'fr' ? 'Type de commande' : 'Order Type'}
               </Label>
               <div className="grid grid-cols-2 gap-3">
                 <Button
@@ -401,13 +458,13 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
         <>
           <div className="border-t border-gray-200 pt-6">
             <h3 className="text-md font-semibold text-gray-900 mb-4">
-              {language === 'fr' ? 'Adresse de livraison' : 'Delivery Address'}
+              {currentLanguage === 'fr' ? 'Adresse de livraison' : 'Delivery Address'}
             </h3>
             
             {/* Address Type Selection - Smaller buttons */}
             <div className="mb-4">
               <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                {language === 'fr' ? 'Type d\'adresse' : 'Address Type'}
+                {currentLanguage === 'fr' ? 'Type d\'adresse' : 'Address Type'}
               </Label>
               <div className="grid grid-cols-4 gap-3">
                 {addressTypes.map((type) => {

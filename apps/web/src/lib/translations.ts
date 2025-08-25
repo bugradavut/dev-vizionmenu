@@ -550,11 +550,11 @@ export const translations = {
         noItems: "No Items",
         noItemsDesc: "Get started by creating your first menu item",
         createItem: "Create Item",
-        editItem: "Edit Item",
-        deleteItem: "Delete Item",
-        duplicateItem: "Duplicate Item",
-        hideItem: "Hide Item",
-        showItem: "Show Item",
+        editItem: "Edit",
+        deleteItem: "Delete", 
+        duplicateItem: "Duplicate",
+        hideItem: "Hide",
+        showItem: "Show",
         updating: "Updating...",
         confirmDelete: "Are you sure you want to delete item \"{name}\"?",
         failedToToggleItem: "Failed to toggle item availability",
@@ -903,7 +903,8 @@ export const translations = {
         otherInformation: "Other information",
         optional: "Optional",
         noteForOrder: "Note for the order",
-        notePlaceholder: "Ex: Put the sauce separately"
+        notePlaceholder: "Ex: Put the sauce separately",
+        validationError: "Please fill in all required fields"
       },
       
       // Payment Section
@@ -1547,11 +1548,11 @@ export const translations = {
         noItems: "Aucun article",
         noItemsDesc: "Commencez par créer votre premier article de menu",
         createItem: "Créer un article",
-        editItem: "Modifier l'article",
-        deleteItem: "Supprimer l'article",
-        duplicateItem: "Dupliquer l'article",
-        hideItem: "Masquer l'article",
-        showItem: "Afficher l'article",
+        editItem: "Modifier",
+        deleteItem: "Supprimer",
+        duplicateItem: "Dupliquer", 
+        hideItem: "Masquer",
+        showItem: "Afficher",
         updating: "Mise à jour...",
         confirmDelete: "Êtes-vous sûr de vouloir supprimer l'article \"{name}\" ?",
         failedToToggleItem: "Erreur lors de la modification de la disponibilité de l'article",
@@ -1900,7 +1901,8 @@ export const translations = {
         otherInformation: "Autres informations",
         optional: "Optionnel",
         noteForOrder: "Note pour la commande",
-        notePlaceholder: "Ex: Mettre la sauce séparément"
+        notePlaceholder: "Ex: Mettre la sauce séparément",
+        validationError: "Veuillez remplir tous les champs obligatoires"
       },
       
       // Payment Section - Canadian French

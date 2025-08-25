@@ -112,7 +112,12 @@
       "Read(/c:\\vision-menu\\apps\\web\\src\\app\\order\\review/**)",
       "Read(/c:\\vision-menu\\apps\\web\\src\\app\\order\\review\\components/**)",
       "Read(/c:\\vision-menu\\apps\\web\\src/**)",
-      "Read(/c:\\vision-menu\\apps\\web\\src\\app\\settings\\branch/**)"
+      "Read(/c:\\vision-menu\\apps\\web\\src\\app\\settings\\branch/**)",
+      "Read(/c:\\vision-menu\\Docs/**)",
+      "Read(/c:\\vision-menu\\Docs/**)",
+      "Read(/c:\\vision-menu\\apps\\web\\src\\app\\campaigns\\create/**)",
+      "Read(/c:\\vision-menu\\apps\\web\\src\\app\\order\\review\\components/**)",
+      "Read(/c:\\vision-menu\\apps\\web\\src\\lib/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

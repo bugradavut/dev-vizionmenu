@@ -168,6 +168,8 @@ async function createCampaign(branchId, campaignData, createdBy) {
  */
 async function updateCampaign(campaignId, branchId, updateData) {
   try {
+    console.log('updateCampaign called with:', { campaignId, branchId, updateData });
+    
     const {
       code,
       type,
@@ -180,6 +182,7 @@ async function updateCampaign(campaignId, branchId, updateData) {
 
     // Validation
     if (type && !['percentage', 'fixed_amount'].includes(type)) {
+      console.log('Invalid campaign type:', type);
       throw new Error('Invalid campaign type. Must be "percentage" or "fixed_amount"');
     }
 

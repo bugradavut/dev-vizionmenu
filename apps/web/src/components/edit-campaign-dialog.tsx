@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { Plus, Tag, CalendarIcon } from 'lucide-react'
+import { Tag, CalendarIcon, Save } from 'lucide-react'
 import { format } from 'date-fns'
 
 // Components
@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -24,13 +23,13 @@ import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 
 // Services
-import { campaignsService, MenuCategory, MenuItem } from '@/services/campaigns.service'
+import { campaignsService } from '@/services/campaigns.service'
 
 // Types
-import { CreateCampaignData } from '@/types/campaign'
+import { Campaign } from '@/types/campaign'
 
 // Form validation schema
-const createCampaignSchema = z.object({
+const editCampaignSchema = z.object({
   code: z.string()
     .min(3, 'Code must be at least 3 characters')
     .max(20, 'Code must be 20 characters or less')
@@ -43,32 +42,25 @@ const createCampaignSchema = z.object({
     }),
   validFrom: z.string().optional(),
   validUntil: z.string().min(1, 'Valid until date is required'),
-  applicableCategories: z.array(z.string()).optional(),
-  applicableItems: z.array(z.string()).optional(),
-  allCategories: z.boolean(),
-  allItems: z.boolean()
+  is_active: z.boolean()
 })
 
-type CreateCampaignFormData = z.infer<typeof createCampaignSchema>
+type EditCampaignFormData = z.infer<typeof editCampaignSchema>
 
-interface CreateCampaignDialogProps {
+interface EditCampaignDialogProps {
+  campaign: Campaign | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
 }
 
-export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCampaignDialogProps) {
+export function EditCampaignDialog({ campaign, open, onOpenChange, onSuccess }: EditCampaignDialogProps) {
   const { language } = useLanguage()
   const t = translations[language] || translations.en
 
   const [isLoading, setIsLoading] = useState(false)
-  const [categories, setCategories] = useState<MenuCategory[]>([])
-  const [loadingCategories, setLoadingCategories] = useState(true)
-  const [items, setItems] = useState<MenuItem[]>([])
-  const [loadingItems, setLoadingItems] = useState(true)
   const [validFromDate, setValidFromDate] = useState<Date>()
   const [validUntilDate, setValidUntilDate] = useState<Date>()
-
 
   const {
     register,
@@ -76,49 +68,38 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
     formState: { errors },
     watch,
     setValue,
-    getValues,
     reset
-  } = useForm<CreateCampaignFormData>({
-    resolver: zodResolver(createCampaignSchema),
+  } = useForm<EditCampaignFormData>({
+    resolver: zodResolver(editCampaignSchema),
     defaultValues: {
-      allCategories: true,
-      allItems: true,
-      applicableCategories: [],
-      applicableItems: [],
-      validFrom: new Date().toISOString().split('T')[0]
+      is_active: true
     }
   })
 
   const watchedType = watch('type')
   const watchedValue = watch('value')
-  const watchedAllCategories = watch('allCategories')
-  const watchedAllItems = watch('allItems')
 
-  // Fetch menu categories and items
+  // Initialize form when campaign changes
   useEffect(() => {
-    if (open) {
-      const fetchData = async () => {
-        try {
-          // Fetch categories
-          const categoriesResponse = await campaignsService.getCategories()
-          const activeCategories = categoriesResponse.data?.filter((cat: MenuCategory) => cat.is_active) || []
-          setCategories(activeCategories)
-          
-          // Fetch menu items
-          const itemsResponse = await campaignsService.getMenuItems()
-          const availableItems = itemsResponse.data?.filter((item: MenuItem) => item.is_available) || []
-          setItems(availableItems)
-        } catch (error) {
-          console.error('Failed to fetch data:', error)
-        } finally {
-          setLoadingCategories(false)
-          setLoadingItems(false)
-        }
+    if (campaign && open) {
+      setValue('code', campaign.code)
+      setValue('type', campaign.type)
+      setValue('value', campaign.value)
+      setValue('is_active', campaign.is_active)
+      
+      if (campaign.valid_from) {
+        const fromDate = new Date(campaign.valid_from)
+        setValidFromDate(fromDate)
+        setValue('validFrom', format(fromDate, 'yyyy-MM-dd'))
       }
-
-      fetchData()
+      
+      if (campaign.valid_until) {
+        const untilDate = new Date(campaign.valid_until)
+        setValidUntilDate(untilDate)
+        setValue('validUntil', format(untilDate, 'yyyy-MM-dd'))
+      }
     }
-  }, [open])
+  }, [campaign, open, setValue])
 
   // Validate percentage when type changes
   useEffect(() => {
@@ -133,55 +114,46 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
       reset()
       setValidFromDate(undefined)
       setValidUntilDate(undefined)
-      setLoadingCategories(true)
-      setLoadingItems(true)
     }
   }, [open, reset])
 
-  const onSubmit = async (data: CreateCampaignFormData) => {
+  const onSubmit = async (data: EditCampaignFormData) => {
+    if (!campaign) return
+    
     setIsLoading(true)
-
     try {
-      // Prepare campaign data
-      const campaignData: CreateCampaignData = {
+      await campaignsService.updateCampaign(campaign.id, {
         code: data.code.toUpperCase(),
         type: data.type,
         value: data.value,
         valid_until: data.validUntil,
         ...(data.validFrom && { valid_from: data.validFrom }),
-        applicable_categories: data.allCategories ? null : data.applicableCategories,
-        applicable_items: data.allItems ? null : data.applicableItems
-      }
-
-      await campaignsService.createCampaign(campaignData)
+        is_active: data.is_active
+      })
       
       onOpenChange(false)
       onSuccess()
     } catch (error) {
-      console.error('Create campaign error:', error)
-      toast.error(error instanceof Error ? error.message : t.campaigns.createFailed)
+      console.error('Update campaign error:', error)
+      
+      // Extract detailed error message
+      let errorMessage = 'Failed to update campaign'
+      if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = error.message as string
+      } else if (error && typeof error === 'object' && 'error' in error) {
+        const apiError = error as { error?: { message?: string } }
+        if (apiError.error && apiError.error.message) {
+          errorMessage = apiError.error.message
+        }
+      }
+      
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Calculate discount preview
-  const getDiscountPreview = () => {
-    if (!watchedValue || !watchedType) return null
-    
-    const sampleAmount = 50 // $50 sample order
-    if (watchedType === 'percentage') {
-      const discount = (sampleAmount * watchedValue) / 100
-      return language === 'fr' 
-        ? `Exemple: ${discount.toFixed(2)} $ de remise sur une commande de ${sampleAmount} $`
-        : `Sample: $${discount.toFixed(2)} off a $${sampleAmount} order`
-    } else {
-      const discount = Math.min(watchedValue, sampleAmount)
-      return language === 'fr'
-        ? `Exemple: ${discount.toFixed(2)} $ de remise sur une commande de ${sampleAmount} $`
-        : `Sample: $${discount.toFixed(2)} off a $${sampleAmount} order`
-    }
-  }
+  if (!campaign) return null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -189,7 +161,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Tag className="h-5 w-5" />
-            {t.campaigns.createPageTitle}
+            {language === 'fr' ? 'Modifier la campagne' : 'Edit Campaign'}
           </DialogTitle>
         </DialogHeader>
         
@@ -204,7 +176,6 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
                 placeholder={t.campaigns.campaignCodePlaceholder}
                 className={errors.code ? 'border-red-500' : ''}
                 onChange={(e) => {
-                  // Convert to uppercase automatically
                   const value = e.target.value.toUpperCase()
                   setValue('code', value)
                 }}
@@ -214,11 +185,14 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
               )}
             </div>
 
-            {/* Campaign Type & Value in a row */}
+            {/* Campaign Type & Value */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="type">{t.campaigns.campaignType}</Label>
-                <Select onValueChange={(value: 'percentage' | 'fixed_amount') => setValue('type', value)}>
+                <Select 
+                  value={watch('type')} 
+                  onValueChange={(value: 'percentage' | 'fixed_amount') => setValue('type', value)}
+                >
                   <SelectTrigger className={errors.type ? 'border-red-500' : ''}>
                     <SelectValue placeholder="Select discount type" />
                   </SelectTrigger>
@@ -257,9 +231,6 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
                 {errors.value && (
                   <p className="text-sm text-red-600">{errors.value.message}</p>
                 )}
-                {getDiscountPreview() && (
-                  <p className="text-sm text-muted-foreground">{getDiscountPreview()}</p>
-                )}
               </div>
             </div>
 
@@ -292,6 +263,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
                   </PopoverContent>
                 </Popover>
               </div>
+              
               <div className="space-y-2">
                 <Label>{t.campaigns.validUntil} *</Label>
                 <Popover>
@@ -327,114 +299,16 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
               </div>
             </div>
 
-            {/* Categories */}
-            <div className="space-y-3">
-              <Label>{t.campaigns.applicableCategories}</Label>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <Switch
-                    id="allCategories"
-                    checked={watchedAllCategories}
-                    onCheckedChange={(checked) => setValue('allCategories', checked)}
-                  />
-                  <Label htmlFor="allCategories" className="text-sm font-medium">
-                    {t.campaigns.allCategories}
-                  </Label>
-                </div>
-
-                {!watchedAllCategories && (
-                  <div className="mt-3 p-4 border border-border rounded-lg bg-muted/30">
-                    <p className="text-sm font-medium text-foreground mb-3">
-                      {t.campaigns.selectCategories}:
-                    </p>
-                    <div className="max-h-32 overflow-y-auto space-y-2">
-                      {loadingCategories ? (
-                        <p className="text-sm text-muted-foreground">Loading categories...</p>
-                      ) : categories.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          {language === 'fr' ? 'Aucune catégorie trouvée' : 'No categories found'}
-                        </p>
-                      ) : (
-                        <div className="grid grid-cols-1 gap-2">
-                          {categories.map((category) => (
-                            <div key={category.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`category-${category.id}`}
-                                onCheckedChange={(checked) => {
-                                  const currentCategories = getValues('applicableCategories') || []
-                                  if (checked) {
-                                    setValue('applicableCategories', [...currentCategories, category.id])
-                                  } else {
-                                    setValue('applicableCategories', currentCategories.filter(id => id !== category.id))
-                                  }
-                                }}
-                              />
-                              <Label htmlFor={`category-${category.id}`} className="text-sm">
-                                {category.name}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Items */}
-            <div className="space-y-3">
-              <Label>{language === 'fr' ? 'Articles applicables' : 'Applicable Items'}</Label>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <Switch
-                    id="allItems"
-                    checked={watchedAllItems}
-                    onCheckedChange={(checked) => setValue('allItems', checked)}
-                  />
-                  <Label htmlFor="allItems" className="text-sm font-medium">
-                    {language === 'fr' ? 'Tous les articles' : 'All menu items'}
-                  </Label>
-                </div>
-
-                {!watchedAllItems && (
-                  <div className="mt-3 p-4 border border-border rounded-lg bg-muted/30">
-                    <p className="text-sm font-medium text-foreground mb-3">
-                      {language === 'fr' ? 'Sélectionner des articles:' : 'Select specific items:'}
-                    </p>
-                    <div className="max-h-32 overflow-y-auto space-y-2">
-                      {loadingItems ? (
-                        <p className="text-sm text-muted-foreground">{language === 'fr' ? 'Chargement des articles...' : 'Loading items...'}</p>
-                      ) : items.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          {language === 'fr' ? 'Aucun article trouvé' : 'No items found'}
-                        </p>
-                      ) : (
-                        <div className="grid grid-cols-1 gap-2">
-                          {items.map((item) => (
-                            <div key={item.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`item-${item.id}`}
-                                onCheckedChange={(checked) => {
-                                  const currentItems = getValues('applicableItems') || []
-                                  if (checked) {
-                                    setValue('applicableItems', [...currentItems, item.id])
-                                  } else {
-                                    setValue('applicableItems', currentItems.filter(id => id !== item.id))
-                                  }
-                                }}
-                              />
-                              <Label htmlFor={`item-${item.id}`} className="text-sm">
-                                {item.name}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+            {/* Status Toggle */}
+            <div className="flex items-center space-x-3">
+              <Switch
+                id="is_active"
+                checked={watch('is_active')}
+                onCheckedChange={(checked) => setValue('is_active', checked)}
+              />
+              <Label htmlFor="is_active" className="text-sm font-medium">
+                {language === 'fr' ? 'Campagne active' : 'Campaign active'}
+              </Label>
             </div>
           </div>
 
@@ -446,12 +320,12 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  {language === 'fr' ? 'Création...' : 'Creating...'}
+                  {language === 'fr' ? 'Mise à jour...' : 'Updating...'}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  {t.campaigns.createCampaign}
+                  <Save className="w-4 h-4" />
+                  {language === 'fr' ? 'Sauvegarder' : 'Save Changes'}
                 </div>
               )}
             </Button>
