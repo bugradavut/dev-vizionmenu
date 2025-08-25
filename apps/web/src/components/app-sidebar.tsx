@@ -6,6 +6,7 @@ import {
   PieChart,
   Settings2,
   SquareTerminal,
+  Tag,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -56,6 +57,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           {
             title: t.navigation.menu,
             url: "/menu",
+          },
+        ],
+      },
+      {
+        title: t.navigation.campaigns,
+        url: "/campaigns",
+        icon: Tag,
+        items: [
+          {
+            title: t.navigation.createCampaign,
+            url: "/campaigns/create",
           },
         ],
       },

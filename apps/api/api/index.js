@@ -45,6 +45,7 @@ const menuItemsRoutes = require('./routes/menu-items.routes');
 const menuPresetsRoutes = require('./routes/menu-presets.routes');
 const customerMenuRoutes = require('./routes/customer-menu.routes');
 const customerOrdersRoutes = require('./routes/customer-orders.routes');
+const campaignsRoutes = require('./routes/campaigns.routes');
 const platformSyncRoutes = require('./routes/platform-sync.routes');
 
 // Global Supabase client initialization
@@ -99,6 +100,9 @@ app.use('/api/v1/customer/menu', customerMenuRoutes);
 
 // Use customer orders routes (public - no auth required)
 app.use('/api/v1/customer/orders', customerOrdersRoutes);
+
+// Use campaigns routes
+app.use('/api/v1/campaigns', campaignsRoutes);
 
 // Use platform sync routes (protected - auth required)
 app.use('/api/v1/platform-sync', requireAuthWithBranch, platformSyncRoutes);

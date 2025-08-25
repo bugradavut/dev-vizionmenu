@@ -27,6 +27,7 @@ export const translations = {
       orderHistory: "Order History",
       kitchenDisplay: "Kitchen Display",
       menuManagement: "Menu Management",
+      campaigns: "Campaigns",
       settings: "Settings",
       generalSettings: "General Settings",
       branchSettings: "Branch Settings", 
@@ -39,7 +40,8 @@ export const translations = {
       categories: "Categories",
       items: "Items",
       pricing: "Pricing",
-      menu: "Menu"
+      menu: "Menu",
+      createCampaign: "Create Campaign"
     },
     
     // Dashboard
@@ -952,6 +954,48 @@ export const translations = {
         addMore: "Add {quantity} More ({current} in cart)",
         addToCart: "Add {quantity} to Cart"
       }
+    },
+    
+    // Campaigns
+    campaigns: {
+      // Page Header
+      createPageTitle: "Create Campaign",
+      createPageSubtitle: "Set up promotional codes and discounts for your customers",
+      
+      // Form Labels
+      campaignCode: "Campaign Code",
+      campaignCodePlaceholder: "e.g., SAVE20, PIZZA15",
+      campaignType: "Discount Type",
+      discountValue: "Discount Value",
+      validFrom: "Valid From",
+      validUntil: "Valid Until",
+      applicableCategories: "Applicable Categories",
+      allCategories: "All menu categories",
+      selectCategories: "Select specific categories",
+      
+      // Campaign Types
+      percentage: "Percentage Discount",
+      fixedAmount: "Fixed Amount Discount",
+      
+      // Buttons
+      createCampaign: "Create Campaign",
+      cancel: "Cancel",
+      
+      // Success Messages
+      campaignCreated: "Campaign created successfully!",
+      campaignCreatedDesc: "Your promotional campaign is now active and ready to use.",
+      
+      // Validation Messages
+      codeRequired: "Campaign code is required",
+      codeMinLength: "Code must be at least 3 characters",
+      codeMaxLength: "Code must be 20 characters or less",
+      typeRequired: "Please select a discount type",
+      valueRequired: "Discount value is required",
+      valueMin: "Value must be greater than 0",
+      percentageMax: "Percentage cannot exceed 100%",
+      validUntilRequired: "Valid until date is required",
+      validUntilFuture: "Valid until date must be in the future",
+      createFailed: "Failed to create campaign"
     }
   },
   
@@ -980,6 +1024,7 @@ export const translations = {
       orderHistory: "Historique des commandes",
       kitchenDisplay: "Affichage cuisine",
       menuManagement: "Gestion du menu",
+      campaigns: "Campagnes",
       settings: "Paramètres",
       generalSettings: "Paramètres généraux",
       branchSettings: "Paramètres de succursale", 
@@ -992,7 +1037,8 @@ export const translations = {
       categories: "Catégories", 
       items: "Articles",
       pricing: "Tarification",
-      menu: "Menu"
+      menu: "Menu",
+      createCampaign: "Créer une campagne"
     },
     
     // Dashboard - Canadian French
@@ -1905,6 +1951,48 @@ export const translations = {
         addMore: "Ajouter {quantity} de plus ({current} dans le panier)",
         addToCart: "Ajouter {quantity} au panier"
       }
+    },
+    
+    // Campaigns - Canadian French
+    campaigns: {
+      // Page Header
+      createPageTitle: "Créer une campagne",
+      createPageSubtitle: "Configurez des codes promotionnels et des remises pour vos clients",
+      
+      // Form Labels
+      campaignCode: "Code de campagne",
+      campaignCodePlaceholder: "ex: ECONOMIE20, PIZZA15",
+      campaignType: "Type de remise",
+      discountValue: "Valeur de la remise",
+      validFrom: "Valide à partir de",
+      validUntil: "Valide jusqu'à",
+      applicableCategories: "Catégories applicables",
+      allCategories: "Toutes les catégories du menu",
+      selectCategories: "Sélectionner des catégories spécifiques",
+      
+      // Campaign Types
+      percentage: "Remise en pourcentage",
+      fixedAmount: "Remise de montant fixe",
+      
+      // Buttons
+      createCampaign: "Créer la campagne",
+      cancel: "Annuler",
+      
+      // Success Messages
+      campaignCreated: "Campagne créée avec succès !",
+      campaignCreatedDesc: "Votre campagne promotionnelle est maintenant active et prête à utiliser.",
+      
+      // Validation Messages
+      codeRequired: "Le code de campagne est requis",
+      codeMinLength: "Le code doit contenir au moins 3 caractères",
+      codeMaxLength: "Le code doit contenir au maximum 20 caractères",
+      typeRequired: "Veuillez sélectionner un type de remise",
+      valueRequired: "La valeur de la remise est requise",
+      valueMin: "La valeur doit être supérieure à 0",
+      percentageMax: "Le pourcentage ne peut pas dépasser 100%",
+      validUntilRequired: "La date de fin de validité est requise",
+      validUntilFuture: "La date de fin doit être dans le futur",
+      createFailed: "Échec de la création de la campagne"
     }
   }
 } as const
