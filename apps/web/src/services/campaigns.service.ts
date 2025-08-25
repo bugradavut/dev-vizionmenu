@@ -1,7 +1,7 @@
 "use client";
 
 import { apiClient, ApiResponse } from './api-client';
-import { Campaign, CreateCampaignData, CampaignsListResponse } from '@/types/campaign';
+import { Campaign, CreateCampaignData } from '@/types/campaign';
 
 export interface MenuCategory {
   id: string
