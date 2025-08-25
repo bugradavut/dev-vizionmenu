@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { orderService } from '@/services/order-service';
 import { useLanguage } from '@/contexts/language-context';
+import { translations } from '@/lib/translations';
 import { useCart } from '../contexts/cart-context';
 import { Check, Package, CheckCircle2, RefreshCw } from 'lucide-react';
 
@@ -64,6 +65,35 @@ interface OrderSession {
   timestamp?: number;
 }
 
+// Helper function to format estimated time as completion time
+const formatEstimatedCompletionTime = (estimatedTime: string, createdAt: string, language: string) => {
+  try {
+    // Extract minutes from estimated time string (e.g., "20 minutes" -> 20)
+    const minutesMatch = estimatedTime.match(/(\d+)\s*minutes?/i);
+    if (!minutesMatch) return estimatedTime; // Fallback to original format
+    
+    const minutes = parseInt(minutesMatch[1], 10);
+    if (isNaN(minutes)) return estimatedTime;
+    
+    // Calculate completion time
+    const orderTime = new Date(createdAt);
+    const completionTime = new Date(orderTime.getTime() + minutes * 60 * 1000);
+    
+    // Format completion time
+    const timeString = completionTime.toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'America/Toronto'
+    });
+    
+    return `${timeString} (${minutes} ${language === 'fr' ? 'minutes' : 'Minutes'})`;
+  } catch (error) {
+    console.warn('Error formatting estimated completion time:', error);
+    return estimatedTime; // Fallback to original format
+  }
+};
+
 // Simplified 3-step progress with correct timestamps
 const getProgressSteps = (currentStatus: string, language: string, orderCreatedAt?: string) => {
   const isEnglish = language === 'en';
@@ -119,6 +149,7 @@ function OrderConfirmationContent() {
   const router = useRouter();
   const { language } = useLanguage();
   const { items, clearCart } = useCart();
+  const t = translations[language] || translations.en;
   
   const orderId = searchParams.get('orderId');
 
@@ -348,10 +379,10 @@ function OrderConfirmationContent() {
               )}
             </div>
 
-            {/* Delivery Information */}
+            {/* Order Details */}
             <div className="border-t border-gray-200 pt-6 mb-8">
               <h2 className="font-semibold text-gray-900 mb-4">
-                {language === 'fr' ? 'Type de commande' : 'Order Type'}
+                {language === 'fr' ? 'Détails de la commande' : 'Order Details'}
               </h2>
               
               <div className="space-y-3">
@@ -397,14 +428,14 @@ function OrderConfirmationContent() {
                 </div>
                 
                 {/* Estimated Completion Time */}
-                {orderDetails?.estimatedTime && (
+                {orderDetails?.estimatedTime && orderDetails?.createdAt && (
                   <div className="flex items-center py-2">
                     <span className="text-gray-500 text-sm">
-                      {language === 'fr' ? 'Temps estimé' : 'Estimated Time'}
+                      {t.orderTracking.completionTime}
                     </span>
                     <div className="flex-1 border-b border-dotted border-gray-300 mx-3"></div>
                     <span className="font-medium text-orange-600 bg-orange-50 border border-orange-200 px-3 py-1 rounded-lg">
-                      {orderDetails.estimatedTime}
+                      {formatEstimatedCompletionTime(orderDetails.estimatedTime, orderDetails.createdAt, language)}
                     </span>
                   </div>
                 )}

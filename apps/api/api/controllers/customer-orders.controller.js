@@ -11,26 +11,23 @@ const { handleControllerError } = require('../helpers/error-handler');
  * Calculate estimated time based on order type and branch timing settings
  * @param {string} orderType - 'takeaway', 'dine_in', or 'delivery'
  * @param {Object} timingSettings - Branch timing configuration
- * @returns {string} Estimated time string (e.g., "20-25 minutes")
+ * @returns {string} Estimated time string (e.g., "20 minutes")
  */
 function calculateEstimatedTime(orderType, timingSettings) {
   const kitchenTime = (timingSettings.baseDelay || 20) + (timingSettings.temporaryBaseDelay || 0);
   
   if (orderType === 'takeaway' || orderType === 'dine_in') {
     // Takeaway/Dine-in: Only kitchen preparation time
-    const minTime = Math.max(5, kitchenTime);
-    const maxTime = minTime + 5;
-    return `${minTime}-${maxTime} minutes`;
+    const totalTime = Math.max(5, kitchenTime);
+    return `${totalTime} minutes`;
   } else if (orderType === 'delivery') {
     // Delivery: Kitchen + delivery time
     const deliveryTime = (timingSettings.deliveryDelay || 15) + (timingSettings.temporaryDeliveryDelay || 0);
     const totalTime = Math.max(10, kitchenTime + deliveryTime);
-    const minTime = totalTime;
-    const maxTime = totalTime + 5;
-    return `${minTime}-${maxTime} minutes`;
+    return `${totalTime} minutes`;
   } else {
     // Fallback for unknown order types
-    return '20-25 minutes';
+    return '20 minutes';
   }
 }
 
@@ -115,7 +112,7 @@ const createCustomerOrder = async (req, res) => {
     const createResult = await ordersService.createOrder(orderData, branchId);
 
     // Get branch timing settings for estimated time calculation
-    let estimatedTime = '20-25 minutes'; // Default fallback
+    let estimatedTime = '20 minutes'; // Default fallback
     try {
       const branchSettings = await branchesService.getBranchSettings(branchId);
       const timingSettings = branchSettings.settings?.timingSettings || {};
@@ -201,13 +198,13 @@ const getOrderStatus = async (req, res) => {
         estimatedTime = calculateEstimatedTime(orderType, timingSettings);
       } else {
         // Fallback estimated time
-        estimatedTime = orderType === 'delivery' ? '35-40 minutes' : '20-25 minutes';
+        estimatedTime = orderType === 'delivery' ? '35 minutes' : '20 minutes';
       }
     } catch (timingError) {
       console.warn('Failed to calculate estimated time for order status:', timingError.message);
       // Fallback estimated time
       const orderType = order.order_type || order.orderType || 'takeaway';
-      estimatedTime = orderType === 'delivery' ? '35-40 minutes' : '20-25 minutes';
+      estimatedTime = orderType === 'delivery' ? '35 minutes' : '20 minutes';
     }
 
     // Return public information including order items for confirmation page

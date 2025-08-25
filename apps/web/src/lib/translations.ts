@@ -705,6 +705,7 @@ export const translations = {
       orderPlaced: "Order Placed",
       preparing: "Preparing",
       estimatedTime: "Estimated time",
+      completionTime: "Completion Time",
       ready: "Ready for Pickup/Delivery",
       contactTitle: "Need Help?",
       callRestaurant: "Call Restaurant",
@@ -752,6 +753,10 @@ export const translations = {
       yourCart: "Your Cart",
       cartEmpty: "Your cart is empty",
       cartEmptyDesc: "Add items from the menu to get started",
+      
+      // Order Ready Time
+      orderReadyFor: "ORDER READY FOR",
+      orderReadyIn: "in {minutes} minutes",
       
       // Order Types
       dineIn: "Dine In",
@@ -1703,6 +1708,7 @@ export const translations = {
       orderPlaced: "Commande passée",
       preparing: "Préparation",
       estimatedTime: "Temps estimé",
+      completionTime: "Heure d'achèvement",
       ready: "Prêt pour ramassage/livraison",
       contactTitle: "Besoin d'aide?",
       callRestaurant: "Appeler le restaurant",
@@ -1750,6 +1756,10 @@ export const translations = {
       yourCart: "Votre panier",
       cartEmpty: "Votre panier est vide",
       cartEmptyDesc: "Ajoutez des articles du menu pour commencer",
+      
+      // Order Ready Time - Canadian French
+      orderReadyFor: "COMMANDE PRÊTE POUR",
+      orderReadyIn: "dans {minutes} minutes",
       
       // Order Types - Canadian French restaurant terms
       dineIn: "Sur place",          // NOT "Salle à manger"

@@ -1,18 +1,19 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, Minus, Trash2, ShoppingBag, Loader2, Utensils, Bike } from 'lucide-react'
+import { Plus, Minus, Trash2, ShoppingBag, Loader2, Utensils, Bike, Clock } from 'lucide-react'
 import { useCart } from '../contexts/cart-context'
 import { useOrderContext } from '../contexts/order-context'
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 import { useResponsiveClasses } from '@/hooks/use-responsive'
+import { getBranchSettings, type TimingSettings } from '@/services/branch-settings.service'
 
 
 export function CartSidebar() {
@@ -38,6 +39,57 @@ export function CartSidebar() {
   const [selectedOrderType, setSelectedOrderType] = useState<'dine_in' | 'takeaway' | 'delivery'>(
     isQROrder ? 'dine_in' : 'takeaway'
   )
+  const [timingSettings, setTimingSettings] = useState<TimingSettings | null>(null)
+
+  // Load branch timing settings
+  useEffect(() => {
+    const loadTimingSettings = async () => {
+      if (branchId) {
+        try {
+          const branchSettings = await getBranchSettings(branchId)
+          setTimingSettings(branchSettings.settings.timingSettings)
+        } catch (error) {
+          console.warn('Failed to load branch timing settings:', error)
+        }
+      }
+    }
+    
+    loadTimingSettings()
+  }, [branchId])
+
+  // Calculate order ready time
+  const calculateOrderReadyTime = (orderType: 'dine_in' | 'takeaway' | 'delivery') => {
+    if (!timingSettings) return null
+    
+    try {
+      const kitchenTime = (timingSettings.baseDelay || 20) + (timingSettings.temporaryBaseDelay || 0)
+      
+      let totalMinutes: number
+      if (orderType === 'delivery') {
+        const deliveryTime = (timingSettings.deliveryDelay || 15) + (timingSettings.temporaryDeliveryDelay || 0)
+        totalMinutes = Math.max(10, kitchenTime + deliveryTime)
+      } else {
+        totalMinutes = Math.max(5, kitchenTime)
+      }
+      
+      // Calculate completion time
+      const now = new Date()
+      const readyTime = new Date(now.getTime() + totalMinutes * 60 * 1000)
+      
+      // Format time
+      const timeString = readyTime.toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'America/Toronto'
+      })
+      
+      return { timeString, totalMinutes }
+    } catch (error) {
+      console.warn('Error calculating order ready time:', error)
+      return null
+    }
+  }
 
   const handleQuantityChange = (itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -86,10 +138,36 @@ export function CartSidebar() {
     <div className="flex flex-col h-full">
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
+        {/* Order Ready Time Header - Always visible */}
+        <div className={`${responsiveClasses.padding.section} pb-0 pt-4`}>
+          {(() => {
+            const readyTimeInfo = calculateOrderReadyTime(selectedOrderType)
+            if (!readyTimeInfo) return null
+            
+            return (
+              <Card className="bg-orange-50 border-orange-200 p-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Clock className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm text-orange-600 font-medium">
+                      {t.orderPage.orderReadyFor}
+                    </div>
+                    <div className="text-lg font-bold text-orange-900">
+                      {readyTimeInfo.timeString} <span className="text-sm font-normal">({readyTimeInfo.totalMinutes} min)</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )
+          })()}
+        </div>
+
         {/* Cart Items or Empty State */}
       <div className="flex-1 overflow-y-auto pb-[100px]">
         {items.length === 0 ? (
-          <div className="h-full flex items-center justify-center pt-16">
+          <div className="h-full flex items-center justify-center pt-8">
             <div className="text-center px-6">
               <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto">
                 <ShoppingBag className="w-10 h-10 text-muted-foreground/40" />
