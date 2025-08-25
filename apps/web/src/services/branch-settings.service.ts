@@ -12,9 +12,16 @@ export interface TimingSettings {
   autoReady: boolean;
 }
 
+export interface PaymentSettings {
+  allowOnlinePayment: boolean;
+  allowCounterPayment: boolean;
+  defaultPaymentMethod: 'online' | 'counter';
+}
+
 export interface BranchSettings {
   orderFlow: 'standard' | 'simplified';
   timingSettings: TimingSettings;
+  paymentSettings: PaymentSettings;
 }
 
 export interface BranchSettingsResponse {
@@ -97,6 +104,7 @@ export const updateBranchSettings = async (
       body: JSON.stringify({
         orderFlow: settings.orderFlow,
         timingSettings: settings.timingSettings,
+        paymentSettings: settings.paymentSettings,
       }),
     });
 
@@ -124,5 +132,10 @@ export const getDefaultSettings = (): BranchSettings => ({
     deliveryDelay: 15,
     temporaryDeliveryDelay: 0,
     autoReady: false,
+  },
+  paymentSettings: {
+    allowOnlinePayment: true,
+    allowCounterPayment: false, // Default: counter payment disabled
+    defaultPaymentMethod: 'online',
   },
 });

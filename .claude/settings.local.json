@@ -107,7 +107,12 @@
       "Read(/c:\\vision-menu\\apps\\web\\src\\hooks/**)",
       "Read(/c:\\vision-menu\\apps\\web\\src\\services/**)",
       "Read(/c:\\vision-menu\\apps\\web\\src\\services/**)",
-      "Read(/c:\\vision-menu\\apps\\web\\src\\services/**)"
+      "Read(/c:\\vision-menu\\apps\\web\\src\\services/**)",
+      "Read(/c:\\vision-menu\\apps\\web\\src\\app\\order\\review/**)",
+      "Read(/c:\\vision-menu\\apps\\web\\src\\app\\order\\review/**)",
+      "Read(/c:\\vision-menu\\apps\\web\\src\\app\\order\\review\\components/**)",
+      "Read(/c:\\vision-menu\\apps\\web\\src/**)",
+      "Read(/c:\\vision-menu\\apps\\web\\src\\app\\settings\\branch/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

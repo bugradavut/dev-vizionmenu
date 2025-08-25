@@ -376,6 +376,92 @@ export default function BranchSettingsPage() {
                       </div>
                     </div>
 
+                    {/* Payment Method Settings Section */}
+                    <div className="space-y-6 transition-all duration-300">
+                      <div className="flex items-center gap-3">
+                        <ArrowRight className="h-5 w-5 text-primary" />
+                        <h3 className="text-lg font-semibold">Payment Method Options</h3>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                          <h4 className="font-medium text-gray-900 mb-3">Available Payment Methods</h4>
+                          <div className="space-y-3">
+                            {/* Online Payment Toggle */}
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <Label htmlFor="online-payment" className="text-sm font-medium">
+                                  Pay Online
+                                </Label>
+                                <p className="text-xs text-muted-foreground">
+                                  Allow customers to pay online during order placement
+                                </p>
+                              </div>
+                              <Switch
+                                id="online-payment"
+                                checked={settings.paymentSettings?.allowOnlinePayment ?? true}
+                                onCheckedChange={(enabled) => updateSettings({
+                                  paymentSettings: {
+                                    ...settings.paymentSettings,
+                                    allowOnlinePayment: enabled,
+                                    allowCounterPayment: settings.paymentSettings?.allowCounterPayment ?? false,
+                                    defaultPaymentMethod: settings.paymentSettings?.defaultPaymentMethod ?? 'online'
+                                  }
+                                })}
+                              />
+                            </div>
+                            
+                            <Separator />
+                            
+                            {/* Counter Payment Toggle */}
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <Label htmlFor="counter-payment" className="text-sm font-medium">
+                                  Pay at Counter
+                                </Label>
+                                <p className="text-xs text-muted-foreground">
+                                  Allow customers to pay at the counter upon pickup/delivery
+                                </p>
+                              </div>
+                              <Switch
+                                id="counter-payment"
+                                checked={settings.paymentSettings?.allowCounterPayment ?? false}
+                                onCheckedChange={(enabled) => updateSettings({
+                                  paymentSettings: {
+                                    ...settings.paymentSettings,
+                                    allowOnlinePayment: settings.paymentSettings?.allowOnlinePayment ?? true,
+                                    allowCounterPayment: enabled,
+                                    defaultPaymentMethod: settings.paymentSettings?.defaultPaymentMethod ?? 'online'
+                                  }
+                                })}
+                              />
+                            </div>
+                          </div>
+                          
+                          {/* Payment Status Indicator */}
+                          <div className="mt-4 pt-3 border-t border-gray-200">
+                            {settings.paymentSettings?.allowCounterPayment ? (
+                              <div className="flex items-center gap-2 text-green-700 text-sm">
+                                <CheckCircle className="h-4 w-4" />
+                                <span className="font-medium">Counter payment enabled</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 text-orange-600 text-sm">
+                                <AlertCircle className="h-4 w-4" />
+                                <span className="font-medium">Counter payment disabled</span>
+                              </div>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {settings.paymentSettings?.allowCounterPayment 
+                                ? "Customers can choose to pay at pickup/delivery"
+                                : "Customers must pay online to place orders"
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Save Button */}
                     <div className="flex items-center justify-between pt-6 border-t">
                       <div className="text-sm text-muted-foreground">

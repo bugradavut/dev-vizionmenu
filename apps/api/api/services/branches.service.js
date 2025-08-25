@@ -39,6 +39,11 @@ async function getBranchSettings(branchId) {
       deliveryDelay: 15,
       temporaryDeliveryDelay: 0,
       autoReady: false
+    },
+    paymentSettings: {
+      allowOnlinePayment: true,
+      allowCounterPayment: false,
+      defaultPaymentMethod: 'online'
     }
   };
 
@@ -59,7 +64,7 @@ async function getBranchSettings(branchId) {
  * @returns {Object} Updated branch data
  */
 async function updateBranchSettings(branchId, settingsData, userId) {
-  const { orderFlow, timingSettings } = settingsData;
+  const { orderFlow, timingSettings, paymentSettings } = settingsData;
   
   // Validate orderFlow
   if (!orderFlow || !['standard', 'simplified'].includes(orderFlow)) {
@@ -88,6 +93,23 @@ async function updateBranchSettings(branchId, settingsData, userId) {
     
     if (typeof autoReady !== 'boolean') {
       throw new Error('autoReady must be a boolean');
+    }
+  }
+
+  // Validate paymentSettings if provided
+  if (paymentSettings && typeof paymentSettings === 'object') {
+    const { allowOnlinePayment, allowCounterPayment, defaultPaymentMethod } = paymentSettings;
+    
+    if (typeof allowOnlinePayment !== 'boolean') {
+      throw new Error('allowOnlinePayment must be a boolean');
+    }
+    
+    if (typeof allowCounterPayment !== 'boolean') {
+      throw new Error('allowCounterPayment must be a boolean');
+    }
+    
+    if (defaultPaymentMethod && !['online', 'counter'].includes(defaultPaymentMethod)) {
+      throw new Error('defaultPaymentMethod must be "online" or "counter"');
     }
   }
 
@@ -120,7 +142,7 @@ async function updateBranchSettings(branchId, settingsData, userId) {
     throw new Error('Branch not found');
   }
 
-  // Prepare new settings - always preserve timingSettings with autoReady toggle
+  // Prepare new settings - always preserve timingSettings and paymentSettings
   const newSettings = {
     ...branchData.settings,
     orderFlow,
@@ -130,6 +152,11 @@ async function updateBranchSettings(branchId, settingsData, userId) {
       deliveryDelay: 15,
       temporaryDeliveryDelay: 0,
       autoReady: false
+    },
+    paymentSettings: paymentSettings || {
+      allowOnlinePayment: true,
+      allowCounterPayment: false,
+      defaultPaymentMethod: 'online'
     }
   };
 

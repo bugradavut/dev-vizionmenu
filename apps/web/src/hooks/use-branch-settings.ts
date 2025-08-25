@@ -116,7 +116,11 @@ export const useBranchSettings = (options: UseBranchSettingsOptions = {}): UseBr
       // Ensure timingSettings are properly merged
       timingSettings: updates.timingSettings 
         ? { ...current.timingSettings, ...updates.timingSettings }
-        : current.timingSettings
+        : current.timingSettings,
+      // Ensure paymentSettings are properly merged
+      paymentSettings: updates.paymentSettings 
+        ? { ...current.paymentSettings, ...updates.paymentSettings }
+        : current.paymentSettings
     }));
   }, []);
 
