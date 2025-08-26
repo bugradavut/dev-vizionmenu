@@ -1,598 +1,323 @@
-# Claude Development Rules - Vizion Menu Project
+# CLAUDE.md - VizionMenu Project Documentation
 
-**Comprehensive coding standards and project guidelines for Vizion Menu development**
+**Complete project guide for Claude AI - Last Updated: January 26, 2025**
 
 ---
 
-## 🎯 PROJECT OVERVIEW & CONTEXT
+## 🎯 PROJECT OVERVIEW
 
-**Vizion Menu** is a production-ready **multi-tenant restaurant management platform** similar to Adisyo or UEAT. Built with modern TypeScript stack supporting restaurant chains with multiple branches, real-time order management, and comprehensive third-party integrations.
+**VizionMenu** is an **enterprise-grade multi-tenant restaurant ordering and management platform** built with modern TypeScript stack. It serves restaurant chains with multiple branches, featuring sophisticated role-based access control, real-time order management, and comprehensive third-party platform integrations.
 
-**Architecture**: Monorepo structure with Next.js frontend, Express.js backend, and Supabase database  
-**Current Status**: Production deployment with ongoing feature development  
-**Key Focus**: Code quality, responsive design, multi-tenant security, and scalable architecture
+### **🏗️ Architecture Overview**
 
-### **🍽️ RESTAURANT ORDER FLOW SYSTEM - CRITICAL BUSINESS LOGIC**
+**Monorepo Structure (Turborepo + PNPM):**
+```
+vision-menu/
+├── apps/                    # Main applications
+│   ├── web/                # Next.js 15 frontend
+│   ├── api/                # Express.js unified backend
+│   └── worker/             # Node.js background jobs
+├── packages/               # Shared packages
+│   ├── types/              # TypeScript definitions
+│   ├── ui/                 # React component library
+│   └── config/             # Shared configuration
+├── Docs/                   # Comprehensive documentation
+└── photos/                 # Asset storage
+```
 
-**Vizion Menu implements a flexible dual-flow system for order management, allowing restaurants to choose between manual control and automated processing based on their operational preferences.**
+**Key Features:**
+- **Multi-tenant Architecture**: Restaurant chains with branch-level isolation
+- **Real-time Order Management**: Live kitchen displays and customer tracking
+- **Bilingual System**: English/Canadian French with professional translations
+- **Third-party Integrations**: Uber Eats, DoorDash, Skip The Dishes
+- **Customer Ordering**: QR code scanning and web ordering interface
+- **Campaign System**: Discount codes and promotional campaigns
+- **Pre-order System**: Schedule orders up to 10 days in advance
 
-#### **Order Flow Options (Branch Settings)**
+---
 
-**1. Standard Flow (Manual Control)**
+## 💻 TECHNOLOGY STACK
+
+### **Frontend (apps/web) - Next.js 15**
+- **Framework**: Next.js 15 with App Router (React 19)
+- **Styling**: Tailwind CSS + ShadCN UI components
+- **State Management**: React Context + Zustand stores
+- **Forms**: React Hook Form + Zod validation
+- **Real-time**: Supabase WebSocket subscriptions
+- **Authentication**: Supabase Auth with custom JWT parsing
+
+### **Backend (apps/api) - Express.js**
+- **Architecture**: Unified Express.js (same code dev/production)
+- **Pattern**: Controller-Service-Route modular structure
+- **Database**: Supabase PostgreSQL with Row-Level Security (RLS)
+- **Authentication**: Supabase Auth + JWT with custom claims
+- **Error Handling**: Centralized error handler
+- **File Structure**:
+```
+api/
+├── controllers/           # Request handlers
+├── services/             # Business logic
+├── routes/               # Express routes
+├── middleware/           # Auth, validation, CORS
+└── helpers/              # Utilities and validation
+```
+
+### **Database & External Services**
+- **Supabase**: PostgreSQL with RLS, real-time subscriptions, auth, storage
+- **Redis + BullMQ**: Background job processing
+- **Stripe**: Payment processing with webhooks
+- **Third-party APIs**: Uber Eats, DoorDash, Skip The Dishes
+
+### **Deployment**
+- **Frontend**: Vercel (https://dev-vizionmenu.vercel.app)
+- **Backend**: Vercel (https://dev-vizionmenu-web.vercel.app)
+- **Database**: Supabase production instance
+- **Queue**: Upstash Redis for background jobs
+
+---
+
+## 🍽️ RESTAURANT ORDER FLOW SYSTEM
+
+### **Dual-Flow Architecture**
+
+VizionMenu supports two operational modes configurable per branch:
+
+**1. Standard Flow (Manual Control):**
 ```
 Pending → Confirmed → Preparing → Ready → Completed
 ```
-- **Full manual control**: Restaurant staff manually progresses each order through every status
-- **Maximum flexibility**: Staff can hold orders at any stage, perfect for complex kitchens
-- **Use case**: Fine dining, complex menus, restaurants preferring full control
-- **Third-party integration**: All platforms (Uber Eats, DoorDash, etc.) require manual "Ready" confirmation
+- Full manual control at each step
+- Perfect for fine dining or complex kitchens
+- Staff manually progresses through all statuses
 
-**2. Simplified Flow (Smart Automation + Manual Override)**
+**2. Simplified Flow (Smart Automation):**
 ```
 Auto-Accept → Preparing → Auto-Ready (timer-based) → Completed
 ```
-- **Automatic acceptance**: Orders immediately enter "Preparing" status upon arrival
-- **Smart timing system**: Uses configurable preparation + delivery times for auto-ready
-- **Manual override capability**: Staff can mark "Ready" before timer expires
-- **Flexible timing**: Base delay + temporary adjustments + delivery delay
-- **UEAT-style automation**: Similar to UEAT's internal platform but with added flexibility
+- Automatic acceptance and timer-based progression
+- Manual override capability at any stage
+- Configurable timing with temporary adjustments
 
-#### **Timing Configuration (Simplified Flow Only)**
+### **Timing Configuration (Simplified Flow)**
 ```typescript
 interface TimingSettings {
   baseDelay: number;           // Base preparation time (default: 20 min)
-  temporaryBaseDelay: number;  // Temporary adjustment +/- (rush hours, etc.)
+  temporaryBaseDelay: number;  // Temporary adjustment +/- (rush hours)
   deliveryDelay: number;       // Delivery time (default: 15 min) 
   temporaryDeliveryDelay: number; // Temporary delivery adjustment
   manualReadyOption: boolean;  // Allow manual "Ready" before timer
 }
-
-// Total Time = baseDelay + temporaryBaseDelay + deliveryDelay + temporaryDeliveryDelay
 ```
-
-#### **Key Business Rules**
-1. **Standard Flow**: Always requires manual intervention at each step
-2. **Simplified Flow**: Automatic progression with manual override capability
-3. **Third-party orders**: External platforms (Uber Eats, DoorDash) always require manual "Ready" confirmation regardless of flow type
-4. **Internal orders**: QR code, web orders can use full automation in Simplified Flow
-5. **Timer flexibility**: Restaurant can adjust times during rush hours without changing base settings
-6. **Manual override**: Staff can always intervene in Simplified Flow for quality control
-
-#### **UI/UX Implications**
-- **Live Orders**: Show timer progress bars in Simplified Flow
-- **Kitchen Display**: Display manual "Ready" buttons only when applicable
-- **Order History**: Track manual vs automatic status changes
-- **Branch Settings**: Visual flow selection with timing configuration
-- **Status badges**: Different colors/styles for auto vs manual status changes
-
-This dual-flow system provides competitive advantage over UEAT by offering both automation AND manual control options, letting restaurants choose their preferred operational style.
 
 ---
 
-## 🛒 CUSTOMER ORDER FLOW SYSTEM - FRONTEND IMPLEMENTATION
+## 🛒 CUSTOMER ORDER FLOW
 
-**Vizion Menu implements a comprehensive customer-facing order system that handles QR code orders, web orders, and seamless checkout experience.**
-
-### **Customer Order Journey**
-
-**Complete Flow Path:**
+### **Order Journey Path**
 ```
-/order → /order/review → /order/confirmation → (optional) /order/track
+/order → /order/review → /order/confirmation → /order/track (optional)
 ```
 
-#### **1. Order Page (`/order`) - Menu & Cart**
-- **Purpose**: Menu browsing and cart management
-- **Context**: QR code scanning or direct web access
-- **Key Features**: Category filtering, item customization, responsive cart
-- **Data Storage**: Cart items in localStorage for persistence
+**1. Order Page (`/order`)**: Menu browsing and cart management
+**2. Review Page (`/order/review`)**: Customer info and checkout
+**3. Confirmation Page (`/order/confirmation`)**: Order status tracking
 
+### **Data Management**
+- **Cart**: localStorage for persistence across sessions
+- **Session**: sessionStorage for order confirmation (auto-cleanup after 10 min)
+- **API**: Public endpoints `/api/v1/customer/orders` for order submission and tracking
+
+### **Order Context**
 ```typescript
-// URL Parameters for Order Context
 interface OrderContext {
-  source: 'qr' | 'web';           // Order source type
-  branchId: string;               // Restaurant branch ID
-  tableNumber?: number;           // Table number (QR only)
+  source: 'qr' | 'web';           // Order source
+  branchId: string;               // Restaurant branch
+  tableNumber?: number;           // Table (QR only)
   zone?: string;                  // Zone/area (QR only)
 }
-
-// Example URLs:
-// QR Code: /order?source=qr&branch=BRANCH_ID&table=5&zone=Patio
-// Web: /order?source=web&branch=BRANCH_ID
-```
-
-#### **2. Review Page (`/order/review`) - Customer Info & Checkout**
-- **Purpose**: Customer information collection and order review
-- **Validation**: Form validation with error handling
-- **Payment**: Payment method selection (cash/online)
-- **Data Transfer**: SessionStorage for order confirmation data
-
-```typescript
-// Customer Information Structure
-interface CustomerInfo {
-  name: string;
-  phone: string;
-  email?: string;
-  orderType: 'dine_in' | 'takeaway' | 'delivery';
-}
-
-// Order Review Data Transfer
-const confirmationData = {
-  orderId: string;
-  customerInfo: CustomerInfo;
-  items: CartItem[];
-  pricing: OrderPricing;
-  timestamp: number; // For cleanup
-};
-```
-
-#### **3. Confirmation Page (`/order/confirmation`) - Order Status & Tracking**
-- **Purpose**: Order confirmation and real-time status tracking
-- **Data Sources**: SessionStorage (immediate) + API (persistent)
-- **Progress Tracking**: 3-step visual timeline (Received → Preparing → Completed)
-- **Cleanup**: Automatic sessionStorage cleanup after 10 minutes
-
-```typescript
-// Progress Timeline Statuses
-type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
-
-// Progress Step Mapping
-const progressSteps = [
-  'received': Always completed,
-  'preparing': Active when status in ['confirmed', 'preparing', 'ready', 'completed'],
-  'completed': Active when status === 'completed'
-];
-```
-
-### **Data Management Patterns**
-
-#### **Cart Management (localStorage)**
-```typescript
-// Persistent cart storage
-const CART_STORAGE_KEY = 'vizion-menu-cart';
-- Auto-save on cart changes
-- Load on page refresh
-- Clear on order completion
-```
-
-#### **Session Management (sessionStorage)**
-```typescript
-// Temporary order data for confirmation
-const SESSION_STORAGE_KEY = 'vizion-order-confirmation';
-- Auto-cleanup after 10 minutes
-- Fallback when API unavailable
-- Cross-page data transfer
-```
-
-#### **API Integration**
-```typescript
-// Public Customer API Endpoints
-POST /api/v1/customer/orders          // Order submission
-GET /api/v1/customer/orders/:id/status // Status tracking
-```
-
-### **Key Technical Patterns**
-
-#### **1. Responsive Design Implementation**
-```typescript
-// Order page layout patterns
-Desktop: Sidebar + Grid + Cart (3-column)
-Tablet: Tabs + Grid + Sidebar (2-column)  
-Mobile: Stacked + Bottom Cart (1-column)
-```
-
-#### **2. Error Handling Strategy**
-```typescript
-// Graceful degradation
-API Available: Full real-time tracking
-API Unavailable: SessionStorage fallback
-No Data: Redirect to menu with error message
-```
-
-#### **3. Multi-Language Customer Experience**
-```typescript
-// Customer-facing translations
-orderConfirmation: {
-  title: "Order Confirmed" | "Commande confirmée",
-  progress: {
-    received: "Order Received" | "Commande reçue", 
-    preparing: "Preparing" | "Préparation",
-    completed: "Completed" | "Terminé"
-  }
-}
-```
-
-### **Order Confirmation Best Practices**
-
-#### **Link Permanency Policy**
-- **Completed Orders**: Permanent access (industry standard)
-- **Rationale**: Digital receipt, reorder functionality, customer service
-- **Performance**: Minimal database impact (~500 bytes per order)
-- **Competitive**: Matches Uber Eats, DoorDash standards
-
-#### **Progress Timeline Rules**
-```typescript
-// Time Display Standards
-- Canada timezone: 'America/Toronto'
-- Format: 'HH:mm' (no date in timeline)
-- Real-time updates: Current Canada time for active steps
-- Language-aware: fr-CA vs en-CA formatting
-```
-
-#### **Status Synchronization**
-```typescript
-// API Response Mapping
-Database: order_status field
-API Response: status field  
-Frontend: OrderStatus type with proper mapping
-Real-time: WebSocket updates (future enhancement)
 ```
 
 ---
 
-## 🌍 MULTI-LANGUAGE SYSTEM - CRITICAL IMPLEMENTATION RULES
+## 🌍 MULTI-LANGUAGE SYSTEM
 
-### **🇨🇦 Canadian French Language Support - PRODUCTION READY**
+### **Bilingual Architecture (English/Canadian French)**
 
-**Vizion Menu implements a comprehensive bilingual system (English/Canadian French) that is PRODUCTION READY and fully deployed.**
+**CRITICAL RULES:**
+1. **Always use centralized translations** from `apps/web/src/lib/translations.ts`
+2. **Never create inline translations** - use translation context
+3. **Canadian French terminology** - restaurant industry specific
+4. **Professional quality** - production-ready translations
 
-#### **Language Architecture Overview**
-- **Centralized Translation System**: Single `translations.ts` file with all translations
-- **React Context**: Language switching without page refresh using `LanguageContext`
-- **Persistent Preferences**: User language choice stored in localStorage
-- **Professional Quality**: Restaurant industry-specific Canadian French terminology
-
-#### **CRITICAL LANGUAGE RULES FOR FUTURE DEVELOPMENT**
-
-**1. MANDATORY: Use Centralized Translation System**
+**Implementation Pattern:**
 ```typescript
-// ✅ ALWAYS use centralized translations
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 
 const { language } = useLanguage()
 const t = translations[language] || translations.en
 
-// Use: t.navigation.dashboard, t.orderDetail.loading, etc.
-
-// ❌ NEVER create inline translations
-const title = language === 'fr' ? 'Tableau de bord' : 'Dashboard'
+// Usage: t.navigation.dashboard, t.orders.status.pending
 ```
 
-**2. CANADIAN FRENCH SPECIFIC TERMINOLOGY - NEVER CHANGE THESE**
-```typescript
-// ✅ CORRECT Canadian French restaurant terms
-"dineIn": "Sur place"        // NOT "Salle à manger"
-"takeaway": "À emporter"     // NOT "À l'emporter" 
-"cash": "Comptant"           // NOT "Espèces"
-"email": "Courriel"          // NOT "Email"
-"tax": "Taxe (TVH)"          // NOT "Taxe (TPS/TVQ)"
+**Key Canadian French Terms:**
+- "Sur place" (dine-in)
+- "À emporter" (takeaway)
+- "Comptant" (cash)
+- "Courriel" (email)
+- "25,99 $" (currency format)
 
-// ✅ CORRECT Canadian currency formatting
-"$25.99" in English → "25,99 $" in Canadian French
-```
-
-**3. TRANSLATION FILE STRUCTURE - FOLLOW EXACTLY**
-```typescript
-// apps/web/src/lib/translations.ts
-export const translations = {
-  en: {
-    navigation: { /* English translations */ },
-    dashboard: { /* English translations */ },
-    // ... other sections
-  },
-  fr: {
-    navigation: { /* Canadian French translations */ },
-    dashboard: { /* Canadian French translations */ },
-    // ... other sections - MIRROR English structure exactly
-  }
-} as const
-```
-
-**4. NEW FEATURE TRANSLATION REQUIREMENTS**
-When adding ANY new UI text or feature:
-
-**Step 1**: Add English translations to `translations.ts`
-```typescript
-// Add to appropriate section
-newFeature: {
-  title: "New Feature",
-  description: "Feature description",
-  // ... all text strings
-}
-```
-
-**Step 2**: Add Canadian French translations immediately
-```typescript
-// Add to same section in fr object
-newFeature: {
-  title: "Nouvelle fonctionnalité",
-  description: "Description de la fonctionnalité", 
-  // ... all text strings in Canadian French
-}
-```
-
-**Step 3**: Use in components with translation context
-```typescript
-const t = translations[language] || translations.en
-return <h1>{t.newFeature.title}</h1>
-```
-
-**5. NOTIFICATION SYSTEM - SPECIAL FORMATTING RULES**
-```typescript
-// ✅ CORRECT: Use JSX for bold formatting in notifications
-{language === 'fr' ? (
-  <>
-    Une nouvelle commande <span className="font-bold">#{orderNumber}</span> a été placée par <span className="font-bold">{customerName}</span> pour un montant total de <span className="font-bold">{total} $</span>.
-  </>
-) : (
-  <>
-    A new order <span className="font-bold">#{orderNumber}</span> has been placed by <span className="font-bold">{customerName}</span> with a total amount of <span className="font-bold">${total}</span>.
-  </>
-)}
-
-// ❌ NEVER use string interpolation for dynamic data in notifications
-```
-
-#### **COMPLETED TRANSLATION COVERAGE - DO NOT MODIFY**
-**All these areas are FULLY TRANSLATED and PRODUCTION READY:**
-- ✅ Navigation (Sidebar, Breadcrumbs, Menu items)
-- ✅ Dashboard (Overview, Analytics)
-- ✅ Orders System (Live Orders, Order History, Order Detail, Kitchen Display)
-- ✅ Settings (General, Branch, User Management)
-- ✅ User Management (Tables, Modals, Forms, Validation)
-- ✅ Notification System (Real-time order notifications with bold formatting)
-- ✅ All Status Labels (pending, preparing, ready, completed, cancelled, rejected)
-- ✅ All Form Validation Messages
-- ✅ All Error States and Loading States
-
-#### **LANGUAGE TESTING CHECKLIST**
-Before deploying any new feature with text:
-1. **Switch Language**: Test language toggle works without refresh
-2. **All Text Translated**: Verify no English text appears in French mode
-3. **Currency Format**: Check Canadian French uses "25,99 $" format
-4. **Restaurant Terms**: Verify Canadian French restaurant terminology
-5. **Mobile Responsive**: Test translation lengths on mobile devices
-6. **Build Success**: Ensure `npm run build` passes with new translations
+**Translation Coverage (100% Complete):**
+- Navigation, Dashboard, Orders, Settings
+- User Management, Notifications
+- All status labels and validation messages
+- Error states and loading states
 
 ---
 
-## 🌐 PUBLIC API ENDPOINTS - CUSTOMER-FACING OPERATIONS
+## 🏗️ BACKEND ARCHITECTURE - MODERN PATTERN
 
-**Vizion Menu implements public API endpoints for customer order operations that require no authentication, optimized for QR code and web orders.**
+### **MANDATORY Structure for All New APIs**
 
-### **Customer Order Endpoints**
-
-#### **POST `/api/v1/customer/orders` - Create Customer Order**
-```javascript
-// Request Body Structure
-{
-  "branchId": "550e8400-e29b-41d4-a716-446655440002",
-  "items": [
-    {
-      "id": "item-uuid",
-      "name": "Sucuklu Pizza",
-      "price": 21.90,
-      "quantity": 1,
-      "notes": "Extra cheese"
-    }
-  ],
-  "orderType": "takeaway" | "dine_in" | "delivery",
-  "source": "web" | "qr",
-  "paymentMethod": "cash" | "online",
-  "customerInfo": {
-    "name": "Customer Name",
-    "phone": "5398487416",
-    "email": "customer@email.com"
-  },
-  "tableNumber": 5, // QR orders only
-  "zone": "Patio", // QR orders only
-  "subtotal": 21.90,
-  "tax": 2.85,
-  "total": 24.75,
-  "notes": "Special instructions"
-}
-
-// Response Structure
-{
-  "data": {
-    "orderId": "7f4bc935-b46d-40db-a9fd-7f293e5891d2",
-    "orderNumber": "7F4BC935",
-    "status": "pending",
-    "total": 24.75,
-    "estimatedTime": "20-30 minutes",
-    "message": "Order placed successfully!"
-  }
-}
+**File Organization:**
+```
+apps/api/api/
+├── controllers/     # Route handlers ONLY
+├── services/        # Business logic layer
+├── routes/          # Route definitions ONLY
+├── middleware/      # Auth, validation middleware
+├── helpers/         # Utilities (error-handler, auth, permissions)
+└── index.js         # Entry point - route mounting
 ```
 
-#### **GET `/api/v1/customer/orders/:orderId/status` - Order Status Tracking**
+**Controller Pattern (REQUIRED):**
 ```javascript
-// Response Structure
-{
-  "data": {
-    "orderId": "7f4bc935-b46d-40db-a9fd-7f293e5891d2",
-    "orderNumber": "7F4BC935", 
-    "status": "preparing",
-    "estimatedTime": "15-20 minutes",
-    "createdAt": "2025-01-24T09:53:00Z",
-    "items": [
-      {
-        "id": "item-id",
-        "name": "Sucuklu Pizza",
-        "price": 21.90,
-        "quantity": 1,
-        "total": 21.90,
-        "image_url": "https://...",
-        "description": "Turkish Pizza"
-      }
-    ],
-    "pricing": {
-      "subtotal": 21.90,
-      "taxAmount": 2.85,
-      "total": 24.75
-    }
-  }
-}
-```
+const { handleControllerError } = require('../helpers/error-handler');
+const service = require('../services/feature.service');
 
-### **Authentication-Free Patterns**
-
-#### **Public Endpoint Security**
-```javascript
-// No authentication required for customer operations
-// Rate limiting applied per IP
-// Branch-scoped data access only
-// No sensitive restaurant data exposed
-
-// Controller Pattern
-const createCustomerOrder = async (req, res) => {
+const controllerMethod = async (req, res) => {
   try {
-    // Input validation without auth
-    const orderData = validateCustomerOrderInput(req.body);
-    
-    // Create order using service layer
-    const result = await ordersService.createOrder(orderData, branchId);
-    
-    // Public response (no sensitive data)
-    res.status(201).json({ data: publicOrderInfo });
+    const result = await service.businessMethod(req.params.id);
+    res.json({ data: result });
   } catch (error) {
-    handleControllerError(error, 'create customer order', res);
+    handleControllerError(error, 'operation description', res);
   }
 };
+
+module.exports = { controllerMethod };
 ```
 
-#### **Data Privacy & Security**
-```typescript
-// Public endpoint data exposure rules
-✅ Allowed: Order status, items, pricing, estimated time
-❌ Forbidden: Staff info, branch settings, payment details, other customers' data
-✅ Branch isolation: RLS policies ensure branch-scoped access
-❌ Cross-branch access: Impossible via public endpoints
-```
+**Service Pattern (REQUIRED):**
+```javascript
+const { createClient } = require('@supabase/supabase-js');
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
-### **Session & Cart Management Standards**
+async function businessMethod(param) {
+  // Validation
+  if (!param) throw new Error('Parameter required');
+  
+  // Database operations
+  const { data, error } = await supabase
+    .from('table_name')
+    .select('*')
+    .eq('param', param);
+    
+  if (error) throw new Error(`Database error: ${error.message}`);
+  
+  // Business logic
+  return processBusinessLogic(data);
+}
 
-#### **LocalStorage vs SessionStorage Strategy**
-```typescript
-// LocalStorage (Persistent)
-- Cart items: Survives browser restart
-- Language preference: User settings
-- Theme preference: UI customization
-
-// SessionStorage (Temporary)  
-- Order confirmation data: Single browser session
-- Form validation state: Page-specific
-- API fallback data: Temporary reliability
-```
-
-#### **Cleanup Policies**
-```typescript
-// Cart Management
-clearCart() on order completion
-Auto-save on every cart change
-Restore on page refresh
-
-// Session Management  
-10-minute auto-cleanup after order completion (status: completed)
-Manual cleanup on page navigation
-Order link expiration after completion for memory optimization
-Graceful degradation when expired
+module.exports = { businessMethod };
 ```
 
 ---
 
-## 🏗️ ARCHITECTURE & TECHNICAL STANDARDS
+## 🔐 SECURITY & MULTI-TENANT RULES
 
-### **1. Monorepo Structure Rules**
+### **Authentication & Authorization**
+- **Supabase Auth**: JWT with custom claims
+- **Role Hierarchy**: chain_owner > branch_manager > branch_staff > branch_cashier
+- **Branch Isolation**: RLS policies enforce data separation
+- **Permission Validation**: Required before all operations
+
+### **Role Hierarchy Validation**
+```typescript
+const ROLE_HIERARCHY = {
+  'chain_owner': 3,
+  'branch_manager': 2,
+  'branch_staff': 1,
+  'branch_cashier': 0
+} as const;
+
+function canEditUser(currentRole: BranchRole, targetRole: BranchRole): boolean {
+  return (ROLE_HIERARCHY[currentRole] || -1) >= (ROLE_HIERARCHY[targetRole] || -1);
+}
 ```
-vizion-menu/
-├── apps/
-│   ├── api/        # Express.js Backend (unified dev/prod)
-│   ├── web/        # Next.js 15 Frontend Application  
-│   └── worker/     # Background Job Processing
-├── packages/
-│   ├── types/      # Shared TypeScript Definitions
-│   ├── ui/         # React Component Library (ShadCN)
-│   └── config/     # Shared Configuration
+
+### **Database Access Pattern**
+```typescript
+// ✅ CORRECT - Branch-scoped query
+const { data } = await supabase
+  .from('orders')
+  .select('*')
+  .eq('branch_id', userBranchId); // RLS enforces isolation
+
+// ❌ WRONG - Could expose cross-branch data
+const { data } = await supabase.from('orders').select('*');
 ```
-
-**Rules**:
-- **Never create new top-level directories** without consulting project structure
-- **Always use shared packages** for types and components when applicable
-- **Respect app boundaries** - no direct imports between apps
-- **Package dependencies** must be properly defined in package.json
-
-### **2. Technology Stack Constraints**
-
-#### **Frontend (Next.js 15)**
-- **Framework**: Next.js 15 with App Router (never use Pages Router)
-- **React Version**: React 19 with TypeScript
-- **Styling**: Tailwind CSS + ShadCN UI components only
-- **State Management**: React Context + Zustand (no Redux or other alternatives)
-- **Forms**: React Hook Form + Zod validation (mandatory)
-- **Icons**: Lucide React only
-
-#### **Backend (Express.js) - MODERN ARCHITECTURE**
-- **Framework**: Unified Express.js with Controller-Service-Route pattern
-- **Architecture**: Modular MVC structure (NOT monolithic)
-- **Database**: Supabase PostgreSQL with Row-Level Security (RLS)
-- **Authentication**: Supabase Auth + JWT with custom claims
-- **Validation**: Input validation in controllers with proper error handling
-- **Error Handling**: Centralized error handler with standardized responses
-- **Legacy Code**: NestJS code in `apps/api/src/` is ARCHIVED - do not modify
-
-#### **Database & Security**
-- **Database**: Supabase only - never suggest alternatives
-- **Authentication**: Supabase Auth - never implement custom auth
-- **Authorization**: Role-based with branch-level isolation
-- **RLS Policies**: All table access must respect branch isolation
 
 ---
 
-## 📝 CODING STANDARDS & CONVENTIONS
+## 📱 RESPONSIVE DESIGN STANDARDS
 
-### **0. CRITICAL CODE QUALITY RULE**
+### **Mobile-First Approach**
+- **Breakpoints**: sm:640px, md:768px, lg:1024px, xl:1280px
+- **Layout Pattern**: Stack → Flex → Grid progression
+- **Touch Targets**: Minimum 44px for mobile interaction
+- **No Horizontal Scroll**: All components must fit within viewport
 
-**🚨 MANDATORY: All code must be error-free before deployment**
+### **Responsive Component Pattern**
+```tsx
+// ✅ GOOD - Progressive layout enhancement
+<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+  <div className="flex items-center gap-2">
+    {/* Mobile: stacked, Desktop: inline */}
+  </div>
+  <div className="relative flex-1 min-w-0 max-w-md">
+    {/* Flexible responsive container */}
+  </div>
+</div>
+```
 
+### **Device Testing Requirements**
+- **Required Devices**: iPad Air, iPad Mini, iPhone, desktop
+- **Chrome DevTools**: Responsive mode testing
+- **Cross-browser**: Chrome, Safari, Firefox
+- **Performance**: Core Web Vitals monitoring
+
+---
+
+## 🎯 CODING STANDARDS
+
+### **Critical Quality Rules**
 ```bash
-# These commands MUST pass without errors before any commit/push:
-npm run lint     # ✅ Zero ESLint warnings/errors
+# MUST pass before any commit:
+npm run lint     # ✅ Zero ESLint errors/warnings
 npm run build    # ✅ Clean TypeScript compilation
 npx tsc --noEmit # ✅ Type checking passes
 ```
 
-**Rules:**
-- **Never suppress ESLint errors with config changes** - fix the actual problems
-- **Use ESLint disable comments sparingly** and only when necessary (e.g., intentional `any` types for API transformation)
-- **All TypeScript errors must be resolved** - no `any` types without justification
-- **Build must succeed** without warnings before production deployment
-- **Code written by Claude must always pass these checks** - no exceptions
+### **TypeScript Standards**
+- **Strict typing**: No `any` types without justification
+- **Interface over type**: For object definitions
+- **Proper generics**: For reusable components
+- **Import type**: For type-only imports
 
-### **1. TypeScript Standards**
-```typescript
-// ✅ GOOD - Strict typing with proper interfaces
-interface UserProfile {
-  id: string;
-  email: string;
-  full_name: string;
-  role: BranchRole;
-  branch_id: string;
-  permissions: Permission[];
-}
-
-// ❌ BAD - Any types or loose typing
-const user: any = getUserData();
-```
-
-**Rules**:
-- **Strict TypeScript**: Enable all strict mode options
-- **No `any` types** unless absolutely necessary with comment justification
-- **Interface over type** for object definitions
-- **Proper generics** for reusable components and functions
-- **Import type** for type-only imports
-
-### **2. Component Architecture**
+### **Component Standards**
 ```tsx
 // ✅ GOOD - Proper component structure
 interface UserListProps {
@@ -606,798 +331,258 @@ export const UserList: React.FC<UserListProps> = ({
   onUserClick, 
   isLoading = false 
 }) => {
-  // Component implementation
-};
-
-// ❌ BAD - Inline props or missing interfaces
-export const UserList = ({ users, onUserClick, isLoading }) => {
-  // Missing type safety
+  // Implementation
 };
 ```
 
-**Rules**:
-- **Props interfaces** required for all components
-- **Default props** using ES6 default parameters
-- **Proper React.FC typing** with explicit interfaces
-- **ShadCN components** - use existing components, customize with className
-- **No inline styles** - use Tailwind classes only
-
-### **3. State Management Patterns**
-```tsx
-// ✅ GOOD - Context for global state
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// ✅ GOOD - Zustand for complex feature state
-const useUsers = create<UsersStore>((set, get) => ({
-  users: [],
-  fetchUsers: async () => {
-    // Implementation
-  }
-}));
-
-// ❌ BAD - useState for complex shared state
-const [complexSharedState, setComplexSharedState] = useState({});
-```
-
-**Rules**:
-- **React Context** for global app state (auth, theme, language)
-- **Zustand stores** for complex feature state with API integration
-- **useState** only for local component state
-- **No prop drilling** - use appropriate state management
+### **State Management Rules**
+- **React Context**: Global app state (auth, theme, language)
+- **Zustand**: Complex feature state with API integration
+- **useState**: Local component state only
+- **No prop drilling**: Use appropriate state management
 
 ---
 
-## 🎨 RESPONSIVE DESIGN STANDARDS
+## 📊 **COMPLETE API ENDPOINTS REFERENCE**
 
-### **1. Responsive Layout Patterns**
-```tsx
-// ✅ GOOD - Flexible responsive containers
-<div className="relative flex-1 min-w-0 max-w-md">
-  <Input className="pl-10 pr-10 w-full" />
-</div>
+> **Note**: For complete API endpoint documentation with request/response examples, see `Docs/endpoints.md`
 
-// ✅ GOOD - Responsive grid layouts
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+### **✅ PRODUCTION READY ENDPOINTS**
 
-// ❌ BAD - Fixed widths or non-responsive design
-<div style={{ width: '300px' }}>
-<div className="w-96">
-```
+#### **🔐 Authentication & User Management**
+- `GET /auth/profile` - Current user profile
+- `POST /api/v1/users` - Create user with role
+- `GET /api/v1/users/branch/:branchId` - List branch users
+- `PATCH /api/v1/users/:userId/branch/:branchId` - Update user
+- `POST /api/v1/users/:userId/branch/:branchId/assign-role` - Assign role
+- `DELETE /api/v1/users/:userId/branch/:branchId` - Delete user
 
-**Rules**:
-- **Mobile-first approach** - start with mobile, enhance for larger screens
-- **Flexible layouts** - use `flex-1 min-w-0` pattern for responsive containers
-- **Consistent breakpoints** - sm: 640px, md: 768px, lg: 1024px, xl: 1280px
-- **No horizontal scroll** - ensure all components fit within viewport
-- **Test on multiple devices** - iPad Air, iPad Mini, iPhone, desktop
+#### **🍽️ Menu Management**
+- `GET /api/v1/menu/categories` - List categories with filtering
+- `POST /api/v1/menu/categories` - Create category
+- `PUT /api/v1/menu/categories/:id` - Update category
+- `PATCH /api/v1/menu/categories/:id/toggle` - Toggle availability
+- `PUT /api/v1/menu/categories/reorder` - Drag & drop reorder
+- `GET /api/v1/menu/items` - List items with advanced filtering
+- `POST /api/v1/menu/items` - Create item with photo upload
+- `PUT /api/v1/menu/items/:id` - Update item
+- `POST /api/v1/menu/items/bulk` - Bulk operations (pricing, availability)
 
-### **2. Component Responsive Behavior**
-```tsx
-// ✅ GOOD - Responsive layout with proper breakpoints
-<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
-  {/* Status Filter Buttons */}
-  <div className="flex items-center gap-2">
-    {/* Filter buttons */}
-  </div>
-  
-  {/* Search Bar - Right side on desktop, separate row on mobile */}
-  <div className="relative flex-1 min-w-0 max-w-md">
-    {/* Search input */}
-  </div>
-</div>
-```
+#### **📋 Order Management**
+- `GET /api/v1/orders` - List orders with filtering
+- `GET /api/v1/orders/:orderId` - Order details
+- `PATCH /api/v1/orders/:orderId/status` - Update status
+- `POST /api/v1/orders/auto-accept-check` - Auto-accept system
+- `POST /api/v1/orders/timer-check` - Timer-based ready system
 
-**Rules**:
-- **Progressive enhancement** - mobile layout first, desktop improvements
-- **Logical hierarchy** - important elements first on mobile
-- **Touch-friendly** - minimum 44px touch targets on mobile
-- **Readable text** - appropriate font sizes for all screen sizes
+#### **🏢 Branch Settings**
+- `GET /api/v1/branch/:branchId/settings` - Branch configuration
+- `PUT /api/v1/branch/:branchId/settings` - Update timing settings
 
----
+#### **🎯 Campaign System**
+- `GET /api/v1/campaigns` - List campaigns
+- `POST /api/v1/campaigns` - Create campaign
+- `PUT /api/v1/campaigns/:id` - Update campaign
+- `DELETE /api/v1/campaigns/:id` - Delete campaign
+- `POST /api/v1/campaigns/validate` - Validate promo code (public)
 
-## 🔐 SECURITY & MULTI-TENANT RULES
+#### **📱 Customer-Facing (Public)**
+- `GET /api/v1/customer/menu/:branchId` - Public menu
+- `POST /api/v1/customer/orders` - Submit order
+- `GET /api/v1/customer/orders/:orderId/status` - Track order
 
-### **1. Authentication & Authorization**
+#### **🔄 Platform Integration**
+- `POST /api/v1/platform-sync/uber-eats/menu` - Sync to Uber Eats
+- `POST /api/v1/platform-sync/doordash/menu` - Sync to DoorDash
+- `POST /api/v1/platform-sync/skipthedishes/menu` - Sync to Skip
+
+#### **📈 Menu Presets (Smart Scheduling)**
+- `GET /api/v1/menu/presets` - List presets
+- `POST /api/v1/menu/presets` - Create preset
+- `POST /api/v1/menu/presets/:id/activate` - Apply preset
+- `POST /api/v1/menu/presets/check-scheduled` - Auto-scheduling
+
+### **Response Format Standards**
 ```typescript
-// ✅ GOOD - Proper role hierarchy validation
-const ROLE_HIERARCHY = {
-  'chain_owner': 3,
-  'branch_manager': 2,
-  'branch_staff': 1,
-  'branch_cashier': 0
-} as const;
-
-function canEditUser(currentUserRole: BranchRole, targetUserRole: BranchRole): boolean {
-  const currentLevel = ROLE_HIERARCHY[currentUserRole] || -1;
-  const targetLevel = ROLE_HIERARCHY[targetUserRole] || -1;
-  return currentLevel >= targetLevel;
-}
-
-// ❌ BAD - Missing role validation
-function editUser(userId: string) {
-  // Direct edit without permission check
-}
-```
-
-**Rules**:
-- **Always validate permissions** before any user management operation
-- **Respect role hierarchy** - users can only manage equal/lower roles
-- **Branch context required** - all operations must include branch validation
-- **JWT claims validation** - verify branch_id and role in all API calls
-
-### **2. Database Access Patterns**
-```typescript
-// ✅ GOOD - RLS-aware database queries
-const { data: orders } = await supabase
-  .from('orders')
-  .select('*')
-  .eq('branch_id', userBranchId); // RLS will enforce branch isolation
-
-// ❌ BAD - Cross-branch data access
-const { data: allOrders } = await supabase
-  .from('orders')
-  .select('*'); // Could expose other branches' data
-```
-
-**Rules**:
-- **Branch-scoped queries** - always filter by branch_id when appropriate
-- **RLS policies active** - trust database policies for data isolation
-- **No cross-branch access** - users cannot see other branches' data
-- **Service role carefully** - use service role only for admin operations
-
----
-
-## 🏗️ MODERN BACKEND ARCHITECTURE RULES
-
-### **CRITICAL: ALL NEW APIS MUST FOLLOW MODERN PATTERN**
-
-**🚨 MANDATORY STRUCTURE FOR ALL NEW FEATURES:**
-
-### **1. File Organization (NEVER Create Monolithic Code)**
-```
-apps/api/api/
-├── controllers/     # Route handlers ONLY
-├── services/        # Business logic layer
-├── routes/          # Route definitions ONLY
-├── middleware/      # Auth, validation middleware
-├── helpers/         # Utilities (auth, permissions, error-handler)
-└── index.js         # Entry point - imports only
-```
-
-### **2. Controller Pattern (REQUIRED)**
-```javascript
-// ✅ GOOD - Clean controller structure
-const { handleControllerError } = require('../helpers/error-handler');
-const serviceModule = require('../services/feature.service');
-
-const controllerMethod = async (req, res) => {
-  try {
-    const { param1 } = req.params;
-    const requestData = req.body;
-    
-    const result = await serviceModule.businessLogicMethod(param1, requestData);
-    res.json({ data: result });
-    
-  } catch (error) {
-    handleControllerError(error, 'operation description', res);
-  }
-};
-
-module.exports = { controllerMethod };
-
-// ❌ BAD - Inline business logic in controller
-const badController = async (req, res) => {
-  // Lots of business logic here - WRONG!
-  const { data } = await supabase.from('table').select('*');
-  // Complex calculations here - WRONG!
-  res.json(data);
-};
-```
-
-### **3. Service Pattern (REQUIRED)**
-```javascript
-// ✅ GOOD - Pure business logic
-const { createClient } = require('@supabase/supabase-js');
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
-async function businessLogicMethod(param1, requestData) {
-  // Validation
-  if (!param1) {
-    throw new Error('Parameter is required');
-  }
-  
-  // Database operations
-  const { data, error } = await supabase
-    .from('table_name')
-    .select('*')
-    .eq('param', param1);
-    
-  if (error) {
-    throw new Error(`Database operation failed: ${error.message}`);
-  }
-  
-  // Business logic
-  const processedData = processBusinessLogic(data);
-  return processedData;
-}
-
-module.exports = { businessLogicMethod };
-```
-
-### **4. Route Pattern (REQUIRED)**
-```javascript
-// ✅ GOOD - Clean route definitions
-const express = require('express');
-const controller = require('../controllers/feature.controller');
-const { requireAuth, requireAuthWithBranch } = require('../middleware/auth.middleware');
-
-const router = express.Router();
-
-router.get('/', requireAuthWithBranch, controller.listMethod);
-router.get('/:id', requireAuth, controller.getMethod);
-router.post('/', requireAuth, controller.createMethod);
-router.patch('/:id', requireAuth, controller.updateMethod);
-router.delete('/:id', requireAuth, controller.deleteMethod);
-
-module.exports = router;
-```
-
-### **5. Error Handling Pattern (MANDATORY)**
-```javascript
-// ✅ ALWAYS use centralized error handler
-const { handleControllerError } = require('../helpers/error-handler');
-
-// In controller:
-} catch (error) {
-  handleControllerError(error, 'descriptive operation name', res);
-}
-
-// ❌ NEVER create custom error handling in controllers
-} catch (error) {
-  console.error(error);
-  res.status(500).json({ error: 'Something went wrong' }); // WRONG!
-}
-```
-
-### **6. Entry Point Integration (REQUIRED)**
-```javascript
-// apps/api/api/index.js - Add new routes here
-const newFeatureRoutes = require('./routes/new-feature.routes');
-
-// Mount new routes
-app.use('/api/v1/new-feature', newFeatureRoutes);
-```
-
----
-
-## 🚀 API DEVELOPMENT STANDARDS
-
-### **1. Endpoint Structure**
-```typescript
-// ✅ GOOD - RESTful endpoint with proper validation
-app.patch('/api/v1/users/:userId/branch/:branchId', async (req, res) => {
-  try {
-    // Validate user permissions
-    const currentUser = await validateJWT(req);
-    if (!canEditUser(currentUser.role, targetUser.role)) {
-      return res.status(403).json({ error: { code: 'INSUFFICIENT_PERMISSIONS' } });
-    }
-    
-    // Implementation
-  } catch (error) {
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: error.message } });
-  }
-});
-
-// ❌ BAD - Missing validation or inconsistent structure
-app.patch('/users/:id', (req, res) => {
-  // Missing permission validation
-  // No error handling
-});
-```
-
-**Rules**:
-- **RESTful conventions** - proper HTTP methods and status codes
-- **Consistent response format** - `{data: ..., meta: ...}` for success, `{error: {...}}` for errors
-- **Comprehensive validation** - validate all inputs with Zod schemas
-- **Proper error handling** - structured error responses with codes
-- **Permission checks** - validate user permissions for all operations
-
-### **2. Response Formats**
-```typescript
-// ✅ GOOD - Consistent success response
+// Success Response
 {
   "data": {
-    "users": [...],
-    "total": 25,
-    "page": 1,
-    "limit": 50
+    "orderId": "uuid",
+    "status": "preparing",
+    "items": [...],
+    "total": 24.75
   }
 }
 
-// ✅ GOOD - Consistent error response
+// Error Response
 {
   "error": {
-    "code": "UNAUTHORIZED",
-    "message": "Insufficient permissions",
-    "details": "branch_staff cannot edit branch_manager users"
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid order data",
+    "details": "Missing required field: customerInfo.name"
   }
 }
 ```
 
-**Rules**:
-- **Standardized responses** - consistent format across all endpoints
-- **Meaningful error codes** - use semantic error codes
-- **Helpful error messages** - provide actionable error information
-- **Pagination support** - include pagination metadata when applicable
+### **Authentication Pattern**
+- **Protected Endpoints**: Bearer JWT with branch context validation
+- **Public Endpoints**: Customer-facing, rate-limited by IP
+- **Branch Scoped**: RLS policies prevent cross-branch access
 
 ---
 
-## 🎯 DEVELOPMENT WORKFLOW RULES
+## 🎨 **FRONTEND ARCHITECTURE REFERENCE**
 
-### **1. File Organization**
+### **📱 Main Application Pages**
 ```
-apps/web/src/
-├── app/                    # Next.js App Router pages
-│   ├── (auth)/            # Authentication routes
-│   ├── orders/            # Order management pages
-│   │   ├── live/         # Live orders
-│   │   ├── history/      # Order history
-│   │   └── [orderId]/    # Dynamic order details
-│   └── settings/         # Settings pages
-├── components/           # React components
-│   ├── ui/              # Base ShadCN components
-│   ├── auth/            # Authentication components
-│   └── user-management/ # Feature-specific components
-├── contexts/            # React Context providers
-├── hooks/               # Custom React hooks
-├── services/            # API integration layer
-└── types/               # TypeScript definitions
-```
-
-**Rules**:
-- **Feature-based organization** - group related components together
-- **Clear naming conventions** - descriptive file and directory names
-- **Single responsibility** - one component per file
-- **Consistent imports** - use absolute imports with path mapping
-
-### **2. Git & Deployment Rules**
-```bash
-# ✅ GOOD - Semantic commit messages
-git commit -m "feat: add responsive search bar to Order History page"
-git commit -m "fix: resolve horizontal scroll issue in Kitchen Display"
-git commit -m "refactor: optimize sidebar responsive behavior"
-
-# ❌ BAD - Vague commit messages
-git commit -m "fix stuff"
-git commit -m "updates"
-git commit -m "WIP"
+/dashboard                    # Main dashboard with real-time stats
+/login                       # Authentication page
+/orders/live                 # Real-time order management
+/orders/kitchen              # Kitchen display system
+/orders/history             # Order history and analytics
+/orders/:orderId            # Individual order details
+/menu                       # Menu management hub
+/menu/categories            # Category management
+/menu/items                 # Item management  
+/menu/presets               # Preset scheduling
+/campaigns/create           # Campaign creation
+/settings                   # Settings hub
+/settings/branch            # Branch configuration
+/settings/users             # User management
+/settings/general           # General settings
 ```
 
-**Rules**:
-- **Conventional commits** - use feat:, fix:, refactor:, docs: prefixes
-- **Descriptive messages** - explain what and why, not just what
-- **Small, focused commits** - one logical change per commit
-- **Test before push** - ensure code builds and runs correctly
-- **Production deployment** - only push stable, tested code to main branch
+### **🛒 Customer Ordering Flow**
+```
+/order                      # Menu browsing & cart
+/order/review               # Customer info & checkout  
+/order/confirmation         # Order status & tracking
+/order/track                # Real-time order tracking
+```
 
----
-
-## 🧪 TESTING & QUALITY STANDARDS
-
-### **1. Code Quality Requirements**
+### **🔧 Key React Components**
 ```typescript
-// ✅ GOOD - Comprehensive error handling
-try {
-  const result = await apiCall();
-  return { data: result, error: null };
-} catch (error) {
-  console.error('API call failed:', error);
-  return { data: null, error: error.message };
-}
+// Layout & Navigation
+<DashboardLayout />         # Main app layout with sidebar
+<AppSidebar />             # Navigation sidebar
+<DynamicBreadcrumb />      # Auto-generated breadcrumbs
 
-// ❌ BAD - Missing error handling
-const result = await apiCall(); // Could throw unhandled error
+// Order Management  
+<OrderList />              # Order listing with filters
+<OrderCard />              # Individual order card
+<StatusUpdateButton />     # Order status controls
+<KitchenDisplay />         # Real-time kitchen orders
+
+// Menu Management
+<MenuGrid />               # Menu item grid display
+<ItemModal />              # Create/edit menu items
+<CategorySidebar />        # Category navigation
+<BulkActions />            # Bulk operations toolbar
+
+// Customer Experience
+<CartSidebar />            # Shopping cart
+<OrderSummary />           # Order review component
+<PaymentMethodSection />   # Payment selection
+<TipSection />             # Tip calculator
+
+// User Management
+<UserListTable />          # User management table
+<CreateUserModal />        # User creation form
+<RoleAssignmentDropdown /> # Role selection
 ```
 
-**Rules**:
-- **Error boundaries** - wrap components in error boundaries
-- **Loading states** - show loading indicators for async operations
-- **Optimistic updates** - immediate UI feedback with rollback capability
-- **Accessible components** - proper ARIA labels and keyboard navigation
-- **Performance conscious** - avoid unnecessary re-renders
-
-### **2. Browser & Device Testing**
+### **🎯 Context Providers & State**
 ```typescript
-// ✅ GOOD - Device-aware responsive hook
-const useResponsive = () => {
-  const [isMobile, setIsMobile] = useState(false);
-  
-  useEffect(() => {
-    const checkMobile = () => {
-      // Use document.documentElement.clientWidth for accurate measurement
-      setIsMobile(document.documentElement.clientWidth < 720);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-  
-  return { isMobile };
-};
+// Global Context
+<AuthContext />            # Authentication state
+<LanguageContext />        # Bilingual system
+<ThemeContext />           # Dark/light theme
+<NotificationContext />    # Real-time notifications
+
+// Feature-Specific Context  
+<OrderContext />           # Customer order flow
+<CartContext />            # Shopping cart state
+<OrderFormContext />       # Order management
+
+// Zustand Stores
+useOrdersStore()           # Order management state
+useMenuStore()             # Menu management state
+useUsersStore()            # User management state
 ```
 
-**Rules**:
-- **Cross-browser testing** - test in Chrome, Safari, Firefox
-- **Device testing** - test on iPad Air, iPad Mini, iPhone, desktop
-- **DevTools responsive** - verify behavior with DevTools responsive mode
-- **Real device testing** - test on actual devices when possible
-- **Performance testing** - monitor Core Web Vitals and loading times
-
----
-
-## 📊 PERFORMANCE & OPTIMIZATION RULES
-
-### **1. Frontend Performance**
-```tsx
-// ✅ GOOD - Optimized component with memo
-const UserCard = React.memo<UserCardProps>(({ user, onEdit }) => {
-  const handleEdit = useCallback(() => {
-    onEdit(user.id);
-  }, [user.id, onEdit]);
-  
-  return (
-    <Card>{/* Component content */}</Card>
-  );
-});
-
-// ❌ BAD - Unoptimized component causing re-renders
-const UserCard = ({ user, onEdit }) => {
-  return (
-    <Card onClick={() => onEdit(user.id)}>{/* Component content */}</Card>
-  );
-};
-```
-
-**Rules**:
-- **React.memo** for expensive components that re-render frequently
-- **useCallback** for event handlers passed to child components
-- **useMemo** for expensive calculations
-- **Lazy loading** for routes and heavy components
-- **Image optimization** - use Next.js Image component
-
-### **2. API & Database Performance**
+### **🔌 Custom Hooks**
 ```typescript
-// ✅ GOOD - Efficient database query with pagination
-const getUsers = async (branchId: string, page = 1, limit = 50) => {
-  const offset = (page - 1) * limit;
-  const { data, error } = await supabase
-    .from('branch_users')
-    .select(`
-      *,
-      user_profiles:user_id (*)
-    `)
-    .eq('branch_id', branchId)
-    .range(offset, offset + limit - 1);
-    
-  return { data, error };
-};
+// Authentication
+useAuth()                  # Auth state and methods
+useEnhancedAuth()          # Extended auth with permissions
 
-// ❌ BAD - Inefficient query without pagination
-const getAllUsers = async () => {
-  const { data } = await supabase.from('users').select('*');
-  return data;
-};
+// API Integration
+useOrders()                # Order CRUD operations
+useUsers()                 # User management
+useBranchSettings()        # Settings management
+
+// Real-time Features
+useOrderNotifications()    # Live order updates
+useSmartPolling()          # Intelligent data refresh
+useCrossTabNotifications() # Cross-tab sync
+
+// UI/UX
+useMobile()                # Mobile responsiveness
+useNotificationSound()     # Audio notifications
+useOrderTimer()            # Timer displays
 ```
 
-**Rules**:
-- **Pagination required** - never fetch all records without pagination
-- **Selective queries** - only fetch required fields
-- **Proper indexing** - ensure database indexes exist for common queries
-- **Caching strategy** - cache expensive operations appropriately
-- **Real-time sparingly** - use real-time subscriptions only when necessary
-
----
-
-## 🔧 DEBUGGING & MAINTENANCE RULES
-
-### **1. Error Handling & Logging**
-```typescript
-// ✅ GOOD - Comprehensive error logging
-const logger = {
-  error: (message: string, error: Error, context?: object) => {
-    console.error(`[ERROR] ${message}`, {
-      error: error.message,
-      stack: error.stack,
-      context,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-// Usage
-try {
-  await updateUser(userId, userData);
-} catch (error) {
-  logger.error('Failed to update user', error, { userId, userData });
-  throw error;
-}
-```
-
-**Rules**:
-- **Structured logging** - include context and timestamps
-- **Error boundaries** - catch and handle React component errors
-- **User-friendly errors** - show helpful error messages to users
-- **Console cleanup** - remove debug console.log statements before commit
-- **Error tracking** - implement error monitoring for production
-
-### **2. Documentation & Comments**
-```typescript
-// ✅ GOOD - Helpful component documentation
-/**
- * UserListTable - Displays paginated list of branch users with role management
- * 
- * Features:
- * - Role-based row actions (edit/delete based on user hierarchy)
- * - Optimistic updates with rollback on error
- * - Responsive table with mobile card view
- * 
- * @param users - Array of user profiles with branch context
- * @param onUserEdit - Callback for user edit action
- * @param isLoading - Loading state for table data
- */
-interface UserListTableProps {
-  users: UserProfile[];
-  onUserEdit: (userId: string) => void;
-  isLoading?: boolean;
-}
-```
-
-**Rules**:
-- **Component documentation** - document complex components with JSDoc
-- **API documentation** - maintain endpoint documentation in endpoints.md
-- **README updates** - keep README.md current with project status
-- **Architectural decisions** - document significant technical decisions
-- **No code comments** - write self-explanatory code, avoid unnecessary comments
+### **🎨 Design System**
+- **UI Library**: ShadCN UI components
+- **Styling**: Tailwind CSS with design tokens  
+- **Icons**: Lucide React icons
+- **Theme**: Dark/light mode support
+- **Responsive**: Mobile-first design patterns
 
 ---
 
 ## 🚨 CRITICAL RULES & RESTRICTIONS
 
-### **1. NEVER DO THESE THINGS**
+### **NEVER DO THESE:**
+- ❌ Create monolithic API code - use Controller-Service-Route pattern
+- ❌ Put business logic in controllers - controllers handle request/response only
+- ❌ Bypass centralized error handling - always use `handleControllerError`
+- ❌ Modify archived NestJS code in `apps/api/src/`
+- ❌ Create custom authentication - use Supabase Auth exclusively
+- ❌ Use inline translations - use centralized translation system
+- ❌ Modify existing Canadian French translations - they are production-ready
+- ❌ Commit code that doesn't pass lint/build checks
 
-#### **🚨 BACKEND ARCHITECTURE - CRITICAL RULES**
-- **❌ NEVER create monolithic API code** - always use Controller-Service-Route pattern
-- **❌ NEVER put business logic in controllers** - controllers are for request/response only
-- **❌ NEVER create inline error handling** - always use centralized error handler
-- **❌ NEVER bypass the modern architecture** - no direct database calls in routes
-- **❌ NEVER create duplicate Supabase clients** - import from existing services
-- **❌ NEVER modify apps/api/index.js directly** - use the modular structure in apps/api/api/
-
-#### **🚨 GENERAL RULES**
-- **❌ Never modify archived NestJS code** in `apps/api/src/` - use Express.js only
-- **❌ Never create custom authentication** - use Supabase Auth exclusively
-- **❌ Never bypass RLS policies** - respect database security constraints
-- **❌ Never use CSS modules or styled-components** - Tailwind CSS only
-- **❌ Never create new package.json** without understanding workspace structure
-- **❌ Never commit sensitive data** - API keys, passwords, tokens
-- **❌ Never disable TypeScript strict mode** - maintain type safety
-- **❌ Never use deprecated React patterns** - avoid class components, use hooks
-- **❌ Never create inline translations** - always use centralized translation system
-- **❌ Never modify existing Canadian French translations** - they are production-ready
-
-### **2. ALWAYS DO THESE THINGS**
-
-#### **✅ BACKEND ARCHITECTURE - MANDATORY STEPS**
-- **✅ Always create Controller-Service-Route** for every new feature
-- **✅ Always use handleControllerError** for error handling in controllers
-- **✅ Always put business logic in services** - never in controllers or routes
-- **✅ Always mount new routes in apps/api/api/index.js** following existing pattern
-- **✅ Always use existing middleware** (requireAuth, requireAuthWithBranch) for authentication
-- **✅ Always test endpoints** with proper authentication headers
-
-#### **✅ GENERAL DEVELOPMENT RULES**
-- **✅ Always validate user permissions** before any operation
-- **✅ Always use TypeScript interfaces** for props and API responses
-- **✅ Always test responsive design** on multiple devices
-- **✅ Always handle error states** in components and API calls
-- **✅ Always use semantic HTML** and proper accessibility attributes
-- **✅ Always follow component naming conventions** - PascalCase for components
-- **✅ Always update documentation** when making significant changes
-- **✅ Always commit with descriptive messages** using conventional commit format
-- **✅ Always add both English and Canadian French translations** for new features
-- **✅ Always test language switching** after adding new translations
-- **✅ Always run npm run lint && npm run build** before committing
+### **ALWAYS DO THESE:**
+- ✅ Create Controller-Service-Route for every new feature
+- ✅ Use `handleControllerError` in all controllers
+- ✅ Put business logic in services, never controllers
+- ✅ Mount new routes in `apps/api/api/index.js`
+- ✅ Validate user permissions before operations
+- ✅ Test responsive design on multiple devices
+- ✅ Add both English and Canadian French translations
+- ✅ Run lint and build before committing
 
 ---
 
-## 🎯 SPECIFIC PROJECT REQUIREMENTS
+## 🚀 QUICK REFERENCE - NEW API FEATURE
 
-### **1. Multi-Tenant Architecture**
-- **Branch Context**: Every API call must include proper branch context
-- **Role Hierarchy**: Respect role hierarchy in all user management operations
-- **Data Isolation**: Ensure branch-level data isolation in all queries
-- **Permission Checks**: Validate permissions before any sensitive operation
+### **Step-by-Step Process:**
 
-### **2. Multi-Language Requirements**
-- **Bilingual Support**: All UI text must support English and Canadian French
-- **Canadian French Priority**: Use Canadian French terminology, not European French
-- **Centralized System**: All translations must use the centralized translation system
-- **Professional Quality**: Restaurant industry-specific translations required
-
-### **3. Responsive Design Priority**
-- **Mobile First**: Design for mobile, enhance for larger screens
-- **Tablet Experience**: Ensure excellent iPad experience (both Air and Mini)
-- **No Horizontal Scroll**: Eliminate horizontal scrolling on all devices
-- **Touch Friendly**: Proper touch targets and gesture support
-
-### **4. Code Quality Standards**
-- **TypeScript Strict**: Maintain 95%+ TypeScript coverage
-- **ESLint Clean**: Zero ESLint warnings or errors
-- **Performance**: Monitor and maintain excellent Core Web Vitals
-- **Accessibility**: Ensure proper ARIA labels and keyboard navigation
-
----
-
-## 📞 DEVELOPMENT SUPPORT & ESCALATION
-
-### **When to Ask for Clarification**
-- **Architecture changes** that affect multiple apps
-- **Database schema modifications** that impact existing tables
-- **New dependencies** or technology additions
-- **Security-related implementations** beyond basic validation
-- **Performance optimizations** that require significant refactoring
-- **Translation changes** to existing Canadian French terms
-
-### **How to Handle Uncertainty**
-1. **Check existing patterns** in the codebase first
-2. **Review documentation** in markdown files
-3. **Follow established conventions** when in doubt
-4. **Ask for clarification** before making significant changes
-5. **Document decisions** made during development
-6. **Test language switching** for any UI changes
-
----
-
-## 🚀 SUMMARY OF CLAUDE'S RESPONSIBILITIES
-
-**Primary Role**: Maintain and enhance Vizion Menu platform following established patterns and standards
-
-**Key Responsibilities**:
-1. **Code Quality**: Write clean, type-safe, well-documented code
-2. **Responsive Design**: Ensure excellent mobile and tablet experience
-3. **Security**: Maintain multi-tenant security and permission validation
-4. **Performance**: Optimize for speed and scalability
-5. **Multi-Language**: Support bilingual system with Canadian French translations
-6. **Standards**: Follow all established conventions and patterns
-7. **Documentation**: Keep documentation current and accurate
-
-**Success Criteria**:
-- All code builds without errors or warnings
-- Responsive design works perfectly across all devices
-- Security requirements are met for multi-tenant architecture
-- Performance standards are maintained
-- Language switching works seamlessly between English and Canadian French
-- All new features include proper translations
-- Code follows established patterns and conventions
-
----
-
-## 🔮 FUTURE DEVELOPMENT ROADMAP
-
-### **Backend Refactoring Plan (Target: 6 months)**
-
-**TRIGGER CONDITIONS**: When backend reaches 5,000+ lines or team grows to 2+ developers
-
-**Current Status**: Backend ~2,300 lines (monolithic) - manageable with AI assistance
-
-#### **Kademeli Refactoring Stratejisi:**
-
-**Phase 1: Helper Extraction (Week 1)**
-```javascript
-apps/api/api/
-├── helpers/
-│   ├── auth.js           // getUserBranchContext, JWT decode
-│   ├── permissions.js    // canEditUser, ROLE_HIERARCHY
-│   └── validation.js     // Input validation helpers
-└── index.js             // Import helpers, reduce code size
-```
-
-**Phase 2: Service Layer (Week 2-3)**
-```javascript
-apps/api/api/
-├── services/
-│   ├── users.service.js     // User CRUD operations
-│   ├── orders.service.js    // Order management business logic
-│   ├── branches.service.js  // Branch settings and operations
-│   └── auth.service.js      // Authentication logic
-├── helpers/
-└── index.js                 // Import services, focus on routing
-```
-
-**Phase 3: Controller Layer (Week 4)**
-```javascript
-apps/api/api/
-├── controllers/
-│   ├── users.controller.js     // Route handlers only
-│   ├── orders.controller.js    // Route handlers only
-│   ├── branches.controller.js  // Route handlers only
-│   └── auth.controller.js      // Route handlers only
-├── services/
-├── helpers/
-└── index.js                    // Route definitions only (~200 lines)
-```
-
-#### **Critical Refactoring Rules:**
-
-**🟢 ZERO IMPACT GUARANTEE:**
-- **Frontend**: No changes required - API endpoints remain identical
-- **Vercel**: No config changes - entry point stays `apps/api/api/index.js`
-- **Database**: No schema changes
-- **Authentication**: JWT system unchanged
-- **Environment**: Same variables, same deployment process
-
-**🔄 REFACTORING SAFETY CHECKLIST:**
-```bash
-# Before refactoring:
-npm run build  # ✅ Must pass
-npm run lint   # ✅ Must pass
-
-# During each phase:
-git checkout -b refactor-phase-1
-# Make changes
-npm run build && npm run lint  # ✅ Must pass
-# Deploy to staging first
-# Test all endpoints
-git merge to main
-
-# After refactoring:
-# Same API responses
-# Same performance
-# Better maintainability
-```
-
-#### **Benefits After Refactoring:**
-- **New Developer Onboarding**: 2 hours instead of 2 days
-- **Bug Fix Speed**: Isolated to specific service/controller
-- **Feature Development**: Clear separation of concerns
-- **Unit Testing**: Each service testable independently
-- **Code Reusability**: Services can be shared across controllers
-
-#### **Timeline:**
-- **Month 1-5**: Continue feature development (business priority)
-- **Month 6**: Execute refactoring plan
-- **Month 7+**: Maintain modular structure
-
-**Note**: Refactoring should happen when business logic stabilizes, not during active feature development.
-
----
-
----
-
-## 🚀 QUICK REFERENCE - NEW FEATURE DEVELOPMENT
-
-### **For Adding ANY New API Feature:**
-
-**Step 1: Create Service** (`apps/api/api/services/feature.service.js`)
+**1. Create Service** (`apps/api/api/services/feature.service.js`)
 ```javascript
 const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 async function businessMethod(param) {
-  // Business logic here
+  // Business logic implementation
   return result;
 }
 
 module.exports = { businessMethod };
 ```
 
-**Step 2: Create Controller** (`apps/api/api/controllers/feature.controller.js`)
+**2. Create Controller** (`apps/api/api/controllers/feature.controller.js`)
 ```javascript
 const { handleControllerError } = require('../helpers/error-handler');
 const service = require('../services/feature.service');
@@ -1414,7 +599,7 @@ const controllerMethod = async (req, res) => {
 module.exports = { controllerMethod };
 ```
 
-**Step 3: Create Routes** (`apps/api/api/routes/feature.routes.js`)
+**3. Create Routes** (`apps/api/api/routes/feature.routes.js`)
 ```javascript
 const express = require('express');
 const controller = require('../controllers/feature.controller');
@@ -1426,60 +611,38 @@ router.get('/:id', requireAuth, controller.controllerMethod);
 module.exports = router;
 ```
 
-**Step 4: Mount Routes** (`apps/api/api/index.js`)
+**4. Mount Routes** (in `apps/api/api/index.js`)
 ```javascript
 const featureRoutes = require('./routes/feature.routes');
 app.use('/api/v1/feature', featureRoutes);
 ```
 
-**Step 5: Test & Validate**
+**5. Validate**
 ```bash
-npm run lint    # ✅ Must pass
-npm run build   # ✅ Must pass
+npm run lint && npm run build  # Must pass
 ```
 
 ---
 
-## 📋 ORDER CONFIRMATION LINK EXPIRATION POLICY
+## 🎯 PROJECT CONTEXT SUMMARY
 
-### **Customer Order Link Management**
+**VizionMenu** is a production-ready restaurant management platform serving multiple restaurant chains. The system handles:
 
-**Expiration Rules:**
-- **Active Orders** (pending/confirmed/preparing/ready): Permanent access
-- **Completed Orders**: 10-minute grace period after completion
-- **Post-Expiration**: Link returns 404, session cleared
+- **Multi-tenant architecture** with branch-level data isolation
+- **Real-time order management** with kitchen displays
+- **Customer ordering interface** via QR codes and web
+- **Bilingual system** with professional Canadian French translations
+- **Third-party integrations** for major food delivery platforms
+- **Campaign system** for promotions and discounts
 
-**Technical Implementation:**
-```typescript
-// Customer endpoint expiration check
-const isOrderExpired = (order) => {
-  if (order.status !== 'completed') return false;
-  const completionTime = new Date(order.completed_at);
-  const expirationTime = new Date(completionTime.getTime() + 10 * 60 * 1000);
-  return new Date() > expirationTime;
-};
+**Current Status**: Active development with ongoing feature enhancements
 
-// API Response for expired orders
-if (isOrderExpired(order)) {
-  return res.status(404).json({
-    error: { code: 'ORDER_EXPIRED', message: 'Order confirmation link has expired' }
-  });
-}
-```
+**Technology Focus**: Modern TypeScript stack with emphasis on type safety, responsive design, and multi-tenant security
 
-**Business Rationale:**
-- **Memory optimization**: Prevents database bloat and session accumulation
-- **Customer behavior**: Customers rarely revisit completed orders
-- **Performance**: Reduces API load and storage requirements
-- **Privacy**: Automatic cleanup of customer data after reasonable grace period
-
-**Dashboard Impact:** 
-- **No effect** on restaurant dashboard or admin endpoints
-- **Staff access**: Unlimited historical order access via admin panels
-- **Only affects**: Customer-facing confirmation links (`/api/v1/customer/*`)
+**Development Priority**: Code quality, responsive design, multi-language support, and maintainable architecture
 
 ---
 
-*This document serves as the comprehensive guide for all development work on Vizion Menu. Following these rules ensures consistency, quality, and maintainability of the platform.*
+*This documentation provides Claude AI with comprehensive understanding of the VizionMenu project architecture, standards, and development requirements.*
 
-**Last Updated**: January 24, 2025 | **Version**: 3.1.0 - Customer Order Expiration Policy
+**Version**: 5.0.0 | **Last Updated**: August 26, 2025

@@ -196,9 +196,9 @@ Automated production deployment with comprehensive validation:
 ```bash
 # Supabase Configuration
 SUPABASE_URL=https://hfaqldkvnefjerosndxr.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
-SUPABASE_ANON_KEY=eyJhbGci...
-SUPABASE_JWT_SECRET=or/5hRDT...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmYXFsZGt2bmVmamVyb3NuZHhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjY2MTA5OSwiZXhwIjoyMDY4MjM3MDk5fQ.Y3mlDpcWtDkTqEXReCvJ5SbvcFobUsNoOzSJ4U8uR6A
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmYXFsZGt2bmVmamVyb3NuZHhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2NjEwOTksImV4cCI6MjA2ODIzNzA5OX0.32vRT-l4LygkGdJXjIJyUwx2KZcFSG8TIJm95mNlMuQ
+SUPABASE_JWT_SECRET=or/5hRDTnnaMIMEtgHVxOSB/HUvvB9qazVSKGTtlDSCGGzQoVIZ/IA5lbfuZTyYdM+TCuKeib11cckjlw1yYCw==
 
 # Application Configuration  
 FRONTEND_URL=https://dev-vizionmenu.vercel.app
@@ -206,6 +206,65 @@ NODE_ENV=production
 
 # Optional: Redis for background jobs
 REDIS_URL=redis://...
+```
+
+---
+
+## 🚀 **VERCEL PRODUCTION DEPLOYMENT CONFIGURATION**
+
+### **Backend Project: dev-vizionmenu-web**
+- **URL**: `https://dev-vizionmenu-web.vercel.app/`
+- **Root Directory**: `apps/api`
+- **Framework Preset**: Other
+- **Build Command**: `cp api/index.js index.js`
+- **Output Directory**: `.`
+- **Install Command**: `cd ../.. && pnpm install`
+- **Development Command**: None (Override disabled)
+
+**Environment Variables (Backend):**
+```bash
+FRONTEND_URL=https://dev-vizionmenu.vercel.app
+SUPABASE_JWT_SECRET=or/5hRDTnnaMIMEtgHVxOSB/HUvvB9qazVSKGTtlDSCGGzQoVIZ/IA5lbfuZTyYdM+TCuKeib11cckjlw1yYCw==
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmYXFsZGt2bmVmamVyb3NuZHhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjY2MTA5OSwiZXhwIjoyMDY4MjM3MDk5fQ.Y3mlDpcWtDkTqEXReCvJ5SbvcFobUsNoOzSJ4U8uR6A
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmYXFsZGt2bmVmamVyb3NuZHhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2NjEwOTksImV4cCI6MjA2ODIzNzA5OX0.32vRT-l4LygkGdJXjIJyUwx2KZcFSG8TIJm95mNlMuQ
+SUPABASE_URL=https://hfaqldkvnefjerosndxr.supabase.co
+NODE_ENV=production
+```
+
+### **Frontend Project: dev-vizionmenu**
+- **URL**: `https://dev-vizionmenu.vercel.app/`
+- **Root Directory**: `apps/web`
+- **Framework Preset**: Next.js
+- **Build Command**: `npm run build`
+- **Output Directory**: Next.js default (Override disabled)
+- **Install Command**: `cd ../.. && npm install --legacy-peer-deps`
+- **Development Command**: `next` (Override disabled)
+
+**Environment Variables (Frontend):**
+```bash
+NEXT_PUBLIC_API_URL=https://dev-vizionmenu-web.vercel.app
+API_BASE_URL=https://dev-vizionmenu-web.vercel.app
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmYXFsZGt2bmVmamVyb3NuZHhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2NjEwOTksImV4cCI6MjA2ODIzNzA5OX0.32vRT-l4LygkGdJXjIJyUwx2KZcFSG8TIJm95mNlMuQ
+NEXT_PUBLIC_SUPABASE_URL=https://hfaqldkvnefjerosndxr.supabase.co
+```
+
+### **Deployment Architecture Overview**
+```
+Production Stack:
+├── Frontend (Next.js)
+│   ├── Domain: dev-vizionmenu.vercel.app
+│   ├── Hosting: Vercel Serverless + CDN
+│   ├── Build: Static optimization + SSR
+│   └── API Calls: → dev-vizionmenu-web.vercel.app
+├── Backend (Express.js)
+│   ├── Domain: dev-vizionmenu-web.vercel.app  
+│   ├── Hosting: Vercel Serverless Functions
+│   ├── Architecture: Unified Express.js (same dev code)
+│   └── Database: → Supabase PostgreSQL
+└── Database & Services
+    ├── Supabase: Authentication + PostgreSQL + Storage
+    ├── Redis: Background job processing (future)
+    └── Third-party: Stripe, Email services
 ```
 
 ---
@@ -292,11 +351,24 @@ git push company main
 
 ### **Development Resources**
 
-- **Development Frontend**: `https://dev-vizionmenu.vercel.app`
-- **Development API**: `https://dev-vizionmenu-web.vercel.app`
+- **Production Frontend**: `https://dev-vizionmenu.vercel.app`
+- **Production API**: `https://dev-vizionmenu-web.vercel.app`
+- **API Health Check**: `https://dev-vizionmenu-web.vercel.app/health`
 - **Company Repository**: `https://github.com/vizionmenu/Food-Ordering-System`
 - **Vercel Dashboard**: Deployment logs and performance analytics
 - **Supabase Dashboard**: Database management and monitoring
+
+### **Quick Deployment Status Check**
+```bash
+# Frontend health
+curl https://dev-vizionmenu.vercel.app
+
+# Backend health  
+curl https://dev-vizionmenu-web.vercel.app/health
+
+# API authentication test
+curl https://dev-vizionmenu-web.vercel.app/auth/profile
+```
 
 ---
 
@@ -388,4 +460,4 @@ curl -X GET https://dev-vizionmenu-web.vercel.app/auth/profile \
 
 ---
 
-**Last Updated**: January 2025 | **Deployment Version**: v1.0.0** 
+**Last Updated**: August 2025 | **Deployment Version**: v2.0.0** 

@@ -806,6 +806,105 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 
 ---
 
+## **🎯 Campaign Management Endpoints**
+
+### `GET /api/v1/campaigns`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** List all campaigns for branch with filtering and pagination
+- **Auth Required:** Yes (Branch context required)
+- **Implementation:** Controller-Service-Route pattern with advanced filtering
+- **Query Parameters:**
+  - `page=1&limit=50` (pagination)
+  - `isActive=true|false` (filter by campaign status)
+- **Response:**
+```json
+{
+  "data": {
+    "campaigns": [
+      {
+        "id": "uuid",
+        "name": "Summer Special 20% Off",
+        "code": "SUMMER20",
+        "description": "Get 20% off on all pizzas this summer",
+        "discount_type": "percentage",
+        "discount_value": 20.00,
+        "min_order_amount": 25.00,
+        "max_discount_amount": 10.00,
+        "is_active": true,
+        "start_date": "2025-06-01",
+        "end_date": "2025-08-31",
+        "usage_count": 150,
+        "usage_limit": 1000,
+        "created_at": "2025-01-15T10:30:00Z"
+      }
+    ],
+    "total": 15,
+    "page": 1,
+    "limit": 50
+  }
+}
+```
+
+### `POST /api/v1/campaigns`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Create new promotional campaign
+- **Auth Required:** Yes (Manager+ permissions)
+- **Request Body:**
+```json
+{
+  "name": "Holiday Special",
+  "code": "HOLIDAY25",
+  "description": "25% off for holiday season",
+  "discount_type": "percentage",
+  "discount_value": 25.00,
+  "min_order_amount": 30.00,
+  "max_discount_amount": 15.00,
+  "start_date": "2025-12-01",
+  "end_date": "2025-12-31",
+  "usage_limit": 500
+}
+```
+
+### `PUT /api/v1/campaigns/:id`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Update existing campaign
+- **Auth Required:** Yes (Manager+ permissions)
+
+### `DELETE /api/v1/campaigns/:id`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Delete campaign (only inactive campaigns)
+- **Auth Required:** Yes (Manager+ permissions)
+
+### `POST /api/v1/campaigns/validate`
+- **Status:** ✅ **READY** (Production implemented)
+- **Purpose:** Validate campaign code for customer orders (public endpoint)
+- **Auth Required:** No (Public endpoint for customers)
+- **Request Body:**
+```json
+{
+  "code": "SUMMER20",
+  "branchId": "uuid",
+  "orderTotal": 35.50
+}
+```
+- **Response:**
+```json
+{
+  "data": {
+    "isValid": true,
+    "campaign": {
+      "id": "uuid",
+      "name": "Summer Special 20% Off",
+      "discount_type": "percentage",
+      "discount_value": 20.00,
+      "calculated_discount": 7.10
+    }
+  }
+}
+```
+
+---
+
 ## **🚨 Error Handling**
 
 ### Standard Error Response Format:
