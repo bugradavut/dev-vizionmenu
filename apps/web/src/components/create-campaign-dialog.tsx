@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import toast from 'react-hot-toast'
 
@@ -68,8 +67,10 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
   const [loadingItems, setLoadingItems] = useState(true)
   const [validFromDate, setValidFromDate] = useState<Date>()
   const [validUntilDate, setValidUntilDate] = useState<Date>()
-  const [validFromOpen, setValidFromOpen] = useState(false)
-  const [validUntilOpen, setValidUntilOpen] = useState(false)
+  const [showValidFromCalendar, setShowValidFromCalendar] = useState(false)
+  const [showValidUntilCalendar, setShowValidUntilCalendar] = useState(false)
+  const validFromRef = useRef<HTMLDivElement>(null)
+  const validUntilRef = useRef<HTMLDivElement>(null)
 
 
   const {
@@ -130,14 +131,31 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
   }, [watchedType, watchedValue, setValue])
 
 
+  // Close calendars when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (validFromRef.current && !validFromRef.current.contains(event.target as Node)) {
+        setShowValidFromCalendar(false)
+      }
+      if (validUntilRef.current && !validUntilRef.current.contains(event.target as Node)) {
+        setShowValidUntilCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
   // Reset form when dialog closes
   useEffect(() => {
     if (!open) {
       reset()
       setValidFromDate(undefined)
       setValidUntilDate(undefined)
-      setValidFromOpen(false)
-      setValidUntilOpen(false)
+      setShowValidFromCalendar(false)
+      setShowValidUntilCalendar(false)
       setLoadingCategories(true)
       setLoadingItems(true)
     }
@@ -270,69 +288,73 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
 
             {/* Valid Dates */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div className="space-y-2 relative" ref={validFromRef}>
                 <Label>{t.campaigns.validFrom}</Label>
-                <Popover open={validFromOpen} onOpenChange={setValidFromOpen} modal={false}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={`w-full justify-start text-left font-normal ${!validFromDate && "text-muted-foreground"}`}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {validFromDate ? format(validFromDate, "PPP") : 
-                        (language === 'fr' ? 'Sélectionner une date' : 'Pick a date')
-                      }
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={`w-full justify-start text-left font-normal ${!validFromDate && "text-muted-foreground"}`}
+                  onClick={() => {
+                    setShowValidFromCalendar(!showValidFromCalendar)
+                    setShowValidUntilCalendar(false)
+                  }}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {validFromDate ? format(validFromDate, "PPP") : 
+                    (language === 'fr' ? 'Sélectionner une date' : 'Pick a date')
+                  }
+                </Button>
+                {showValidFromCalendar && (
+                  <div className="absolute top-full left-0 z-[9999] mt-1 border rounded-lg bg-popover shadow-lg">
                     <Calendar
                       mode="single"
                       selected={validFromDate}
                       onSelect={(date) => {
                         setValidFromDate(date)
                         setValue('validFrom', date ? format(date, 'yyyy-MM-dd') : '')
-                        setValidFromOpen(false)
+                        setShowValidFromCalendar(false)
                       }}
-                      initialFocus
+                      className="p-3"
                     />
-                  </PopoverContent>
-                </Popover>
+                  </div>
+                )}
                 {errors.validFrom && (
                   <p className="text-sm text-red-600">{errors.validFrom.message}</p>
                 )}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 relative" ref={validUntilRef}>
                 <Label>{t.campaigns.validUntil} *</Label>
-                <Popover open={validUntilOpen} onOpenChange={setValidUntilOpen} modal={false}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={`w-full justify-start text-left font-normal ${
-                        !validUntilDate && "text-muted-foreground"
-                      } ${errors.validUntil ? 'border-red-500' : ''}`}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {validUntilDate ? format(validUntilDate, "PPP") : 
-                        (language === 'fr' ? 'Sélectionner une date' : 'Pick a date')
-                      }
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={`w-full justify-start text-left font-normal ${
+                    !validUntilDate && "text-muted-foreground"
+                  } ${errors.validUntil ? 'border-red-500' : ''}`}
+                  onClick={() => {
+                    setShowValidUntilCalendar(!showValidUntilCalendar)
+                    setShowValidFromCalendar(false)
+                  }}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {validUntilDate ? format(validUntilDate, "PPP") : 
+                    (language === 'fr' ? 'Sélectionner une date' : 'Pick a date')
+                  }
+                </Button>
+                {showValidUntilCalendar && (
+                  <div className="absolute top-full left-0 z-[9999] mt-1 border rounded-lg bg-popover shadow-lg">
                     <Calendar
                       mode="single"
                       selected={validUntilDate}
                       onSelect={(date) => {
                         setValidUntilDate(date)
                         setValue('validUntil', date ? format(date, 'yyyy-MM-dd') : '')
-                        setValidUntilOpen(false)
+                        setShowValidUntilCalendar(false)
                       }}
-                      initialFocus
                       disabled={(date) => date < new Date()}
+                      className="p-3"
                     />
-                  </PopoverContent>
-                </Popover>
+                  </div>
+                )}
                 {errors.validUntil && (
                   <p className="text-sm text-red-600">{errors.validUntil.message}</p>
                 )}
