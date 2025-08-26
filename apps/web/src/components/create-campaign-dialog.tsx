@@ -68,6 +68,8 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
   const [loadingItems, setLoadingItems] = useState(true)
   const [validFromDate, setValidFromDate] = useState<Date>()
   const [validUntilDate, setValidUntilDate] = useState<Date>()
+  const [validFromOpen, setValidFromOpen] = useState(false)
+  const [validUntilOpen, setValidUntilOpen] = useState(false)
 
 
   const {
@@ -127,12 +129,15 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
     }
   }, [watchedType, watchedValue, setValue])
 
+
   // Reset form when dialog closes
   useEffect(() => {
     if (!open) {
       reset()
       setValidFromDate(undefined)
       setValidUntilDate(undefined)
+      setValidFromOpen(false)
+      setValidUntilOpen(false)
       setLoadingCategories(true)
       setLoadingItems(true)
     }
@@ -185,16 +190,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto"
-        onInteractOutside={(e) => {
-          // Check if the click is on a calendar popover
-          const target = e.target as HTMLElement
-          if (target.closest('[data-radix-popper-content-wrapper]')) {
-            e.preventDefault()
-          }
-        }}
-      >
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Tag className="h-5 w-5" />
@@ -276,9 +272,10 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{t.campaigns.validFrom}</Label>
-                <Popover>
+                <Popover open={validFromOpen} onOpenChange={setValidFromOpen} modal={false}>
                   <PopoverTrigger asChild>
                     <Button
+                      type="button"
                       variant="outline"
                       className={`w-full justify-start text-left font-normal ${!validFromDate && "text-muted-foreground"}`}
                     >
@@ -288,24 +285,29 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
                       }
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[9999]">
+                  <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
                     <Calendar
                       mode="single"
                       selected={validFromDate}
                       onSelect={(date) => {
                         setValidFromDate(date)
                         setValue('validFrom', date ? format(date, 'yyyy-MM-dd') : '')
+                        setValidFromOpen(false)
                       }}
                       initialFocus
                     />
                   </PopoverContent>
                 </Popover>
+                {errors.validFrom && (
+                  <p className="text-sm text-red-600">{errors.validFrom.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>{t.campaigns.validUntil} *</Label>
-                <Popover>
+                <Popover open={validUntilOpen} onOpenChange={setValidUntilOpen} modal={false}>
                   <PopoverTrigger asChild>
                     <Button
+                      type="button"
                       variant="outline"
                       className={`w-full justify-start text-left font-normal ${
                         !validUntilDate && "text-muted-foreground"
@@ -317,13 +319,14 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
                       }
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[9999]">
+                  <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
                     <Calendar
                       mode="single"
                       selected={validUntilDate}
                       onSelect={(date) => {
                         setValidUntilDate(date)
                         setValue('validUntil', date ? format(date, 'yyyy-MM-dd') : '')
+                        setValidUntilOpen(false)
                       }}
                       initialFocus
                       disabled={(date) => date < new Date()}
