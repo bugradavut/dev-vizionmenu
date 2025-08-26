@@ -185,7 +185,16 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+      <DialogContent 
+        className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto"
+        onInteractOutside={(e) => {
+          // Check if the click is on a calendar popover
+          const target = e.target as HTMLElement
+          if (target.closest('[data-radix-popper-content-wrapper]')) {
+            e.preventDefault()
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Tag className="h-5 w-5" />
@@ -279,18 +288,16 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
                       }
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[60]" onInteractOutside={(e) => e.preventDefault()}>
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <Calendar
-                        mode="single"
-                        selected={validFromDate}
-                        onSelect={(date) => {
-                          setValidFromDate(date)
-                          setValue('validFrom', date ? format(date, 'yyyy-MM-dd') : '')
-                        }}
-                        initialFocus
-                      />
-                    </div>
+                  <PopoverContent className="w-auto p-0 z-[9999]">
+                    <Calendar
+                      mode="single"
+                      selected={validFromDate}
+                      onSelect={(date) => {
+                        setValidFromDate(date)
+                        setValue('validFrom', date ? format(date, 'yyyy-MM-dd') : '')
+                      }}
+                      initialFocus
+                    />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -310,19 +317,17 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
                       }
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[60]" onInteractOutside={(e) => e.preventDefault()}>
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <Calendar
-                        mode="single"
-                        selected={validUntilDate}
-                        onSelect={(date) => {
-                          setValidUntilDate(date)
-                          setValue('validUntil', date ? format(date, 'yyyy-MM-dd') : '')
-                        }}
-                        initialFocus
-                        disabled={(date) => date < new Date()}
-                      />
-                    </div>
+                  <PopoverContent className="w-auto p-0 z-[9999]">
+                    <Calendar
+                      mode="single"
+                      selected={validUntilDate}
+                      onSelect={(date) => {
+                        setValidUntilDate(date)
+                        setValue('validUntil', date ? format(date, 'yyyy-MM-dd') : '')
+                      }}
+                      initialFocus
+                      disabled={(date) => date < new Date()}
+                    />
                   </PopoverContent>
                 </Popover>
                 {errors.validUntil && (
