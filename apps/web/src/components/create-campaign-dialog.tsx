@@ -279,16 +279,18 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
                       }
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[60]" onClick={(e) => e.stopPropagation()}>
-                    <Calendar
-                      mode="single"
-                      selected={validFromDate}
-                      onSelect={(date) => {
-                        setValidFromDate(date)
-                        setValue('validFrom', date ? format(date, 'yyyy-MM-dd') : '')
-                      }}
-                      initialFocus
-                    />
+                  <PopoverContent className="w-auto p-0 z-[60]" onInteractOutside={(e) => e.preventDefault()}>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Calendar
+                        mode="single"
+                        selected={validFromDate}
+                        onSelect={(date) => {
+                          setValidFromDate(date)
+                          setValue('validFrom', date ? format(date, 'yyyy-MM-dd') : '')
+                        }}
+                        initialFocus
+                      />
+                    </div>
                   </PopoverContent>
                 </Popover>
               </div>
@@ -308,17 +310,19 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
                       }
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[60]" onClick={(e) => e.stopPropagation()}>
-                    <Calendar
-                      mode="single"
-                      selected={validUntilDate}
-                      onSelect={(date) => {
-                        setValidUntilDate(date)
-                        setValue('validUntil', date ? format(date, 'yyyy-MM-dd') : '')
-                      }}
-                      initialFocus
-                      disabled={(date) => date < new Date()}
-                    />
+                  <PopoverContent className="w-auto p-0 z-[60]" onInteractOutside={(e) => e.preventDefault()}>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Calendar
+                        mode="single"
+                        selected={validUntilDate}
+                        onSelect={(date) => {
+                          setValidUntilDate(date)
+                          setValue('validUntil', date ? format(date, 'yyyy-MM-dd') : '')
+                        }}
+                        initialFocus
+                        disabled={(date) => date < new Date()}
+                      />
+                    </div>
                   </PopoverContent>
                 </Popover>
                 {errors.validUntil && (
