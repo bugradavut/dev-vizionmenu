@@ -279,7 +279,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
                       }
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[60]" container={document.body}>
+                  <PopoverContent className="w-auto p-0 z-[60]" onClick={(e) => e.stopPropagation()}>
                     <Calendar
                       mode="single"
                       selected={validFromDate}
@@ -308,7 +308,7 @@ export function CreateCampaignDialog({ open, onOpenChange, onSuccess }: CreateCa
                       }
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[60]" container={document.body}>
+                  <PopoverContent className="w-auto p-0 z-[60]" onClick={(e) => e.stopPropagation()}>
                     <Calendar
                       mode="single"
                       selected={validUntilDate}
