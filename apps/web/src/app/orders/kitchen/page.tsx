@@ -48,8 +48,8 @@ const transformOrderForKitchen = (order: Order): KitchenOrder => {
       hour: '2-digit', 
       minute: '2-digit' 
     }),
-    isPreOrder: false, // Can be enhanced based on order_type or other fields
-    scheduledFor: order.estimated_ready_time || null,
+    isPreOrder: order.status === 'scheduled', // Scheduled orders are pre-orders in kitchen display
+    scheduledFor: order.status === 'scheduled' ? (order.scheduled_datetime || order.estimated_ready_time || null) : null,
     items: order.items?.map(item => ({
       id: item.id,
       name: item.name,
@@ -67,6 +67,8 @@ const mapApiStatusToKitchenStatus = (apiStatus: Order['status']): KitchenOrder['
   switch (apiStatus) {
     case 'preparing':
       return 'preparing' // Show in "In Progress" - ready for Mark Completed button
+    case 'scheduled':
+      return 'accepted' // Show scheduled orders as accepted (ready for start prep)
     default:
       return 'preparing'
   }
@@ -133,7 +135,7 @@ export default function KitchenDisplayPage() {
     localStorage.removeItem(key);
   }, []);
 
-  // Use orders hook for kitchen display with Realtime (only preparing orders in new simplified flow)
+  // Use orders hook for kitchen display with Realtime (preparing and scheduled orders)
   const { 
     orders: apiOrders, 
     loading, 
@@ -142,7 +144,7 @@ export default function KitchenDisplayPage() {
     refetch,
     clearError 
   } = useOrders({
-    status: 'preparing',
+    status: 'preparing,scheduled', // Include both preparing and scheduled orders
     limit: 100 // Show more orders for kitchen
   })
 
@@ -697,7 +699,7 @@ export default function KitchenDisplayPage() {
                           >
                             <Card className={`hover:shadow-lg transition-all duration-300 ease-in-out ${
                               order.isPreOrder 
-                                ? 'bg-yellow-50 border-yellow-200 border-2' 
+                                ? 'bg-white border-yellow-200 border-2' 
                                 : ''
                             }`}>
                             <CardContent className="p-4">
@@ -887,7 +889,7 @@ export default function KitchenDisplayPage() {
                             key={`preorder-${order.id}`}
                             className="animate-in fade-in-0 slide-in-from-top-2 duration-500"
                           >
-                            <Card className="bg-yellow-50 border-yellow-200 border-2 hover:shadow-lg transition-all duration-300 ease-in-out">
+                            <Card className="bg-white border-yellow-200 border-2 hover:shadow-lg transition-all duration-300 ease-in-out">
                             <CardContent className="p-4">
                               <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
                                 <div>
@@ -905,6 +907,57 @@ export default function KitchenDisplayPage() {
                                   </div>
                                 </div>
                               )}
+                              
+                              {/* Order Items for Pre-Orders (read-only) */}
+                              <div className="mb-3 pb-3 border-b border-gray-200">
+                                <div className="space-y-2">
+                                  {(() => {
+                                    const isExpanded = expandedOrders.has(order.id)
+                                    const maxVisibleItems = 2
+                                    const visibleItems = isExpanded ? order.items : order.items.slice(0, maxVisibleItems)
+                                    const hiddenItemsCount = order.items.length - maxVisibleItems
+                                    
+                                    return (
+                                      <>
+                                        {visibleItems.map((item) => (
+                                          <div key={item.id} className="flex items-start space-x-2">
+                                            <div className="w-4 h-4 rounded border border-gray-300 bg-gray-50 mt-0.5 flex-shrink-0"></div>
+                                            <div className="flex-1 text-xs">
+                                              <div className="font-medium text-gray-700">
+                                                {item.quantity}x {item.name}
+                                              </div>
+                                              {item.specialInstructions && (
+                                                <div className="text-xs text-orange-600 mt-1">
+                                                  ⚠️ {item.specialInstructions}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))}
+                                        
+                                        {order.items.length > maxVisibleItems && (
+                                          <button
+                                            onClick={() => toggleOrderExpansion(order.id)}
+                                            className="flex items-center justify-center w-full py-1 text-xs text-muted-foreground hover:text-foreground transition-colors border border-dashed border-gray-300 rounded-md hover:border-gray-400"
+                                          >
+                                            {isExpanded ? (
+                                              <>
+                                                <ChevronUp className="h-3 w-3 mr-1" />
+                                                {t.kitchenDisplay.showLess}
+                                              </>
+                                            ) : (
+                                              <>
+                                                <ChevronDown className="h-3 w-3 mr-1" />
+                                                +{hiddenItemsCount} {t.kitchenDisplay.more}
+                                              </>
+                                            )}
+                                          </button>
+                                        )}
+                                      </>
+                                    )
+                                  })()}
+                                </div>
+                              </div>
                               
                               <div className="flex items-center justify-between">
                                 <div className="text-sm font-bold">${order.total.toFixed(2)}</div>
@@ -939,8 +992,10 @@ export default function KitchenDisplayPage() {
                         {displayedOrders.map((order) => (
                           <React.Fragment key={order.id}>
                             <tr className={`transition-colors duration-150 hover:bg-gray-50 ${
-                              order.isPreOrder ? 'bg-yellow-50 hover:bg-yellow-100' : ''
-                            }`}>
+                              order.isPreOrder ? 'hover:bg-yellow-50' : ''
+                            }`} style={{
+                              backgroundColor: order.isPreOrder ? '#fffef5' : undefined // Very light yellow
+                            }}>
                               <td className="px-4 py-4 whitespace-nowrap">
                                 <div className="flex items-center">
                                   <div className={`w-2 h-2 rounded-full mr-2 ${
@@ -1033,7 +1088,7 @@ export default function KitchenDisplayPage() {
                             
                             {/* Expanded row with items */}
                             {expandedOrders.has(order.id) && (
-                              <tr key={`${order.id}-expanded`} className={`border-t-0 ${order.isPreOrder ? 'bg-yellow-50/50' : 'bg-gray-50/50'}`}>
+                              <tr key={`${order.id}-expanded`} className={`border-t-0 ${order.isPreOrder ? 'bg-yellow-50/30' : 'bg-gray-50/50'}`}>
                                 <td colSpan={7} className="px-6 py-6">
                                   <div className="space-y-4">
                                     <div className="flex items-center justify-between mb-4">

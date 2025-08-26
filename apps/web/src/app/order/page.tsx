@@ -20,6 +20,7 @@ interface OrderPageProps {
   }>
 }
 
+
 function OrderPageContent({ searchParams }: { searchParams: Promise<{
   source?: string
   branch?: string
@@ -36,6 +37,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
   // Centralized responsive state management
   const { isMobile, isTablet, isDesktop } = useResponsive()
   const responsiveClasses = useResponsiveClasses()
+
 
   // Create order context from URL parameters with enhanced validation
   const orderContext = {
@@ -71,6 +73,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
 
     fetchMenu()
   }, [orderContext.branchId])
+
 
   // Enhanced branch validation (Disabled for MVP)
   // if (!orderContext.branchId) {

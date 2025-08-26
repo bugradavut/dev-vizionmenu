@@ -20,6 +20,13 @@ export interface CartCustomization {
   price: number
 }
 
+export interface PreOrderData {
+  isPreOrder: boolean
+  scheduledDate?: string
+  scheduledTime?: string
+  scheduledDateTime?: Date
+}
+
 export interface CartContextType {
   items: CartItem[]
   addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void
@@ -32,6 +39,10 @@ export interface CartContextType {
   tax: number
   total: number
   itemCount: number
+  // Pre-order functions
+  preOrder: PreOrderData
+  setPreOrder: (preOrderData: PreOrderData) => void
+  clearPreOrder: () => void
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -42,6 +53,7 @@ interface CartContextProviderProps {
 
 const TAX_RATE = 0.13 // 13% HST (Canadian tax)
 const CART_STORAGE_KEY = 'vizion-menu-cart'
+const PRE_ORDER_STORAGE_KEY = 'vizion-menu-pre-order'
 
 // Helper functions for localStorage
 const loadCartFromStorage = (): CartItem[] => {
@@ -66,14 +78,48 @@ const saveCartToStorage = (items: CartItem[]) => {
   }
 }
 
+// Helper functions for pre-order localStorage
+const loadPreOrderFromStorage = (): PreOrderData => {
+  if (typeof window === 'undefined') return { isPreOrder: false }
+  
+  try {
+    const stored = localStorage.getItem(PRE_ORDER_STORAGE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      // Convert scheduledDateTime back to Date object if it exists
+      if (parsed.scheduledDateTime) {
+        parsed.scheduledDateTime = new Date(parsed.scheduledDateTime)
+      }
+      return parsed
+    }
+    return { isPreOrder: false }
+  } catch (error) {
+    console.error('Failed to load pre-order from localStorage:', error)
+    return { isPreOrder: false }
+  }
+}
+
+const savePreOrderToStorage = (preOrderData: PreOrderData) => {
+  if (typeof window === 'undefined') return
+  
+  try {
+    localStorage.setItem(PRE_ORDER_STORAGE_KEY, JSON.stringify(preOrderData))
+  } catch (error) {
+    console.error('Failed to save pre-order to localStorage:', error)
+  }
+}
+
 export function CartContextProvider({ children }: CartContextProviderProps) {
   const [items, setItems] = useState<CartItem[]>([])
+  const [preOrder, setPreOrderState] = useState<PreOrderData>({ isPreOrder: false })
   const [isLoaded, setIsLoaded] = useState(false)
 
-  // Load cart from localStorage on mount
+  // Load cart and pre-order from localStorage on mount
   useEffect(() => {
     const savedCart = loadCartFromStorage()
+    const savedPreOrder = loadPreOrderFromStorage()
     setItems(savedCart)
+    setPreOrderState(savedPreOrder)
     setIsLoaded(true)
   }, [])
 
@@ -83,6 +129,13 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
       saveCartToStorage(items)
     }
   }, [items, isLoaded])
+
+  // Save pre-order to localStorage whenever it changes (but not on initial load)
+  useEffect(() => {
+    if (isLoaded) {
+      savePreOrderToStorage(preOrder)
+    }
+  }, [preOrder, isLoaded])
 
   const addItem = useCallback((item: Omit<CartItem, 'quantity'>, quantity = 1) => {
     setItems(prev => {
@@ -140,6 +193,19 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
     }
   }, [])
 
+  const setPreOrder = useCallback((preOrderData: PreOrderData) => {
+    setPreOrderState(preOrderData)
+  }, [])
+
+  const clearPreOrder = useCallback(() => {
+    const emptyPreOrder = { isPreOrder: false }
+    setPreOrderState(emptyPreOrder)
+    // Also clear from localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(PRE_ORDER_STORAGE_KEY)
+    }
+  }, [])
+
   const getItemQuantity = useCallback((itemId: string) => {
     const item = items.find(item => item.id === itemId)
     return item?.quantity || 0
@@ -162,7 +228,11 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
     subtotal,
     tax,
     total,
-    itemCount
+    itemCount,
+    // Pre-order functions
+    preOrder,
+    setPreOrder,
+    clearPreOrder
   }
 
   return (

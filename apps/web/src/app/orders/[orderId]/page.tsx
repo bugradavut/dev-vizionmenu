@@ -210,6 +210,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
     const colors: Record<string, string> = {
       pending: "text-orange-700 border-orange-300 bg-orange-100 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-700",
       preparing: "text-blue-700 border-blue-300 bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700",
+      scheduled: "text-yellow-800 border-yellow-300 bg-yellow-100", // Medium yellow for scheduled orders
       ready: "text-green-700 border-green-400 bg-green-100 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700",
       completed: "text-gray-600 border-gray-200 bg-gray-50 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-700",
       rejected: "text-red-700 border-red-300 bg-red-100 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700",
@@ -939,6 +940,76 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                       )}
 
                       {/* Order Status Actions */}
+                      {order.status === 'scheduled' && (
+                        <div className="space-y-3">
+                          {/* Start Preparing Button */}
+                          <Button 
+                            onClick={() => handleStatusUpdate('preparing')}
+                            disabled={updatingStatus !== null}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors"
+                          >
+                            {updatingStatus === 'preparing' ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                                {language === 'fr' ? 'Démarrage...' : 'Starting...'}
+                              </>
+                            ) : (
+                              language === 'fr' ? 'Commencer la préparation' : 'Start Preparing'
+                            )}
+                          </Button>
+                          <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+                            <DialogTrigger asChild>
+                              <Button 
+                                disabled={updatingStatus !== null}
+                                variant="outline" 
+                                className="w-full border-red-300 text-red-700 hover:bg-red-50 py-2.5 rounded-lg transition-colors"
+                              >
+                                {t.orderDetail.rejectOrder}
+                              </Button>
+                            </DialogTrigger>
+                            
+                            <DialogContent className="max-w-md">
+                              <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                  <AlertCircle className="h-5 w-5 text-red-600" />
+                                  {t.orderDetail.rejectOrder}
+                                </DialogTitle>
+                                <DialogDescription>
+                                  {t.orderDetail.rejectConfirm}
+                                </DialogDescription>
+                              </DialogHeader>
+                              
+                              <DialogFooter className="gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  onClick={() => setShowRejectDialog(false)}
+                                  disabled={updatingStatus !== null}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button 
+                                  onClick={() => {
+                                    handleStatusUpdate('rejected')
+                                    setShowRejectDialog(false)
+                                  }}
+                                  disabled={updatingStatus !== null}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  {updatingStatus === 'rejected' ? (
+                                    <>
+                                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                                      {t.orderDetail.rejecting}
+                                    </>
+                                  ) : (
+                                    t.orderDetail.yesRejectOrder
+                                  )}
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      )}
+                      
                       {order.status === 'preparing' && (
                         <div className="space-y-3">
                           {/* Mark Ready Button */}

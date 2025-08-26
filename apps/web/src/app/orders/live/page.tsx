@@ -60,9 +60,10 @@ export default function LiveOrdersPage() {
     refetch,
     clearError 
   } = useOrders({
-    status: 'preparing',
+    status: 'preparing,scheduled', // Include both preparing and scheduled orders
     limit: 50
   })
+
 
   // Initialize timer service for auto-ready functionality
   const {
@@ -72,6 +73,7 @@ export default function LiveOrdersPage() {
     runManualCheck,
     clearError: clearTimerError
   } = useOrderTimer()
+
 
 
   // Load saved view mode from localStorage on component mount
@@ -138,7 +140,7 @@ export default function LiveOrdersPage() {
   // Handle search changes with debouncing
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
-      const statusParam = 'preparing' // Only show preparing orders in new flow
+      const statusParam = 'preparing,scheduled' // Include both preparing and scheduled orders
       await fetchOrders({
         status: statusParam,
         search: searchQuery || undefined,
@@ -182,6 +184,7 @@ export default function LiveOrdersPage() {
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       preparing: "secondary", 
+      scheduled: "outline", // Pre-orders scheduled for later
       completed: "default",
       rejected: "destructive",
       cancelled: "destructive"
@@ -189,6 +192,7 @@ export default function LiveOrdersPage() {
     
     const colors: Record<string, string> = {
       preparing: "text-blue-700 border-blue-300 bg-blue-100",
+      scheduled: "text-yellow-800 border-yellow-300 bg-yellow-100", // Medium yellow for scheduled orders
       completed: "text-gray-600 border-gray-200 bg-gray-50",
       rejected: "text-red-700 border-red-300 bg-red-100",
       cancelled: "text-red-700 border-red-300 bg-red-100"
@@ -197,6 +201,7 @@ export default function LiveOrdersPage() {
     const getStatusText = (status: string) => {
       switch(status) {
         case 'preparing': return t.liveOrders.statusPreparing
+        case 'scheduled': return 'Scheduled' // Pre-order scheduled for later
         case 'completed': return t.liveOrders.statusCompleted
         case 'rejected': return t.liveOrders.statusRejected
         case 'cancelled': return t.liveOrders.statusCancelled
@@ -351,7 +356,13 @@ export default function LiveOrdersPage() {
                 </TableRow>
               ) : (
                 filteredOrders.map((order) => (
-                  <TableRow key={order.id} className="hover:bg-gray-50 transition-colors">
+                  <TableRow key={order.id} className={`transition-colors ${
+                    order.status === 'scheduled' 
+                      ? 'border-yellow-300 hover:bg-yellow-100' 
+                      : 'bg-white hover:bg-gray-50'
+                  }`} style={{
+                    backgroundColor: order.status === 'scheduled' ? '#fefce8' : undefined // Custom yellow between 50 and 100
+                  }}>
                     <TableCell>
                       {renderSourceIcon(order.source)}
                     </TableCell>
@@ -456,7 +467,13 @@ export default function LiveOrdersPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredOrders.map((order) => (
-              <Card key={order.id} className="hover:shadow-lg transition-all duration-200">
+              <Card key={order.id} className={`hover:shadow-lg transition-all duration-200 ${
+                order.status === 'scheduled' 
+                  ? 'border-yellow-300 hover:bg-yellow-100' 
+                  : 'bg-white border-gray-200'
+              }`} style={{
+                backgroundColor: order.status === 'scheduled' ? '#fefce8' : undefined // Custom yellow between 50 and 100
+              }}>
                 <CardContent className="p-5">
                   {/* Header - Channel and Status */}
                   <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">

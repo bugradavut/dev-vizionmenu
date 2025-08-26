@@ -148,7 +148,7 @@ function OrderConfirmationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { language } = useLanguage();
-  const { items, clearCart } = useCart();
+  const { items, clearCart, clearPreOrder } = useCart();
   const t = translations[language] || translations.en;
   
   const orderId = searchParams.get('orderId');
@@ -201,10 +201,11 @@ function OrderConfirmationContent() {
   const orderNotes = sessionData?.orderNotes || '';
   const deliveryAddress = sessionData?.deliveryAddress;
 
-  // Clear cart when confirmation page loads (order is successful)
+  // Clear cart and pre-order when confirmation page loads (order is successful)
   useEffect(() => {
     clearCart();
-  }, [clearCart]);
+    clearPreOrder();
+  }, [clearCart, clearPreOrder]);
 
   // Cleanup sessionStorage based on order completion status
   useEffect(() => {

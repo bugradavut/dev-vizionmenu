@@ -117,7 +117,9 @@
       "Read(/c:\\vision-menu\\Docs/**)",
       "Read(/c:\\vision-menu\\apps\\web\\src\\app\\campaigns\\create/**)",
       "Read(/c:\\vision-menu\\apps\\web\\src\\app\\order\\review\\components/**)",
-      "Read(/c:\\vision-menu\\apps\\web\\src\\lib/**)"
+      "Read(/c:\\vision-menu\\apps\\web\\src\\lib/**)",
+      "Read(/c:\\vision-menu\\Docs/**)",
+      "Read(/c:\\vision-menu\\Docs/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

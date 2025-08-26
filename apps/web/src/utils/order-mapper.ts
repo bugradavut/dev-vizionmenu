@@ -39,6 +39,13 @@ export interface FrontendOrderData {
   tip?: number;
   notes?: string;
   deliveryAddress?: FrontendAddressInfo; // Add separate delivery address field
+  // NEW: Pre-order fields
+  preOrder?: {
+    isPreOrder: boolean;
+    scheduledDate?: string;
+    scheduledTime?: string;
+    scheduledDateTime?: Date;
+  };
 }
 
 export interface BackendOrderData {
@@ -65,6 +72,11 @@ export interface BackendOrderData {
   total: number;
   notes: string;
   deliveryAddress?: FrontendAddressInfo; // Add separate delivery address field
+  // NEW: Pre-order fields
+  isPreOrder?: boolean;
+  scheduledDate?: string;
+  scheduledTime?: string;
+  scheduledDateTime?: string; // ISO string for API
 }
 
 /**
@@ -76,7 +88,7 @@ export function mapOrderDataForAPI(
   tableNumber?: number,
   zone?: string
 ): BackendOrderData {
-  const { customerInfo, addressInfo, items, orderType, paymentMethod, subtotal, tax, total, tip, notes } = frontendData;
+  const { customerInfo, addressInfo, items, orderType, paymentMethod, subtotal, tax, total, tip, notes, preOrder } = frontendData;
 
   // Combine order notes (NO delivery address in notes anymore!)
   const combinedNotes = [
@@ -120,7 +132,12 @@ export function mapOrderDataForAPI(
     tax,
     total: total + (tip || 0), // Include tip in total
     notes: combinedNotes,
-    deliveryAddress // Send delivery address separately
+    deliveryAddress, // Send delivery address separately
+    // NEW: Pre-order mapping
+    isPreOrder: preOrder?.isPreOrder || false,
+    scheduledDate: preOrder?.scheduledDate,
+    scheduledTime: preOrder?.scheduledTime,
+    scheduledDateTime: preOrder?.scheduledDateTime?.toISOString()
   };
 }
 

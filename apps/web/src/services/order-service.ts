@@ -13,6 +13,11 @@ export interface OrderSubmissionResponse {
   estimatedTime: string;
   message: string;
   createdAt: string;
+  // NEW: Pre-order fields
+  isPreOrder?: boolean;
+  scheduledDateTime?: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
   items?: Array<{
     id: string;
     name: string;

@@ -421,7 +421,7 @@ async function updateOrderStatus(orderId, updateData, userBranch) {
  * @returns {Object} Created order data
  */
 async function createOrder(orderData, branchId) {
-  const { customer, items, orderType, source, tableNumber, notes, specialInstructions, deliveryAddress } = orderData;
+  const { customer, items, orderType, source, tableNumber, notes, specialInstructions, deliveryAddress, preOrder } = orderData;
   
   // Only allow internal orders for now (third-party will be added in 2 weeks)
   if (!['qr_code', 'web'].includes(source)) {
@@ -434,6 +434,68 @@ async function createOrder(orderData, branchId) {
   const taxAmount = subtotal * taxRate;
   const total = subtotal + taxAmount;
 
+  // Handle pre-order data
+  const isPreOrder = preOrder?.isPreOrder || false;
+  
+  
+  // Parse scheduledDateTime properly to avoid timezone issues
+  let scheduledDateTime = null;
+  if (preOrder?.scheduledDateTime) {
+    try {
+      // If it's a string, parse it. If it's already a Date, use it
+      const dateValue = typeof preOrder.scheduledDateTime === 'string' 
+        ? new Date(preOrder.scheduledDateTime) 
+        : preOrder.scheduledDateTime;
+      
+      // Convert to ISO string for PostgreSQL
+      if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
+        scheduledDateTime = dateValue.toISOString();
+      }
+    } catch (error) {
+      console.warn('Failed to parse scheduledDateTime:', error);
+      scheduledDateTime = null;
+    }
+  }
+  
+  const scheduledDate = preOrder?.scheduledDate || null;
+  
+  // Parse scheduledTime to remove AM/PM and convert to 24-hour format for PostgreSQL
+  let scheduledTime = null;
+  if (preOrder?.scheduledTime) {
+    try {
+      // Parse the time string (e.g., "11:30 a.m." or "2:30 p.m.")
+      const timeMatch = preOrder.scheduledTime.match(/(\d+):(\d+)\s*(a\.m\.|p\.m\.|AM|PM)/i);
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1]);
+        const minutes = timeMatch[2];
+        const meridiem = timeMatch[3].toLowerCase();
+        
+        // Convert to 24-hour format
+        if (meridiem.includes('p') && hours !== 12) {
+          hours += 12;
+        } else if (meridiem.includes('a') && hours === 12) {
+          hours = 0;
+        }
+        
+        // Format as HH:MM:SS for PostgreSQL TIME type
+        scheduledTime = `${hours.toString().padStart(2, '0')}:${minutes}:00`;
+      } else {
+        console.warn('Could not parse time format:', preOrder.scheduledTime);
+        scheduledTime = null;
+      }
+    } catch (error) {
+      console.warn('Failed to parse scheduledTime:', error);
+      scheduledTime = null;
+    }
+  }
+  
+
+  // Determine initial status based on order type
+  let initialStatus = 'preparing'; // Default for immediate orders
+  if (isPreOrder) {
+    initialStatus = 'scheduled'; // Pre-orders start as scheduled
+  }
+
   // Create order in database
   const orderDataObj = {
     branch_id: branchId,
@@ -443,7 +505,7 @@ async function createOrder(orderData, branchId) {
     order_type: orderType,
     table_number: tableNumber || null,
     delivery_address: deliveryAddress || null, // Add delivery address
-    order_status: 'preparing', // New flow: auto-accept all orders
+    order_status: initialStatus, // Dynamic status based on pre-order
     payment_status: 'pending',
     subtotal: subtotal,
     tax_amount: taxAmount,
@@ -451,8 +513,14 @@ async function createOrder(orderData, branchId) {
     notes: notes || null,
     special_instructions: specialInstructions || null,
     third_party_platform: source === 'qr_code' ? null : source, // qr_code doesn't set platform
+    // NEW: Pre-order fields
+    is_pre_order: isPreOrder,
+    scheduled_datetime: scheduledDateTime,
+    scheduled_date: scheduledDate,
+    scheduled_time: scheduledTime,
     created_at: new Date().toISOString()
   };
+
 
   const { data: createdOrder, error: createError } = await supabase
     .from('orders')
@@ -489,10 +557,15 @@ async function createOrder(orderData, branchId) {
   return {
     order: {
       id: createdOrder.id,
-      orderNumber: `ORDER-${createdOrder.id.substring(0, 8).toUpperCase()}`,
+      order_number: `${createdOrder.id.substring(0, 8).toUpperCase()}`,
       status: createdOrder.order_status,
       total: total,
-      createdAt: createdOrder.created_at
+      createdAt: createdOrder.created_at,
+      // NEW: Pre-order information
+      is_pre_order: createdOrder.is_pre_order,
+      scheduled_datetime: createdOrder.scheduled_datetime,
+      scheduled_date: createdOrder.scheduled_date,
+      scheduled_time: createdOrder.scheduled_time
     }
   };
 }

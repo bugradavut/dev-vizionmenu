@@ -50,7 +50,12 @@ const createCustomerOrder = async (req, res) => {
       tax,
       total,
       notes,
-      deliveryAddress 
+      deliveryAddress,
+      // NEW: Pre-order fields
+      isPreOrder,
+      scheduledDate,
+      scheduledTime,
+      scheduledDateTime
     } = req.body;
     
     // Minimal validation - just ensure basic data exists
@@ -74,6 +79,12 @@ const createCustomerOrder = async (req, res) => {
         phone: customerInfo?.phone?.trim() || '0000000000',
         email: customerInfo?.email?.trim() || 'customer@example.com'
       };
+    }
+
+    // Parse scheduled datetime if provided
+    let parsedScheduledDateTime = null;
+    if (isPreOrder && scheduledDateTime) {
+      parsedScheduledDateTime = new Date(scheduledDateTime);
     }
 
     // Prepare order data for internal service
@@ -105,6 +116,13 @@ const createCustomerOrder = async (req, res) => {
         subtotal: subtotal || 0,
         tax_amount: tax || 0,
         total: total || 0
+      },
+      // NEW: Pre-order data
+      preOrder: {
+        isPreOrder: Boolean(isPreOrder),
+        scheduledDate: scheduledDate || null,
+        scheduledTime: scheduledTime || null,
+        scheduledDateTime: parsedScheduledDateTime
       }
     };
 
@@ -136,7 +154,11 @@ const createCustomerOrder = async (req, res) => {
         status: createResult.order.status,
         total: createResult.order.total_amount,
         estimatedTime: estimatedTime,
-        message: `Order placed successfully! ${source === 'qr' ? `Table ${tableNumber}` : 'Takeaway order'}`
+        isPreOrder: Boolean(isPreOrder),
+        scheduledDateTime: parsedScheduledDateTime,
+        message: isPreOrder 
+          ? `Pre-order scheduled successfully for ${scheduledDate} at ${scheduledTime}!`
+          : `Order placed successfully! ${source === 'qr' ? `Table ${tableNumber}` : 'Takeaway order'}`
       }
     });
     
@@ -216,6 +238,11 @@ const getOrderStatus = async (req, res) => {
         estimatedTime: estimatedTime,
         createdAt: order.created_at,
         completedAt: order.completed_at, // Add completion time for expiration logic
+        // NEW: Pre-order information
+        isPreOrder: Boolean(order.is_pre_order),
+        scheduledDateTime: order.scheduled_datetime,
+        scheduledDate: order.scheduled_date,
+        scheduledTime: order.scheduled_time,
         // Include order items and pricing for confirmation page
         items: (order.order_items || []).map(item => ({
           id: item.id,

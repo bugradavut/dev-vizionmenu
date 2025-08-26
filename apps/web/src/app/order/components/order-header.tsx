@@ -3,11 +3,13 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { useOrderContext } from '../contexts/order-context'
+import { useCart } from '../contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
-import { MapPin, Store, Search, X, Globe } from 'lucide-react'
+import { MapPin, Store, Search, X, Globe, Clock } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { PreOrderModal } from './pre-order-modal'
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -19,12 +21,15 @@ interface OrderHeaderProps {
   branchName?: string
   branchAddress?: string
   onSearch?: (query: string) => void
+  onPreOrderConfirm?: (date: string, time: string) => void
 }
 
-export function OrderHeader({ branchName, onSearch }: OrderHeaderProps) {
+export function OrderHeader({ branchName, onSearch, onPreOrderConfirm }: OrderHeaderProps) {
   const { tableNumber, zone, isQROrder } = useOrderContext()
+  const { preOrder, setPreOrder, clearPreOrder } = useCart()
   const { language, setLanguage } = useLanguage()
   const [searchQuery, setSearchQuery] = useState('')
+  const [isPreOrderModalOpen, setIsPreOrderModalOpen] = useState(false)
   const t = translations[language] || translations.en
 
   const handleSearch = (value: string) => {
@@ -35,6 +40,52 @@ export function OrderHeader({ branchName, onSearch }: OrderHeaderProps) {
   const clearSearch = () => {
     setSearchQuery('')
     onSearch?.('')
+  }
+
+  const handlePreOrderConfirm = (date: string, time: string) => {
+    // Create scheduled datetime
+    const scheduledDateTime = createScheduledDateTime(date, time)
+    
+    // Update cart context with pre-order data
+    setPreOrder({
+      isPreOrder: true,
+      scheduledDate: date,
+      scheduledTime: time,
+      scheduledDateTime
+    });
+    
+    // Call parent callback if provided (for backward compatibility)
+    onPreOrderConfirm?.(date, time)
+  }
+
+  // Helper function to create scheduled datetime
+  const createScheduledDateTime = (date: string, time: string): Date => {
+    const today = new Date()
+    let targetDate: Date
+
+    if (date === 'today') {
+      targetDate = new Date(today)
+    } else if (date === 'tomorrow') {
+      targetDate = new Date(today)
+      targetDate.setDate(today.getDate() + 1)
+    } else {
+      targetDate = new Date(date)
+    }
+
+    // Parse time and set it
+    const timeParts = time.match(/(\d+):(\d+)\s*(AM|PM)/i)
+    if (timeParts) {
+      let hours = parseInt(timeParts[1])
+      const minutes = parseInt(timeParts[2])
+      const meridiem = timeParts[3].toUpperCase()
+      
+      if (meridiem === 'PM' && hours !== 12) hours += 12
+      if (meridiem === 'AM' && hours === 12) hours = 0
+      
+      targetDate.setHours(hours, minutes, 0, 0)
+    }
+
+    return targetDate
   }
 
   return (
@@ -60,6 +111,13 @@ export function OrderHeader({ branchName, onSearch }: OrderHeaderProps) {
           <span className="text-sm truncate">
             {branchName || 'Restaurant'}
           </span>
+          {preOrder.isPreOrder && preOrder.scheduledDate && preOrder.scheduledTime && (
+            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2 whitespace-nowrap">
+              📅 {preOrder.scheduledDate === 'today' ? (language === 'fr' ? "Aujourd'hui" : 'Today') : 
+                   preOrder.scheduledDate === 'tomorrow' ? (language === 'fr' ? 'Demain' : 'Tomorrow') : 
+                   preOrder.scheduledDate} • ⏰ {preOrder.scheduledTime}
+            </span>
+          )}
         </div>
       </div>
 
@@ -119,7 +177,56 @@ export function OrderHeader({ branchName, onSearch }: OrderHeaderProps) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Pre-Order Buttons */}
+        {preOrder.isPreOrder ? (
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="default"
+              size="sm" 
+              className="h-9 gap-2" 
+              onClick={() => setIsPreOrderModalOpen(true)}
+            >
+              <Clock className="w-4 h-4" />
+              <span className="hidden sm:inline">
+                {language === 'fr' ? 'Programmé' : 'Scheduled'}
+              </span>
+            </Button>
+            <Button 
+              variant="outline"
+              size="sm" 
+              className="h-9 gap-2 text-red-600 border-red-300 hover:bg-red-50" 
+              onClick={clearPreOrder}
+              title={language === 'fr' ? 'Annuler la programmation' : 'Cancel scheduling'}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        ) : (
+          <Button 
+            variant="outline"
+            size="sm" 
+            className="h-9 gap-2" 
+            onClick={() => setIsPreOrderModalOpen(true)}
+          >
+            <Clock className="w-4 h-4" />
+            <span className="hidden sm:inline">
+              {language === 'fr' ? 'Programmer' : 'Schedule'}
+            </span>
+          </Button>
+        )}
       </div>
+
+      {/* Pre-Order Modal */}
+      <PreOrderModal
+        isOpen={isPreOrderModalOpen}
+        onClose={() => setIsPreOrderModalOpen(false)}
+        onConfirm={handlePreOrderConfirm}
+        currentSchedule={preOrder.isPreOrder ? {
+          date: preOrder.scheduledDate!,
+          time: preOrder.scheduledTime!
+        } : undefined}
+      />
     </div>
   )
 }

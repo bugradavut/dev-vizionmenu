@@ -36,7 +36,7 @@ interface OrderTotalSidebarProps {
 
 export function OrderTotalSidebar({ language, formData, orderNotes = '', orderContext, onTriggerValidation }: OrderTotalSidebarProps) {
   const router = useRouter()
-  const { items, subtotal, tax, total } = useCart()
+  const { items, subtotal, tax, total, preOrder } = useCart()
   const t = translations[language as keyof typeof translations] || translations.en
   const [isSubmitting, setIsSubmitting] = useState(false)
   
@@ -91,7 +91,14 @@ export function OrderTotalSidebar({ language, formData, orderNotes = '', orderCo
         subtotal,
         tax,
         total,
-        notes: orderNotes.trim() || undefined // Add order notes
+        notes: orderNotes.trim() || undefined, // Add order notes
+        // NEW: Pre-order data from cart context
+        preOrder: preOrder.isPreOrder ? {
+          isPreOrder: preOrder.isPreOrder,
+          scheduledDate: preOrder.scheduledDate,
+          scheduledTime: preOrder.scheduledTime,
+          scheduledDateTime: preOrder.scheduledDateTime
+        } : undefined
       }
       
       // Submit order
@@ -103,7 +110,6 @@ export function OrderTotalSidebar({ language, formData, orderNotes = '', orderCo
       )
       
       if (result.success) {
-        
         // Store order confirmation data in sessionStorage (temporary)
         const confirmationData = {
           orderId: result.data.orderId,
@@ -145,7 +151,7 @@ export function OrderTotalSidebar({ language, formData, orderNotes = '', orderCo
           sessionStorage.setItem('vizion-order-confirmation', JSON.stringify(confirmationData));
         }
         
-        // Navigate with minimal URL params
+        // Navigate to confirmation page (cart will be cleared there)
         router.push(`/order/confirmation?orderId=${result.data.orderId}`)
       } else {
         // Handle error
