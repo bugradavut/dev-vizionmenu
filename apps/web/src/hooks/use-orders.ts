@@ -200,16 +200,31 @@ export function useOrderDetail(orderId?: string): UseOrderDetailReturn {
     
     try {
       // Format order ID for API call
-      const apiOrderId = id.includes('ORDER-') ? id : `ORDER-${id}`;
+      // If ID is already a UUID (36 chars with dashes), use it directly
+      // If it's already prefixed with ORDER-, use it as is  
+      // Otherwise add ORDER- prefix for short format
+      let apiOrderId: string;
+      if (id.length === 36 && id.includes('-') && !id.startsWith('ORDER-')) {
+        // Full UUID - use directly
+        apiOrderId = id;
+      } else if (id.includes('ORDER-')) {
+        // Already has ORDER- prefix
+        apiOrderId = id;
+      } else {
+        // Short format - add ORDER- prefix
+        apiOrderId = `ORDER-${id}`;
+      }
       
       // Real API call to get order details
       const response = await ordersService.getOrderById(apiOrderId);
+      
+      // Backend already sends correctly formatted data, no need to transform
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const transformedOrder = ordersService.transformOrder(response.data as any);
+      const orderData = response.data as any;
       
       setState(prev => ({
         ...prev,
-        order: transformedOrder,
+        order: orderData,
         loading: false,
       }));
       

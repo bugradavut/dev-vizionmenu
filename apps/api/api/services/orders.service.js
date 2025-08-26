@@ -287,6 +287,10 @@ async function getOrderDetail(orderId, userBranch) {
     notes: existingOrder.notes,
     special_instructions: existingOrder.special_instructions,
     estimated_ready_time: existingOrder.estimated_ready_time,
+    scheduled_datetime: existingOrder.scheduled_datetime, // Pre-order scheduled datetime
+    scheduled_date: existingOrder.scheduled_date, // Pre-order scheduled date  
+    scheduled_time: existingOrder.scheduled_time, // Pre-order scheduled time
+    is_pre_order: existingOrder.is_pre_order || false, // Pre-order flag
     delivery_address: existingOrder.delivery_address, // Add delivery_address field
     third_party_order_id: existingOrder.third_party_order_id,
     third_party_platform: existingOrder.third_party_platform,

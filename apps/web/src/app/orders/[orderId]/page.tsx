@@ -881,9 +881,134 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                           <span className="text-muted-foreground">{t.orderDetail.estTime}</span>
                           <span>{formatEstimatedTime(order.estimated_ready_time || '')}</span>
                         </div>
+                        {/* Pre-order scheduled time */}
+                        {order.status === 'scheduled' && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">{language === 'fr' ? 'Programmé pour' : 'Scheduled For'}</span>
+                            <span className="font-medium text-yellow-700">
+                              {(() => {
+                                // Build from separate date and time fields for accurate display
+                                if (order.scheduled_date && order.scheduled_time) {
+                                  // Parse date and time separately to avoid timezone issues
+                                  const dateStr = order.scheduled_date; // '2025-08-28'
+                                  const timeStr = order.scheduled_time; // '11:45:00'
+                                  
+                                  // Create date object in local time (not UTC)
+                                  const [year, month, day] = dateStr.split('-').map(Number);
+                                  const [hour, minute] = timeStr.split(':').map(Number);
+                                  
+                                  const scheduledDate = new Date(year, month - 1, day, hour, minute);
+                                  
+                                  return scheduledDate.toLocaleString('en-CA', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true
+                                  });
+                                }
+                                
+                                // Fallback to scheduled_datetime if separate fields not available
+                                if (order.scheduled_datetime) {
+                                  return new Date(order.scheduled_datetime).toLocaleString('en-CA', {
+                                    timeZone: 'America/Toronto',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true
+                                  });
+                                }
+                                
+                                // Fallback to estimated_ready_time
+                                if (order.estimated_ready_time) {
+                                  return new Date(order.estimated_ready_time).toLocaleString('en-CA', {
+                                    timeZone: 'America/Toronto',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true
+                                  });
+                                }
+                                
+                                return language === 'fr' ? 'Non spécifié' : 'Not specified';
+                              })()}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
+
+                  {/* Pre-order schedule info - shown after payment summary for scheduled orders */}
+                  {order.status === 'scheduled' && (
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Clock className="h-4 w-4 text-yellow-600" />
+                            <span className="text-sm font-medium text-yellow-800">
+                              {language === 'fr' ? 'Commande programmée' : 'Pre-Order Scheduled'}
+                            </span>
+                          </div>
+                          <div className="text-sm text-yellow-700">
+                            {(() => {
+                              // Build from separate date and time fields for accurate display
+                              if (order.scheduled_date && order.scheduled_time) {
+                                // Parse date and time separately to avoid timezone issues
+                                const dateStr = order.scheduled_date; // '2025-08-28'
+                                const timeStr = order.scheduled_time; // '11:45:00'
+                                
+                                // Create date object in local time (not UTC)
+                                const [year, month, day] = dateStr.split('-').map(Number);
+                                const [hour, minute] = timeStr.split(':').map(Number);
+                                
+                                const scheduledDate = new Date(year, month - 1, day, hour, minute);
+                                
+                                return scheduledDate.toLocaleString('en-CA', {
+                                  weekday: 'long',
+                                  month: 'long',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true
+                                });
+                              }
+                              
+                              // Fallback to scheduled_datetime if separate fields not available
+                              if (order.scheduled_datetime) {
+                                return new Date(order.scheduled_datetime).toLocaleString('en-CA', {
+                                  timeZone: 'America/Toronto',
+                                  weekday: 'long',
+                                  month: 'long',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true
+                                });
+                              }
+                              
+                              // Fallback to estimated_ready_time
+                              if (order.estimated_ready_time) {
+                                return new Date(order.estimated_ready_time).toLocaleString('en-CA', {
+                                  timeZone: 'America/Toronto',
+                                  weekday: 'long',
+                                  month: 'long',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true
+                                });
+                              }
+                              
+                              return language === 'fr' ? 'Heure non spécifiée' : 'Time not specified';
+                            })()}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
                   {/* Quick Actions */}
                   <Card>
@@ -946,7 +1071,10 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                           <Button 
                             onClick={() => handleStatusUpdate('preparing')}
                             disabled={updatingStatus !== null}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors"
+                            className="w-full text-white font-medium py-3 rounded-lg transition-colors duration-200 hover:opacity-90"
+                            style={{ backgroundColor: 'var(--primary)' }}
+                            onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#e6440a'}
+                            onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = 'var(--primary)'}
                           >
                             {updatingStatus === 'preparing' ? (
                               <>
