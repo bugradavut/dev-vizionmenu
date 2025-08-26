@@ -24,7 +24,8 @@ export function CartSidebar() {
     removeItem, 
     subtotal, 
     tax, 
-    total 
+    total,
+    preOrder 
   } = useCart()
   
   const { isQROrder, tableNumber, zone, source, branchId } = useOrderContext()
@@ -141,6 +142,44 @@ export function CartSidebar() {
         {/* Order Ready Time Header - Always visible */}
         <div className={`${responsiveClasses.padding.section} pb-0 pt-4`}>
           {(() => {
+            // If pre-order is scheduled, show scheduled time instead of estimated time
+            if (preOrder.isPreOrder && preOrder.scheduledDate && preOrder.scheduledTime) {
+              // Format the scheduled date
+              let dateDisplay = '';
+              if (preOrder.scheduledDate === 'today') {
+                dateDisplay = language === 'fr' ? "Aujourd'hui" : 'Today';
+              } else if (preOrder.scheduledDate === 'tomorrow') {
+                dateDisplay = language === 'fr' ? 'Demain' : 'Tomorrow';
+              } else {
+                // Format actual date
+                const date = new Date(preOrder.scheduledDate);
+                dateDisplay = date.toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric'
+                });
+              }
+
+              return (
+                <Card className="bg-green-50 border-green-200 p-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Clock className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm text-green-600 font-medium">
+                        {language === 'fr' ? 'PROGRAMMÉ POUR' : 'ORDER SCHEDULED FOR'}
+                      </div>
+                      <div className="text-lg font-bold text-green-900">
+                        {dateDisplay} • {preOrder.scheduledTime}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            }
+
+            // Default behavior - show estimated ready time
             const readyTimeInfo = calculateOrderReadyTime(selectedOrderType)
             if (!readyTimeInfo) return null
             

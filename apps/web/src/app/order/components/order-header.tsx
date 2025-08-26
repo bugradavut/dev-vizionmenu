@@ -111,13 +111,6 @@ export function OrderHeader({ branchName, onSearch, onPreOrderConfirm }: OrderHe
           <span className="text-sm truncate">
             {branchName || 'Restaurant'}
           </span>
-          {preOrder.isPreOrder && preOrder.scheduledDate && preOrder.scheduledTime && (
-            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2 whitespace-nowrap">
-              📅 {preOrder.scheduledDate === 'today' ? (language === 'fr' ? "Aujourd'hui" : 'Today') : 
-                   preOrder.scheduledDate === 'tomorrow' ? (language === 'fr' ? 'Demain' : 'Tomorrow') : 
-                   preOrder.scheduledDate} • ⏰ {preOrder.scheduledTime}
-            </span>
-          )}
         </div>
       </div>
 
@@ -181,26 +174,33 @@ export function OrderHeader({ branchName, onSearch, onPreOrderConfirm }: OrderHe
         {/* Pre-Order Buttons */}
         {preOrder.isPreOrder ? (
           <div className="flex items-center gap-2">
-            <Button 
-              variant="default"
-              size="sm" 
-              className="h-9 gap-2" 
-              onClick={() => setIsPreOrderModalOpen(true)}
+            {/* Scheduled Button with Primary Color */}
+            <div 
+              className="flex items-center h-8 rounded-md text-white text-sm font-medium overflow-hidden"
+              style={{ backgroundColor: 'var(--primary)' }}
             >
-              <Clock className="w-4 h-4" />
-              <span className="hidden sm:inline">
-                {language === 'fr' ? 'Programmé' : 'Scheduled'}
-              </span>
-            </Button>
-            <Button 
-              variant="outline"
-              size="sm" 
-              className="h-9 gap-2 text-red-600 border-red-300 hover:bg-red-50" 
-              onClick={clearPreOrder}
-              title={language === 'fr' ? 'Annuler la programmation' : 'Cancel scheduling'}
-            >
-              <X className="w-4 h-4" />
-            </Button>
+              {/* Main button area */}
+              <button
+                onClick={() => setIsPreOrderModalOpen(true)}
+                className="flex items-center gap-2 px-3 py-1 hover:opacity-90 transition-opacity"
+              >
+                <Clock className="w-4 h-4" />
+                <span className="hidden sm:inline">
+                  {language === 'fr' ? 'Programmé' : 'Scheduled'}
+                </span>
+              </button>
+              
+              {/* X button with white background */}
+              <div className="bg-white rounded-md ml-1 mr-1">
+                <button
+                  onClick={clearPreOrder}
+                  className="flex items-center justify-center w-6 h-6 text-red-500 hover:bg-gray-50 rounded-md transition-colors"
+                  title={language === 'fr' ? 'Annuler la programmation' : 'Cancel scheduling'}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
           <Button 
