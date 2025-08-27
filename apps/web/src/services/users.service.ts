@@ -16,7 +16,36 @@ import type {
 
 export class UsersService {
   /**
-   * Get all users for a specific branch
+   * Get all users for a specific chain (unified: chain owners + branch users)
+   */
+  async getUsersByChain(params: GetUsersParams & { chain_id: string }): Promise<GetUsersResponse> {
+    const { chain_id, ...queryParams } = params;
+    
+    // Validate chain_id before making API call
+    if (!chain_id || chain_id === 'undefined' || chain_id === 'null') {
+      return {
+        users: [],
+        total: 0,
+        page: 1,
+        limit: 50
+      };
+    }
+    
+    try {
+      const response = await apiClient.get<GetUsersResponse>(
+        `/api/v1/users/chain/${chain_id}`,
+        queryParams
+      );
+      
+      return response.data;
+    } catch (error) {
+      console.error('Chain users service error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all users for a specific branch (legacy method - kept for compatibility)
    */
   async getUsersByBranch(params: GetUsersParams): Promise<GetUsersResponse> {
     const { branch_id, ...queryParams } = params;

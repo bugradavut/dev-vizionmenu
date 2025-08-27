@@ -48,7 +48,9 @@ import type { BranchUser, BranchRole } from '@repo/types/auth';
 import { cn } from '@/lib/utils';
 
 interface UserListTableProps {
-  branchId: string;
+  branchId?: string;
+  chainId?: string;
+  isChainOwner?: boolean;
   onCreateUser?: () => void;
   onEditUser?: (user: BranchUser) => void;
   className?: string;
@@ -81,6 +83,8 @@ const ROLE_STYLES: Record<BranchRole, { bg: string; text: string; border: string
 
 export function UserListTable({
   branchId,
+  chainId,
+  isChainOwner,
   onCreateUser,
   onEditUser,
   className
@@ -104,27 +108,40 @@ export function UserListTable({
     }
   };
 
-  const { users, loading, error, fetchUsers, totalUsers } = useUsers();
+  const { users, loading, error, fetchUsers, fetchChainUsers, totalUsers } = useUsers();
   const { toggleUserStatus, removeUser } = useUserMutations();
 
-  // Fetch users from API
+  // Fetch users from API - auto-detect context
   useEffect(() => {
-    if (branchId && branchId !== 'undefined') {
+    if (isChainOwner && chainId) {
+      // Chain owner: fetch all chain users (chain owners + branch users)
+      fetchChainUsers({
+        branch_id: '',
+        chain_id: chainId,
+        page: 1,
+        limit: 50
+      });
+    } else if (branchId && branchId !== 'undefined') {
+      // Branch user: fetch only branch users
       fetchUsers({
         branch_id: branchId,
         page: 1,
         limit: 50
       });
     }
-  }, [branchId, fetchUsers]);
+  }, [branchId, chainId, isChainOwner, fetchUsers, fetchChainUsers]);
 
   const displayUsers = users;
 
 
   const filteredUsers = displayUsers.filter(user => {
+    // Handle both unified API structure (direct fields) and legacy structure (nested user object)
+    const fullName = (user as unknown as Record<string, unknown>).full_name || user.user?.full_name;
+    const email = (user as unknown as Record<string, unknown>).email || user.user?.email;
+    
     const matchesSearch = !searchQuery ||
-      user.user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.user.email.toLowerCase().includes(searchQuery.toLowerCase());
+      (typeof fullName === 'string' && fullName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (typeof email === 'string' && email.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     const matchesStatus = statusFilter === 'all' ||
@@ -142,7 +159,9 @@ export function UserListTable({
   };
 
   const handleDeleteUser = async (user: BranchUser) => {
-    const confirmMessage = t.settingsUsers.userTable.deleteConfirm.replace('{name}', user.user.full_name || user.user.email);
+    const fullName = (user as unknown as Record<string, unknown>).full_name || user.user?.full_name;
+    const email = (user as unknown as Record<string, unknown>).email || user.user?.email;
+    const confirmMessage = t.settingsUsers.userTable.deleteConfirm.replace('{name}', (fullName || email || 'Unknown') as string);
     if (!confirm(confirmMessage)) {
       return;
     }
@@ -154,11 +173,14 @@ export function UserListTable({
     }
   };
 
-  const getInitials = (name?: string, email?: string) => {
-    if (name) {
+  const getInitials = (user: BranchUser) => {
+    const name = (user as unknown as Record<string, unknown>).full_name || user.user?.full_name;
+    const email = (user as unknown as Record<string, unknown>).email || user.user?.email;
+    
+    if (name && typeof name === 'string') {
       return name.split(' ').map(n => n[0]).join('').toUpperCase();
     }
-    return email?.substring(0, 2).toUpperCase() || 'U';
+    return (email && typeof email === 'string') ? email.substring(0, 2).toUpperCase() : 'U';
   };
 
   // Real permission checks using enhanced auth
@@ -368,22 +390,32 @@ export function UserListTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((user) => (
-                  <TableRow key={`${user.user_id}-${user.branch_id}`}>
+                filteredUsers.map((user) => {
+                  // Handle both unified API structure and legacy structure
+                  const fullName = (user as unknown as Record<string, unknown>).full_name || user.user?.full_name;
+                  const email = (user as unknown as Record<string, unknown>).email || user.user?.email;
+                  const avatarUrl = (user as unknown as Record<string, unknown>).avatar_url || user.user?.avatar_url;
+                  const branchName = (user as unknown as Record<string, unknown>).branch_name;
+                  
+                  return (
+                  <TableRow key={`${user.user_id}-${user.branch_id || 'chain'}`}>
                     <TableCell>
                       <div className="flex items-center space-x-3">
                         <Avatar className="h-10 w-10">
-                          <AvatarImage src={user.user.avatar_url || undefined} />
+                          <AvatarImage src={typeof avatarUrl === 'string' ? avatarUrl : undefined} />
                           <AvatarFallback>
-                            {getInitials(user.user.full_name, user.user.email)}
+                            {getInitials(user)}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="font-medium">
-                            {user.user.full_name || 'No name'}
+                            {typeof fullName === 'string' ? fullName : 'No name'}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {user.user.email}
+                            {typeof email === 'string' ? email : 'No email'}
+                            {typeof branchName === 'string' && branchName && (
+                              <span className="block text-xs">{branchName}</span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -465,7 +497,8 @@ export function UserListTable({
                       })()}
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>

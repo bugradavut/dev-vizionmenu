@@ -32,6 +32,7 @@ interface UsersState {
   
   // API Actions
   fetchUsers: (params: GetUsersParams) => Promise<void>;
+  fetchChainUsers: (params: GetUsersParams & { chain_id: string }) => Promise<void>;
   fetchUserById: (userId: string, branchId: string) => Promise<void>;
   createUser: (userData: CreateUserRequest) => Promise<boolean>;
   updateUser: (userId: string, branchId: string, userData: UpdateUserRequest) => Promise<BranchUser>;
@@ -86,6 +87,24 @@ export const useUsersStore = create<UsersState>()(
         } catch (error) {
           console.error('Hook: Error fetching users:', error);
           const errorMessage = error instanceof Error ? error.message : 'Failed to fetch users';
+          setError(errorMessage);
+        } finally {
+          setLoading(false);
+        }
+      },
+
+      fetchChainUsers: async (params) => {
+        const { setLoading, setError, setUsers } = get();
+        
+        try {
+          setLoading(true);
+          setError(null);
+          
+          const response = await usersService.getUsersByChain(params);
+          setUsers(response.users, response.total, response.page, response.limit);
+        } catch (error) {
+          console.error('Hook: Error fetching chain users:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Failed to fetch chain users';
           setError(errorMessage);
         } finally {
           setLoading(false);
@@ -298,6 +317,7 @@ export const useUsers = () => {
     currentPage: store.currentPage,
     pageLimit: store.pageLimit,
     fetchUsers: store.fetchUsers,
+    fetchChainUsers: store.fetchChainUsers,
     reset: store.reset,
   };
 };

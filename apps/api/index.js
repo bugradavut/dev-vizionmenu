@@ -47,6 +47,10 @@ const customerMenuRoutes = require('./routes/customer-menu.routes');
 const customerOrdersRoutes = require('./routes/customer-orders.routes');
 const campaignsRoutes = require('./routes/campaigns.routes');
 const platformSyncRoutes = require('./routes/platform-sync.routes');
+const adminChainRoutes = require('./routes/admin-chain.routes');
+const adminBranchRoutes = require('./routes/admin-branch.routes');
+const chainUsersRoutes = require('./routes/chain-users.routes');
+const platformAdminRoutes = require('./routes/platform-admin.routes');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -106,6 +110,18 @@ app.use('/api/v1/campaigns', campaignsRoutes);
 
 // Use platform sync routes (protected - auth required)
 app.use('/api/v1/platform-sync', requireAuthWithBranch, platformSyncRoutes);
+
+// Use admin chain routes (platform admin only)
+app.use('/api/v1/admin/chains', adminChainRoutes);
+
+// Use admin branch routes (platform admin only)
+app.use('/api/v1/admin/branches', adminBranchRoutes);
+
+// Use chain users routes (unified chain employee management)
+app.use('/api/v1/users/chain', chainUsersRoutes);
+
+// Use platform admin routes (platform admin management)
+app.use('/api/v1/admin', platformAdminRoutes);
 
 // Catch all other routes
 app.use('*', (req, res) => {

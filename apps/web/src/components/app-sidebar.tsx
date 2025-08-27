@@ -7,6 +7,7 @@ import {
   Settings2,
   SquareTerminal,
   Tag,
+  Shield,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -19,102 +20,168 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { useAuth } from "@/contexts/auth-context"
+import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/translations"
 
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useAuth()
+  const enhancedAuth = useEnhancedAuth()
   const { language } = useLanguage()
+  
+  // Destructure what we need from enhanced auth
+  const { isPlatformAdmin, email } = enhancedAuth
 
   // Use centralized translations
   const t = translations[language] || translations.en
 
-  // Create translated navigation data using centralized translations
-  const translatedNavData = {
-    navMain: [
-      {
-        title: t.navigation.dashboard,
-        url: "/dashboard",
-        icon: PieChart,
-        items: [
+  // Create navigation data based on user type
+  const createNavData = () => {
+    // Base navigation for platform admins (only dashboard and admin settings)
+    if (isPlatformAdmin) {
+      return {
+        navMain: [
           {
-            title: t.navigation.overview,
+            title: t.navigation.dashboard,
             url: "/dashboard",
+            icon: PieChart,
+            items: [
+              {
+                title: t.navigation.overview,
+                url: "/dashboard",
+              },
+            ],
           },
           {
-            title: t.navigation.analytics,
-            url: "/dashboard/analytics",
+            title: t.navigation.adminSettings,
+            url: "/admin-settings",
+            icon: Shield,
+            items: [
+              {
+                title: language === 'fr' ? 'Chaînes' : 'Chains',
+                url: "/admin-settings/chains",
+              },
+              {
+                title: language === 'fr' ? 'Succursales' : 'Branches',
+                url: "/admin-settings/branches",
+              },
+              {
+                title: language === 'fr' ? 'Administrateurs Plateforme' : 'Platform Admins',
+                url: "/admin-settings/platform-admins",
+              },
+            ],
           },
         ],
-      },
-      {
-        title: t.navigation.menuManagement,
-        url: "/menu",
-        icon: BookOpen,
-        items: [
-          {
-            title: t.navigation.menu,
-            url: "/menu",
-          },
-        ],
-      },
-      {
-        title: t.navigation.campaigns,
-        url: "/campaigns",
-        icon: Tag,
-        items: [
-          {
-            title: t.navigation.createCampaign,
-            url: "/campaigns/create",
-          },
-        ],
-      },
-      {
-        title: t.navigation.orders,
-        url: "/orders",
-        icon: SquareTerminal,
-        items: [
-          {
-            title: t.navigation.liveOrders,
-            url: "/orders/live",
-          },
-          {
-            title: t.navigation.orderHistory,
-            url: "/orders/history",
-          },
-          {
-            title: t.navigation.kitchenDisplay,
-            url: "/orders/kitchen",
-          },
-        ],
-      },
-      {
-        title: t.navigation.settings,
-        url: "/settings",
-        icon: Settings2,
-        items: [
-          {
-            title: t.navigation.generalSettings,
-            url: "/settings/general",
-          },
-          {
-            title: t.navigation.userManagement,
-            url: "/settings/users",
-          },
-          {
-            title: t.navigation.branchSettings,
-            url: "/settings/branch",
-          },
-        ],
-      },
-    ],
-  }
+      };
+    }
+
+    // Full navigation for branch users
+    return {
+      navMain: [
+        {
+          title: t.navigation.dashboard,
+          url: "/dashboard",
+          icon: PieChart,
+          items: [
+            {
+              title: t.navigation.overview,
+              url: "/dashboard",
+            },
+            {
+              title: t.navigation.analytics,
+              url: "/dashboard/analytics",
+            },
+          ],
+        },
+        {
+          title: t.navigation.menuManagement,
+          url: "/menu",
+          icon: BookOpen,
+          items: [
+            {
+              title: t.navigation.menu,
+              url: "/menu",
+            },
+          ],
+        },
+        {
+          title: t.navigation.campaigns,
+          url: "/campaigns",
+          icon: Tag,
+          items: [
+            {
+              title: t.navigation.createCampaign,
+              url: "/campaigns/create",
+            },
+          ],
+        },
+        {
+          title: t.navigation.orders,
+          url: "/orders",
+          icon: SquareTerminal,
+          items: [
+            {
+              title: t.navigation.liveOrders,
+              url: "/orders/live",
+            },
+            {
+              title: t.navigation.orderHistory,
+              url: "/orders/history",
+            },
+            {
+              title: t.navigation.kitchenDisplay,
+              url: "/orders/kitchen",
+            },
+          ],
+        },
+        {
+          title: t.navigation.settings,
+          url: "/settings",
+          icon: Settings2,
+          items: [
+            {
+              title: t.navigation.generalSettings,
+              url: "/settings/general",
+            },
+            {
+              title: t.navigation.userManagement,
+              url: "/settings/users",
+            },
+            {
+              title: t.navigation.branchSettings,
+              url: "/settings/branch",
+            },
+          ],
+        },
+        // Platform Admin Section (conditional for branch users who are also platform admin)
+        ...(isPlatformAdmin ? [{
+          title: t.navigation.adminSettings,
+          url: "/admin-settings",
+          icon: Shield,
+          items: [
+            {
+              title: language === 'fr' ? 'Chaînes' : 'Chains',
+              url: "/admin-settings/chains",
+            },
+            {
+              title: language === 'fr' ? 'Succursales' : 'Branches',
+              url: "/admin-settings/branches",
+            },
+            {
+              title: language === 'fr' ? 'Administrateurs Plateforme' : 'Platform Admins',
+              url: "/admin-settings/platform-admins",
+            },
+          ],
+        }] : []),
+      ],
+    };
+  };
+
+  const translatedNavData = createNavData();
 
   // Parse user info from email
   const getUserInfo = () => {
-    if (!user?.email) {
+    if (!email) {
       return {
         name: "User",
         email: "user@vizionmenu.com",
@@ -122,8 +189,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
     }
 
-    const email = user.email
-    const emailPrefix = email.split('@')[0] // john.doe veya test
+    const userEmail = email
+    const emailPrefix = userEmail.split('@')[0] // john.doe veya test
     const nameParts = emailPrefix.split('.') // ['john', 'doe'] veya ['test']
     
     // Capitalize each part
@@ -148,7 +215,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     
     return {
       name: fullName,
-      email: email,
+      email: userEmail,
       initials: initials
     }
   }

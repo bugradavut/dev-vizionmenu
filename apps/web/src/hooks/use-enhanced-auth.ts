@@ -29,6 +29,7 @@ interface EnhancedAuthState {
   branchName: string | null;
   role: BranchRole | null;
   permissions: string[];
+  isPlatformAdmin: boolean;
   
   // Permission utilities
   hasPermission: (permission: string) => boolean;
@@ -123,6 +124,7 @@ export function useEnhancedAuth(): EnhancedAuthState {
     branchName: apiAuth.user?.branch_name || jwtUserContext?.branchName || null,
     role: apiAuth.user?.role || jwtUserContext?.role || null,
     permissions: apiAuth.user?.permissions || jwtUserContext?.permissions || [],
+    isPlatformAdmin: apiAuth.user?.isPlatformAdmin || false,
     issuedAt: jwtUserContext?.issuedAt || null,
     expiresAt: jwtUserContext?.expiresAt || null,
   };
@@ -207,6 +209,7 @@ export function useEnhancedAuth(): EnhancedAuthState {
     branchName: userContext.branchName,
     role: userContext.role,
     permissions: safePermissions,
+    isPlatformAdmin: userContext.isPlatformAdmin,
     
     // Permission utilities
     hasPermission,

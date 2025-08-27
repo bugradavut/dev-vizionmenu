@@ -17,6 +17,8 @@ export interface User {
   role?: BranchRole;
   permissions?: string[];
   banned_until?: string;
+  // Platform admin flag
+  isPlatformAdmin?: boolean;
 }
 
 export interface AuthSession {

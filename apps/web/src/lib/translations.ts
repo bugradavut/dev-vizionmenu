@@ -33,6 +33,10 @@ export const translations = {
       branchSettings: "Branch Settings", 
       userManagement: "User Management",
       branch: "Branch",
+      adminSettings: "Admin Settings",
+      restaurantChains: "Restaurant Chains",
+      branchManagement: "Branch Management",
+      platformAdmins: "Platform Administrators",
       
       // Sub-navigation items
       overview: "Overview",
@@ -1036,6 +1040,10 @@ export const translations = {
       branchSettings: "Paramètres de succursale", 
       userManagement: "Gestion des utilisateurs",
       branch: "Succursale",
+      adminSettings: "Paramètres administrateur",
+      restaurantChains: "Chaînes de restaurants",
+      branchManagement: "Gestion des succursales",
+      platformAdmins: "Administrateurs Plateforme",
       
       // Sub-navigation items
       overview: "Aperçu",

@@ -55,6 +55,25 @@ const breadcrumbConfig = {
     title: 'navigation.userManagement',
     href: '/settings/users',
     parent: '/settings'
+  },
+  '/admin-settings': {
+    title: 'navigation.adminSettings',
+    href: '/admin-settings'
+  },
+  '/admin-settings/chains': {
+    title: 'navigation.restaurantChains',
+    href: '/admin-settings/chains',
+    parent: '/admin-settings'
+  },
+  '/admin-settings/branches': {
+    title: 'navigation.branchManagement',
+    href: '/admin-settings/branches',
+    parent: '/admin-settings'
+  },
+  '/admin-settings/platform-admins': {
+    title: 'navigation.platformAdmins',
+    href: '/admin-settings/platform-admins',
+    parent: '/admin-settings'
   }
 } as const
 

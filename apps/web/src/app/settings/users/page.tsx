@@ -28,9 +28,10 @@ export default function UserManagementPage() {
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
   
-
-  // Get current branch ID from authenticated user
-  const currentBranchId = user?.branch_id || "550e8400-e29b-41d4-a716-446655440002";
+  // Auto-detect context: chain owner uses chain API, others use branch API
+  const isChainOwner = user?.role === 'chain_owner';
+  const currentChainId = user?.chain_id;
+  const currentBranchId = user?.branch_id;
 
   const activeUsers = users.filter(user => user.is_active).length;
   const adminUsers = users.filter(user => ['chain_owner', 'branch_manager'].includes(user.role)).length;
@@ -132,6 +133,8 @@ export default function UserManagementPage() {
                   <UserListTable
                     key={`user-table-${user?.role}-${user?.id}`}
                     branchId={currentBranchId}
+                    chainId={currentChainId}
+                    isChainOwner={isChainOwner}
                     onCreateUser={handleCreateUser}
                     onEditUser={handleEditUser}
                   />
@@ -147,7 +150,7 @@ export default function UserManagementPage() {
       <CreateUserModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        branchId={currentBranchId}
+        branchId={currentBranchId || ''}
       />
 
       {/* Edit User Modal */}

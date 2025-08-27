@@ -60,6 +60,12 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
         // Check if user is active by calling our API
         try {
           const token = authData.session?.access_token;
+          
+          if (!token) {
+            setError("Authentication failed. Please try again.");
+            return;
+          }
+
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/profile`, {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -67,11 +73,8 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
             }
           });
 
-          console.log('Profile check response:', response.status, response.statusText);
-
           if (response.status === 403) {
             // User is inactive
-            console.log('User is inactive - blocking login');
             await signOut();
             setError("Your account has been deactivated. Please contact an administrator.");
             return;
@@ -79,17 +82,10 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
 
           if (response.status === 404) {
             // Profile not found - probably inactive
-            console.log('Profile not found - blocking login');
             await signOut();
             setError("Your account has been deactivated. Please contact an administrator.");
             return;
           }
-
-          if (!response.ok) {
-            console.warn('Profile check failed, but allowing login');
-          }
-
-          console.log('User is active - allowing login');
           // User is active, proceed with success
           setShowSuccessAlert(true);
           
