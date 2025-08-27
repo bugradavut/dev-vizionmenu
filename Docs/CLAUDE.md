@@ -27,6 +27,7 @@ vision-menu/
 
 **Key Features:**
 - **Multi-tenant Architecture**: Restaurant chains with branch-level isolation
+- **Platform Admin System**: Complete chain and branch management with role-based access
 - **Real-time Order Management**: Live kitchen displays and customer tracking
 - **Bilingual System**: English/Canadian French with professional translations
 - **Third-party Integrations**: Uber Eats, DoorDash, Skip The Dishes
@@ -240,23 +241,30 @@ module.exports = { businessMethod };
 
 ### **Authentication & Authorization**
 - **Supabase Auth**: JWT with custom claims
-- **Role Hierarchy**: chain_owner > branch_manager > branch_staff > branch_cashier
+- **Role Hierarchy**: platform_admin > chain_owner > branch_manager > branch_staff > branch_cashier
 - **Branch Isolation**: RLS policies enforce data separation
 - **Permission Validation**: Required before all operations
 
 ### **Role Hierarchy Validation**
 ```typescript
 const ROLE_HIERARCHY = {
-  'chain_owner': 3,
-  'branch_manager': 2,
-  'branch_staff': 1,
-  'branch_cashier': 0
+  'platform_admin': 4,    // 🆕 Highest level - manages entire platform
+  'chain_owner': 3,       // Manages specific chain and its branches
+  'branch_manager': 2,    // Manages specific branch
+  'branch_staff': 1,      // Branch operations
+  'branch_cashier': 0     // Basic POS operations
 } as const;
 
 function canEditUser(currentRole: BranchRole, targetRole: BranchRole): boolean {
   return (ROLE_HIERARCHY[currentRole] || -1) >= (ROLE_HIERARCHY[targetRole] || -1);
 }
 ```
+
+### **Platform Admin Special Privileges**
+- **Cross-tenant Access**: Can view and manage all chains and branches
+- **User Management**: Can create/remove platform admins and chain owners
+- **System Settings**: Access to platform-wide configurations
+- **Conditional UI**: Special navigation and dashboard for platform operations
 
 ### **Database Access Pattern**
 ```typescript
@@ -402,6 +410,25 @@ export const UserList: React.FC<UserListProps> = ({
 - `POST /api/v1/menu/presets/:id/activate` - Apply preset
 - `POST /api/v1/menu/presets/check-scheduled` - Auto-scheduling
 
+#### **🔧 Platform Admin Management**
+- `GET /api/v1/admin/platform-admins` - List platform administrators
+- `POST /api/v1/admin/platform-admins` - Create new platform admin user
+- `POST /api/v1/admin/platform-admins/:userId` - Assign platform admin role to existing user
+- `DELETE /api/v1/admin/platform-admins/:userId` - Remove platform admin role
+- `GET /api/v1/admin/users/search` - Search users by email
+
+#### **🏢 Chain & Branch Management**
+- `GET /api/v1/admin/chains` - List all restaurant chains
+- `POST /api/v1/admin/chains` - Create new chain with owner
+- `PUT /api/v1/admin/chains/:id` - Update chain information
+- `DELETE /api/v1/admin/chains/:id` - Delete chain
+- `PATCH /api/v1/admin/chains/:id/toggle` - Toggle chain active status
+- `GET /api/v1/admin/branches` - List all branches with filtering
+- `POST /api/v1/admin/branches` - Create new branch
+- `PUT /api/v1/admin/branches/:id` - Update branch information
+- `DELETE /api/v1/admin/branches/:id` - Delete branch
+- `PATCH /api/v1/admin/branches/:id/toggle` - Toggle branch active status
+
 ### **Response Format Standards**
 ```typescript
 // Success Response
@@ -426,8 +453,10 @@ export const UserList: React.FC<UserListProps> = ({
 
 ### **Authentication Pattern**
 - **Protected Endpoints**: Bearer JWT with branch context validation
+- **Platform Admin Endpoints**: Require `is_platform_admin` flag and `requirePlatformAdmin` middleware
 - **Public Endpoints**: Customer-facing, rate-limited by IP
 - **Branch Scoped**: RLS policies prevent cross-branch access
+- **Multi-Role Support**: platform_admin, chain_owner, branch_manager, branch_staff, branch_cashier
 
 ---
 
@@ -450,6 +479,14 @@ export const UserList: React.FC<UserListProps> = ({
 /settings/branch            # Branch configuration
 /settings/users             # User management
 /settings/general           # General settings
+```
+
+### **🛡️ Platform Admin Pages**
+```
+/admin-settings             # Platform admin dashboard
+/admin-settings/chains      # Restaurant chain management
+/admin-settings/branches    # Branch management with address search
+/admin-settings/platform-admins # Platform admin management
 ```
 
 ### **🛒 Customer Ordering Flow**
@@ -489,6 +526,17 @@ export const UserList: React.FC<UserListProps> = ({
 <UserListTable />          # User management table
 <CreateUserModal />        # User creation form
 <RoleAssignmentDropdown /> # Role selection
+
+// Platform Admin Management
+<AdminListTable />         # Platform admin management table
+<AddAdminModal />          # Create new platform admin
+<ChainListTable />         # Chain management table
+<CreateChainModal />       # Chain creation with owner
+<EditChainModal />         # Chain editing
+<BranchListTable />        # Branch management table  
+<CreateBranchModal />      # Branch creation with address search
+<EditBranchModal />        # Branch editing
+<AddressSearchInput />     # Canadian address geocoding
 ```
 
 ### **🎯 Context Providers & State**
@@ -645,4 +693,4 @@ npm run lint && npm run build  # Must pass
 
 *This documentation provides Claude AI with comprehensive understanding of the VizionMenu project architecture, standards, and development requirements.*
 
-**Version**: 5.0.0 | **Last Updated**: August 26, 2025
+**Version**: 6.0.0 | **Last Updated**: August 27, 2025
