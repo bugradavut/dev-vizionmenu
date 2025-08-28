@@ -42,7 +42,7 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
   // Create order context from URL parameters with enhanced validation
   const orderContext = {
     source: (resolvedSearchParams.source as 'qr' | 'web') || 'web',
-    branchId: resolvedSearchParams.branch || '550e8400-e29b-41d4-a716-446655440002', // Default branch for MVP
+    branchId: resolvedSearchParams.branch, // No fallback - require explicit branch
     tableNumber: resolvedSearchParams.table ? parseInt(resolvedSearchParams.table) : undefined,
     zone: resolvedSearchParams.zone,
     isQROrder: resolvedSearchParams.source === 'qr'
@@ -75,33 +75,39 @@ function OrderPageContent({ searchParams }: { searchParams: Promise<{
   }, [orderContext.branchId])
 
 
-  // Enhanced branch validation (Disabled for MVP)
-  // if (!orderContext.branchId) {
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-  //       <div className="max-w-md mx-auto text-center p-6">
-  //         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-  //           <span className="text-2xl">🏪</span>
-  //         </div>
-  //         <h1 className="text-2xl font-bold text-gray-900 mb-4">Branch Required</h1>
-  //         <p className="text-gray-600 mb-6">
-  //           {orderContext.isQROrder 
-  //             ? 'Invalid QR code. Please scan a valid restaurant QR code.'
-  //             : 'Please select a branch to view the menu.'
-  //           }
-  //         </p>
-  //         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-  //           <p className="text-sm text-blue-800">
-  //             <strong>QR Code Format:</strong><br />
-  //             /order?source=qr&branch=BRANCH_ID&table=TABLE_NUMBER<br />
-  //             <strong>Web Access:</strong><br />
-  //             /order?branch=BRANCH_ID
-  //           </p>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   )
-  // }
+  // Branch validation - redirect to chain selection
+  if (!orderContext.branchId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="max-w-md mx-auto text-center p-6">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">🏪</span>
+          </div>
+          <h1 className="text-2xl font-bold mb-4">Chain Selection Required</h1>
+          <p className="text-muted-foreground mb-6">
+            {orderContext.isQROrder 
+              ? 'This QR code appears to be from an older format. Please scan a new QR code from the restaurant.'
+              : 'Please use the new ordering system by selecting a restaurant chain first.'
+            }
+          </p>
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-4">
+            <p className="text-sm text-foreground">
+              <strong>New URL Format:</strong><br />
+              /order/chain-name → Select branch → Menu<br />
+              <strong>QR Code Format:</strong><br />
+              /order/chain-name?branch=BRANCH_ID&table=TABLE
+            </p>
+          </div>
+          <button 
+            onClick={() => window.location.href = '/'} 
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+          >
+            Return to Home
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   // Handle menu loading error
   if (error) {
