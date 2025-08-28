@@ -251,6 +251,9 @@ export interface CreateUserRequest {
   role: BranchRole;
   permissions?: string[];
   send_invitation?: boolean;
+  // UI refresh strategy 
+  refreshStrategy?: 'chain' | 'branch';
+  chain_id?: string;
 }
 
 export interface CreateUserResponse {
@@ -279,6 +282,8 @@ export interface BranchUser {
   created_at: string;
   updated_at: string;
   user: User;
+  // Branch information
+  branch_name?: string;
 }
 
 export interface GetUsersResponse {

@@ -180,7 +180,77 @@ async function updateBranchSettings(branchId, settingsData, userId) {
   };
 }
 
+/**
+ * Get all branches belonging to a specific chain
+ * Used for hierarchical user management
+ * @param {string} chainId - Chain ID
+ * @param {string} currentUserId - User making the request
+ * @returns {Array} Array of branches with basic info
+ */
+async function getBranchesByChain(chainId, currentUserId) {
+  // Get current user's role and permissions
+  const { data: userProfile, error: userError } = await supabase
+    .from('user_profiles')
+    .select('is_platform_admin, role, chain_id')
+    .eq('user_id', currentUserId)
+    .single();
+
+  if (userError || !userProfile) {
+    throw new Error('User not found or unauthorized');
+  }
+
+  // Permission check: Only platform_admin or chain_owner of the specific chain
+  if (!userProfile.is_platform_admin && 
+      (userProfile.role !== 'chain_owner' || userProfile.chain_id !== chainId)) {
+    throw new Error('Insufficient permissions to access chain branches');
+  }
+
+  // Verify chain exists
+  const { data: chainData, error: chainError } = await supabase
+    .from('restaurant_chains')
+    .select('id, name')
+    .eq('id', chainId)
+    .eq('is_active', true)
+    .single();
+
+  if (chainError || !chainData) {
+    throw new Error('Chain not found or inactive');
+  }
+
+  // Get branches for the chain
+  const { data: branches, error: branchesError } = await supabase
+    .from('branches')
+    .select(`
+      id,
+      name,
+      slug,
+      description,
+      phone,
+      email,
+      address,
+      location,
+      is_active
+    `)
+    .eq('chain_id', chainId)
+    .eq('is_active', true)
+    .order('name');
+
+  if (branchesError) {
+    console.error('Failed to fetch chain branches:', branchesError);
+    throw new Error('Failed to fetch chain branches');
+  }
+
+  return {
+    chain: {
+      id: chainData.id,
+      name: chainData.name
+    },
+    branches: branches || []
+  };
+}
+
 module.exports = {
   getBranchSettings,
-  updateBranchSettings
+  updateBranchSettings,
+  getBranchesByChain
 };

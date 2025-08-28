@@ -195,8 +195,13 @@ export function UserListTable({
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <CardTitle className="text-lg font-semibold">
-                Team Members ({totalUsers})
+                {isChainOwner ? 'Chain Team Members' : 'Branch Team Members'} ({totalUsers})
               </CardTitle>
+              {isChainOwner && (
+                <p className="text-sm text-muted-foreground">
+                  Managing users across all branches in your chain
+                </p>
+              )}
             </div>
 
             {/* Actions */}
@@ -351,11 +356,12 @@ export function UserListTable({
         )}
 
         <div className="rounded-md overflow-x-auto">
-          <Table className="min-w-[600px]">
+          <Table className="min-w-[700px]">
             <TableHeader className="bg-muted">
               <TableRow className="hover:bg-muted">
                 <TableHead className="px-4">{t.settingsUsers.userTable.name}</TableHead>
                 <TableHead className="px-4">{t.settingsUsers.userTable.role}</TableHead>
+                <TableHead className="px-4">Branch</TableHead>
                 <TableHead className="px-4">{t.settingsUsers.userTable.status}</TableHead>
                 <TableHead className="px-4">Joined</TableHead>
                 <TableHead className="w-[70px] px-4 text-center">{t.settingsUsers.userTable.actions}</TableHead>
@@ -376,6 +382,7 @@ export function UserListTable({
                       </div>
                     </TableCell>
                     <TableCell><div className="h-6 w-20 animate-pulse bg-muted" /></TableCell>
+                    <TableCell><div className="h-6 w-24 animate-pulse bg-muted" /></TableCell>
                     <TableCell><div className="h-6 w-16 animate-pulse bg-muted" /></TableCell>
                     <TableCell><div className="h-4 w-24 animate-pulse bg-muted" /></TableCell>
                     <TableCell><div className="h-8 w-8 animate-pulse bg-muted" /></TableCell>
@@ -383,7 +390,7 @@ export function UserListTable({
                 ))
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <p className="text-muted-foreground">{t.settingsUsers.userTable.noUsers}</p>
                     </div>
@@ -413,9 +420,6 @@ export function UserListTable({
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {typeof email === 'string' ? email : 'No email'}
-                            {typeof branchName === 'string' && branchName && (
-                              <span className="block text-xs">{branchName}</span>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -423,6 +427,15 @@ export function UserListTable({
                     <TableCell>
                       <div className={`inline-flex items-center px-2 py-1 rounded-lg border text-xs font-medium ${ROLE_STYLES[user.role].bg} ${ROLE_STYLES[user.role].text} ${ROLE_STYLES[user.role].border}`}>
                         {getRoleLabel(user.role)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {/* Branch Badge */}
+                      <div className="inline-flex items-center px-2 py-1 rounded-lg border text-xs font-medium bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-700 dark:text-orange-300">
+                        <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                        {(user as BranchUser & { branch_name?: string }).branch_name || (typeof branchName === 'string' ? branchName : '') || 'No Branch'}
                       </div>
                     </TableCell>
                     <TableCell>

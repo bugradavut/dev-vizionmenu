@@ -74,7 +74,7 @@ async function searchUserByEmail(email) {
 }
 
 /**
- * Create new user and assign platform admin role
+ * Create new user and assign platform admin role (Independent system - no Supabase Auth)
  */
 async function createNewPlatformAdmin(userData, adminUserId) {
   const { email, full_name, password } = userData;
@@ -84,17 +84,7 @@ async function createNewPlatformAdmin(userData, adminUserId) {
     throw new Error('Email, full name, and password are required');
   }
 
-  // Check if user already exists in auth
-  const { data: existingAuthUser } = await supabase.auth.admin.listUsers();
-  const userExists = existingAuthUser.users.some(user => 
-    user.email?.toLowerCase() === email.trim().toLowerCase()
-  );
-
-  if (userExists) {
-    throw new Error('User already exists with this email address');
-  }
-
-  // Also check user_profiles table
+  // Check if user already exists in user_profiles table
   const { data: existingProfile } = await supabase
     .from('user_profiles')
     .select('user_id, email')
@@ -105,84 +95,68 @@ async function createNewPlatformAdmin(userData, adminUserId) {
     throw new Error('User profile already exists with this email address');
   }
 
-  // Create user in Supabase Auth
-  const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-    email: email.trim().toLowerCase(),
-    password: password,
-    email_confirm: true // Auto-confirm email
-  });
-
-  if (authError) {
-    throw new Error(`Failed to create user account: ${authError.message}`);
+  // Also check if email exists in Supabase Auth
+  try {
+    const { data: authUser } = await supabase.auth.admin.getUserById('dummy'); // We'll use email search instead
+    const { data: existingAuthUsers } = await supabase.auth.admin.listUsers();
+    const emailExists = existingAuthUsers.users?.some(u => u.email?.toLowerCase() === email.trim().toLowerCase());
+    
+    if (emailExists) {
+      throw new Error('User already exists with this email address in authentication system');
+    }
+  } catch (authCheckError) {
+    // If we can't check auth users, continue (better to try creation than block)
+    console.warn('Could not check existing auth users:', authCheckError);
   }
 
-  // Wait a bit for potential triggers to complete
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  // Check if profile was auto-created by trigger
-  let { data: existingUserProfile } = await supabase
-    .from('user_profiles')
-    .select('user_id, email, full_name, created_at, updated_at')
-    .eq('user_id', authUser.user.id)
-    .single();
-
-  let newUser;
-
-  if (existingUserProfile) {
-    // Profile exists, just update it to make platform admin
-    const { data: updatedUser, error: updateError } = await supabase
-      .from('user_profiles')
-      .update({ 
-        is_platform_admin: true,
-        email: email.trim().toLowerCase(),
+  try {
+    // 1. Create Supabase Auth user first (like Chain Owner and User Management)
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: email.trim().toLowerCase(),
+      password: password,
+      email_confirm: true, // ✅ Bypass email confirmation (admin-created users)
+      user_metadata: {
         full_name: full_name.trim(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', authUser.user.id)
-      .select('user_id, email, full_name, created_at, updated_at')
-      .single();
-
-    if (updateError) {
-      // Cleanup: Delete the auth user if profile update failed
-      try {
-        await supabase.auth.admin.deleteUser(authUser.user.id);
-      } catch (cleanupError) {
-        console.error('Failed to cleanup auth user after profile update error:', cleanupError);
+        display_name: full_name.trim(),
+        is_platform_admin: true
       }
-      throw new Error(`Failed to update user profile: ${updateError.message}`);
+    });
+
+    if (authError || !authData.user) {
+      throw new Error(`Failed to create auth user: ${authError?.message || 'Unknown auth error'}`);
     }
-    newUser = updatedUser;
-  } else {
-    // Profile doesn't exist, create it
+
+    const userId = authData.user.id;
+    
+    // 2. Update user profile using Supabase trigger (UPDATE instead of INSERT)
+    // Supabase trigger automatically creates basic profile on auth user creation
     const { data: createdUser, error: createError } = await supabase
       .from('user_profiles')
-      .insert({
-        user_id: authUser.user.id,
+      .update({
         email: email.trim().toLowerCase(),
         full_name: full_name.trim(),
         is_platform_admin: true,
-        created_at: new Date().toISOString(),
+        is_active: true,
+        role: null, // Platform admins don't have a role, they have is_platform_admin flag
+        chain_id: null,
+        branch_id: null,
+        permissions: [],
         updated_at: new Date().toISOString()
       })
+      .eq('user_id', userId)
       .select('user_id, email, full_name, created_at, updated_at')
       .single();
 
     if (createError) {
-      // Cleanup: Delete the auth user if profile creation failed
-      try {
-        await supabase.auth.admin.deleteUser(authUser.user.id);
-      } catch (cleanupError) {
-        console.error('Failed to cleanup auth user after profile creation error:', cleanupError);
-      }
-      throw new Error(`Failed to create user profile: ${createError.message}`);
+      // Rollback: Delete auth user if profile update fails
+      await supabase.auth.admin.deleteUser(userId);
+      throw new Error(`Failed to update user profile: ${createError.message}`);
     }
-    newUser = createdUser;
+
+    return createdUser;
+  } catch (error) {
+    throw error;
   }
-
-  // Log the admin action
-  console.log(`New platform admin created: ${email} by admin ${adminUserId}`);
-
-  return newUser;
 }
 
 /**

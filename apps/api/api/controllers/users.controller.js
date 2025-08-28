@@ -14,8 +14,15 @@ const { handleControllerError } = require('../helpers/error-handler');
 const createUser = async (req, res) => {
   try {
     const userData = req.body;
-    const result = await usersService.createUser(userData);
+    const currentUserId = req.currentUserId;
     
+    if (!currentUserId) {
+      return res.status(401).json({
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
+      });
+    }
+    
+    const result = await usersService.createUser(userData, currentUserId);
     res.json({ data: result });
     
   } catch (error) {

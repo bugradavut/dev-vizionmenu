@@ -228,40 +228,46 @@ export function useEnhancedAuth(): EnhancedAuthState {
 
 // Role hierarchy constants (matching backend)
 const ROLE_HIERARCHY = {
-  'super_admin': 4,      // Future super admin role
-  'chain_owner': 3,      // Highest current role
-  'branch_manager': 2,   // Can manage staff and cashiers
-  'branch_staff': 1,     // Can only view
-  'branch_cashier': 0    // Lowest permission level
+  'platform_admin': 5,   // Platform admin - highest level
+  'chain_owner': 3,      // Chain owner - can manage branch users
+  'branch_manager': 2,   // Branch manager - can manage staff and cashiers
+  'branch_staff': 1,     // Branch staff - can only view
+  'branch_cashier': 0    // Branch cashier - lowest permission level
 } as const;
 
 // Helper function to check if user can edit target user based on role hierarchy
 function canEditUserRole(currentUserRole: string | null, targetUserRole: string | null): boolean {
   if (!currentUserRole || !targetUserRole) return false;
   
-  // Chain Owner can edit everyone (branch_manager, branch_staff, branch_cashier)
+  const currentLevel = ROLE_HIERARCHY[currentUserRole as keyof typeof ROLE_HIERARCHY] ?? -1;
+  const targetLevel = ROLE_HIERARCHY[targetUserRole as keyof typeof ROLE_HIERARCHY] ?? -1;
+  
+  // Can edit users with equal or lower role level
+  return currentLevel >= targetLevel;
+}
+
+// Helper function to get roles that current user can create
+function getAllowedRolesToCreate(currentUserRole: string | null, isPlatformAdmin: boolean = false): string[] {
+  if (isPlatformAdmin || currentUserRole === 'platform_admin') {
+    return ['chain_owner', 'branch_manager', 'branch_staff', 'branch_cashier'];
+  }
+  
   if (currentUserRole === 'chain_owner') {
-    return targetUserRole !== 'chain_owner'; // Cannot edit other chain owners
+    return ['branch_manager', 'branch_staff', 'branch_cashier'];
   }
   
-  // Branch Manager can edit staff and cashiers, but NOT chain owners or other branch managers
   if (currentUserRole === 'branch_manager') {
-    return targetUserRole === 'branch_staff' || targetUserRole === 'branch_cashier';
+    return ['branch_staff', 'branch_cashier'];
   }
   
-  // Staff and Cashier cannot edit anyone
-  if (currentUserRole === 'branch_staff' || currentUserRole === 'branch_cashier') {
-    return false;
-  }
-  
-  return false;
+  return [];
 }
 
 /**
  * Hook for permission-only checks (lighter weight)
  */
 export function usePermissions() {
-  const { hasPermission, hasRole, hasAnyRole, permissions, role, isChainOwner, isBranchManager } = useEnhancedAuth();
+  const { hasPermission, hasRole, hasAnyRole, permissions, role, isChainOwner, isBranchManager, isPlatformAdmin } = useEnhancedAuth();
   
   // Force re-calculation when user changes with useMemo
   const calculatedPermissions = useMemo(() => ({
@@ -273,9 +279,9 @@ export function usePermissions() {
     isChainOwner,
     isBranchManager,
     
-    // Common permission checks
-    canManageUsers: isChainOwner || isBranchManager, // Chain owners and branch managers can add users
-    canDeleteUsers: hasPermission('users:delete') || isChainOwner,
+    // Common permission checks  
+    canManageUsers: hasPermission('users:write') || isChainOwner || isBranchManager || isPlatformAdmin,
+    canDeleteUsers: hasPermission('users:delete') || isChainOwner || isPlatformAdmin,
     canManageMenu: hasPermission('menu:write') || isChainOwner || isBranchManager,
     canViewReports: hasPermission('reports:read') || isChainOwner || isBranchManager,
     canAccessSettings: hasPermission('settings:read') || isChainOwner || isBranchManager,
@@ -286,13 +292,14 @@ export function usePermissions() {
     // Role hierarchy utilities
     canEditUser: (targetUserRole: string | null) => canEditUserRole(role, targetUserRole),
     canAssignRole: (targetRole: string | null) => canEditUserRole(role, targetRole),
+    getAllowedRolesToCreate: () => getAllowedRolesToCreate(role, isPlatformAdmin),
     getRoleLevel: (checkRole: string | null) => ROLE_HIERARCHY[checkRole as keyof typeof ROLE_HIERARCHY] ?? -1,
     isHigherRoleThan: (targetRole: string | null) => {
       const currentLevel = ROLE_HIERARCHY[role as keyof typeof ROLE_HIERARCHY] ?? -1;
       const targetLevel = ROLE_HIERARCHY[targetRole as keyof typeof ROLE_HIERARCHY] ?? -1;
       return currentLevel > targetLevel;
     },
-  }), [role, permissions, isChainOwner, isBranchManager, hasPermission, hasRole, hasAnyRole]);
+  }), [role, permissions, isChainOwner, isBranchManager, isPlatformAdmin, hasPermission, hasRole, hasAnyRole]);
   
   return calculatedPermissions;
 }

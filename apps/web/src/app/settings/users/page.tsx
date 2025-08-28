@@ -150,7 +150,7 @@ export default function UserManagementPage() {
       <CreateUserModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        branchId={currentBranchId || ''}
+        branchId={currentBranchId}
       />
 
       {/* Edit User Modal */}

@@ -10,7 +10,7 @@ const { requireAuth, requireAuthWithBranch } = require('../middleware/auth.middl
 const router = express.Router();
 
 // Create user endpoint
-router.post('/', usersController.createUser);
+router.post('/', requireAuth, usersController.createUser);
 
 // Update user endpoint
 router.patch('/:userId/branch/:branchId', requireAuth, usersController.updateUser);

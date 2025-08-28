@@ -4,7 +4,8 @@
 // =====================================================
 
 const { createClient } = require('@supabase/supabase-js');
-const { canEditUser, DEFAULT_PERMISSIONS } = require('../helpers/permissions');
+const { canEditUser, DEFAULT_PERMISSIONS, canCreateRole } = require('../helpers/permissions');
+const crypto = require('crypto');
 
 // Create Supabase client
 const supabase = createClient(
@@ -17,64 +18,160 @@ const supabase = createClient(
  * @param {Object} userData - User data from request body
  * @returns {Object} Created user data
  */
-async function createUser(userData) {
+async function createUser(userData, currentUserId) {
   const { email, password, full_name, phone, branch_id, role, permissions } = userData;
   
-  // Create user in Supabase Auth
-  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-    email,
-    password, // ✅ FIX: Add missing password field
-    email_confirm: true,
-    user_metadata: {
-      full_name,
-      display_name: full_name,
-      phone
-    }
-  });
-  
-  if (authError) {
-    console.error('Auth user creation error:', authError);
-    throw new Error(`Failed to create auth user: ${authError.message}`);
-  }
-  
-  const userId = authData.user.id;
-  
-  // Create user profile
-  const { error: profileError } = await supabase
+  // Get current user's role and permissions
+  const { data: currentUserProfile, error: currentUserError } = await supabase
     .from('user_profiles')
-    .insert({
-      user_id: userId,
-      full_name,
-      phone
-    });
-  
-  if (profileError) {
-    console.error('Profile creation error:', profileError);
-  }
-  
-  // Add user to branch
-  const { data: branchUserData, error: branchError } = await supabase
-    .from('branch_users')
-    .insert({
-      user_id: userId,
-      branch_id,
-      role,
-      permissions,
-      is_active: true
-    })
-    .select()
+    .select('is_platform_admin, role, chain_id')
+    .eq('user_id', currentUserId)
     .single();
-  
-  if (branchError) {
-    console.error('Branch user creation error:', branchError);
-    throw new Error(`Failed to add user to branch: ${branchError.message}`);
+
+  if (currentUserError || !currentUserProfile) {
+    throw new Error('Current user not found or unauthorized');
+  }
+
+  // Determine current user's effective role
+  let currentUserRole;
+  if (currentUserProfile.is_platform_admin) {
+    currentUserRole = 'platform_admin';
+  } else if (currentUserProfile.role) {
+    // Chain owners and others have role in user_profiles
+    currentUserRole = currentUserProfile.role;
+  } else {
+    // For branch users, get their role from branch_users
+    const { data: branchUser, error: branchUserError } = await supabase
+      .from('branch_users')
+      .select('role')
+      .eq('user_id', currentUserId)
+      .single();
+    
+    if (branchUserError || !branchUser) {
+      throw new Error('Current user branch role not found');
+    }
+    currentUserRole = branchUser.role;
+  }
+
+  // Check if current user can create this role
+  if (!canCreateRole(currentUserRole, role)) {
+    throw new Error(`You cannot create users with role '${role}'. Insufficient permissions.`);
+  }
+
+  // Branch selection validation based on current user role
+  if (currentUserRole === 'platform_admin') {
+    // Platform admin can create users in any branch - branch_id required
+    if (!branch_id) {
+      throw new Error('Branch selection is required for user creation');
+    }
+  } else if (currentUserRole === 'chain_owner') {
+    // Chain owner can create users in their chain's branches only
+    if (!branch_id) {
+      throw new Error('Branch selection is required for user creation');
+    }
+    
+    // Verify branch belongs to chain owner's chain
+    const { data: branchData, error: branchError } = await supabase
+      .from('branches')
+      .select('chain_id')
+      .eq('id', branch_id)
+      .single();
+    
+    if (branchError || !branchData) {
+      throw new Error('Invalid branch selected');
+    }
+    
+    if (branchData.chain_id !== currentUserProfile.chain_id) {
+      throw new Error('You can only create users in branches belonging to your chain');
+    }
+  } else if (currentUserRole === 'branch_manager') {
+    // Branch manager can only create users in their own branch
+    const { data: currentUserBranch, error: currentBranchError } = await supabase
+      .from('branch_users')
+      .select('branch_id')
+      .eq('user_id', currentUserId)
+      .single();
+    
+    if (currentBranchError || !currentUserBranch) {
+      throw new Error('Current user branch not found');
+    }
+    
+    // Force branch_id to be current user's branch
+    userData.branch_id = currentUserBranch.branch_id;
+  } else {
+    throw new Error('You do not have permission to create users');
   }
   
-  return {
-    message: 'User created successfully',
-    user_id: userId,
-    branch_user: branchUserData
-  };
+  try {
+    // 1. Create Supabase Auth user first (like Chain Admin system does)
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: email.trim(),
+      password: password,
+      email_confirm: true, // ✅ Bypass email confirmation (admin-created users)
+      user_metadata: {
+        full_name: full_name.trim(),
+        display_name: full_name.trim(),
+        role: role
+      }
+    });
+
+    if (authError || !authData.user) {
+      throw new Error(`Failed to create auth user: ${authError?.message || 'Unknown auth error'}`);
+    }
+
+    const userId = authData.user.id;
+    
+    // 2. Update user profile using Supabase trigger (UPDATE instead of INSERT)
+    // Supabase trigger automatically creates basic profile on auth user creation
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .update({
+        full_name,
+        phone,
+        email: email.trim(),
+        is_active: true,
+        role: role,
+        chain_id: (currentUserRole === 'branch_manager' || currentUserRole === 'chain_owner') ? currentUserProfile.chain_id : null,
+        branch_id: userData.branch_id,
+        permissions: DEFAULT_PERMISSIONS[role] || [],
+        is_platform_admin: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+    
+    if (profileError) {
+      // Rollback: Delete auth user if profile update fails
+      await supabase.auth.admin.deleteUser(userId);
+      throw new Error(`Failed to update user profile: ${profileError.message}`);
+    }
+    
+    // 3. Add user to branch
+    const { data: branchUserData, error: branchError } = await supabase
+      .from('branch_users')
+      .insert({
+        user_id: userId,
+        branch_id: userData.branch_id, // Use the validated branch_id
+        role,
+        permissions: DEFAULT_PERMISSIONS[role] || permissions || [],
+        is_active: true
+      })
+      .select()
+      .single();
+    
+    if (branchError) {
+      // Rollback: Delete auth user and profile if branch user creation fails
+      await supabase.auth.admin.deleteUser(userId);
+      throw new Error(`Failed to add user to branch: ${branchError.message}`);
+    }
+    
+    return {
+      message: 'User created successfully',
+      user_id: userId,
+      branch_user: branchUserData
+    };
+  } catch (error) {
+    throw error;
+  }
 }
 
 /**
@@ -85,14 +182,18 @@ async function createUser(userData) {
  * @returns {Object} Users list with pagination
  */
 async function getBranchUsers(branchId, page = 1, limit = 50) {
-  // Get branch users (both active and inactive)
+  // Get branch users (both active and inactive) with branch name
   const { data: branchUsers, error } = await supabase
     .from('branch_users')
-    .select('*')
+    .select(`
+      *,
+      branches:branch_id (
+        name
+      )
+    `)
     .eq('branch_id', branchId);
     
   if (error) {
-    console.error('Supabase error:', error);
     throw new Error(`Failed to get branch users: ${error.message}`);
   }
   
@@ -126,7 +227,7 @@ async function getBranchUsers(branchId, page = 1, limit = 50) {
         });
       }
     } catch (err) {
-      console.error('Failed to get user email for:', userId, err);
+      // Silently continue if email fetch fails
     }
   }
   
@@ -143,6 +244,8 @@ async function getBranchUsers(branchId, page = 1, limit = 50) {
       is_active: branchUser.is_active,
       created_at: branchUser.created_at,
       updated_at: branchUser.updated_at,
+      // Branch information
+      branch_name: branchUser.branches?.name || 'Unknown Branch',
       user: {
         user_id: branchUser.user_id,
         email: emailData?.email || `user${branchUser.user_id.substring(0,8)}@example.com`,
@@ -213,7 +316,6 @@ async function updateUser(userId, branchId, updateData, currentUserId) {
       .eq('user_id', userId);
 
     if (profileError) {
-      console.error('Profile update error:', profileError);
       throw new Error(`Failed to update user profile: ${profileError.message}`);
     }
 
@@ -231,7 +333,6 @@ async function updateUser(userId, branchId, updateData, currentUserId) {
 
       if (authMetaError) {
         // Don't return error - profile update succeeded, this is just for consistency
-        console.warn('Profile updated but auth metadata sync failed:', authMetaError);
       }
     }
   }
@@ -244,7 +345,6 @@ async function updateUser(userId, branchId, updateData, currentUserId) {
     );
 
     if (authError) {
-      console.error('Email update error:', authError);
       throw new Error(`Failed to update user email: ${authError.message}`);
     }
   }
@@ -258,7 +358,6 @@ async function updateUser(userId, branchId, updateData, currentUserId) {
       .eq('branch_id', branchId);
 
     if (branchUserError) {
-      console.error('Branch user update error:', branchUserError);
       throw new Error(`Failed to update user status: ${branchUserError.message}`);
     }
   }
@@ -325,7 +424,6 @@ async function assignUserRole(userId, branchId, role, currentUserId) {
     .single();
 
   if (updateError) {
-    console.error('Role assignment error:', updateError);
     throw new Error(`Failed to assign role: ${updateError.message}`);
   }
 
@@ -383,7 +481,6 @@ async function deleteUser(userId, branchId, currentUserId) {
     .eq('branch_id', branchId);
 
   if (deleteError) {
-    console.error('Delete user error:', deleteError);
     throw new Error(`Failed to delete user: ${deleteError.message}`);
   }
 

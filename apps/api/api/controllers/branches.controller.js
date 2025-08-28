@@ -5,6 +5,7 @@
 
 const branchesService = require('../services/branches.service');
 const { getUserBranchContext } = require('../helpers/auth');
+const { handleControllerError } = require('../helpers/error-handler');
 
 /**
  * GET /api/v1/branch/:branchId/settings
@@ -164,7 +165,32 @@ const updateBranchSettings = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/v1/branches/by-chain/:chainId
+ * Get all branches belonging to a specific chain
+ * Used for hierarchical user management (chain owners creating users)
+ */
+const getBranchesByChain = async (req, res) => {
+  try {
+    const { chainId } = req.params;
+    const currentUserId = req.currentUserId;
+    
+    if (!chainId) {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Chain ID is required' }
+      });
+    }
+
+    const branches = await branchesService.getBranchesByChain(chainId, currentUserId);
+    res.json({ data: branches });
+    
+  } catch (error) {
+    handleControllerError(error, 'get branches by chain', res);
+  }
+};
+
 module.exports = {
   getBranchSettings,
-  updateBranchSettings
+  updateBranchSettings,
+  getBranchesByChain
 };

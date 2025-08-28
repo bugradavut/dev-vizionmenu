@@ -15,4 +15,7 @@ router.get('/:branchId/settings', requireAuth, branchesController.getBranchSetti
 // Update branch settings
 router.put('/:branchId/settings', requireAuth, branchesController.updateBranchSettings);
 
+// Get branches by chain (for hierarchical user management)
+router.get('/by-chain/:chainId', requireAuth, branchesController.getBranchesByChain);
+
 module.exports = router;

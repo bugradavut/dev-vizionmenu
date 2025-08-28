@@ -6,21 +6,27 @@ export interface Branch {
   name: string;
   slug: string;
   description?: string;
-  address: string;
+  address: {
+    street?: string;
+    city?: string;
+    province?: string;
+    postal_code?: string;
+    country?: string;
+  } | string;
+  location?: {
+    lat: number;
+    lng: number;
+  };
   phone?: string;
   email?: string;
-  settings: Record<string, unknown>;
+  settings?: Record<string, unknown>;
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  chain: {
+  chain?: {
     id: string;
     name: string;
     slug: string;
-  };
-  coordinates?: {
-    lat: number;
-    lng: number;
   };
 }
 
@@ -123,6 +129,37 @@ class BranchesService {
     if (branch.phone) parts.push(`📞 ${branch.phone}`);
     if (branch.email) parts.push(`📧 ${branch.email}`);
     return parts.join(' • ');
+  }
+
+  /**
+   * Get branches by chain ID - for hierarchical user management
+   * Used when chain owners or platform admins need to select branches
+   */
+  async getBranchesByChain(chainId: string): Promise<{ chain: { id: string; name: string }; branches: Branch[] }> {
+    const response = await apiClient.get<{ chain: { id: string; name: string }; branches: Branch[] }>(`/api/v1/branches/by-chain/${chainId}`);
+    return response.data;
+  }
+
+  /**
+   * Get available branches for user creation based on current user's role
+   */
+  async getAvailableBranches(currentUserRole: string, chainId?: string): Promise<Branch[]> {
+    if (currentUserRole === 'platform_admin') {
+      // Platform admin needs to select chain first
+      if (!chainId) {
+        throw new Error('Chain selection required for platform admin');
+      }
+      const result = await this.getBranchesByChain(chainId);
+      return result.branches;
+    }
+    
+    if (currentUserRole === 'chain_owner' && chainId) {
+      const result = await this.getBranchesByChain(chainId);
+      return result.branches;
+    }
+    
+    // Branch manager cannot select branches - they can only create users in their own branch
+    return [];
   }
 }
 

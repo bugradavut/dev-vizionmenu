@@ -78,8 +78,11 @@ export function BranchListTable({
   const filteredBranches = branches.filter(branch => {
     const matchesSearch = searchQuery === '' || 
       branch.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      branch.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      branch.chain.name.toLowerCase().includes(searchQuery.toLowerCase())
+      (typeof branch.address === 'string' ? branch.address : 
+        typeof branch.address === 'object' && branch.address ? 
+        `${branch.address.street || ''} ${branch.address.city || ''} ${branch.address.province || ''}`.trim() : 
+        '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (branch.chain?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
 
     const matchesChain = selectedChainId === 'all' || branch.chain_id === selectedChainId
     
@@ -286,20 +289,19 @@ export function BranchListTable({
                     <TableCell>
                       <div className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
                         <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
-                          {branch.chain.name}
+                          {branch.chain?.name || 'No Chain'}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
                         <div className="truncate max-w-xs">
-                          {branch.address}
+                          {typeof branch.address === 'string' ? branch.address : 
+                            typeof branch.address === 'object' && branch.address ? 
+                            `${branch.address.street || ''} ${branch.address.city || ''} ${branch.address.province || ''}`.trim() : 
+                            'No Address'}
                         </div>
-                        {branch.coordinates && (
-                          <div className="text-xs text-muted-foreground">
-                            📍 {branch.coordinates.lat.toFixed(4)}, {branch.coordinates.lng.toFixed(4)}
-                          </div>
-                        )}
+                        {/* Coordinates removed for now */}
                       </div>
                     </TableCell>
                     <TableCell>

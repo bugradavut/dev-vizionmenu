@@ -79,12 +79,15 @@ export function EditBranchModal({ open, onOpenChange, branch, chains, onSuccess 
         name: branch.name,
         slug: branch.slug,
         description: branch.description || "",
-        address: branch.address,
+        address: typeof branch.address === 'string' ? branch.address : 
+                typeof branch.address === 'object' && branch.address ? 
+                `${branch.address.street || ''} ${branch.address.city || ''} ${branch.address.province || ''}`.trim() : 
+                '',
         phone: branch.phone || "",
         email: branch.email || "",
         is_active: branch.is_active,
       })
-      setSelectedCoordinates(branch.coordinates || null)
+      setSelectedCoordinates(null)
     }
   }, [branch, open, form])
 

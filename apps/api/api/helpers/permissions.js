@@ -5,11 +5,11 @@
 
 // Role hierarchy constants for permission checks
 const ROLE_HIERARCHY = {
-  'super_admin': 4,      // Future super admin role
-  'chain_owner': 3,      // Highest current role
-  'branch_manager': 2,   // Can manage staff and cashiers
-  'branch_staff': 1,     // Can only view
-  'branch_cashier': 0    // Lowest permission level
+  'platform_admin': 5,   // Platform admin - highest level
+  'chain_owner': 3,      // Chain owner - can manage branch users
+  'branch_manager': 2,   // Branch manager - can manage staff and cashiers
+  'branch_staff': 1,     // Branch staff - can only view
+  'branch_cashier': 0    // Branch cashier - lowest permission level
 };
 
 // Helper function to check if user can edit target user based on role hierarchy
@@ -53,8 +53,48 @@ const DEFAULT_PERMISSIONS = {
   ]
 };
 
+/**
+ * Get roles that a user can create based on their current role
+ * @param {string} currentRole - Current user's role
+ * @returns {Array} Array of roles the user can create
+ */
+function getAllowedRolesToCreate(currentRole) {
+  const currentLevel = ROLE_HIERARCHY[currentRole] || -1;
+  
+  // Platform admin can create any role except platform_admin
+  if (currentRole === 'platform_admin') {
+    return ['chain_owner', 'branch_manager', 'branch_staff', 'branch_cashier'];
+  }
+  
+  // Chain owner can create branch roles only
+  if (currentRole === 'chain_owner') {
+    return ['branch_manager', 'branch_staff', 'branch_cashier'];
+  }
+  
+  // Branch manager can create staff and cashier only
+  if (currentRole === 'branch_manager') {
+    return ['branch_staff', 'branch_cashier'];
+  }
+  
+  // Others cannot create users
+  return [];
+}
+
+/**
+ * Check if a user can create a specific role
+ * @param {string} currentRole - Current user's role
+ * @param {string} targetRole - Role to create
+ * @returns {boolean} Whether the user can create this role
+ */
+function canCreateRole(currentRole, targetRole) {
+  const allowedRoles = getAllowedRolesToCreate(currentRole);
+  return allowedRoles.includes(targetRole);
+}
+
 module.exports = {
   ROLE_HIERARCHY,
   canEditUser,
-  DEFAULT_PERMISSIONS
+  DEFAULT_PERMISSIONS,
+  getAllowedRolesToCreate,
+  canCreateRole
 };

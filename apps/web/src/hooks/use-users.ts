@@ -130,7 +130,7 @@ export const useUsersStore = create<UsersState>()(
       },
 
       createUser: async (userData) => {
-        const { setLoading, setError, fetchUsers } = get();
+        const { setLoading, setError, fetchUsers, fetchChainUsers } = get();
         
         try {
           setLoading(true);
@@ -139,7 +139,25 @@ export const useUsersStore = create<UsersState>()(
           await usersService.createUser(userData);
           
           // Refresh the user list to show the new user
-          await fetchUsers({ branch_id: userData.branch_id, page: 1, limit: 50 });
+          
+          // Check if we need to refresh chain users or branch users
+          // This will be determined by the calling component context
+          if (userData.refreshStrategy === 'chain' && userData.chain_id) {
+            // For chain owners and platform admins viewing all chain users
+            await fetchChainUsers({ 
+              branch_id: '', 
+              chain_id: userData.chain_id, 
+              page: 1, 
+              limit: 50 
+            });
+          } else {
+            // For branch managers or specific branch view
+            await fetchUsers({ 
+              branch_id: userData.branch_id, 
+              page: 1, 
+              limit: 50 
+            });
+          }
           
           return true;
         } catch (error) {

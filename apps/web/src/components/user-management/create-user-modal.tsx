@@ -5,7 +5,7 @@
  * ShadCN Dialog-based user creation modal
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -17,16 +17,25 @@ import {
   Input,
   Label
 } from '@repo/ui';
-// Simple select without external dependencies
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useUserMutations } from '@/hooks';
+import { usePermissions } from '@/hooks/use-enhanced-auth';
 import { useLanguage } from '@/contexts/language-context';
 import { translations } from '@/lib/translations';
+import { branchesService, type Branch } from '@/services/branches.service';
+import { useAuthApi } from '@/hooks';
 import type { BranchRole, CreateUserRequest } from '@repo/types/auth';
 
 interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  branchId: string;
+  branchId?: string; // Optional - will be determined by role
 }
 
 // Role options will be handled dynamically with translations
@@ -64,26 +73,79 @@ const DEFAULT_PERMISSIONS: Record<BranchRole, string[]> = {
 
 export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
+  const [loadingBranches, setLoadingBranches] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     full_name: '',
     phone: '',
     password: '',
     role: 'branch_staff' as BranchRole,
+    branch_id: branchId || '', // Will be set based on user role
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { createUser } = useUserMutations();
+  const { user } = useAuthApi();
+  const permissions = usePermissions();
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
   
-  // Dynamic role options based on language
-  const getRoleOptions = () => [
-    { value: 'branch_staff' as BranchRole, label: t.settingsUsers.userTable.staff },
-    { value: 'branch_cashier' as BranchRole, label: t.settingsUsers.userTable.cashier },
-    { value: 'branch_manager' as BranchRole, label: t.settingsUsers.userTable.branchManager },
-    { value: 'chain_owner' as BranchRole, label: t.settingsUsers.userTable.chainOwner },
-  ];
+  // Get allowed roles based on current user's permissions
+  const allowedRoles = useMemo(() => {
+    const roles = permissions.getAllowedRolesToCreate();
+    const roleOptions = [
+      { value: 'chain_owner' as BranchRole, label: t.settingsUsers.userTable.chainOwner },
+      { value: 'branch_manager' as BranchRole, label: t.settingsUsers.userTable.branchManager },
+      { value: 'branch_staff' as BranchRole, label: t.settingsUsers.userTable.staff },
+      { value: 'branch_cashier' as BranchRole, label: t.settingsUsers.userTable.cashier },
+    ];
+    return roleOptions.filter(option => roles.includes(option.value));
+  }, [permissions, t]);
+
+  // Determine if branch selection is needed
+  const needsBranchSelection = useMemo(() => {
+    // Check if user is platform admin or chain owner
+    const isUserPlatformAdmin = (user as { is_platform_admin?: boolean })?.is_platform_admin === true;
+    const isChainOwner = user?.role === 'chain_owner';
+    return isUserPlatformAdmin || isChainOwner;
+  }, [user]);
+
+  // Load available branches when modal opens
+  useEffect(() => {
+    if (!isOpen || !needsBranchSelection) return;
+
+    const loadBranches = async () => {
+      if (!user?.role || !user?.chain_id) {
+        return;
+      }
+      
+      setLoadingBranches(true);
+      try {
+        const branches = await branchesService.getAvailableBranches(user.role, user.chain_id);
+        setAvailableBranches(branches);
+        setErrors(prev => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { branches, ...rest } = prev;
+          return rest;
+        });
+      } catch (error) {
+        console.error('Failed to load branches:', error);
+        setErrors(prev => ({ ...prev, branches: `Failed to load branches: ${error instanceof Error ? error.message : 'Unknown error'}` }));
+      } finally {
+        setLoadingBranches(false);
+      }
+    };
+
+    loadBranches();
+  }, [isOpen, needsBranchSelection, user?.role, user?.chain_id]);
+
+  // Set default branch for branch managers
+  useEffect(() => {
+    if (user?.role === 'branch_manager' && user?.branch_id) {
+      setFormData(prev => ({ ...prev, branch_id: user.branch_id! }));
+    }
+  }, [user?.role, user?.branch_id]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -102,6 +164,11 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
       newErrors.password = t.settingsUsers.createUserModal.passwordRequired;
     } else if (formData.password.length < 8) {
       newErrors.password = t.settingsUsers.createUserModal.passwordMinLength;
+    }
+
+    // Branch selection validation
+    if (needsBranchSelection && !formData.branch_id) {
+      newErrors.branch_id = 'Please select a branch';
     }
 
     if (formData.phone && !/^\+?[\d\s\-\(\)]+$/.test(formData.phone)) {
@@ -123,14 +190,19 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
     setErrors({});
 
     try {
+      const isUserPlatformAdmin = (user as { is_platform_admin?: boolean })?.is_platform_admin === true;
+      
       const userData: CreateUserRequest = {
         email: formData.email.trim(),
         full_name: formData.full_name.trim(),
         phone: formData.phone.trim() || undefined,
         password: formData.password,
-        branch_id: branchId,
+        branch_id: formData.branch_id || branchId || '', // Use selected branch or fallback
         role: formData.role,
         permissions: DEFAULT_PERMISSIONS[formData.role],
+        // Set refresh strategy based on user role
+        refreshStrategy: (isUserPlatformAdmin || user?.role === 'chain_owner') ? 'chain' : 'branch',
+        chain_id: user?.chain_id || undefined,
       };
 
       await createUser(userData);
@@ -141,8 +213,10 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
         full_name: '',
         phone: '',
         password: '',
-        role: 'branch_staff',
+        role: allowedRoles[0]?.value || 'branch_staff',
+        branch_id: user?.role === 'branch_manager' ? (user?.branch_id || '') : '',
       });
+      setAvailableBranches([]);
       onClose();
     } catch (error) {
       setErrors({
@@ -160,8 +234,10 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
         full_name: '',
         phone: '',
         password: '',
-        role: 'branch_staff',
+        role: allowedRoles[0]?.value || 'branch_staff',
+        branch_id: user?.role === 'branch_manager' ? (user?.branch_id || '') : '',
       });
+      setAvailableBranches([]);
       setErrors({});
       onClose();
     }
@@ -253,23 +329,67 @@ export function CreateUserModal({ isOpen, onClose, branchId }: CreateUserModalPr
             </p>
           </div>
 
+          {/* Branch Selection (if needed) */}
+          {needsBranchSelection && (
+            <div className="space-y-2">
+              <Label htmlFor="branch_id">Branch *</Label>
+              <Select
+                value={formData.branch_id}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, branch_id: value }))}
+                disabled={isSubmitting || loadingBranches}
+              >
+                <SelectTrigger className={errors.branch_id ? 'border-red-500' : ''}>
+                  <SelectValue placeholder="Select a branch..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableBranches.map((branch) => {
+                    // Get city name from address object or use branch name only
+                    const cityName = typeof branch.address === 'object' && branch.address.city 
+                      ? branch.address.city 
+                      : null;
+                    const displayName = cityName ? `${branch.name} (${cityName})` : branch.name;
+                    
+                    return (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {displayName}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {errors.branch_id && (
+                <p className="text-sm text-red-600">{errors.branch_id}</p>
+              )}
+              {loadingBranches && (
+                <p className="text-xs text-muted-foreground">Loading branches...</p>
+              )}
+            </div>
+          )}
+
           {/* Role */}
           <div className="space-y-2">
             <Label htmlFor="role">{t.settingsUsers.createUserModal.role} *</Label>
-            <select
-              id="role"
+            <Select
               value={formData.role}
-              onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as BranchRole }))}
-              disabled={isSubmitting}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              required
+              onValueChange={(value) => setFormData(prev => ({ ...prev, role: value as BranchRole }))}
+              disabled={isSubmitting || allowedRoles.length === 0}
             >
-              {getRoleOptions().map((role) => (
-                <option key={role.value} value={role.value}>
-                  {role.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a role..." />
+              </SelectTrigger>
+              <SelectContent>
+                {allowedRoles.map((role) => (
+                  <SelectItem key={role.value} value={role.value}>
+                    {role.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {allowedRoles.length === 0 && (
+              <p className="text-xs text-muted-foreground text-red-600">
+                No roles available to create
+              </p>
+            )}
           </div>
 
           {/* Submit Error */}

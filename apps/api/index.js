@@ -84,11 +84,14 @@ app.use('/api/v1/auth', authRoutes);
 // Use users routes
 app.use('/api/v1/users', usersRoutes);
 
+// Use chain users routes
+app.use('/api/v1/chain-users', chainUsersRoutes);
+
 // Use orders routes
 app.use('/api/v1/orders', ordersRoutes);
 
 // Use branches routes
-app.use('/api/v1/branch', branchesRoutes);
+app.use('/api/v1/branches', branchesRoutes);
 
 // Use menu categories routes
 app.use('/api/v1/menu/categories', menuCategoriesRoutes);
