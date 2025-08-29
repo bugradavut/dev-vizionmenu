@@ -3,6 +3,7 @@
 import { useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCart } from '../contexts/cart-context'
+import { OrderContextProvider } from '../contexts/order-context'
 import { OrderReviewContainer } from './components/order-review-container'
 
 function OrderReviewContent() {
@@ -31,7 +32,11 @@ function OrderReviewContent() {
     return null // Will redirect
   }
 
-  return <OrderReviewContainer orderContext={orderContext} />
+  return (
+    <OrderContextProvider value={orderContext}>
+      <OrderReviewContainer orderContext={orderContext} />
+    </OrderContextProvider>
+  )
 }
 
 export default function OrderReviewPage() {

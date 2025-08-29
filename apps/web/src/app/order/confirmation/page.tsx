@@ -58,6 +58,7 @@ interface OrderSession {
   };
   orderType?: string;
   source?: string;
+  branchId?: string; // Add branch ID for new order navigation
   tableNumber?: number;
   zone?: string;
   orderNotes?: string;
@@ -155,7 +156,47 @@ function OrderConfirmationContent() {
 
   // Action handlers will be defined after fetchOrderStatus
 
-  const handleBackToMenu = () => {
+  const handleBackToMenu = async () => {
+    console.log('SessionData:', sessionData);
+    console.log('BranchId from sessionData:', sessionData?.branchId);
+    
+    // Try to get branchId from sessionData first, then from URL params
+    let branchId = sessionData?.branchId;
+    if (!branchId) {
+      // Try to get from URL search params (if user came from review page)
+      branchId = new URLSearchParams(window.location.search).get('branch');
+      console.log('BranchId from URL:', branchId);
+    }
+    
+    // If we have branchId, check localStorage for chain info
+    if (branchId) {
+      try {
+        // Look for chain info in localStorage branch selections
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('selected-branch-')) {
+            const branchData = JSON.parse(localStorage.getItem(key) || '{}');
+            if (branchData.id === branchId) {
+              // Found the chain slug from localStorage key
+              const chainSlug = key.replace('selected-branch-', '');
+              const newUrl = `/order/${chainSlug}?branch=${branchId}`;
+              console.log('Found chain from localStorage, navigating to:', newUrl);
+              window.open(newUrl, '_blank');
+              return;
+            }
+          }
+        }
+        
+        console.log('Branch not found in localStorage, using fallback');
+      } catch (error) {
+        console.error('Failed to get chain info from localStorage:', error);
+      }
+    } else {
+      console.log('No branchId in sessionData, using fallback');
+    }
+    
+    // Fallback to general order page if we can't get specific chain/branch
+    console.log('Using fallback: /order');
     window.open('/order', '_blank');
   };
 

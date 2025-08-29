@@ -119,6 +119,7 @@ export function OrderTotalSidebar({ language, formData, orderNotes = '', orderCo
           customerEmail: customerInfo?.email || '',
           orderType: formData?.orderType || orderContext.selectedOrderType || 'takeaway',
           source: orderContext.source || 'web',
+          branchId: orderContext.branchId, // Add branch ID for new order navigation
           subtotalAmount: subtotal.toFixed(2),
           taxAmount: tax.toFixed(2),
           totalAmount: total.toFixed(2),
