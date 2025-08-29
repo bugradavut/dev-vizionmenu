@@ -15,8 +15,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from '@/components/ui/alert-dialog'
 import { useResponsive } from '@/hooks/use-responsive'
 import { OrderContextProvider } from '@/app/order/contexts/order-context'
+import { useCart } from '@/app/order/contexts/cart-context'
+import { useLanguage } from '@/contexts/language-context'
 import type { Chain, Branch } from '@/services/customer-chains.service'
 import type { CustomerMenu } from '@/services/customer-menu.service'
 
@@ -46,7 +58,46 @@ export function MenuExperience({
 }: MenuExperienceProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [showCartClearDialog, setShowCartClearDialog] = useState(false)
+  const [pendingBranchChange, setPendingBranchChange] = useState<Branch | null>(null)
+  
   const { isMobile, isTablet, isDesktop } = useResponsive()
+  const { clearCart, itemCount } = useCart()
+  const { language } = useLanguage()
+
+  // Branch change handlers
+  const handleBranchChange = (branch: Branch) => {
+    // If cart has items, show confirmation dialog
+    if (itemCount > 0) {
+      setPendingBranchChange(branch)
+      setShowCartClearDialog(true)
+      return
+    }
+    
+    // If no items in cart, proceed with branch change
+    executeBranchChange(branch)
+  }
+
+  const executeBranchChange = (branch: Branch) => {
+    // Clear cart since menu items might be different across branches
+    clearCart()
+    
+    // Call parent handler
+    onBranchChange?.(branch)
+  }
+
+  const confirmBranchChange = () => {
+    if (pendingBranchChange) {
+      executeBranchChange(pendingBranchChange)
+      setPendingBranchChange(null)
+    }
+    setShowCartClearDialog(false)
+  }
+
+  const cancelBranchChange = () => {
+    setPendingBranchChange(null)
+    setShowCartClearDialog(false)
+  }
 
   // Branch switcher component
   const BranchSwitcher = ({ className = '' }: { className?: string }) => {
@@ -74,7 +125,7 @@ export function MenuExperience({
           {availableBranches.map((b) => (
             <DropdownMenuItem
               key={b.id}
-              onClick={() => onBranchChange?.(b)}
+              onClick={() => handleBranchChange(b)}
               className="flex items-center gap-2"
               disabled={b.id === branch.id}
             >
@@ -338,6 +389,31 @@ export function MenuExperience({
           <MobileCart />
         </div>
       )}
+
+      {/* Cart Clear Confirmation Dialog */}
+      <AlertDialog open={showCartClearDialog} onOpenChange={setShowCartClearDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {language === 'fr' ? 'Changer de succursale ?' : 'Switch Branch?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {language === 'fr' 
+                ? 'Votre panier contient des articles. Changer de succursale effacera votre panier car le menu peut être différent. Voulez-vous continuer ?'
+                : 'Your cart contains items. Switching branches will clear your cart since the menu may be different. Do you want to continue?'
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelBranchChange}>
+              {language === 'fr' ? 'Annuler' : 'Cancel'}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmBranchChange}>
+              {language === 'fr' ? 'Continuer' : 'Continue'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </OrderContextProvider>
   )
 }

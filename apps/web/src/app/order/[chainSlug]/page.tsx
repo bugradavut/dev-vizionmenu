@@ -9,17 +9,6 @@ import { MenuExperience } from './components/menu-experience'
 import { OrderContext } from './types/order-flow.types'
 import { Chain, Branch } from '@/services/customer-chains.service'
 import { useLanguage } from '@/contexts/language-context'
-import { useCart } from '../contexts/cart-context'
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle 
-} from '@/components/ui/alert-dialog'
 
 interface ChainOrderPageProps {
   params: Promise<{ chainSlug: string }>
@@ -39,14 +28,11 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null)
   const [customerMenu, setCustomerMenu] = useState<CustomerMenu | null>(null)
   const [showBranchModal, setShowBranchModal] = useState(false)
-  const [showCartClearDialog, setShowCartClearDialog] = useState(false)
-  const [pendingBranchChange, setPendingBranchChange] = useState<Branch | null>(null)
   const [initialLoading, setInitialLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Language and cart context
+  // Language context
   const { language } = useLanguage()
-  const { clearCart, itemCount } = useCart()
 
   // Extract URL context
   const orderContext: OrderContext = {
@@ -185,23 +171,8 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
   }
 
   const handleBranchChange = (branch: Branch) => {
-    // If cart has items, show confirmation dialog
-    if (itemCount > 0) {
-      setPendingBranchChange(branch)
-      setShowCartClearDialog(true)
-      return
-    }
-    
-    // If no items in cart, proceed with branch change
-    executeBranchChange(branch)
-  }
-
-  const executeBranchChange = (branch: Branch) => {
     setSelectedBranch(branch)
     saveBranchToLocalStorage(orderContext.chainSlug, branch)
-    
-    // Clear cart since menu items might be different across branches
-    clearCart()
     
     // Clear existing menu to trigger reload
     setCustomerMenu(null)
@@ -209,19 +180,6 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
     // Update URL
     const newUrl = `/order/${orderContext.chainSlug}?branch=${branch.id}`
     window.history.pushState({}, '', newUrl)
-  }
-
-  const confirmBranchChange = () => {
-    if (pendingBranchChange) {
-      executeBranchChange(pendingBranchChange)
-      setPendingBranchChange(null)
-    }
-    setShowCartClearDialog(false)
-  }
-
-  const cancelBranchChange = () => {
-    setPendingBranchChange(null)
-    setShowCartClearDialog(false)
   }
 
   // Loading state
@@ -374,30 +332,6 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
         </div>
       </div>
 
-      {/* Cart Clear Confirmation Dialog */}
-      <AlertDialog open={showCartClearDialog} onOpenChange={setShowCartClearDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {language === 'fr' ? 'Changer de succursale ?' : 'Switch Branch?'}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {language === 'fr' 
-                ? 'Votre panier contient des articles. Changer de succursale effacera votre panier car le menu peut être différent. Voulez-vous continuer ?'
-                : 'Your cart contains items. Switching branches will clear your cart since the menu may be different. Do you want to continue?'
-              }
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelBranchChange}>
-              {language === 'fr' ? 'Annuler' : 'Cancel'}
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmBranchChange}>
-              {language === 'fr' ? 'Continuer' : 'Continue'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }
