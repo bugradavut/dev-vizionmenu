@@ -87,6 +87,119 @@ async function validateBranchForChain(branchId, chainId) {
 }
 
 /**
+ * Get branches by location with distance calculation
+ * @param {string} chainId - Chain ID
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @param {number} radiusKm - Search radius in kilometers (default: 50)
+ * @returns {Array} Branches sorted by distance
+ */
+async function getBranchesByLocation(chainId, lat, lng, radiusKm = 50) {
+  if (!chainId || !lat || !lng) {
+    throw new Error('Chain ID, latitude, and longitude are required');
+  }
+
+  // Using ST_Distance_Sphere for distance calculation in meters
+  const { data: branches, error } = await supabase
+    .rpc('get_branches_by_location', {
+      p_chain_id: chainId,
+      p_lat: lat,
+      p_lng: lng,
+      p_radius_km: radiusKm
+    });
+
+  if (error) {
+    throw new Error(`Failed to fetch branches by location: ${error.message}`);
+  }
+
+  return branches || [];
+}
+
+/**
+ * Get branches by address using geocoding
+ * @param {string} chainId - Chain ID  
+ * @param {string} address - Search address
+ * @returns {Array} Branches near the address
+ */
+async function getBranchesByAddress(chainId, address) {
+  if (!chainId || !address) {
+    throw new Error('Chain ID and address are required');
+  }
+
+  // This would integrate with a geocoding service
+  // For now, return all branches (to be enhanced with actual geocoding)
+  const branches = await getChainBranches(chainId);
+  
+  // TODO: Add address-based filtering logic
+  // For now, return all branches with a note
+  return branches.map(branch => ({
+    ...branch,
+    distance: null, // Will be calculated after geocoding
+    address_match: address
+  }));
+}
+
+/**
+ * Get branches grouped by city
+ * @param {string} chainId - Chain ID
+ * @returns {Object} Branches grouped by city
+ */
+async function getBranchesByCity(chainId) {
+  if (!chainId) {
+    throw new Error('Chain ID is required');
+  }
+
+  const branches = await getChainBranches(chainId);
+  
+  // Group branches by city (extracted from address)
+  const branchesByCity = branches.reduce((acc, branch) => {
+    // Extract city from address (simple extraction)
+    const addressParts = branch.address?.split(',') || [];
+    const city = addressParts[addressParts.length - 2]?.trim() || 'Unknown';
+    
+    if (!acc[city]) {
+      acc[city] = [];
+    }
+    acc[city].push(branch);
+    
+    return acc;
+  }, {});
+
+  return branchesByCity;
+}
+
+/**
+ * Validate delivery availability for address
+ * @param {string} chainId - Chain ID
+ * @param {string} address - Delivery address
+ * @param {string} apartmentNumber - Apartment/unit number
+ * @returns {Object} Delivery validation result
+ */
+async function validateDeliveryAddress(chainId, address, apartmentNumber = '') {
+  if (!chainId || !address) {
+    throw new Error('Chain ID and address are required');
+  }
+
+  // For now, simple validation logic
+  // TODO: Integrate with actual delivery zone validation
+  const branches = await getChainBranches(chainId);
+  
+  // Find branches that could deliver to this address
+  const availableBranches = branches.filter(branch => {
+    // Simple validation - in real implementation, check delivery zones
+    return branch.address && address.length > 10; // Basic validation
+  });
+
+  return {
+    isAvailable: availableBranches.length > 0,
+    availableBranches,
+    estimatedDeliveryTime: availableBranches.length > 0 ? '30-45 minutes' : null,
+    deliveryFee: availableBranches.length > 0 ? 2.99 : null,
+    fullAddress: `${address}${apartmentNumber ? `, ${apartmentNumber}` : ''}`
+  };
+}
+
+/**
  * Get chain by branch ID (for QR code compatibility)
  * @param {string} branchId - Branch ID
  * @returns {Object} Chain data for the branch
@@ -130,5 +243,9 @@ module.exports = {
   getChainBySlug,
   getChainBranches,
   validateBranchForChain,
+  getBranchesByLocation,
+  getBranchesByAddress,
+  getBranchesByCity,
+  validateDeliveryAddress,
   getChainByBranchId
 };

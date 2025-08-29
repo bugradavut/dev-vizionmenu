@@ -2,10 +2,14 @@
 
 import { use, useState, useEffect } from 'react'
 import { notFound } from 'next/navigation'
-import { customerChainsService, type Chain, type Branch } from '@/services/customer-chains.service'
+import { customerChainsService } from '@/services/customer-chains.service'
 import { customerMenuService, type CustomerMenu } from '@/services/customer-menu.service'
-import { BranchSelectionFlow } from './components/branch-selection-flow'
+import { useOrderFlow } from './hooks/use-order-flow'
+import { useBranchSearch } from './hooks/use-branch-search'
+import { OrderTypeModal } from './components/order-type-modal'
+import { BranchSelectionModal } from './components/branch-selection-modal'
 import { MenuExperience } from './components/menu-experience'
+import { Chain, Branch, OrderContext } from './types/order-flow.types'
 
 interface ChainOrderPageProps {
   params: Promise<{ chainSlug: string }>
@@ -21,14 +25,12 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
   const resolvedSearchParams = use(searchParams)
   
   const [chain, setChain] = useState<Chain | null>(null)
-  const [branches, setBranches] = useState<Branch[]>([])
-  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null)
   const [customerMenu, setCustomerMenu] = useState<CustomerMenu | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [initialLoading, setInitialLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // Extract URL context
-  const orderContext = {
+  const orderContext: OrderContext = {
     chainSlug: resolvedParams.chainSlug,
     branchId: resolvedSearchParams.branch,
     tableNumber: resolvedSearchParams.table ? parseInt(resolvedSearchParams.table) : undefined,
@@ -36,30 +38,24 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
     isQROrder: resolvedSearchParams.source === 'qr'
   }
 
-  // Load chain and branches
+  // Initialize hooks
+  const { state: flowState, actions: flowActions } = useOrderFlow()
+  const { branches, loading: branchesLoading, loadBranches } = useBranchSearch(orderContext.chainSlug)
+
+  // Load chain and branches on mount
   useEffect(() => {
-    const loadChainData = async () => {
+    const loadInitialData = async () => {
       try {
-        setLoading(true)
+        setInitialLoading(true)
         setError(null)
 
-        // Get chain with branches
-        const chainData = await customerChainsService.getChainWithBranches(orderContext.chainSlug)
-        setChain(chainData.chain)
-        setBranches(chainData.branches)
+        // Get chain data
+        const chainData = await customerChainsService.getChainBySlug(orderContext.chainSlug)
+        setChain(chainData)
 
-        // If specific branch requested, validate and load menu
-        if (orderContext.branchId) {
-          const branch = chainData.branches.find(b => b.id === orderContext.branchId)
-          if (!branch) {
-            throw new Error('Branch not found or does not belong to this chain')
-          }
-          setSelectedBranch(branch)
-          
-          // Load menu for selected branch
-          const menu = await customerMenuService.getCustomerMenu(orderContext.branchId)
-          setCustomerMenu(menu)
-        }
+        // Load branches
+        await loadBranches()
+
       } catch (err) {
         console.error('Failed to load chain data:', err)
         if (err instanceof Error && err.message.includes('Chain not found')) {
@@ -67,33 +63,84 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
         }
         setError(err instanceof Error ? err.message : 'Failed to load chain data')
       } finally {
-        setLoading(false)
+        setInitialLoading(false)
       }
     }
 
-    loadChainData()
-  }, [orderContext.chainSlug, orderContext.branchId])
+    loadInitialData()
+  }, [orderContext.chainSlug, loadBranches])
 
-  // Handle branch selection
-  const handleBranchSelect = async (branch: Branch) => {
-    try {
-      setSelectedBranch(branch)
-      
-      // Update URL without page reload
-      const newUrl = `/order/${orderContext.chainSlug}?branch=${branch.id}`
-      window.history.pushState({}, '', newUrl)
-      
-      // Load menu for selected branch
-      const menu = await customerMenuService.getCustomerMenu(branch.id)
-      setCustomerMenu(menu)
-    } catch (err) {
-      console.error('Failed to load menu:', err)
-      setError('Failed to load menu for selected branch')
+  // Handle QR order or direct branch access
+  useEffect(() => {
+    if (orderContext.branchId && branches.length > 0 && !flowState.selectedBranch) {
+      const branch = branches.find(b => b.id === orderContext.branchId)
+      if (branch) {
+        flowActions.setSelectedBranch(branch)
+        // Load menu will be handled in the menu loading effect
+      } else {
+        setError('Branch not found or does not belong to this chain')
+      }
+    }
+  }, [orderContext.branchId, branches, flowState.selectedBranch, flowActions])
+
+  // Auto-show modal for web users (not QR)
+  useEffect(() => {
+    if (!orderContext.isQROrder && chain && branches.length > 0 && !flowState.isModalOpen && !flowState.selectedBranch) {
+      flowActions.openModal()
+    }
+  }, [orderContext.isQROrder, chain, branches, flowState.isModalOpen, flowState.selectedBranch, flowActions])
+
+  // Load menu when branch is selected
+  useEffect(() => {
+    const loadMenu = async () => {
+      if (flowState.selectedBranch && !customerMenu) {
+        try {
+          const menu = await customerMenuService.getCustomerMenu(flowState.selectedBranch.id)
+          setCustomerMenu(menu)
+          
+          // Update URL for web users
+          if (!orderContext.isQROrder) {
+            const newUrl = `/order/${orderContext.chainSlug}?branch=${flowState.selectedBranch.id}`
+            window.history.pushState({}, '', newUrl)
+          }
+        } catch (err) {
+          console.error('Failed to load menu:', err)
+          setError('Failed to load menu for selected branch')
+        }
+      }
+    }
+
+    loadMenu()
+  }, [flowState.selectedBranch, customerMenu, orderContext.chainSlug, orderContext.isQROrder])
+
+  // Modal handlers
+  const handleOrderTypeSelect = (orderType: 'takeout' | 'delivery') => {
+    // Single branch auto-selection logic
+    if (branches.length === 1) {
+      flowActions.setSelectedBranch(branches[0])
+      flowActions.setOrderType(orderType)
+      flowActions.goToMenu()
+    } else {
+      flowActions.setOrderType(orderType)
+      flowActions.setCurrentStep('branch-selection')
     }
   }
 
+  const handleBranchSelect = (branch: Branch) => {
+    flowActions.setSelectedBranch(branch)
+    flowActions.goToMenu()
+  }
+
+  const handleModalClose = () => {
+    flowActions.closeModal()
+  }
+
+  const handleBackToOrderType = () => {
+    flowActions.setCurrentStep('order-type')
+  }
+
   // Loading state
-  if (loading) {
+  if (initialLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -119,37 +166,60 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
     )
   }
 
-  // QR Flow: Direct to menu if branch specified
-  if (orderContext.isQROrder && selectedBranch && customerMenu) {
+  // Menu Experience: Show when branch and menu are loaded
+  if (flowState.selectedBranch && customerMenu && flowState.currentStep === 'menu') {
     return (
-      <MenuExperience 
-        chain={chain}
-        branch={selectedBranch}
-        customerMenu={customerMenu}
-        orderContext={orderContext}
-      />
+      <>
+        <MenuExperience 
+          chain={chain}
+          branch={flowState.selectedBranch}
+          customerMenu={customerMenu}
+          orderContext={{ ...orderContext, orderType: flowState.orderType }}
+        />
+      </>
     )
   }
 
-  // Web Flow: Menu if branch selected
-  if (selectedBranch && customerMenu) {
-    return (
-      <MenuExperience 
-        chain={chain}
-        branch={selectedBranch}
-        customerMenu={customerMenu}
-        orderContext={orderContext}
-        showBranchSwitcher={true} // Allow branch switching for web users
-      />
-    )
-  }
-
-  // Web Flow: Branch selection
+  // Loading placeholder while data loads
   return (
-    <BranchSelectionFlow 
-      chain={chain}
-      branches={branches}
-      onBranchSelect={handleBranchSelect}
-    />
+    <div className="min-h-screen bg-background">
+      {/* Modals */}
+      <OrderTypeModal 
+        isOpen={flowState.isModalOpen && flowState.currentStep === 'order-type'}
+        onClose={handleModalClose}
+        onSelectOrderType={handleOrderTypeSelect}
+        chainName={chain.name}
+      />
+
+      <BranchSelectionModal 
+        isOpen={flowState.isModalOpen && flowState.currentStep === 'branch-selection'}
+        onClose={handleModalClose}
+        onBack={handleBackToOrderType}
+        onBranchSelect={handleBranchSelect}
+        branches={branches}
+        loading={branchesLoading}
+        chainName={chain.name}
+        orderType={flowState.orderType!}
+        selectedBranch={flowState.selectedBranch}
+      />
+
+      {/* Background content - can be a simple loading state or chain info */}
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          {chain.logo_url && (
+            <img 
+              src={chain.logo_url} 
+              alt={chain.name}
+              className="w-24 h-24 mx-auto mb-4 rounded-lg object-cover"
+            />
+          )}
+          <h1 className="text-3xl font-bold mb-2">{chain.name}</h1>
+          {chain.description && (
+            <p className="text-muted-foreground mb-4">{chain.description}</p>
+          )}
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        </div>
+      </div>
+    </div>
   )
 }

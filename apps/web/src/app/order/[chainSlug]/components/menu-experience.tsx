@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft, MapPin } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import { OrderHeader } from '@/app/order/components/order-header'
 import { CategorySidebar } from '@/app/order/components/category-sidebar' 
 import { MenuGrid } from '@/app/order/components/menu-grid'
@@ -24,25 +23,20 @@ interface MenuExperienceProps {
     tableNumber?: number
     source: 'qr' | 'web'
     isQROrder: boolean
+    orderType?: 'takeout' | 'delivery'
   }
-  showBranchSwitcher?: boolean
 }
 
 export function MenuExperience({
   chain,
   branch, 
   customerMenu,
-  orderContext,
-  showBranchSwitcher = false
+  orderContext
 }: MenuExperienceProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const { isMobile, isTablet, isDesktop } = useResponsive()
 
-  const handleBackToBranches = () => {
-    // Navigate back to branch selection
-    window.location.href = `/order/${orderContext.chainSlug}`
-  }
 
   // Create order context for existing components
   const legacyOrderContext = {
@@ -60,51 +54,46 @@ export function MenuExperience({
           {/* Enhanced Header with Chain/Branch Info */}
           <div className="flex-shrink-0 bg-card border-b">
             <div className="flex items-center justify-between p-4">
+              {/* Left Side: Logo + Restaurant Info */}
               <div className="flex items-center gap-4">
-                {showBranchSwitcher && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={handleBackToBranches}
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Change Location
-                  </Button>
+                {/* Logo */}
+                {chain.logo_url && (
+                  <img 
+                    src={chain.logo_url} 
+                    alt={chain.name}
+                    className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                  />
                 )}
                 
-                <div className="flex items-center gap-3">
-                  {chain.logo_url && (
-                    <img 
-                      src={chain.logo_url} 
-                      alt={chain.name}
-                      className="w-10 h-10 rounded object-cover"
-                    />
-                  )}
-                  <div>
-                    <h1 className="font-semibold">{chain.name}</h1>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="h-3 w-3" />
-                      <span>{branch.name}</span>
-                    </div>
+                {/* Restaurant Info */}
+                <div>
+                  <h1 className="text-lg font-bold">{chain.name}</h1>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <MapPin className="w-4 h-4" />
+                    <span>{branch.name}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Search */}
-              <div className="flex-1 max-w-md mx-8">
-                <OrderHeader 
-                  branchName={branch.name}
-                  branchAddress={branch.address?.street}
-                  onSearch={setSearchQuery}
-                />
-              </div>
-
-              {/* QR Info */}
-              {orderContext.isQROrder && orderContext.tableNumber && (
-                <div className="text-sm bg-primary/10 px-3 py-2 rounded-lg">
-                  Table {orderContext.tableNumber}
+              {/* Right Side: Search + Language + Schedule + QR Info */}
+              <div className="flex items-center gap-4">
+                {/* Search */}
+                <div>
+                  <OrderHeader 
+                    branchName={branch.name}
+                    branchAddress={branch.address}
+                    onSearch={setSearchQuery}
+                    hideTitle={true}
+                  />
                 </div>
-              )}
+
+                {/* QR Table Info */}
+                {orderContext.isQROrder && orderContext.tableNumber && (
+                  <div className="text-sm bg-primary/10 px-3 py-2 rounded-lg">
+                    Table {orderContext.tableNumber}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           
@@ -148,27 +137,45 @@ export function MenuExperience({
           {/* Header with chain/branch info */}
           <div className="flex-shrink-0 bg-card border-b">
             <div className="flex items-center justify-between p-4">
-              {showBranchSwitcher && (
-                <Button variant="ghost" size="sm" onClick={handleBackToBranches}>
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Locations
-                </Button>
-              )}
-              <div className="flex items-center gap-2">
+              {/* Left Side: Logo + Restaurant Info */}
+              <div className="flex items-center gap-3">
+                {/* Logo */}
                 {chain.logo_url && (
-                  <img src={chain.logo_url} alt={chain.name} className="w-8 h-8 rounded" />
+                  <img 
+                    src={chain.logo_url} 
+                    alt={chain.name} 
+                    className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                  />
                 )}
+                
+                {/* Restaurant Info */}
                 <div>
-                  <div className="font-semibold text-sm">{chain.name}</div>
-                  <div className="text-xs text-muted-foreground">{branch.name}</div>
+                  <div className="font-bold text-base">{chain.name}</div>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <MapPin className="w-4 h-4" />
+                    <span>{branch.name}</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex-1 max-w-sm">
-                <OrderHeader 
-                  branchName={branch.name}
-                  branchAddress={branch.address?.street}
-                  onSearch={setSearchQuery}
-                />
+
+              {/* Right Side: Search + Language + Schedule + QR Info */}
+              <div className="flex items-center gap-3">
+                {/* Search */}
+                <div>
+                  <OrderHeader 
+                    branchName={branch.name}
+                    branchAddress={branch.address}
+                    onSearch={setSearchQuery}
+                    hideTitle={true}
+                  />
+                </div>
+
+                {/* QR Table Info */}
+                {orderContext.isQROrder && orderContext.tableNumber && (
+                  <div className="text-sm bg-primary/10 px-3 py-2 rounded-lg">
+                    Table {orderContext.tableNumber}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -213,34 +220,44 @@ export function MenuExperience({
         <div className="min-h-screen bg-background flex flex-col">
           {/* Mobile header with chain/branch info */}
           <div className="bg-card border-b p-4">
-            <div className="flex items-center justify-between">
-              {showBranchSwitcher && (
-                <Button variant="ghost" size="sm" onClick={handleBackToBranches}>
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              )}
-              <div className="flex items-center gap-2">
+            {/* Top Row: Logo + Restaurant Info + QR Info */}
+            <div className="flex items-center justify-between mb-3">
+              {/* Left Side: Logo + Restaurant Info */}
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                {/* Logo */}
                 {chain.logo_url && (
-                  <img src={chain.logo_url} alt={chain.name} className="w-8 h-8 rounded" />
+                  <img 
+                    src={chain.logo_url} 
+                    alt={chain.name} 
+                    className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                  />
                 )}
-                <div>
-                  <div className="font-semibold text-sm">{chain.name}</div>
-                  <div className="text-xs text-muted-foreground">{branch.name}</div>
+                
+                {/* Restaurant Info */}
+                <div className="min-w-0">
+                  <div className="font-bold text-base truncate">{chain.name}</div>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <MapPin className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">{branch.name}</span>
+                  </div>
                 </div>
               </div>
+
+              {/* QR Table Info */}
               {orderContext.isQROrder && orderContext.tableNumber && (
-                <div className="text-xs bg-primary/10 px-2 py-1 rounded">
+                <div className="text-sm bg-primary/10 px-3 py-2 rounded-lg flex-shrink-0">
                   Table {orderContext.tableNumber}
                 </div>
               )}
             </div>
             
-            {/* Search bar on mobile */}
-            <div className="mt-3">
+            {/* Bottom Row: Search + Language + Schedule */}
+            <div>
               <OrderHeader 
                 branchName={branch.name}
-                branchAddress={branch.address?.street}
+                branchAddress={branch.address}
                 onSearch={setSearchQuery}
+                hideTitle={true}
               />
             </div>
           </div>

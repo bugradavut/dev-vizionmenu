@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from 'react'
-import Image from 'next/image'
 import { useOrderContext } from '../contexts/order-context'
 import { useCart } from '../contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
@@ -22,9 +21,10 @@ interface OrderHeaderProps {
   branchAddress?: string
   onSearch?: (query: string) => void
   onPreOrderConfirm?: (date: string, time: string) => void
+  hideTitle?: boolean
 }
 
-export function OrderHeader({ branchName, onSearch, onPreOrderConfirm }: OrderHeaderProps) {
+export function OrderHeader({ branchName, onSearch, onPreOrderConfirm, hideTitle = false }: OrderHeaderProps) {
   const { tableNumber, zone, isQROrder } = useOrderContext()
   const { preOrder, setPreOrder, clearPreOrder } = useCart()
   const { language, setLanguage } = useLanguage()
@@ -88,25 +88,116 @@ export function OrderHeader({ branchName, onSearch, onPreOrderConfirm }: OrderHe
     return targetDate
   }
 
+  // If hideTitle is true, only show the action items (search, language, schedule)
+  if (hideTitle) {
+    return (
+      <>
+        <div className="flex items-center gap-2 md:gap-4 w-full">
+          {/* Search Bar */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              type="text"
+              placeholder={t.orderPage.searchPlaceholder}
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="pl-10 pr-10 h-9 text-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Language Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 gap-2 flex-shrink-0">
+                <Globe className="w-4 h-4" />
+                <span className="hidden sm:inline">
+                  {language === 'fr' ? 'FR' : 'EN'}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setLanguage('en')}>
+                {t.orderPage.english}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLanguage('fr')}>
+                {t.orderPage.french}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Pre-Order Buttons */}
+          {preOrder.isPreOrder ? (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Scheduled Button with Primary Color */}
+              <div 
+                className="flex items-center h-8 rounded-md text-white text-sm font-medium overflow-hidden"
+                style={{ backgroundColor: 'var(--primary)' }}
+              >
+                {/* Main button area */}
+                <button
+                  onClick={() => setIsPreOrderModalOpen(true)}
+                  className="flex items-center gap-2 px-3 py-1 hover:opacity-90 transition-opacity"
+                >
+                  <Clock className="w-4 h-4" />
+                  <span className="hidden sm:inline">
+                    {language === 'fr' ? 'Programmé' : 'Scheduled'}
+                  </span>
+                </button>
+                
+                {/* X button with white background */}
+                <div className="bg-white rounded-md ml-1 mr-1">
+                  <button
+                    onClick={clearPreOrder}
+                    className="flex items-center justify-center w-6 h-6 text-red-500 hover:bg-gray-50 rounded-md transition-colors"
+                    title={language === 'fr' ? 'Annuler la programmation' : 'Cancel scheduling'}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <Button 
+              variant="outline"
+              size="sm" 
+              className="h-9 gap-2 flex-shrink-0" 
+              onClick={() => setIsPreOrderModalOpen(true)}
+            >
+              <Clock className="w-4 h-4" />
+              <span className="hidden sm:inline">
+                {language === 'fr' ? 'Programmer' : 'Schedule'}
+              </span>
+            </Button>
+          )}
+        </div>
+
+        {/* Pre-Order Modal */}
+        <PreOrderModal
+          isOpen={isPreOrderModalOpen}
+          onClose={() => setIsPreOrderModalOpen(false)}
+          onConfirm={handlePreOrderConfirm}
+          currentSchedule={preOrder.isPreOrder ? {
+            date: preOrder.scheduledDate!,
+            time: preOrder.scheduledTime!
+          } : undefined}
+        />
+      </>
+    )
+  }
+
   return (
     <div className="h-16 bg-card border-b border-border px-4 flex items-center justify-between">
-      {/* Left - Brand and Location */}
+      {/* Left - Location Only */}
       <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-background">
-            <Image 
-              src="/web.webp"
-              alt="Vizion Menu"
-              width={32}
-              height={32}
-              className="w-full h-full object-contain"
-            />
-          </div>
-          <span className="font-bold text-lg text-foreground hidden sm:block">{t.orderPage.branding}</span>
-          <span className="font-bold text-base text-foreground sm:hidden">Vizion</span>
-        </div>
-        
-        <div className="hidden lg:flex items-center gap-2 text-muted-foreground min-w-0">
+        <div className="flex items-center gap-2 text-muted-foreground min-w-0">
           <Store className="w-4 h-4 flex-shrink-0" />
           <span className="text-sm truncate">
             {branchName || 'Restaurant'}
