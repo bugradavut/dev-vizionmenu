@@ -3,11 +3,13 @@
 import { createContext, useContext, ReactNode } from 'react'
 
 export interface OrderContext {
+  chainSlug?: string // NEW: Add chainSlug support
   source: 'qr' | 'web'
   branchId?: string
   tableNumber?: number
   zone?: string
   isQROrder: boolean
+  selectedOrderType?: 'dine_in' | 'takeaway' | 'delivery' | null // Also missing this
 }
 
 const OrderContextContext = createContext<OrderContext | undefined>(undefined)

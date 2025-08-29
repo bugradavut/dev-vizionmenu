@@ -24,6 +24,7 @@ interface OrderTotalSidebarProps {
   formData: OrderFormData
   orderNotes?: string
   orderContext: {
+    chainSlug?: string // NEW: Add chainSlug support
     source: 'qr' | 'web'
     branchId: string
     tableNumber?: number
@@ -152,8 +153,12 @@ export function OrderTotalSidebar({ language, formData, orderNotes = '', orderCo
           sessionStorage.setItem('vizion-order-confirmation', JSON.stringify(confirmationData));
         }
         
-        // Navigate to confirmation page (cart will be cleared there)
-        router.push(`/order/confirmation?orderId=${result.data.orderId}`)
+        // UPDATED: Navigate to confirmation page with chainSlug
+        const confirmationUrl = orderContext.chainSlug 
+          ? `/order/${orderContext.chainSlug}/confirmation?orderId=${result.data.orderId}`
+          : `/order/confirmation?orderId=${result.data.orderId}` // Fallback for backward compatibility
+        
+        router.push(confirmationUrl)
       } else {
         // Handle error
         alert(result.error.message) // Replace with proper error handling later

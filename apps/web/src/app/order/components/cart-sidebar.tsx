@@ -28,7 +28,7 @@ export function CartSidebar() {
     preOrder 
   } = useCart()
   
-  const { isQROrder, tableNumber, zone, source, branchId } = useOrderContext()
+  const { isQROrder, tableNumber, zone, source, branchId, chainSlug } = useOrderContext()
   const { language } = useLanguage()
   const t = translations[language] || translations.en
   
@@ -126,7 +126,11 @@ export function CartSidebar() {
     if (zone) searchParams.set('zone', zone)
     searchParams.set('orderType', selectedOrderType)
     
-    const reviewUrl = `/order/review?${searchParams.toString()}`
+    // UPDATED: Use chainSlug in URL path
+    const reviewUrl = chainSlug 
+      ? `/order/${chainSlug}/review?${searchParams.toString()}`
+      : `/order/review?${searchParams.toString()}` // Fallback for backward compatibility
+    
     router.push(reviewUrl)
     
     // Reset loading state after navigation

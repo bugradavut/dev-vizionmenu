@@ -51,6 +51,7 @@ const adminChainRoutes = require('./routes/admin-chain.routes');
 const adminBranchRoutes = require('./routes/admin-branch.routes');
 const chainUsersRoutes = require('./routes/chain-users.routes');
 const platformAdminRoutes = require('./routes/platform-admin.routes');
+const customerChainsRoutes = require('./routes/customer-chains.routes');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -90,8 +91,9 @@ app.use('/api/v1/chain-users', chainUsersRoutes);
 // Use orders routes
 app.use('/api/v1/orders', ordersRoutes);
 
-// Use branches routes
+// Use branches routes (both plural and singular for compatibility)
 app.use('/api/v1/branches', branchesRoutes);
+app.use('/api/v1/branch', branchesRoutes);
 
 // Use menu categories routes
 app.use('/api/v1/menu/categories', menuCategoriesRoutes);
@@ -107,6 +109,9 @@ app.use('/api/v1/customer/menu', customerMenuRoutes);
 
 // Use customer orders routes (public - no auth required)
 app.use('/api/v1/customer/orders', customerOrdersRoutes);
+
+// Use customer chains routes (public - no auth required) 
+app.use('/api/v1/customer/chains', customerChainsRoutes);
 
 // Use campaigns routes
 app.use('/api/v1/campaigns', campaignsRoutes);

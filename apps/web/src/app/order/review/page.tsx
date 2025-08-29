@@ -2,40 +2,56 @@
 
 import { useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useCart } from '../contexts/cart-context'
-import { OrderContextProvider } from '../contexts/order-context'
-import { OrderReviewContainer } from './components/order-review-container'
 
 function OrderReviewContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { items } = useCart()
 
-  // Order context from URL parameters
-  const orderContext = {
-    source: (searchParams.get('source') as 'qr' | 'web') || 'web',
-    branchId: searchParams.get('branch') || '550e8400-e29b-41d4-a716-446655440002',
-    tableNumber: searchParams.get('table') ? parseInt(searchParams.get('table')!) : undefined,
-    zone: searchParams.get('zone') || undefined,
-    isQROrder: searchParams.get('source') === 'qr',
-    selectedOrderType: searchParams.get('orderType') as 'dine_in' | 'takeaway' | 'delivery' | null
-  }
-
-  // Redirect if cart is empty
+  // UPDATED: Redirect to new chainSlug-based URL
   useEffect(() => {
-    if (items.length === 0) {
-      router.push('/order')
+    const branchId = searchParams.get('branch')
+    
+    if (!branchId) {
+      // No branch ID, redirect to general order page
+      router.replace('/order')
+      return
     }
-  }, [items.length, router])
 
-  if (items.length === 0) {
-    return null // Will redirect
-  }
+    // Try to find chain from localStorage branch selections
+    const findChainSlug = () => {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('selected-branch-')) {
+            const branchData = JSON.parse(localStorage.getItem(key) || '{}');
+            if (branchData.id === branchId) {
+              return key.replace('selected-branch-', '');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error finding chain slug:', error);
+      }
+      return null;
+    }
 
+    const chainSlug = findChainSlug()
+    
+    if (chainSlug) {
+      // Redirect to new chainSlug-based URL
+      const newUrl = `/order/${chainSlug}/review?${searchParams.toString()}`
+      router.replace(newUrl)
+    } else {
+      // Fallback: redirect to general order page
+      router.replace('/order')
+    }
+  }, [searchParams, router])
+
+  // Show loading while redirecting
   return (
-    <OrderContextProvider value={orderContext}>
-      <OrderReviewContainer orderContext={orderContext} />
-    </OrderContextProvider>
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    </div>
   )
 }
 

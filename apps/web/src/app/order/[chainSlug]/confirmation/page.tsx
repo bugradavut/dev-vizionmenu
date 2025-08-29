@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { orderService } from '@/services/order-service';
 import { useLanguage } from '@/contexts/language-context';
 import { translations } from '@/lib/translations';
-import { useCart } from '../contexts/cart-context';
+import { useCart } from '../../contexts/cart-context';
 import { Check, Package, CheckCircle2, RefreshCw } from 'lucide-react';
 
 interface OrderDetails {
@@ -64,6 +64,10 @@ interface OrderSession {
   orderNotes?: string;
   deliveryAddress?: DeliveryAddress;
   timestamp?: number;
+}
+
+interface OrderConfirmationPageProps {
+  params: Promise<{ chainSlug: string }>
 }
 
 // Helper function to format estimated time as completion time
@@ -138,7 +142,7 @@ const getProgressSteps = (currentStatus: string, language: string, orderCreatedA
   return steps;
 };
 
-function OrderConfirmationContent() {
+function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [sessionData, setSessionData] = useState<OrderSession | null>(null);
@@ -154,70 +158,7 @@ function OrderConfirmationContent() {
   
   const orderId = searchParams.get('orderId');
 
-  // Action handlers will be defined after fetchOrderStatus
-
-  // UPDATED: Redirect to new chainSlug-based URL first, then add proper redirect
-  useEffect(() => {
-    const orderId = searchParams.get('orderId')
-    
-    if (!orderId) {
-      // No order ID, redirect to general order page
-      router.replace('/order')
-      return
-    }
-
-    // Try to find chain from localStorage branch selections or sessionStorage
-    const findChainSlug = () => {
-      try {
-        // First, check sessionStorage for order confirmation data
-        const stored = sessionStorage.getItem('vizion-order-confirmation');
-        if (stored) {
-          const data = JSON.parse(stored);
-          if (data.branchId) {
-            // Look for chain info in localStorage using branchId
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (key && key.startsWith('selected-branch-')) {
-                const branchData = JSON.parse(localStorage.getItem(key) || '{}');
-                if (branchData.id === data.branchId) {
-                  return key.replace('selected-branch-', '');
-                }
-              }
-            }
-          }
-        }
-        
-        // Fallback: check URL params for branch
-        const branchId = searchParams.get('branch');
-        if (branchId) {
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('selected-branch-')) {
-              const branchData = JSON.parse(localStorage.getItem(key) || '{}');
-              if (branchData.id === branchId) {
-                return key.replace('selected-branch-', '');
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error finding chain slug:', error);
-      }
-      return null;
-    }
-
-    const chainSlug = findChainSlug()
-    
-    if (chainSlug) {
-      // Redirect to new chainSlug-based URL
-      const newUrl = `/order/${chainSlug}/confirmation?${searchParams.toString()}`
-      router.replace(newUrl)
-      return
-    }
-    
-    // If no chainSlug found, continue with normal confirmation page
-  }, [searchParams, router])
-
+  // UPDATED: handleBackToMenu now uses chainSlug from props
   const handleBackToMenu = async () => {
     console.log('SessionData:', sessionData);
     console.log('BranchId from sessionData:', sessionData?.branchId);
@@ -230,31 +171,18 @@ function OrderConfirmationContent() {
       console.log('BranchId from URL:', branchId);
     }
     
-    // If we have branchId, check localStorage for chain info
-    if (branchId) {
-      try {
-        // Look for chain info in localStorage branch selections
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('selected-branch-')) {
-            const branchData = JSON.parse(localStorage.getItem(key) || '{}');
-            if (branchData.id === branchId) {
-              // Found the chain slug from localStorage key
-              const chainSlug = key.replace('selected-branch-', '');
-              const newUrl = `/order/${chainSlug}?branch=${branchId}`;
-              console.log('Found chain from localStorage, navigating to:', newUrl);
-              window.open(newUrl, '_blank');
-              return;
-            }
-          }
-        }
-        
-        console.log('Branch not found in localStorage, using fallback');
-      } catch (error) {
-        console.error('Failed to get chain info from localStorage:', error);
-      }
-    } else {
-      console.log('No branchId in sessionData, using fallback');
+    // NEW: Use chainSlug from URL parameter directly
+    if (branchId && chainSlug) {
+      const newUrl = `/order/${chainSlug}?branch=${branchId}`;
+      console.log('Found chain from URL parameter, navigating to:', newUrl);
+      window.open(newUrl, '_blank');
+      return;
+    } else if (chainSlug) {
+      // Even without branchId, we can navigate to chain page
+      const newUrl = `/order/${chainSlug}`;
+      console.log('Using chainSlug from URL, navigating to:', newUrl);
+      window.open(newUrl, '_blank');
+      return;
     }
     
     // Fallback to general order page if we can't get specific chain/branch
@@ -816,14 +744,37 @@ function OrderConfirmationContent() {
   );
 }
 
-export default function OrderConfirmationPage() {
+function OrderConfirmationContentWrapper({ params }: { params: Promise<{ chainSlug: string }> }) {
+  const [chainSlug, setChainSlug] = useState<string>('')
+  
+  useEffect(() => {
+    const getParams = async () => {
+      const resolvedParams = await params
+      setChainSlug(resolvedParams.chainSlug)
+    }
+    getParams()
+  }, [params])
+  
+  if (!chainSlug) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+  
+  return <OrderConfirmationContent chainSlug={chainSlug} />
+}
+
+export default function OrderConfirmationPage({ params }: OrderConfirmationPageProps) {
+  
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[--primary]"></div>
       </div>
     }>
-      <OrderConfirmationContent />
+      <OrderConfirmationContentWrapper params={params} />
     </Suspense>
   );
 }
