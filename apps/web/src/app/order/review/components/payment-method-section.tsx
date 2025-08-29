@@ -2,16 +2,16 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { useBranchSettings } from '@/hooks/use-branch-settings'
-import { useEnhancedAuth } from '@/hooks/use-enhanced-auth'
+import { useCustomerBranchSettings } from '@/hooks/use-customer-branch-settings'
+import { useOrderContext } from '../../contexts/order-context'
 
 interface PaymentMethodSectionProps {
   onPaymentMethodChange?: (method: 'online' | 'counter') => void
 }
 
 export function PaymentMethodSection({ onPaymentMethodChange }: PaymentMethodSectionProps) {
-  const { branchId } = useEnhancedAuth()
-  const { settings } = useBranchSettings({ branchId: branchId || undefined })
+  const { branchId } = useOrderContext()
+  const { settings } = useCustomerBranchSettings({ branchId: branchId || undefined })
   
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'counter'>('online')
   

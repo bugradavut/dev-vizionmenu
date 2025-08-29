@@ -239,6 +239,52 @@ async function getChainByBranchId(branchId) {
   };
 }
 
+/**
+ * Get branch settings for customer ordering (public - no auth)
+ * Returns only essential settings needed for customer experience
+ * @param {string} branchId - Branch ID
+ * @returns {Object} Branch settings data
+ */
+async function getBranchSettings(branchId) {
+  // Get branch settings from database
+  const { data: branchData, error: branchError } = await supabase
+    .from('branches')
+    .select('id, name, settings, is_active')
+    .eq('id', branchId)
+    .eq('is_active', true)
+    .single();
+
+  if (branchError || !branchData) {
+    console.error('Branch settings fetch error:', branchError);
+    throw new Error('Branch not found');
+  }
+
+  // Default settings if none exist
+  const defaultSettings = {
+    orderFlow: 'standard',
+    timingSettings: {
+      baseDelay: 20,
+      temporaryBaseDelay: 0,
+      deliveryDelay: 15,
+      temporaryDeliveryDelay: 0,
+      autoReady: false
+    },
+    paymentSettings: {
+      allowOnlinePayment: true,
+      allowCounterPayment: false,
+      defaultPaymentMethod: 'online'
+    }
+  };
+
+  const settings = { ...defaultSettings, ...branchData.settings };
+
+  return {
+    branchId: branchData.id,
+    branchName: branchData.name,
+    settings: settings
+  };
+}
+
 module.exports = {
   getChainBySlug,
   getChainBranches,
@@ -247,5 +293,6 @@ module.exports = {
   getBranchesByAddress,
   getBranchesByCity,
   validateDeliveryAddress,
-  getChainByBranchId
+  getChainByBranchId,
+  getBranchSettings
 };

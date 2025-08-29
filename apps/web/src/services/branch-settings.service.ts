@@ -44,7 +44,7 @@ export interface ApiError {
 }
 
 /**
- * Get branch settings from API
+ * Get branch settings from API (admin endpoint - requires authentication)
  */
 export const getBranchSettings = async (branchId: string): Promise<BranchSettingsResponse> => {
   try {

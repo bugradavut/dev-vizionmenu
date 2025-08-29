@@ -209,6 +209,28 @@ const getChainByBranchId = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/v1/customer/chains/branch/:branchId/settings
+ * Get branch settings for customer ordering (public endpoint)
+ */
+const getBranchSettings = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+    
+    if (!branchId) {
+      return res.status(400).json({
+        error: { code: 'MISSING_BRANCH_ID', message: 'Branch ID is required' }
+      });
+    }
+
+    const branchSettings = await customerChainsService.getBranchSettings(branchId);
+    
+    res.json({ data: branchSettings });
+  } catch (error) {
+    handleControllerError(error, 'get branch settings', res);
+  }
+};
+
 module.exports = {
   getChainBySlug,
   getChainBranches,
@@ -216,5 +238,6 @@ module.exports = {
   getBranchesByAddress,
   getBranchesByCity,
   validateDeliveryAddress,
-  getChainByBranchId
+  getChainByBranchId,
+  getBranchSettings
 };

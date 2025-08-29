@@ -11,5 +11,6 @@ router.get('/:slug/branches/address', customerChainsController.getBranchesByAddr
 router.get('/:slug/branches/city', customerChainsController.getBranchesByCity);
 router.post('/:slug/delivery/validate', customerChainsController.validateDeliveryAddress);
 router.get('/branch/:branchId/chain', customerChainsController.getChainByBranchId);
+router.get('/branch/:branchId/settings', customerChainsController.getBranchSettings);
 
 module.exports = router;

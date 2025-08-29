@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge'
 import { MapPin, Phone, Clock } from 'lucide-react'
 import { Branch } from '../types/order-flow.types'
 import { useLanguage } from '@/contexts/language-context'
-import { translations } from '@/lib/translations'
 
 interface BranchListProps {
   branches: Branch[]
@@ -24,7 +23,6 @@ export function BranchList({
   className = ""
 }: BranchListProps) {
   const { language } = useLanguage()
-  const t = translations[language] || translations.en
 
   if (loading) {
     return (

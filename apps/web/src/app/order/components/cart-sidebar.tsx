@@ -13,7 +13,7 @@ import { useOrderContext } from '../contexts/order-context'
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 import { useResponsiveClasses } from '@/hooks/use-responsive'
-import { getBranchSettings, type TimingSettings } from '@/services/branch-settings.service'
+import { getCustomerBranchSettings, type TimingSettings } from '@/services/customer-branch-settings.service'
 
 
 export function CartSidebar() {
@@ -47,7 +47,7 @@ export function CartSidebar() {
     const loadTimingSettings = async () => {
       if (branchId) {
         try {
-          const branchSettings = await getBranchSettings(branchId)
+          const branchSettings = await getCustomerBranchSettings(branchId)
           setTimingSettings(branchSettings.settings.timingSettings)
         } catch (error) {
           console.warn('Failed to load branch timing settings:', error)

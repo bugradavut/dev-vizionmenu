@@ -91,8 +91,9 @@ app.use('/api/v1/chain-users', chainUsersRoutes);
 // Use orders routes
 app.use('/api/v1/orders', ordersRoutes);
 
-// Use branches routes
+// Use branches routes (both plural and singular for compatibility)
 app.use('/api/v1/branches', branchesRoutes);
+app.use('/api/v1/branch', branchesRoutes);
 
 // Use menu categories routes
 app.use('/api/v1/menu/categories', menuCategoriesRoutes);

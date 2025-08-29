@@ -4,7 +4,7 @@ import { createContext, useContext, ReactNode } from 'react'
 
 export interface OrderContext {
   source: 'qr' | 'web'
-  branchId: string
+  branchId?: string
   tableNumber?: number
   zone?: string
   isQROrder: boolean

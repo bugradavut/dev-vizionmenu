@@ -1,13 +1,20 @@
 "use client"
 
 import { useState } from 'react'
-import { MapPin } from 'lucide-react'
+import { MapPin, ChevronDown, Store } from 'lucide-react'
 import { OrderHeader } from '@/app/order/components/order-header'
 import { CategorySidebar } from '@/app/order/components/category-sidebar' 
 import { MenuGrid } from '@/app/order/components/menu-grid'
 import { CartSidebar } from '@/app/order/components/cart-sidebar'
 import { MobileCart } from '@/app/order/components/mobile-cart'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useResponsive } from '@/hooks/use-responsive'
 import { OrderContextProvider } from '@/app/order/contexts/order-context'
 import type { Chain, Branch } from '@/services/customer-chains.service'
@@ -25,17 +32,70 @@ interface MenuExperienceProps {
     isQROrder: boolean
     orderType?: 'takeout' | 'delivery'
   }
+  availableBranches?: Branch[]
+  onBranchChange?: (branch: Branch) => void
 }
 
 export function MenuExperience({
   chain,
   branch, 
   customerMenu,
-  orderContext
+  orderContext,
+  availableBranches = [],
+  onBranchChange
 }: MenuExperienceProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const { isMobile, isTablet, isDesktop } = useResponsive()
+
+  // Branch switcher component
+  const BranchSwitcher = ({ className = '' }: { className?: string }) => {
+    if (!availableBranches.length || availableBranches.length === 1 || orderContext.isQROrder) {
+      return (
+        <div className={`flex items-center gap-1 text-muted-foreground ${className}`}>
+          <MapPin className="w-4 h-4" />
+          <span className="truncate">{branch.name}</span>
+        </div>
+      )
+    }
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className={`h-auto p-0 hover:bg-transparent ${className}`}>
+            <div className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+              <MapPin className="w-4 h-4" />
+              <span className="truncate">{branch.name}</span>
+              <ChevronDown className="w-3 h-3 ml-1" />
+            </div>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          {availableBranches.map((b) => (
+            <DropdownMenuItem
+              key={b.id}
+              onClick={() => onBranchChange?.(b)}
+              className="flex items-center gap-2"
+              disabled={b.id === branch.id}
+            >
+              <Store className="w-4 h-4" />
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">{b.name}</div>
+                {b.address && (
+                  <div className="text-xs text-muted-foreground truncate">
+                    {typeof b.address === 'string' ? b.address : `${b.address.street}, ${b.address.city}`}
+                  </div>
+                )}
+              </div>
+              {b.id === branch.id && (
+                <div className="w-2 h-2 rounded-full bg-primary" />
+              )}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
 
 
   // Create order context for existing components
@@ -68,10 +128,7 @@ export function MenuExperience({
                 {/* Restaurant Info */}
                 <div>
                   <h1 className="text-lg font-bold">{chain.name}</h1>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4" />
-                    <span>{branch.name}</span>
-                  </div>
+                  <BranchSwitcher className="text-sm" />
                 </div>
               </div>
 
@@ -81,7 +138,7 @@ export function MenuExperience({
                 <div>
                   <OrderHeader 
                     branchName={branch.name}
-                    branchAddress={branch.address}
+                    branchAddress={typeof branch.address === 'string' ? branch.address : `${branch.address?.street || ''}, ${branch.address?.city || ''}`}
                     onSearch={setSearchQuery}
                     hideTitle={true}
                   />
@@ -151,10 +208,7 @@ export function MenuExperience({
                 {/* Restaurant Info */}
                 <div>
                   <div className="font-bold text-base">{chain.name}</div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4" />
-                    <span>{branch.name}</span>
-                  </div>
+                  <BranchSwitcher className="text-sm" />
                 </div>
               </div>
 
@@ -164,7 +218,7 @@ export function MenuExperience({
                 <div>
                   <OrderHeader 
                     branchName={branch.name}
-                    branchAddress={branch.address}
+                    branchAddress={typeof branch.address === 'string' ? branch.address : `${branch.address?.street || ''}, ${branch.address?.city || ''}`}
                     onSearch={setSearchQuery}
                     hideTitle={true}
                   />
@@ -236,10 +290,7 @@ export function MenuExperience({
                 {/* Restaurant Info */}
                 <div className="min-w-0">
                   <div className="font-bold text-base truncate">{chain.name}</div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4 flex-shrink-0" />
-                    <span className="truncate">{branch.name}</span>
-                  </div>
+                  <BranchSwitcher className="text-sm" />
                 </div>
               </div>
 
@@ -255,7 +306,7 @@ export function MenuExperience({
             <div>
               <OrderHeader 
                 branchName={branch.name}
-                branchAddress={branch.address}
+                branchAddress={typeof branch.address === 'string' ? branch.address : `${branch.address?.street || ''}, ${branch.address?.city || ''}`}
                 onSearch={setSearchQuery}
                 hideTitle={true}
               />

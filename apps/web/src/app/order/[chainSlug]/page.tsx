@@ -4,12 +4,11 @@ import { use, useState, useEffect } from 'react'
 import { notFound } from 'next/navigation'
 import { customerChainsService } from '@/services/customer-chains.service'
 import { customerMenuService, type CustomerMenu } from '@/services/customer-menu.service'
-import { useOrderFlow } from './hooks/use-order-flow'
-import { useBranchSearch } from './hooks/use-branch-search'
-import { OrderTypeModal } from './components/order-type-modal'
 import { BranchSelectionModal } from './components/branch-selection-modal'
 import { MenuExperience } from './components/menu-experience'
-import { Chain, Branch, OrderContext } from './types/order-flow.types'
+import { OrderContext } from './types/order-flow.types'
+import { Chain, Branch } from '@/services/customer-chains.service'
+import { useLanguage } from '@/contexts/language-context'
 
 interface ChainOrderPageProps {
   params: Promise<{ chainSlug: string }>
@@ -25,9 +24,15 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
   const resolvedSearchParams = use(searchParams)
   
   const [chain, setChain] = useState<Chain | null>(null)
+  const [branches, setBranches] = useState<Branch[]>([])
+  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null)
   const [customerMenu, setCustomerMenu] = useState<CustomerMenu | null>(null)
+  const [showBranchModal, setShowBranchModal] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Language context
+  const { language } = useLanguage()
 
   // Extract URL context
   const orderContext: OrderContext = {
@@ -38,9 +43,40 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
     isQROrder: resolvedSearchParams.source === 'qr'
   }
 
-  // Initialize hooks
-  const { state: flowState, actions: flowActions } = useOrderFlow()
-  const { branches, loading: branchesLoading, loadBranches } = useBranchSearch(orderContext.chainSlug)
+  // Branch selection with localStorage persistence
+  const saveBranchToLocalStorage = (chainSlug: string, branch: Branch) => {
+    try {
+      localStorage.setItem(`selected-branch-${chainSlug}`, JSON.stringify({
+        id: branch.id,
+        name: branch.name,
+        address: branch.address,
+        savedAt: Date.now()
+      }))
+    } catch (error) {
+      console.error('Failed to save branch to localStorage:', error)
+    }
+  }
+
+  const getBranchFromLocalStorage = (chainSlug: string): Branch | null => {
+    try {
+      const stored = localStorage.getItem(`selected-branch-${chainSlug}`)
+      if (!stored) return null
+      
+      const branchData = JSON.parse(stored)
+      const daysSinceStored = (Date.now() - branchData.savedAt) / (1000 * 60 * 60 * 24)
+      
+      // Keep branch selection for 2 days
+      if (daysSinceStored > 2) {
+        localStorage.removeItem(`selected-branch-${chainSlug}`)
+        return null
+      }
+      
+      return branchData
+    } catch (error) {
+      console.error('Failed to get branch from localStorage:', error)
+      return null
+    }
+  }
 
   // Load chain and branches on mount
   useEffect(() => {
@@ -54,12 +90,42 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
         setChain(chainData)
 
         // Load branches
-        await loadBranches()
+        const branchesResponse = await customerChainsService.getChainBranches(orderContext.chainSlug)
+        setBranches(branchesResponse.branches)
+
+        // Handle branch selection logic
+        if (orderContext.branchId) {
+          // QR order with specific branch
+          const qrBranch = branchesResponse.branches.find(b => b.id === orderContext.branchId)
+          if (qrBranch) {
+            setSelectedBranch(qrBranch)
+          } else {
+            setError('Branch not found')
+            return
+          }
+        } else if (branchesResponse.branches.length === 1) {
+          // Single branch - auto select
+          setSelectedBranch(branchesResponse.branches[0])
+          saveBranchToLocalStorage(orderContext.chainSlug, branchesResponse.branches[0])
+        } else {
+          // Multiple branches - check localStorage or show modal
+          const storedBranch = getBranchFromLocalStorage(orderContext.chainSlug)
+          if (storedBranch) {
+            const matchedBranch = branchesResponse.branches.find(b => b.id === storedBranch.id)
+            if (matchedBranch) {
+              setSelectedBranch(matchedBranch)
+            } else {
+              setShowBranchModal(true)
+            }
+          } else {
+            setShowBranchModal(true)
+          }
+        }
 
       } catch (err) {
         console.error('Failed to load chain data:', err)
         if (err instanceof Error && err.message.includes('Chain not found')) {
-          notFound() // 404 page for invalid chain slug
+          notFound()
         }
         setError(err instanceof Error ? err.message : 'Failed to load chain data')
       } finally {
@@ -68,39 +134,20 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
     }
 
     loadInitialData()
-  }, [orderContext.chainSlug, loadBranches])
+  }, [orderContext.chainSlug, orderContext.branchId])
 
-  // Handle QR order or direct branch access
-  useEffect(() => {
-    if (orderContext.branchId && branches.length > 0 && !flowState.selectedBranch) {
-      const branch = branches.find(b => b.id === orderContext.branchId)
-      if (branch) {
-        flowActions.setSelectedBranch(branch)
-        // Load menu will be handled in the menu loading effect
-      } else {
-        setError('Branch not found or does not belong to this chain')
-      }
-    }
-  }, [orderContext.branchId, branches, flowState.selectedBranch, flowActions])
-
-  // Auto-show modal for web users (not QR)
-  useEffect(() => {
-    if (!orderContext.isQROrder && chain && branches.length > 0 && !flowState.isModalOpen && !flowState.selectedBranch) {
-      flowActions.openModal()
-    }
-  }, [orderContext.isQROrder, chain, branches, flowState.isModalOpen, flowState.selectedBranch, flowActions])
 
   // Load menu when branch is selected
   useEffect(() => {
     const loadMenu = async () => {
-      if (flowState.selectedBranch && !customerMenu) {
+      if (selectedBranch && !customerMenu) {
         try {
-          const menu = await customerMenuService.getCustomerMenu(flowState.selectedBranch.id)
+          const menu = await customerMenuService.getCustomerMenu(selectedBranch.id)
           setCustomerMenu(menu)
           
           // Update URL for web users
           if (!orderContext.isQROrder) {
-            const newUrl = `/order/${orderContext.chainSlug}?branch=${flowState.selectedBranch.id}`
+            const newUrl = `/order/${orderContext.chainSlug}?branch=${selectedBranch.id}`
             window.history.pushState({}, '', newUrl)
           }
         } catch (err) {
@@ -111,32 +158,28 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
     }
 
     loadMenu()
-  }, [flowState.selectedBranch, customerMenu, orderContext.chainSlug, orderContext.isQROrder])
+  }, [selectedBranch, customerMenu, orderContext.chainSlug, orderContext.isQROrder])
 
-  // Modal handlers
-  const handleOrderTypeSelect = (orderType: 'takeout' | 'delivery') => {
-    // Single branch auto-selection logic
-    if (branches.length === 1) {
-      flowActions.setSelectedBranch(branches[0])
-      flowActions.setOrderType(orderType)
-      flowActions.goToMenu()
-    } else {
-      flowActions.setOrderType(orderType)
-      flowActions.setCurrentStep('branch-selection')
-    }
-  }
-
+  // Branch selection handlers
   const handleBranchSelect = (branch: Branch) => {
-    flowActions.setSelectedBranch(branch)
-    flowActions.goToMenu()
+    setSelectedBranch(branch)
+    saveBranchToLocalStorage(orderContext.chainSlug, branch)
+    setShowBranchModal(false)
+    
+    // Clear existing menu to trigger reload
+    setCustomerMenu(null)
   }
 
-  const handleModalClose = () => {
-    flowActions.closeModal()
-  }
-
-  const handleBackToOrderType = () => {
-    flowActions.setCurrentStep('order-type')
+  const handleBranchChange = (branch: Branch) => {
+    setSelectedBranch(branch)
+    saveBranchToLocalStorage(orderContext.chainSlug, branch)
+    
+    // Clear existing menu to trigger reload
+    setCustomerMenu(null)
+    
+    // Update URL
+    const newUrl = `/order/${orderContext.chainSlug}?branch=${branch.id}`
+    window.history.pushState({}, '', newUrl)
   }
 
   // Loading state
@@ -167,57 +210,125 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
   }
 
   // Menu Experience: Show when branch and menu are loaded
-  if (flowState.selectedBranch && customerMenu && flowState.currentStep === 'menu') {
+  if (selectedBranch && customerMenu) {
     return (
       <>
         <MenuExperience 
           chain={chain}
-          branch={flowState.selectedBranch}
+          branch={selectedBranch}
           customerMenu={customerMenu}
-          orderContext={{ ...orderContext, orderType: flowState.orderType }}
+          orderContext={orderContext}
+          availableBranches={branches}
+          onBranchChange={handleBranchChange}
         />
       </>
     )
   }
 
-  // Loading placeholder while data loads
+  // Professional landing page with repeating logo pattern background
   return (
-    <div className="min-h-screen bg-background">
-      {/* Modals */}
-      <OrderTypeModal 
-        isOpen={flowState.isModalOpen && flowState.currentStep === 'order-type'}
-        onClose={handleModalClose}
-        onSelectOrderType={handleOrderTypeSelect}
-        chainName={chain.name}
-      />
+    <div className="min-h-screen relative">
+      {/* Enhanced Logo Pattern Background - Full Coverage */}
+      <div className="fixed inset-0 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-background to-accent/5">
+          {/* Logo Pattern - Extended to cover all areas */}
+          <div 
+            className="absolute inset-0" 
+            style={{
+              backgroundImage: chain.logo_url ? 
+                `url(${chain.logo_url})` : 'none',
+              backgroundSize: '60px 60px',
+              backgroundRepeat: 'repeat',
+              opacity: 0.12,
+              transform: 'rotate(-15deg) scale(1.5)',
+              transformOrigin: 'center',
+              // Extend beyond viewport to cover rotated areas
+              width: '150vw',
+              height: '150vh',
+              top: '-25vh',
+              left: '-25vw'
+            }} 
+          />
+        </div>
+      </div>
 
+      {/* Branch Selection Modal */}
       <BranchSelectionModal 
-        isOpen={flowState.isModalOpen && flowState.currentStep === 'branch-selection'}
-        onClose={handleModalClose}
-        onBack={handleBackToOrderType}
+        isOpen={showBranchModal}
+        onClose={() => setShowBranchModal(false)}
         onBranchSelect={handleBranchSelect}
         branches={branches}
-        loading={branchesLoading}
+        loading={false}
         chainName={chain.name}
-        orderType={flowState.orderType!}
-        selectedBranch={flowState.selectedBranch}
+        selectedBranch={selectedBranch}
       />
 
-      {/* Background content - can be a simple loading state or chain info */}
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          {chain.logo_url && (
-            <img 
-              src={chain.logo_url} 
-              alt={chain.name}
-              className="w-24 h-24 mx-auto mb-4 rounded-lg object-cover"
-            />
-          )}
-          <h1 className="text-3xl font-bold mb-2">{chain.name}</h1>
-          {chain.description && (
-            <p className="text-muted-foreground mb-4">{chain.description}</p>
-          )}
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+      {/* Content Layer - Above Pattern Background */}
+      <div className="relative z-10 min-h-screen">
+        {/* Top Header */}
+        <div className="w-full bg-card/70 backdrop-blur-md border-b shadow-sm">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {chain.logo_url && (
+                  <img 
+                    src={chain.logo_url} 
+                    alt={chain.name}
+                    className="w-10 h-10 rounded-lg object-cover shadow-sm"
+                  />
+                )}
+                <h1 className="text-xl font-bold">{chain.name}</h1>
+              </div>
+              <div className="text-sm text-muted-foreground font-medium">
+                Online Ordering
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content - Centered Logo */}
+        <div className="flex-1 flex items-center justify-center p-6 min-h-[calc(100vh-140px)]">
+          <div className="text-center max-w-2xl mx-auto">
+            {/* Large Central Logo */}
+            {chain.logo_url && (
+              <div className="mb-8">
+                <img 
+                  src={chain.logo_url} 
+                  alt={chain.name}
+                  className="w-32 h-32 mx-auto rounded-2xl object-cover shadow-2xl ring-4 ring-primary/10 bg-white/90 p-2"
+                />
+              </div>
+            )}
+
+            {/* Show loading when branch selected but menu not loaded */}
+            {(selectedBranch && !customerMenu && !showBranchModal) && (
+              <div className="bg-card/70 backdrop-blur-sm rounded-lg p-8 border shadow-sm">
+                <div className="flex flex-col items-center justify-center gap-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <div className="text-center">
+                    <div className="font-semibold">
+                      {language === 'fr' ? 'Chargement du menu' : 'Loading Menu'}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {language === 'fr' 
+                        ? `Préparation du menu ${selectedBranch.name}...`
+                        : `Preparing ${selectedBranch.name} menu...`
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="w-full bg-card/60 backdrop-blur-md border-t shadow-sm">
+          <div className="container mx-auto px-4 py-4">
+            <div className="text-center text-sm text-muted-foreground">
+              <p>Powered by VizionMenu • Secure Online Ordering</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
