@@ -262,7 +262,6 @@ export function EditChainModal({ open, onOpenChange, chain, onSuccess }: EditCha
                       value={field.value}
                       onChange={field.onChange}
                       label=""
-                      maxSizeInMB={2}
                     />
                   </FormControl>
                   <FormMessage />

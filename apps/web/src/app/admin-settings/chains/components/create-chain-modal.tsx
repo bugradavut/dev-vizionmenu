@@ -196,7 +196,6 @@ export function CreateChainModal({ open, onOpenChange, onSuccess }: CreateChainM
                       value={field.value}
                       onChange={field.onChange}
                       label=""
-                      maxSizeInMB={2}
                     />
                   </FormControl>
                   <FormMessage />

@@ -10,7 +10,6 @@ interface ImageUploadProps {
   onChange: (value: string | undefined) => void
   label: string
   accept?: string
-  maxSizeInMB?: number
   className?: string
 }
 
@@ -19,7 +18,6 @@ export function ImageUpload({
   onChange, 
   label, 
   accept = 'image/*',
-  maxSizeInMB = 5,
   className = ''
 }: ImageUploadProps) {
   const { language } = useLanguage()
@@ -31,12 +29,12 @@ export function ImageUpload({
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Validate file size
-    if (file.size > maxSizeInMB * 1024 * 1024) {
+    // Validate file size (max 10MB before optimization)
+    if (file.size > 10 * 1024 * 1024) {
       setError(
         language === 'fr' 
-          ? `La taille du fichier dépasse ${maxSizeInMB}MB`
-          : `File size exceeds ${maxSizeInMB}MB`
+          ? 'La taille du fichier ne peut pas dépasser 10 MB'
+          : 'File size cannot exceed 10MB'
       )
       return
     }
@@ -55,19 +53,29 @@ export function ImageUpload({
       setLoading(true)
       setError(null)
 
-      // For now, create a data URL preview
-      // In production, you would upload to Supabase Storage here
+      // Import optimization function dynamically
+      const { optimizePhoto } = await import('@/lib/photo-optimizer')
+      
+      // Optimize photo with chain logo specific settings
+      const optimizedPhoto = await optimizePhoto(file, {
+        maxWidth: 400,
+        maxHeight: 400,
+        quality: 0.9,
+        format: 'webp'
+      })
+
+      // Create preview from optimized file
       const reader = new FileReader()
       reader.onload = (e) => {
         const dataUrl = e.target?.result as string
         onChange(dataUrl)
         setLoading(false)
       }
-      reader.readAsDataURL(file)
+      reader.readAsDataURL(optimizedPhoto.file)
 
       // TODO: Implement actual file upload to Supabase Storage
       // const formData = new FormData()
-      // formData.append('file', file)
+      // formData.append('file', optimizedPhoto.file)
       // const response = await fetch('/api/v1/admin/upload', {
       //   method: 'POST',
       //   body: formData
@@ -76,11 +84,11 @@ export function ImageUpload({
       // onChange(data.url)
 
     } catch (err) {
-      console.error('Upload error:', err)
+      console.error('Photo optimization failed:', err)
       setError(
         language === 'fr' 
-          ? 'Erreur lors du téléchargement'
-          : 'Upload error occurred'
+          ? 'Erreur lors de l\'optimisation de la photo'
+          : 'Photo optimization failed'
       )
       setLoading(false)
     }
@@ -148,9 +156,12 @@ export function ImageUpload({
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {language === 'fr' 
-                        ? `PNG, JPG jusqu'à ${maxSizeInMB}MB`
-                        : `PNG, JPG up to ${maxSizeInMB}MB`
+                        ? 'Max 10MB • JPG, PNG, WebP'
+                        : 'Max 10MB • JPG, PNG, WebP'
                       }
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {language === 'fr' ? 'Optimisé automatiquement' : 'Auto-optimized for web'}
                     </p>
                   </div>
                 </>
