@@ -131,6 +131,11 @@ async function getOrders(filters, userBranch) {
     customerEmail: order.customer_email,
     orderType: order.order_type,
     tableNumber: order.table_number,
+    // Extract zone from customer_name for QR orders (e.g., "Table 5 - Main" -> zone: "Main")
+    zone: order.table_number && order.customer_name ? (() => {
+      const match = order.customer_name.match(/Table \d+(?:\s*-\s*(.+))?/);
+      return match ? match[1] || null : null;
+    })() : null,
     source: order.third_party_platform || (order.table_number ? 'qr_code' : 'web'),
     status: order.order_status,
     paymentStatus: order.payment_status,
@@ -276,6 +281,11 @@ async function getOrderDetail(orderId, userBranch) {
     status: existingOrder.order_status, // 'preparing' | 'ready' | 'completed' | 'cancelled' | 'rejected'
     order_type: existingOrder.order_type,
     table_number: existingOrder.table_number,
+    // Extract zone from customer_name for QR orders (e.g., "Table 5 - Main" -> zone: "Main")
+    zone: existingOrder.table_number && existingOrder.customer_name ? (() => {
+      const match = existingOrder.customer_name.match(/Table \d+(?:\s*-\s*(.+))?/);
+      return match ? match[1] || null : null;
+    })() : null,
     payment_method: existingOrder.payment_method,
     pricing: {
       subtotal: parseFloat(existingOrder.subtotal || 0),

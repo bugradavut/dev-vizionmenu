@@ -168,7 +168,7 @@ export default function LiveOrdersPage() {
     const iconSrc = getSourceIcon(source)
     const label = getSourceLabel(source)
     return (
-      <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <Image 
             src={iconSrc}
@@ -179,13 +179,13 @@ export default function LiveOrdersPage() {
           />
           <span className="text-sm text-muted-foreground">{label}</span>
         </div>
-        {/* Show table badge for QR orders */}
-        {source === 'qr_code' && order?.tableNumber && (
-          <div className="ml-10">
-            <Badge variant="outline" className="text-xs px-2 py-1 bg-blue-50 text-blue-700 border-blue-200">
-              Table {order.tableNumber}{order.zone && ` - ${order.zone}`}
-            </Badge>
-          </div>
+        {/* Show table badge for QR orders - next to the text */}
+        {source === 'qr_code' && (order?.tableNumber || order?.table_number) && (
+          <Badge variant="outline" className="text-xs px-2 py-1 bg-blue-50 text-blue-700 border-blue-200">
+            {/* Handle both table and screen cases */}
+            {order.zone === 'Screen' ? 'Screen' : `Table ${order.tableNumber || order.table_number}`}
+            {order.zone && order.zone !== 'Screen' && ` - ${order.zone}`}
+          </Badge>
         )}
       </div>
     )
