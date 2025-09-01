@@ -15,6 +15,7 @@ interface ChainOrderPageProps {
   searchParams: Promise<{
     branch?: string
     table?: string
+    zone?: string
     source?: 'qr' | 'web'
   }>
 }
@@ -39,6 +40,7 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
     chainSlug: resolvedParams.chainSlug,
     branchId: resolvedSearchParams.branch,
     tableNumber: resolvedSearchParams.table ? parseInt(resolvedSearchParams.table) : undefined,
+    zone: resolvedSearchParams.zone,
     source: (resolvedSearchParams.source as 'qr' | 'web') || 'web',
     isQROrder: resolvedSearchParams.source === 'qr'
   }

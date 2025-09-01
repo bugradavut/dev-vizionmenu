@@ -68,10 +68,11 @@ const createCustomerOrder = async (req, res) => {
     // Prepare customer object with defaults
     let customer;
     if (source === 'qr') {
+      // For QR orders, use real customer info if provided, otherwise use table as fallback
       customer = {
-        name: `Table ${tableNumber || 1}${zone ? ` - ${zone}` : ''}`,
-        phone: `table-${tableNumber || 1}`,
-        email: `table${tableNumber || 1}@dinein.local`
+        name: customerInfo?.name?.trim() || `Table ${tableNumber || 1}${zone ? ` - ${zone}` : ''}`,
+        phone: customerInfo?.phone?.trim() || `table-${tableNumber || 1}`,
+        email: customerInfo?.email?.trim() || `table${tableNumber || 1}@dinein.local`
       };
     } else {
       customer = {

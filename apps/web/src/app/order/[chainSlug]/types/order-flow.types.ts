@@ -11,6 +11,7 @@ export interface OrderContext {
   chainSlug: string;
   branchId?: string;
   tableNumber?: number;
+  zone?: string;
   source: OrderSource;
   isQROrder: boolean;
   orderType?: OrderType;

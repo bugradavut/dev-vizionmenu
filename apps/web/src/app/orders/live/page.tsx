@@ -164,19 +164,29 @@ export default function LiveOrdersPage() {
     }
   }
 
-  const renderSourceIcon = (source: string) => {
+  const renderSourceIcon = (source: string, order?: Order) => {
     const iconSrc = getSourceIcon(source)
     const label = getSourceLabel(source)
     return (
-      <div className="flex items-center gap-2">
-        <Image 
-          src={iconSrc}
-          alt={`${source} icon`}
-          width={32}
-          height={32}
-          className="w-8 h-8 flex-shrink-0"
-        />
-        <span className="text-sm text-muted-foreground">{label}</span>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <Image 
+            src={iconSrc}
+            alt={`${source} icon`}
+            width={32}
+            height={32}
+            className="w-8 h-8 flex-shrink-0"
+          />
+          <span className="text-sm text-muted-foreground">{label}</span>
+        </div>
+        {/* Show table badge for QR orders */}
+        {source === 'qr_code' && order?.tableNumber && (
+          <div className="ml-10">
+            <Badge variant="outline" className="text-xs px-2 py-1 bg-blue-50 text-blue-700 border-blue-200">
+              Table {order.tableNumber}{order.zone && ` - ${order.zone}`}
+            </Badge>
+          </div>
+        )}
       </div>
     )
   }
@@ -364,7 +374,7 @@ export default function LiveOrdersPage() {
                     backgroundColor: order.status === 'scheduled' ? '#fefce8' : undefined // Custom yellow between 50 and 100
                   }}>
                     <TableCell>
-                      {renderSourceIcon(order.source)}
+                      {renderSourceIcon(order.source, order)}
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1.5">
@@ -478,7 +488,7 @@ export default function LiveOrdersPage() {
                   {/* Header - Channel and Status */}
                   <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
                     <div className="flex items-center gap-2">
-                      {renderSourceIcon(order.source)}
+                      {renderSourceIcon(order.source, order)}
                     </div>
                     {getStatusBadge(order.status)}
                   </div>

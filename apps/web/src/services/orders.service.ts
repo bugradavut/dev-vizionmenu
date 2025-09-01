@@ -54,6 +54,8 @@ export interface Order {
   status: 'preparing' | 'scheduled' | 'ready' | 'completed' | 'cancelled' | 'rejected';
   order_type: string;
   table_number?: string;
+  tableNumber?: number;  // For QR orders
+  zone?: string;        // For QR orders (Screen, Main, etc)
   payment_method?: string;
   pricing: OrderPricing;
   notes?: string;

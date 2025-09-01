@@ -40,6 +40,7 @@ interface MenuExperienceProps {
     chainSlug: string
     branchId?: string
     tableNumber?: number
+    zone?: string
     source: 'qr' | 'web'
     isQROrder: boolean
     orderType?: 'takeout' | 'delivery'
@@ -154,7 +155,7 @@ export function MenuExperience({
     source: orderContext.source,
     branchId: branch.id,
     tableNumber: orderContext.tableNumber,
-    zone: undefined,
+    zone: orderContext.zone,
     isQROrder: orderContext.isQROrder
   }
 
@@ -197,8 +198,15 @@ export function MenuExperience({
 
                 {/* QR Table Info */}
                 {orderContext.isQROrder && orderContext.tableNumber && (
-                  <div className="text-sm bg-primary/10 px-3 py-2 rounded-lg">
-                    Table {orderContext.tableNumber}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                    <span className="text-sm font-medium text-blue-900">
+                      {/* Show "Screen" for Screen zone, hide table number to avoid confusion */}
+                      {orderContext.zone === 'Screen' 
+                        ? (language === 'fr' ? 'Écran' : 'Screen') 
+                        : (language === 'fr' ? `Table ${orderContext.tableNumber}` : `Table ${orderContext.tableNumber}`)
+                      }
+                    </span>
                   </div>
                 )}
               </div>
@@ -277,8 +285,15 @@ export function MenuExperience({
 
                 {/* QR Table Info */}
                 {orderContext.isQROrder && orderContext.tableNumber && (
-                  <div className="text-sm bg-primary/10 px-3 py-2 rounded-lg">
-                    Table {orderContext.tableNumber}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                    <span className="text-sm font-medium text-blue-900">
+                      {/* Show "Screen" for Screen zone, hide table number to avoid confusion */}
+                      {orderContext.zone === 'Screen' 
+                        ? (language === 'fr' ? 'Écran' : 'Screen') 
+                        : (language === 'fr' ? `Table ${orderContext.tableNumber}` : `Table ${orderContext.tableNumber}`)
+                      }
+                    </span>
                   </div>
                 )}
               </div>
