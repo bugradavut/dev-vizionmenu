@@ -12,12 +12,20 @@ import {
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Table2, LayoutGrid, ArrowRight, CalendarIcon, ArrowUpDown, Search, X, RefreshCw, AlertCircle } from "lucide-react"
+import { Table2, LayoutGrid, ArrowRight, CalendarIcon, ArrowUpDown, Search, X, RefreshCw, AlertCircle, QrCode } from "lucide-react"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 import Calendar04 from "@/components/ui/calendar-04"
 import {
   Table,
@@ -46,9 +54,11 @@ type ViewMode = 'table' | 'card'
 export default function OrderHistoryPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [sourceFilter, setSourceFilter] = useState<string>('all') // New: QR filter
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest')
   const [searchQuery, setSearchQuery] = useState("")
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false) // New: Sheet state
   const { language } = useLanguage()
   const t = translations[language] || translations.en
 
@@ -108,10 +118,6 @@ export default function OrderHistoryPage() {
     await fetchOrders(params)
   }, [fetchOrders, statusFilter, dateRange, searchQuery])
 
-  // Handle status filter changes
-  const handleStatusFilterChange = async (newStatus: string) => {
-    setStatusFilter(newStatus)
-  }
 
   // Trigger API call when filters change
   useEffect(() => {
@@ -145,7 +151,7 @@ export default function OrderHistoryPage() {
           height={32}
           className="w-8 h-8 flex-shrink-0"
         />
-        <span className="text-sm text-muted-foreground">{label}</span>
+        <span className="text-base text-muted-foreground">{label}</span>
       </div>
     )
   }
@@ -195,6 +201,20 @@ export default function OrderHistoryPage() {
       )
     }
     
+    // Client-side source filter for QR/Web filtering
+    if (sourceFilter !== 'all') {
+      filteredOrders = filteredOrders.filter(order => {
+        if (sourceFilter === 'qr') {
+          // QR orders have source 'qr_code' or have table_number
+          return order.source === 'qr_code' || (order.order_type === 'dine_in' && order.table_number)
+        } else if (sourceFilter === 'web') {
+          // Web orders don't have QR indicators
+          return order.source !== 'qr_code' && !(order.order_type === 'dine_in' && order.table_number)
+        }
+        return true
+      })
+    }
+    
     // Sort orders
     const sortedOrders = filteredOrders.sort((a, b) => {
       const dateA = new Date(a.created_at)
@@ -231,73 +251,27 @@ export default function OrderHistoryPage() {
 
   const renderFilterButtons = () => (
     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 border-b pb-4">
-      {/* Status Filter Buttons */}
+      {/* Left side: Refresh only */}
       <div className="flex items-center gap-2">
-        <Button
-          variant={statusFilter === 'all' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => handleStatusFilterChange('all')}
-          className="h-9 text-sm flex-shrink-0"
-          disabled={loading}
-        >
-          {t.orderHistory.filterAll}
-        </Button>
-        <Button
-          variant={statusFilter === 'completed' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => handleStatusFilterChange('completed')}
-          className="h-9 text-sm flex-shrink-0"
-          disabled={loading}
-        >
-          {t.orderHistory.filterCompleted}
-        </Button>
-        <Button
-          variant={statusFilter === 'cancelled' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => handleStatusFilterChange('cancelled')}
-          className="h-9 text-sm flex-shrink-0"
-          disabled={loading}
-        >
-          {t.orderHistory.filterCancelled}
-        </Button>
-        <Button
-          variant={statusFilter === 'rejected' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => handleStatusFilterChange('rejected')}
-          className="h-9 text-sm flex-shrink-0"
-          disabled={loading}
-        >
-          {t.orderHistory.filterRejected}
-        </Button>
+        {/* Refresh Button - Live Orders style */}
         <Button
           variant="outline"
-          size="sm"
           onClick={refetch}
-          className="h-9 text-sm ml-2 flex-shrink-0"
+          className="h-9 px-3 text-sm"
           disabled={loading}
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          {language === 'fr' ? 'Actualiser' : 'Refresh'}
         </Button>
       </div>
       
-      {/* Sort & Date Range & Search - Right side on desktop, separate rows on mobile/tablet */}
+      {/* Date Range & Search - Right side on desktop, separate rows on mobile/tablet */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-2">
-        {/* Sort & Date Range */}
+        {/* Date Range only */}
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="gap-2 h-9 text-sm flex-shrink-0"
-            onClick={() => setSortOrder(sortOrder === 'newest' ? 'oldest' : 'newest')}
-          >
-            <ArrowUpDown className="h-4 w-4" />
-            <span className="hidden lg:inline">{sortOrder === 'newest' ? t.orderHistory.sortNewest : t.orderHistory.sortOldest}</span>
-            <span className="lg:hidden">{sortOrder === 'newest' ? t.orderHistory.sortNewest.split(' ')[0] : t.orderHistory.sortOldest.split(' ')[0]}</span>
-          </Button>
-          
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 h-9 text-sm font-medium min-w-[140px] justify-between flex-shrink-0">
+              <Button variant="outline" size="sm" className="gap-2 h-9 text-base font-medium min-w-[140px] justify-between flex-shrink-0">
                 {formatDateRange()}
                 <CalendarIcon className="h-4 w-4" />
               </Button>
@@ -368,23 +342,208 @@ export default function OrderHistoryPage() {
           </Popover>
         </div>
         
-        {/* Search Bar */}
-        <div className="relative flex-1 min-w-0 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t.orderHistory.searchPlaceholder}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-10 w-full h-9"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+        {/* Search Bar with Filter */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 min-w-0 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t.orderHistory.searchPlaceholder}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-10 w-full h-9"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Filter Sheet - User management style */}
+          <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 text-[#424245] dark:text-[#86868b]">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+                </svg>
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="flex flex-col">
+              <SheetHeader>
+                <SheetTitle>{language === 'fr' ? 'Filtrer les Commandes' : 'Filter Orders'}</SheetTitle>
+                <SheetDescription>
+                  {language === 'fr' ? 'Filtrer par statut, source et tri' : 'Filter by status, source and sorting'}
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="flex-1 overflow-y-auto">
+                <div className="grid gap-6 py-6">
+                  {/* Status Filter */}
+                  <div className="space-y-3">
+                    <h4 className="text-base font-medium text-foreground">
+                      {language === 'fr' ? 'Statut' : 'Status'}
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setStatusFilter('all')}
+                        className={`justify-start ${
+                          statusFilter === 'all'
+                            ? 'bg-slate-100 border-slate-300 text-slate-900 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100'
+                            : ''
+                        }`}
+                      >
+                        {t.orderHistory.filterAll}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setStatusFilter('completed')}
+                        className={`justify-start ${
+                          statusFilter === 'completed'
+                            ? 'bg-slate-100 border-slate-300 text-slate-900 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100'
+                            : ''
+                        }`}
+                      >
+                        {t.orderHistory.filterCompleted}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setStatusFilter('cancelled')}
+                        className={`justify-start ${
+                          statusFilter === 'cancelled'
+                            ? 'bg-slate-100 border-slate-300 text-slate-900 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100'
+                            : ''
+                        }`}
+                      >
+                        {t.orderHistory.filterCancelled}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setStatusFilter('rejected')}
+                        className={`justify-start ${
+                          statusFilter === 'rejected'
+                            ? 'bg-slate-100 border-slate-300 text-slate-900 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100'
+                            : ''
+                        }`}
+                      >
+                        {t.orderHistory.filterRejected}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Source Filter - NEW QR FILTERING */}
+                  <div className="space-y-3">
+                    <h4 className="text-base font-medium text-foreground">
+                      {language === 'fr' ? 'Source' : 'Order Source'}
+                    </h4>
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSourceFilter('all')}
+                        className={`justify-start ${
+                          sourceFilter === 'all'
+                            ? 'bg-slate-100 border-slate-300 text-slate-900 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100'
+                            : ''
+                        }`}
+                      >
+                        {language === 'fr' ? 'Toutes les Sources' : 'All Sources'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSourceFilter('qr')}
+                        className={`justify-start ${
+                          sourceFilter === 'qr'
+                            ? 'bg-slate-100 border-slate-300 text-slate-900 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100'
+                            : ''
+                        }`}
+                      >
+                        {language === 'fr' ? 'Commandes QR' : 'QR Orders'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSourceFilter('web')}
+                        className={`justify-start ${
+                          sourceFilter === 'web'
+                            ? 'bg-slate-100 border-slate-300 text-slate-900 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100'
+                            : ''
+                        }`}
+                      >
+                        {language === 'fr' ? 'Commandes Web' : 'Web Orders'}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Sort Order */}
+                  <div className="space-y-3">
+                    <h4 className="text-base font-medium text-foreground">
+                      {language === 'fr' ? 'Tri' : 'Sort Order'}
+                    </h4>
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSortOrder('newest')}
+                        className={`justify-start gap-2 ${
+                          sortOrder === 'newest'
+                            ? 'bg-slate-100 border-slate-300 text-slate-900 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100'
+                            : ''
+                        }`}
+                      >
+                        <ArrowUpDown className="h-4 w-4" />
+                        {t.orderHistory.sortNewest}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSortOrder('oldest')}
+                        className={`justify-start gap-2 ${
+                          sortOrder === 'oldest'
+                            ? 'bg-slate-100 border-slate-300 text-slate-900 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100'
+                            : ''
+                        }`}
+                      >
+                        <ArrowUpDown className="h-4 w-4" />
+                        {t.orderHistory.sortOldest}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-2 pt-4 border-t bg-background">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setStatusFilter('all');
+                    setSourceFilter('all');
+                    setSortOrder('newest');
+                    setIsFilterSheetOpen(false);
+                  }}
+                  className="flex-1"
+                >
+                  {language === 'fr' ? 'Effacer' : 'Clear Filters'}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setIsFilterSheetOpen(false)}
+                  className="flex-1"
+                >
+                  {language === 'fr' ? 'Appliquer' : 'Apply Filters'}
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </div>
@@ -452,7 +611,7 @@ export default function OrderHistoryPage() {
                   <TableCell colSpan={7} className="h-24 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <p className="text-muted-foreground">{t.orderHistory.noOrdersFound}</p>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-base text-muted-foreground mt-1">
                         Try adjusting your filters or date range
                       </p>
                     </div>
@@ -462,18 +621,32 @@ export default function OrderHistoryPage() {
                 filteredOrders.map((order) => (
                   <TableRow key={order.id} className="hover:bg-gray-50 transition-colors">
                     <TableCell>
-                      {renderSourceIcon(order.source)}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {renderSourceIcon(order.source)}
+                        {/* QR Order Badge - Show table/zone for QR orders */}
+                        {(order.source === 'qr_code' || (order.order_type === 'dine_in' && order.table_number)) && (
+                          <Badge variant="outline" className="text-xs px-2 py-1 bg-blue-50 text-blue-700 border-blue-200">
+                            <QrCode className="h-3 w-3 mr-1" />
+                            {order.zone === 'Screen' 
+                              ? 'Screen' 
+                              : order.zone 
+                                ? `Table ${order.table_number} - ${order.zone}`
+                                : `Table ${order.table_number}`
+                            }
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{order.orderNumber}</TableCell>
+                    <TableCell className="text-base text-muted-foreground">{order.orderNumber}</TableCell>
                     <TableCell>
                       <div>
-                        <div className="text-sm text-foreground font-medium">{order.customer.name}</div>
-                        <div className="text-sm text-muted-foreground">{order.customer.phone}</div>
+                        <div className="text-base text-foreground font-medium">{order.customer.name}</div>
+                        <div className="text-base text-muted-foreground">{order.customer.phone}</div>
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">${order.pricing.total.toFixed(2)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="text-base text-muted-foreground">${order.pricing.total.toFixed(2)}</TableCell>
+                    <TableCell className="text-base text-muted-foreground">
                       {new Date(order.created_at).toLocaleDateString('en-CA', {
                         timeZone: 'America/Toronto'
                       })}
@@ -532,7 +705,7 @@ export default function OrderHistoryPage() {
           <div className="text-center py-12">
             <div className="flex flex-col items-center justify-center">
               <p className="text-lg text-muted-foreground">No orders found</p>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="text-base text-muted-foreground mt-2">
                 Try adjusting your filters or date range
               </p>
             </div>
@@ -544,8 +717,20 @@ export default function OrderHistoryPage() {
                 <CardContent className="p-5">
                   {/* Header - Channel and Status */}
                   <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {renderSourceIcon(order.source)}
+                      {/* QR Order Badge - Show table/zone for QR orders */}
+                      {(order.source === 'qr_code' || (order.order_type === 'dine_in' && order.table_number)) && (
+                        <Badge variant="outline" className="text-xs px-2 py-1 bg-blue-50 text-blue-700 border-blue-200">
+                          <QrCode className="h-3 w-3 mr-1" />
+                          {order.zone === 'Screen' 
+                            ? 'Screen' 
+                            : order.zone 
+                              ? `Table ${order.table_number} - ${order.zone}`
+                              : `Table ${order.table_number}`
+                          }
+                        </Badge>
+                      )}
                     </div>
                     {getStatusBadge(order.status)}
                   </div>
@@ -554,11 +739,11 @@ export default function OrderHistoryPage() {
                   <div className="mb-4 pb-4 border-b border-gray-200">
                     <div className="flex items-start justify-between mb-1">
                       <div>
-                        <div className="text-sm font-medium text-foreground">{order.customer.name}</div>
+                        <div className="text-base font-medium text-foreground">{order.customer.name}</div>
                         <div className="text-xs text-muted-foreground">{order.customer.phone}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-bold text-foreground">{order.orderNumber}</div>
+                        <div className="text-base font-bold text-foreground">{order.orderNumber}</div>
                         <div className="text-xs text-muted-foreground">
                           {new Date(order.created_at).toLocaleDateString('en-CA', {
                         timeZone: 'America/Toronto'
@@ -581,7 +766,7 @@ export default function OrderHistoryPage() {
                       ${order.pricing.total.toFixed(2)}
                     </div>
                     <Link href={`/orders/${order.orderNumber}?context=history`}>
-                      <button className="px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors text-sm font-medium text-gray-700">
+                      <button className="px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors text-base font-medium text-gray-700">
                         {t.orderHistory.viewDetails}
                       </button>
                     </Link>
@@ -620,7 +805,7 @@ export default function OrderHistoryPage() {
                 <div className="lg:col-span-4 flex items-center justify-end">
                   {/* View Toggle */}
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">{t.orderHistory.viewLabel}</span>
+                    <span className="text-base text-muted-foreground">{t.orderHistory.viewLabel}</span>
                     <Button
                       variant={viewMode === 'table' ? 'default' : 'outline'}
                       size="sm"

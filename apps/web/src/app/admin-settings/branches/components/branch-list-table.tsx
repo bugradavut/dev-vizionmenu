@@ -43,7 +43,8 @@ import {
   MapPin,
   Ban,
   CheckCircle,
-  Filter
+  Phone,
+  Mail
 } from 'lucide-react'
 import { Branch } from '@/services/branches.service'
 import { Chain } from '@/services/chains.service'
@@ -118,7 +119,9 @@ export function BranchListTable({
               <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="sm">
-                    <Filter className="w-4 h-4" />
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 text-[#424245] dark:text-[#86868b]">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+                    </svg>
                   </Button>
                 </SheetTrigger>
                 <SheetContent className="flex flex-col">
@@ -307,10 +310,16 @@ export function BranchListTable({
                     <TableCell>
                       <div className="text-sm space-y-1">
                         {branch.phone && (
-                          <div>📞 {branch.phone}</div>
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="truncate">{branch.phone}</span>
+                          </div>
                         )}
                         {branch.email && (
-                          <div className="truncate max-w-32">📧 {branch.email}</div>
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="truncate max-w-32">{branch.email}</span>
+                          </div>
                         )}
                         {!branch.phone && !branch.email && (
                           <span className="text-muted-foreground">-</span>
