@@ -482,9 +482,17 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                 <div className="flex items-center gap-4">
                   {renderSourceIcon(order.source)}
                   {order.source === 'qr_code' && order.table_number && (
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{t.orderDetail.table} {order.table_number}</span>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-md">
+                      <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                        {/* Zone-based display logic - consistent with /order page blue styling */}
+                        {order.zone === 'Screen' 
+                          ? 'Screen'
+                          : order.zone 
+                            ? `${t.orderDetail.table} ${order.table_number} - ${order.zone}`
+                            : `${t.orderDetail.table} ${order.table_number}`
+                        }
+                      </span>
                     </div>
                   )}
                 </div>

@@ -233,6 +233,7 @@ class OrdersService {
       status: apiOrder.status || apiOrder.order_status,
       order_type: apiOrder.orderType || apiOrder.order_type,
       table_number: apiOrder.tableNumber || apiOrder.table_number || undefined,
+      zone: apiOrder.zone || undefined,
       payment_method: apiOrder.payment_method || undefined,
       pricing: {
         subtotal: apiOrder.pricing?.subtotal || apiOrder.subtotal || 0,

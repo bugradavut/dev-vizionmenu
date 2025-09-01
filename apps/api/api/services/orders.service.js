@@ -48,6 +48,7 @@ async function getOrders(filters, userBranch) {
       customer_email,
       order_type,
       table_number,
+      zone,
       order_status,
       payment_status,
       payment_method,
@@ -124,43 +125,40 @@ async function getOrders(filters, userBranch) {
 
   // Format response for mobile app including order items for Kitchen Display
   const formattedOrders = (ordersResult.data || []).map(order => ({
-    id: order.id,
-    orderNumber: order.id.split('-')[0].toUpperCase(),
-    customerName: order.customer_name || 'Walk-in Customer',
-    customerPhone: order.customer_phone,
-    customerEmail: order.customer_email,
-    orderType: order.order_type,
-    tableNumber: order.table_number,
-    // Extract zone from customer_name for QR orders (e.g., "Table 5 - Main" -> zone: "Main")
-    zone: order.table_number && order.customer_name ? (() => {
-      const match = order.customer_name.match(/Table \d+(?:\s*-\s*(.+))?/);
-      return match ? match[1] || null : null;
-    })() : null,
-    source: order.third_party_platform || (order.table_number ? 'qr_code' : 'web'),
-    status: order.order_status,
-    paymentStatus: order.payment_status,
-    paymentMethod: order.payment_method,
-    pricing: {
-      subtotal: parseFloat(order.subtotal || 0),
-      taxAmount: parseFloat(order.tax_amount || 0),
-      serviceFee: parseFloat(order.service_fee || 0),
-      deliveryFee: parseFloat(order.delivery_fee || 0),
-      total: parseFloat(order.total_amount || 0)
-    },
-    notes: order.notes,
-    specialInstructions: order.special_instructions,
-    estimatedReadyTime: order.estimated_ready_time,
-    items: (order.order_items || []).map(item => ({
-      id: item.id,
-      name: item.menu_item_name,
-      price: parseFloat(item.menu_item_price || 0),
-      quantity: item.quantity || 1,
-      total: parseFloat(item.item_total || 0),
-      special_instructions: item.special_instructions,
-      variants: item.order_item_variants || []
-    })),
-    created_at: order.created_at,
-    updated_at: order.updated_at
+      id: order.id,
+      orderNumber: order.id.split('-')[0].toUpperCase(),
+      customerName: order.customer_name || 'Walk-in Customer',
+      customerPhone: order.customer_phone,
+      customerEmail: order.customer_email,
+      orderType: order.order_type,
+      tableNumber: order.table_number,
+      // Use zone field from database (NEW: Direct zone field support)
+      zone: order.zone || null,
+      source: order.third_party_platform || (order.table_number ? 'qr_code' : 'web'),
+      status: order.order_status,
+      paymentStatus: order.payment_status,
+      paymentMethod: order.payment_method,
+      pricing: {
+        subtotal: parseFloat(order.subtotal || 0),
+        taxAmount: parseFloat(order.tax_amount || 0),
+        serviceFee: parseFloat(order.service_fee || 0),
+        deliveryFee: parseFloat(order.delivery_fee || 0),
+        total: parseFloat(order.total_amount || 0)
+      },
+      notes: order.notes,
+      specialInstructions: order.special_instructions,
+      estimatedReadyTime: order.estimated_ready_time,
+      items: (order.order_items || []).map(item => ({
+        id: item.id,
+        name: item.menu_item_name,
+        price: parseFloat(item.menu_item_price || 0),
+        quantity: item.quantity || 1,
+        total: parseFloat(item.item_total || 0),
+        special_instructions: item.special_instructions,
+        variants: item.order_item_variants || []
+      })),
+      created_at: order.created_at,
+      updated_at: order.updated_at
   }));
 
   const totalCount = countResult.count || 0;
@@ -281,11 +279,8 @@ async function getOrderDetail(orderId, userBranch) {
     status: existingOrder.order_status, // 'preparing' | 'ready' | 'completed' | 'cancelled' | 'rejected'
     order_type: existingOrder.order_type,
     table_number: existingOrder.table_number,
-    // Extract zone from customer_name for QR orders (e.g., "Table 5 - Main" -> zone: "Main")
-    zone: existingOrder.table_number && existingOrder.customer_name ? (() => {
-      const match = existingOrder.customer_name.match(/Table \d+(?:\s*-\s*(.+))?/);
-      return match ? match[1] || null : null;
-    })() : null,
+    // Use zone field from database (NEW: Direct zone field support)
+    zone: existingOrder.zone || null,
     payment_method: existingOrder.payment_method,
     pricing: {
       subtotal: parseFloat(existingOrder.subtotal || 0),
@@ -435,7 +430,7 @@ async function updateOrderStatus(orderId, updateData, userBranch) {
  * @returns {Object} Created order data
  */
 async function createOrder(orderData, branchId) {
-  const { customer, items, orderType, source, tableNumber, notes, specialInstructions, deliveryAddress, preOrder } = orderData;
+  const { customer, items, orderType, source, tableNumber, zone, notes, specialInstructions, deliveryAddress, preOrder } = orderData;
   
   // Only allow internal orders for now (third-party will be added in 2 weeks)
   if (!['qr_code', 'web'].includes(source)) {
@@ -518,6 +513,7 @@ async function createOrder(orderData, branchId) {
     customer_email: customer.email || null,
     order_type: orderType,
     table_number: tableNumber || null,
+    zone: zone || null,
     delivery_address: deliveryAddress || null, // Add delivery address
     order_status: initialStatus, // Dynamic status based on pre-order
     payment_status: 'pending',

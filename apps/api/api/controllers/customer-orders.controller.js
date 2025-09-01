@@ -101,6 +101,7 @@ const createCustomerOrder = async (req, res) => {
       orderType,
       source: source === 'qr' ? 'qr_code' : 'web',
       tableNumber: source === 'qr' ? tableNumber : undefined,
+      zone: source === 'qr' ? zone : undefined,
       notes: notes || '',
       specialInstructions: '',
       deliveryAddress: orderType === 'delivery' && deliveryAddress ? {

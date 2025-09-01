@@ -179,12 +179,16 @@ export default function LiveOrdersPage() {
           />
           <span className="text-sm text-muted-foreground">{label}</span>
         </div>
-        {/* Show table badge for QR orders - next to the text */}
+        {/* Show table/zone badge for QR orders - SIMPLE RULE: Screen = show "Screen" only */}
         {source === 'qr_code' && (order?.tableNumber || order?.table_number) && (
           <Badge variant="outline" className="text-xs px-2 py-1 bg-blue-50 text-blue-700 border-blue-200">
-            {/* Handle both table and screen cases */}
-            {order.zone === 'Screen' ? 'Screen' : `Table ${order.tableNumber || order.table_number}`}
-            {order.zone && order.zone !== 'Screen' && ` - ${order.zone}`}
+            {/* SIMPLE RULE: Screen zone = show "Screen" only, no table number */}
+            {order.zone === 'Screen' 
+              ? 'Screen' 
+              : order.zone 
+                ? `Table ${order.tableNumber || order.table_number} - ${order.zone}`
+                : `Table ${order.tableNumber || order.table_number}`
+            }
           </Badge>
         )}
       </div>
