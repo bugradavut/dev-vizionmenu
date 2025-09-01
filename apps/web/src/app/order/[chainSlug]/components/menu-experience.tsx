@@ -360,10 +360,19 @@ export function MenuExperience({
                 </div>
               </div>
 
-              {/* QR Table Info */}
+              {/* QR Table/Zone Info with consistent styling */}
               {orderContext.isQROrder && orderContext.tableNumber && (
-                <div className="text-sm bg-primary/10 px-3 py-2 rounded-lg flex-shrink-0">
-                  Table {orderContext.tableNumber}
+                <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-md flex-shrink-0">
+                  <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    {/* Zone-based display logic - consistent with other pages */}
+                    {orderContext.zone === 'Screen' 
+                      ? 'Screen'
+                      : orderContext.zone 
+                        ? `Table ${orderContext.tableNumber} - ${orderContext.zone}`
+                        : `Table ${orderContext.tableNumber}`
+                    }
+                  </span>
                 </div>
               )}
             </div>
