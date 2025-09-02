@@ -44,13 +44,14 @@ export default function BranchSettingsPage() {
   const [baseDelayInput, setBaseDelayInput] = useState("")
   const [deliveryDelayInput, setDeliveryDelayInput] = useState("")
   
-  // Update local inputs when settings change - but only on initial load
+  // Update local inputs when settings change from API
   React.useEffect(() => {
-    if (settings.timingSettings && baseDelayInput === "" && deliveryDelayInput === "") {
+    if (settings.timingSettings && !loading) {
+      // Always sync with API data when loading completes
       setBaseDelayInput(settings.timingSettings.baseDelay?.toString() || "")
       setDeliveryDelayInput(settings.timingSettings.deliveryDelay?.toString() || "")
     }
-  }, [settings.timingSettings, baseDelayInput, deliveryDelayInput])
+  }, [settings.timingSettings, loading])
 
   // Handle save
   const handleSave = async () => {

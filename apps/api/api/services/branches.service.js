@@ -30,7 +30,25 @@ async function getBranchSettings(branchId) {
     throw new Error('Branch not found');
   }
 
-  // Default settings if none exist
+  // Helper function to deep merge settings with defaults
+  const mergeWithDefaults = (existing, defaults) => {
+    if (!existing || typeof existing !== 'object') {
+      return defaults;
+    }
+    
+    const merged = { ...defaults };
+    
+    // Apply existing values, preserving user customizations
+    Object.keys(existing).forEach(key => {
+      if (existing[key] !== null && existing[key] !== undefined) {
+        merged[key] = existing[key];
+      }
+    });
+    
+    return merged;
+  };
+
+  // Default settings structure
   const defaultSettings = {
     orderFlow: 'standard',
     timingSettings: {
@@ -47,7 +65,19 @@ async function getBranchSettings(branchId) {
     }
   };
 
-  const settings = { ...defaultSettings, ...branchData.settings };
+  // Merge existing settings with defaults, preserving user values
+  const settings = {
+    orderFlow: branchData.settings?.orderFlow || defaultSettings.orderFlow,
+    timingSettings: mergeWithDefaults(
+      branchData.settings?.timingSettings,
+      defaultSettings.timingSettings
+    ),
+    paymentSettings: mergeWithDefaults(
+      branchData.settings?.paymentSettings,
+      defaultSettings.paymentSettings
+    )
+  };
+
 
   return {
     branchId: branchData.id,
@@ -142,22 +172,58 @@ async function updateBranchSettings(branchId, settingsData, userId) {
     throw new Error('Branch not found');
   }
 
-  // Prepare new settings - always preserve timingSettings and paymentSettings
+  // Helper function to deep merge settings for updates
+  const mergeUpdateWithDefaults = (existing, incoming, defaults) => {
+    if (!incoming) return existing || defaults;
+    
+    const merged = { ...defaults };
+    
+    // First apply existing values
+    if (existing && typeof existing === 'object') {
+      Object.keys(existing).forEach(key => {
+        if (existing[key] !== null && existing[key] !== undefined) {
+          merged[key] = existing[key];
+        }
+      });
+    }
+    
+    // Then apply incoming updates
+    Object.keys(incoming).forEach(key => {
+      merged[key] = incoming[key];
+    });
+    
+    return merged;
+  };
+
+  // Default settings objects
+  const defaultTimingSettings = {
+    baseDelay: 20,
+    temporaryBaseDelay: 0,
+    deliveryDelay: 15,
+    temporaryDeliveryDelay: 0,
+    autoReady: false
+  };
+
+  const defaultPaymentSettings = {
+    allowOnlinePayment: true,
+    allowCounterPayment: false,
+    defaultPaymentMethod: 'online'
+  };
+
+  // Prepare new settings with proper deep merge
   const newSettings = {
     ...branchData.settings,
     orderFlow,
-    timingSettings: timingSettings || {
-      baseDelay: 20,
-      temporaryBaseDelay: 0,
-      deliveryDelay: 15,
-      temporaryDeliveryDelay: 0,
-      autoReady: false
-    },
-    paymentSettings: paymentSettings || {
-      allowOnlinePayment: true,
-      allowCounterPayment: false,
-      defaultPaymentMethod: 'online'
-    }
+    timingSettings: mergeUpdateWithDefaults(
+      branchData.settings?.timingSettings,
+      timingSettings,
+      defaultTimingSettings
+    ),
+    paymentSettings: mergeUpdateWithDefaults(
+      branchData.settings?.paymentSettings,
+      paymentSettings,
+      defaultPaymentSettings
+    )
   };
 
   // Update branch settings in database
