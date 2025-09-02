@@ -271,7 +271,7 @@ export default function OrderHistoryPage() {
         <div className="flex items-center gap-2">
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 h-9 text-base font-medium min-w-[140px] justify-between flex-shrink-0">
+              <Button variant="outline" size="sm" className="gap-2 h-9 text-sm font-medium min-w-[140px] justify-between flex-shrink-0">
                 {formatDateRange()}
                 <CalendarIcon className="h-4 w-4" />
               </Button>
