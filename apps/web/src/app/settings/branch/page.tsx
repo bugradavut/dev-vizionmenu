@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { ArrowRight, CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw } from "lucide-react"
+import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, CreditCard } from "lucide-react"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
 import { useLanguage } from "@/contexts/language-context"
@@ -39,6 +39,18 @@ export default function BranchSettingsPage() {
   const { language } = useLanguage()
   const t = translations[language] || translations.en
   const [saved, setSaved] = useState(false)
+  
+  // Local state for input values to allow empty strings
+  const [baseDelayInput, setBaseDelayInput] = useState("")
+  const [deliveryDelayInput, setDeliveryDelayInput] = useState("")
+  
+  // Update local inputs when settings change - but only on initial load
+  React.useEffect(() => {
+    if (settings.timingSettings && baseDelayInput === "" && deliveryDelayInput === "") {
+      setBaseDelayInput(settings.timingSettings.baseDelay?.toString() || "")
+      setDeliveryDelayInput(settings.timingSettings.deliveryDelay?.toString() || "")
+    }
+  }, [settings.timingSettings, baseDelayInput, deliveryDelayInput])
 
   // Handle save
   const handleSave = async () => {
@@ -65,6 +77,60 @@ export default function BranchSettingsPage() {
       timingSettings: {
         ...settings.timingSettings,
         [key]: value
+      }
+    })
+  }
+
+  // Handle base time input changes
+  const handleBaseTimeChange = (value: string) => {
+    setBaseDelayInput(value)
+    // Only update settings when value is valid or empty becomes 0
+    const numValue = value === "" ? 0 : Number(value)
+    if (!isNaN(numValue) && numValue >= 0) {
+      handleTimingChange('baseDelay', numValue)
+    }
+  }
+
+  const handleDeliveryTimeChange = (value: string) => {
+    setDeliveryDelayInput(value)
+    // Only update settings when value is valid or empty becomes 0  
+    const numValue = value === "" ? 0 : Number(value)
+    if (!isNaN(numValue) && numValue >= 0) {
+      handleTimingChange('deliveryDelay', numValue)
+    }
+  }
+
+  // Handle plus/minus button changes - best practice approach
+  const handleBaseDelayAdjustment = (increment: number) => {
+    const currentValue = Number(baseDelayInput) || 0
+    const newValue = Math.max(0, currentValue + increment)
+    
+    // Update local state first
+    setBaseDelayInput(newValue.toString())
+    
+    // Then update settings
+    updateSettings({
+      timingSettings: {
+        ...settings.timingSettings,
+        baseDelay: newValue,
+        temporaryBaseDelay: 0 // Reset temp adjustment
+      }
+    })
+  }
+
+  const handleDeliveryDelayAdjustment = (increment: number) => {
+    const currentValue = Number(deliveryDelayInput) || 0
+    const newValue = Math.max(0, currentValue + increment)
+    
+    // Update local state first
+    setDeliveryDelayInput(newValue.toString())
+    
+    // Then update settings
+    updateSettings({
+      timingSettings: {
+        ...settings.timingSettings,
+        deliveryDelay: newValue,
+        temporaryDeliveryDelay: 0 // Reset temp adjustment
       }
     })
   }
@@ -139,59 +205,56 @@ export default function BranchSettingsPage() {
                     {t.settingsBranch.pageSubtitle}
                   </p>
                 </div>
-                <div className="lg:col-span-4 flex items-center justify-end">
-                  {/* Toast will be positioned fixed */}
+                <div className="lg:col-span-4 flex items-center justify-end gap-3">
+                  {isDirty && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                      <span className="text-orange-600 font-medium text-sm">Unsaved changes</span>
+                    </div>
+                  )}
+                  
+                  <Button 
+                    onClick={handleSave} 
+                    disabled={!canSave}
+                    size="lg"
+                    className={`px-8 ${saving ? "animate-pulse" : ""}`}
+                  >
+                    {saving ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
             </div>
 
             {/* Main Content */}
             <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6">
-              <div className="max-w-4xl">
-                {/* Single Unified Card */}
-                <Card className="group hover:shadow-lg transition-all duration-200">
-                  <CardHeader className="pb-4 border-b mb-6">
-                    <div className="flex items-center gap-3">
-                      <Settings className="h-5 w-5 text-muted-foreground" />
-                      <CardTitle className="text-xl">Order Management & Timing</CardTitle>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Configure your restaurant&apos;s order flow and automatic completion settings
-                    </p>
-                  </CardHeader>
-                  <CardContent className="space-y-8">
-                    
-                    {/* Order Flow Section */}
-                    <div className="space-y-4">
-                      <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                        <h3 className="font-medium mb-3">Simplified Order Flow</h3>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Streamlined 2-step process for efficient order management
-                        </p>
-                        
-                        {/* Flow Visualization */}
+              <div className="space-y-6">
+                
+                {/* First Row: Auto-Ready & Payment Methods */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Auto-Ready System Card */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-medium text-sm">
-                            Preparing
+                          <div className="p-2 bg-purple-50 rounded-lg">
+                            <Settings className="h-5 w-5 text-purple-600" />
                           </div>
-                          <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                          <div className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-medium text-sm">
-                            Completed
+                          <div>
+                            <CardTitle className="text-base">Auto-Ready System</CardTitle>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Automatically complete orders when time expires
+                            </p>
                           </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Auto-Ready Toggle Section */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-background">
-                        <div>
-                          <h4 className="text-lg font-semibold mb-1">Auto-Ready System</h4>
-                          <p className="text-sm text-muted-foreground">
-                            Automatically complete orders when preparation time expires
-                          </p>
                         </div>
                         <Switch
                           checked={settings.timingSettings?.autoReady || false}
@@ -199,303 +262,231 @@ export default function BranchSettingsPage() {
                           className="data-[state=checked]:bg-primary"
                         />
                       </div>
-                      
-                      {/* Auto-Ready Status Indicator */}
+                    </CardHeader>
+                    <CardContent>
                       {settings.timingSettings?.autoReady ? (
                         <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-center gap-2 text-green-700 text-sm">
+                          <div className="flex items-center gap-2 text-green-700 text-sm mb-2">
                             <CheckCircle className="h-4 w-4" />
                             <span className="font-medium">Auto-Ready is enabled</span>
                           </div>
-                          <p className="text-xs text-green-600 mt-1">
-                            Orders will automatically move to completed status based on timing settings below
+                          <p className="text-xs text-green-600">
+                            Orders automatically move to &quot;Ready&quot; status when kitchen preparation time expires. Staff can still manually mark orders ready at any time.
                           </p>
                         </div>
                       ) : (
                         <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                          <div className="flex items-center gap-2 text-gray-600 text-sm">
+                          <div className="flex items-center gap-2 text-gray-600 text-sm mb-2">
                             <AlertCircle className="h-4 w-4" />
-                            <span className="font-medium">Manual completion only</span>
+                            <span className="font-medium">Manual mode active</span>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Staff will need to manually complete orders - timing settings are for reference only
+                          <p className="text-xs text-gray-500">
+                            Staff must manually change order status to &quot;Ready&quot;. Kitchen timing settings are used for customer time estimates only.
                           </p>
                         </div>
                       )}
-                    </div>
+                    </CardContent>
+                  </Card>
 
-                    {/* Timing Settings Section */}
-                    <div className="space-y-6 transition-all duration-300">
+                  {/* Payment Methods Card */}
+                  <Card>
+                    <CardHeader className="pb-3">
                       <div className="flex items-center gap-3">
-                        <Timer className="h-5 w-5 text-primary" />
-                        <h3 className="text-lg font-semibold">Timing Configuration</h3>
-                      </div>
-                      
-                      {/* Base Preparation Time */}
-                      <div className="space-y-4">
-                        <h4 className="font-medium flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          Kitchen Preparation Time
-                        </h4>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="base-initial" className="text-sm font-medium">Base Time (Minutes)</Label>
-                            <Input
-                              id="base-initial"
-                              type="number"
-                              value={settings.timingSettings.baseDelay}
-                              onChange={(e) => handleTimingChange('baseDelay', Number(e.target.value))}
-                              className="h-10"
-                              min="0"
-                              max="120"
-                            />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label htmlFor="base-temporary" className="text-sm font-medium">Temporary Adjustment</Label>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleTimingChange('temporaryBaseDelay', Math.max(-60, settings.timingSettings.temporaryBaseDelay - 5))}
-                                className="h-10 w-10 p-0"
-                                >
-                                <Minus className="h-4 w-4" />
-                              </Button>
-                              <Input
-                                id="base-temporary"
-                                type="number"
-                                value={settings.timingSettings.temporaryBaseDelay}
-                                onChange={(e) => handleTimingChange('temporaryBaseDelay', Number(e.target.value))}
-                                className="h-10 text-center"
-                                min="-60"
-                                max="60"
-                                />
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleTimingChange('temporaryBaseDelay', Math.min(60, settings.timingSettings.temporaryBaseDelay + 5))}
-                                className="h-10 w-10 p-0"
-                                >
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
+                        <div className="p-2 bg-purple-50 rounded-lg">
+                          <CreditCard className="h-5 w-5 text-purple-600" />
                         </div>
-                        
-                        <div className="bg-primary/10 p-3 rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Kitchen Total:</span>
-                            <span className="text-lg font-bold text-primary">
-                              {settings.timingSettings.baseDelay + settings.timingSettings.temporaryBaseDelay} min
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      {/* Delivery Time */}
-                      <div className="space-y-4">
-                        <h4 className="font-medium flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          Customer Delivery Time
-                        </h4>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="delivery-initial" className="text-sm font-medium">Base Time (Minutes)</Label>
-                            <Input
-                              id="delivery-initial"
-                              type="number"
-                              value={settings.timingSettings.deliveryDelay}
-                              onChange={(e) => handleTimingChange('deliveryDelay', Number(e.target.value))}
-                              className="h-10"
-                              min="0"
-                              max="120"
-                            />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label htmlFor="delivery-temporary" className="text-sm font-medium">Temporary Adjustment</Label>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleTimingChange('temporaryDeliveryDelay', Math.max(-60, settings.timingSettings.temporaryDeliveryDelay - 5))}
-                                className="h-10 w-10 p-0"
-                                >
-                                <Minus className="h-4 w-4" />
-                              </Button>
-                              <Input
-                                id="delivery-temporary"
-                                type="number"
-                                value={settings.timingSettings.temporaryDeliveryDelay}
-                                onChange={(e) => handleTimingChange('temporaryDeliveryDelay', Number(e.target.value))}
-                                className="h-10 text-center"
-                                min="-60"
-                                max="60"
-                                />
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleTimingChange('temporaryDeliveryDelay', Math.min(60, settings.timingSettings.temporaryDeliveryDelay + 5))}
-                                className="h-10 w-10 p-0"
-                                >
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="bg-primary/10 p-3 rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Delivery Total:</span>
-                            <span className="text-lg font-bold text-primary">
-                              {Math.max(0, settings.timingSettings.deliveryDelay + settings.timingSettings.temporaryDeliveryDelay)} min
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Expected Total Time */}
-                      <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-5 w-5 text-orange-600" />
-                            <h3 className="font-semibold text-orange-900">Expected Total Time</h3>
-                          </div>
-                          <p className="text-2xl font-bold text-orange-600">
-                            {Math.max(0, settings.timingSettings.baseDelay + settings.timingSettings.temporaryBaseDelay + settings.timingSettings.deliveryDelay + settings.timingSettings.temporaryDeliveryDelay)} MIN
+                        <div>
+                          <CardTitle className="text-base">Payment Methods</CardTitle>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Configure payment options for customers
                           </p>
                         </div>
-                        <p className="text-xs text-orange-600 mt-1">
-                          This is the total time customers will see for order completion
-                        </p>
                       </div>
-                    </div>
-
-                    {/* Payment Method Settings Section */}
-                    <div className="space-y-6 transition-all duration-300">
-                      <div className="flex items-center gap-3">
-                        <ArrowRight className="h-5 w-5 text-primary" />
-                        <h3 className="text-lg font-semibold">Payment Method Options</h3>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {/* Online Payment Toggle */}
+                      <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div>
+                          <Label htmlFor="online-payment" className="text-sm font-medium">Pay Online</Label>
+                          <p className="text-xs text-muted-foreground">Credit card payments</p>
+                        </div>
+                        <Switch
+                          id="online-payment"
+                          checked={settings.paymentSettings?.allowOnlinePayment ?? true}
+                          onCheckedChange={(enabled) => updateSettings({
+                            paymentSettings: {
+                              ...settings.paymentSettings,
+                              allowOnlinePayment: enabled,
+                              allowCounterPayment: settings.paymentSettings?.allowCounterPayment ?? false,
+                              defaultPaymentMethod: settings.paymentSettings?.defaultPaymentMethod ?? 'online'
+                            }
+                          })}
+                        />
                       </div>
                       
-                      <div className="space-y-4">
-                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                          <h4 className="font-medium text-gray-900 mb-3">Available Payment Methods</h4>
-                          <div className="space-y-3">
-                            {/* Online Payment Toggle */}
-                            <div className="flex items-center justify-between">
-                              <div className="space-y-1">
-                                <Label htmlFor="online-payment" className="text-sm font-medium">
-                                  Pay Online
-                                </Label>
-                                <p className="text-xs text-muted-foreground">
-                                  Allow customers to pay online during order placement
-                                </p>
-                              </div>
-                              <Switch
-                                id="online-payment"
-                                checked={settings.paymentSettings?.allowOnlinePayment ?? true}
-                                onCheckedChange={(enabled) => updateSettings({
-                                  paymentSettings: {
-                                    ...settings.paymentSettings,
-                                    allowOnlinePayment: enabled,
-                                    allowCounterPayment: settings.paymentSettings?.allowCounterPayment ?? false,
-                                    defaultPaymentMethod: settings.paymentSettings?.defaultPaymentMethod ?? 'online'
-                                  }
-                                })}
-                              />
+                      {/* Counter Payment Toggle */}
+                      <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div>
+                          <Label htmlFor="counter-payment" className="text-sm font-medium">Pay at Counter</Label>
+                          <p className="text-xs text-muted-foreground">Cash or card at pickup</p>
+                        </div>
+                        <Switch
+                          id="counter-payment"
+                          checked={settings.paymentSettings?.allowCounterPayment ?? false}
+                          onCheckedChange={(enabled) => updateSettings({
+                            paymentSettings: {
+                              ...settings.paymentSettings,
+                              allowOnlinePayment: settings.paymentSettings?.allowOnlinePayment ?? true,
+                              allowCounterPayment: enabled,
+                              defaultPaymentMethod: settings.paymentSettings?.defaultPaymentMethod ?? 'online'
+                            }
+                          })}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Second Row: Kitchen & Delivery Timing + Total Time */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left Column - Timing Cards + Expected Total Time */}
+                  <div className="space-y-6">
+                    {/* Kitchen & Delivery Timing Cards Side by Side */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Kitchen Timing Card */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="p-2 bg-purple-50 rounded-lg">
+                              <Clock className="h-4 w-4 text-purple-600" />
                             </div>
-                            
-                            <Separator />
-                            
-                            {/* Counter Payment Toggle */}
-                            <div className="flex items-center justify-between">
-                              <div className="space-y-1">
-                                <Label htmlFor="counter-payment" className="text-sm font-medium">
-                                  Pay at Counter
-                                </Label>
-                                <p className="text-xs text-muted-foreground">
-                                  Allow customers to pay at the counter upon pickup/delivery
-                                </p>
-                              </div>
-                              <Switch
-                                id="counter-payment"
-                                checked={settings.paymentSettings?.allowCounterPayment ?? false}
-                                onCheckedChange={(enabled) => updateSettings({
-                                  paymentSettings: {
-                                    ...settings.paymentSettings,
-                                    allowOnlinePayment: settings.paymentSettings?.allowOnlinePayment ?? true,
-                                    allowCounterPayment: enabled,
-                                    defaultPaymentMethod: settings.paymentSettings?.defaultPaymentMethod ?? 'online'
-                                  }
-                                })}
-                              />
+                            <div>
+                              <CardTitle className="text-sm">Kitchen Prep Time</CardTitle>
+                              <p className="text-xs text-muted-foreground">
+                                Time to prepare orders
+                              </p>
                             </div>
                           </div>
-                          
-                          {/* Payment Status Indicator */}
-                          <div className="mt-4 pt-3 border-t border-gray-200">
-                            {settings.paymentSettings?.allowCounterPayment ? (
-                              <div className="flex items-center gap-2 text-green-700 text-sm">
-                                <CheckCircle className="h-4 w-4" />
-                                <span className="font-medium">Counter payment enabled</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2 text-orange-600 text-sm">
-                                <AlertCircle className="h-4 w-4" />
-                                <span className="font-medium">Counter payment disabled</span>
-                              </div>
-                            )}
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {settings.paymentSettings?.allowCounterPayment 
-                                ? "Customers can choose to pay at pickup/delivery"
-                                : "Customers must pay online to place orders"
-                              }
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="space-y-2">
+                            <Label htmlFor="base-initial" className="text-xs font-medium">Base Time (min)</Label>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleBaseDelayAdjustment(-5)}
+                                className="h-8 w-8 p-0"
+                                >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <Input
+                                id="base-initial"
+                                type="number"
+                                value={baseDelayInput}
+                                onChange={(e) => handleBaseTimeChange(e.target.value)}
+                                className="h-8 flex-1 text-center"
+                                min="0"
+                                max="120"
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleBaseDelayAdjustment(5)}
+                                className="h-8 w-8 p-0"
+                                >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Delivery Timing Card */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="p-2 bg-purple-50 rounded-lg">
+                              <Timer className="h-4 w-4 text-purple-600" />
+                            </div>
+                            <div>
+                              <CardTitle className="text-sm">Delivery Time</CardTitle>
+                              <p className="text-xs text-muted-foreground">
+                                Time for pickup/delivery
+                              </p>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="space-y-2">
+                            <Label htmlFor="delivery-initial" className="text-xs font-medium">Base Time (min)</Label>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeliveryDelayAdjustment(-5)}
+                                className="h-8 w-8 p-0"
+                                >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <Input
+                                id="delivery-initial"
+                                type="number"
+                                value={deliveryDelayInput}
+                                onChange={(e) => handleDeliveryTimeChange(e.target.value)}
+                                className="h-8 flex-1 text-center"
+                                min="0"
+                                max="120"
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeliveryDelayAdjustment(5)}
+                                className="h-8 w-8 p-0"
+                                >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Expected Total Time Card - Only covers left column */}
+                    <Card className="border-orange-200 bg-gradient-to-r from-orange-50 to-orange-100">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-orange-100 rounded-lg">
+                              <Clock className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <div>
+                              <h3 className="text-base font-semibold text-orange-900">Expected Total Time</h3>
+                              <p className="text-xs text-orange-700">
+                                Total time customers will see for completion
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-orange-600">
+                              {Math.max(0, settings.timingSettings.baseDelay + settings.timingSettings.temporaryBaseDelay + settings.timingSettings.deliveryDelay + settings.timingSettings.temporaryDeliveryDelay)}
                             </p>
+                            <p className="text-xs font-medium text-orange-600">MINUTES</p>
                           </div>
                         </div>
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  {/* Right Column - Empty */}
+                  <div></div>
+                </div>
 
-                    {/* Save Button */}
-                    <div className="flex items-center justify-between pt-6 border-t">
-                      <div className="text-sm text-muted-foreground">
-                        {isDirty && (
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                            <span className="text-orange-600 font-medium">Unsaved changes</span>
-                          </div>
-                        )}
-                      </div>
-                      <Button 
-                        onClick={handleSave} 
-                        disabled={!canSave}
-                        size="lg"
-                        className={saving ? "animate-pulse" : ""}
-                      >
-                        {saving ? (
-                          <>
-                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          'Save Changes'
-                        )}
-                      </Button>
-                    </div>
-
-                  </CardContent>
-                </Card>
               </div>
             </div>
           </div>
           
-          {/* Modern Toast Notification */}
+          {/* Success Toast Notification */}
           {saved && (
             <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
               <div className="bg-green-50 border border-green-200 rounded-lg shadow-lg p-4 flex items-center gap-3">
