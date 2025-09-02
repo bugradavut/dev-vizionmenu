@@ -855,6 +855,20 @@ export default function KitchenDisplayPage() {
                                 </div>
                               </div>
                               
+                              {/* Order Notes for Kanban View - In Progress Orders */}
+                              {(() => {
+                                const apiOrder = apiOrders.find(o => o.id === order.id)
+                                return apiOrder?.notes && (
+                                  <div className="mb-3 pb-3 border-b border-gray-200">
+                                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                      <div className="text-xs text-blue-700">
+                                        {apiOrder.notes}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })()}
+                              
                               <div className="flex items-center justify-between">
                                 <div className="text-sm font-bold">${order.total.toFixed(2)}</div>
                                 {getActionButton(order)}
@@ -958,6 +972,20 @@ export default function KitchenDisplayPage() {
                                   })()}
                                 </div>
                               </div>
+                              
+                              {/* Order Notes for Kanban View - In Progress Orders */}
+                              {(() => {
+                                const apiOrder = apiOrders.find(o => o.id === order.id)
+                                return apiOrder?.notes && (
+                                  <div className="mb-3 pb-3 border-b border-gray-200">
+                                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                      <div className="text-xs text-blue-700">
+                                        {apiOrder.notes}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })()}
                               
                               <div className="flex items-center justify-between">
                                 <div className="text-sm font-bold">${order.total.toFixed(2)}</div>
@@ -1136,6 +1164,18 @@ export default function KitchenDisplayPage() {
                                       ))}
                                     </div>
                                     
+                                    {/* Order Notes */}
+                                    {(() => {
+                                      const apiOrder = apiOrders.find(o => o.id === order.id)
+                                      return apiOrder?.notes && (
+                                        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                          <div className="text-sm text-blue-700">
+                                            {apiOrder.notes}
+                                          </div>
+                                        </div>
+                                      )
+                                    })()}
+
                                     {/* Order level special instructions */}
                                     {order.items.some(item => item.specialInstructions) && (
                                       <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">

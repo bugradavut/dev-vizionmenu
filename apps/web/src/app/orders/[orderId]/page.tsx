@@ -743,7 +743,6 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                   <div className="space-y-3">
                                     {order.notes && (
                                       <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
-                                        <h5 className="text-sm font-medium text-blue-900 mb-1">{t.orderDetail.notes}</h5>
                                         <p className="text-sm text-blue-700">{order.notes}</p>
                                       </div>
                                     )}
