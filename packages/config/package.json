@@ -3,6 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "main": "index.js",
+  "scripts": {
+    "lint": "echo 'Config: No linting required'",
+    "type-check": "echo 'Config: No TypeScript checking required'",
+    "build": "echo 'Config: No build required'"
+  },
   "files": [
     "eslint.config.js",
     "tailwind.config.js",

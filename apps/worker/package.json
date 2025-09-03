@@ -7,7 +7,9 @@
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "clean": "rmdir /s /q dist 2>nul || echo \"Directory already clean\""
+    "clean": "rmdir /s /q dist 2>nul || echo \"Directory already clean\"",
+    "lint": "echo 'Worker: No linting configured'",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "bullmq": "^5.13.2",

@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node api/index.js",
-    "build": "copy api\\index.js index.js"
+    "build": "copy api\\index.js index.js",
+    "lint": "echo 'API: No linting configured'",
+    "type-check": "echo 'API: No TypeScript checking configured'"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.5",
