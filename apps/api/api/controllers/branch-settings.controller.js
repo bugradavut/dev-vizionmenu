@@ -67,6 +67,20 @@ const updateBranchSettings = async (req, res) => {
       settingsData.minimumOrderAmount = amount;
     }
 
+    // Validate delivery fee if provided
+    if (settingsData.deliveryFee !== undefined) {
+      const fee = parseFloat(settingsData.deliveryFee);
+      if (isNaN(fee) || fee < 0 || fee > 100) {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_DELIVERY_FEE',
+            message: 'Delivery fee must be a number between 0 and 100',
+          },
+        });
+      }
+      settingsData.deliveryFee = fee;
+    }
+
     const result = await branchSettingsService.updateBranchSettings(branchId, settingsData);
     
     res.json({ data: result });
@@ -105,8 +119,35 @@ const getBranchMinimumOrder = async (req, res) => {
   }
 };
 
+const getBranchDeliveryFee = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+
+    if (!branchId) {
+      return res.status(400).json({
+        error: {
+          code: 'MISSING_BRANCH_ID',
+          message: 'Branch ID is required',
+        },
+      });
+    }
+
+    const deliveryFee = await branchSettingsService.getBranchDeliveryFee(branchId);
+    
+    res.json({ 
+      data: { 
+        branchId,
+        deliveryFee 
+      } 
+    });
+  } catch (error) {
+    handleControllerError(error, 'get branch delivery fee', res);
+  }
+};
+
 module.exports = {
   getBranchSettings,
   updateBranchSettings,
   getBranchMinimumOrder,
+  getBranchDeliveryFee,
 };

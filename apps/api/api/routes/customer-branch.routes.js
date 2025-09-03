@@ -13,4 +13,9 @@ router.get('/branch/:branchId/minimum-order',
   branchSettingsController.getBranchMinimumOrder
 );
 
+// Get branch delivery fee (public)
+router.get('/branch/:branchId/delivery-fee', 
+  branchSettingsController.getBranchDeliveryFee
+);
+
 module.exports = router;

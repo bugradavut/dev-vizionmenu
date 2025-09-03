@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useRef, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useCart } from '../../contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
 import { useMinimumOrder } from '@/hooks/use-minimum-order'
+import { useDeliveryFee } from '@/hooks/use-delivery-fee'
 import { translations } from '@/lib/translations'
 import { OrderSummary } from './order-summary'
 import { CustomerInformationSection } from './customer-information-section'
@@ -29,15 +30,19 @@ interface OrderContext {
 
 export function OrderReviewContainer({ orderContext }: { orderContext: OrderContext }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { items } = useCart()
   const { language } = useLanguage()
   const t = translations[language] || translations.en
+  
+  // Initialize order type from URL params
+  const initialOrderType = (searchParams.get('orderType') as 'takeaway' | 'delivery') || null
   
   // Form validation state
   const [isFormValid, setIsFormValid] = useState(false)
   const [formData, setFormData] = useState<object | null>(null)
   const [orderNotes, setOrderNotes] = useState<string>('')
-  const [selectedOrderType, setSelectedOrderType] = useState<'takeaway' | 'delivery' | null>(null)
+  const [selectedOrderType, setSelectedOrderType] = useState<'takeaway' | 'delivery' | null>(initialOrderType)
   const [appliedDiscount, setAppliedDiscount] = useState<{
     code: string
     discountAmount: number
@@ -50,6 +55,12 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   const { minimumOrderAmount, isLoading: isMinimumOrderLoading } = useMinimumOrder({
     branchId: orderContext.branchId,
     enabled: orderContext.source === 'web' // Only for web users
+  })
+  
+  // Fetch delivery fee for the branch
+  const { deliveryFee } = useDeliveryFee({
+    branchId: orderContext.branchId,
+    enabled: true // Always enabled for all users
   })
   
   const handleValidationChange = (isValid: boolean, data: object) => {
@@ -68,19 +79,24 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
     const discountAmount = appliedDiscount?.discountAmount || 0
     const subtotalAfterDiscount = itemsTotal - discountAmount
     
+    // Add delivery fee for delivery orders only
+    const applicableDeliveryFee = selectedOrderType === 'delivery' ? deliveryFee : 0
+    const subtotalWithDelivery = subtotalAfterDiscount + applicableDeliveryFee
+    
     // Quebec taxes: GST (5%) + QST (9.975%)
-    const gst = subtotalAfterDiscount * 0.05
-    const qst = subtotalAfterDiscount * 0.09975
-    const finalTotal = subtotalAfterDiscount + gst + qst
+    const gst = subtotalWithDelivery * 0.05
+    const qst = subtotalWithDelivery * 0.09975
+    const finalTotal = subtotalWithDelivery + gst + qst
     
     return {
       itemsTotal,
       subtotalAfterDiscount,
+      subtotalWithDelivery,
       gst,
       qst,
       finalTotal
     }
-  }, [items, appliedDiscount])
+  }, [items, appliedDiscount, selectedOrderType, deliveryFee])
   
   // Check if minimum order requirement is met for delivery orders
   const isMinimumOrderMet = useMemo(() => {
@@ -90,8 +106,9 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
     // No minimum set or still loading
     if (!minimumOrderAmount || isMinimumOrderLoading) return true
     
-    return orderTotals.finalTotal >= minimumOrderAmount
-  }, [selectedOrderType, minimumOrderAmount, isMinimumOrderLoading, orderTotals.finalTotal])
+    // Only check food subtotal (after discounts) against minimum, exclude delivery fee and taxes
+    return orderTotals.subtotalAfterDiscount >= minimumOrderAmount
+  }, [selectedOrderType, minimumOrderAmount, isMinimumOrderLoading, orderTotals.subtotalAfterDiscount])
   
   // Function to trigger validation from child components
   const triggerFormValidation = () => {
@@ -147,6 +164,7 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
               minimumOrderAmount={minimumOrderAmount}
               isMinimumOrderLoading={isMinimumOrderLoading}
               isMinimumOrderMet={isMinimumOrderMet}
+              deliveryFee={deliveryFee}
             />
             <PromoCodeSection 
               items={items} 

@@ -471,7 +471,19 @@ export const translations = {
       
       // Success Messages
       settingsSaved: "Settings saved successfully!",
-      settingsSavedDesc: "Your order flow preferences have been updated."
+      settingsSavedDesc: "Your order flow preferences have been updated.",
+      
+      // Minimum Order Amount
+      minimumOrderTitle: "Minimum Order Amount",
+      minimumOrderDesc: "Set minimum order value required for checkout",
+      noMinimumSet: "No minimum order amount set",
+      minimumOrderWarning: "Orders below {amount} will be blocked",
+      
+      // Delivery Fee
+      deliveryFeeTitle: "Delivery Fee",
+      deliveryFeeDesc: "Set delivery fee for delivery orders", 
+      noDeliveryFee: "No delivery fee set (free delivery)",
+      deliveryFeeApplied: "{amount} will be added to delivery orders"
     },
     
     // Order Notifications
@@ -1478,7 +1490,19 @@ export const translations = {
       
       // Success Messages
       settingsSaved: "Paramètres sauvegardés avec succès !",
-      settingsSavedDesc: "Vos préférences de flux de commandes ont été mises à jour."
+      settingsSavedDesc: "Vos préférences de flux de commandes ont été mises à jour.",
+      
+      // Minimum Order Amount - Canadian French
+      minimumOrderTitle: "Montant minimum de commande",
+      minimumOrderDesc: "Définir le montant minimum requis pour le processus de commande",
+      noMinimumSet: "Aucun montant minimum défini",
+      minimumOrderWarning: "Les commandes inférieures à {amount} seront bloquées",
+      
+      // Delivery Fee - Canadian French
+      deliveryFeeTitle: "Frais de livraison",
+      deliveryFeeDesc: "Définir les frais de livraison pour les commandes à livrer",
+      noDeliveryFee: "Aucun frais de livraison défini (livraison gratuite)",
+      deliveryFeeApplied: "{amount} sera ajouté aux commandes de livraison"
     },
     
     // Order Notifications - Canadian French

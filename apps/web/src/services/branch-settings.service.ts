@@ -23,6 +23,7 @@ export interface BranchSettings {
   timingSettings: TimingSettings;
   paymentSettings: PaymentSettings;
   minimumOrderAmount?: number;
+  deliveryFee?: number;
 }
 
 export interface BranchSettingsResponse {
@@ -107,6 +108,7 @@ export const updateBranchSettings = async (
         timingSettings: settings.timingSettings,
         paymentSettings: settings.paymentSettings,
         minimumOrderAmount: settings.minimumOrderAmount,
+        deliveryFee: settings.deliveryFee,
       }),
     });
 
@@ -141,4 +143,5 @@ export const getDefaultSettings = (): BranchSettings => ({
     defaultPaymentMethod: 'online',
   },
   minimumOrderAmount: 0, // Default: no minimum order amount
+  deliveryFee: 0, // Default: no delivery fee
 });

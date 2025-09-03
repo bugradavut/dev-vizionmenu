@@ -25,6 +25,7 @@ interface PriceDetailsSectionProps {
   minimumOrderAmount?: number
   isMinimumOrderLoading?: boolean
   isMinimumOrderMet?: boolean
+  deliveryFee?: number
 }
 
 export function PriceDetailsSection({ 
@@ -34,7 +35,8 @@ export function PriceDetailsSection({
   selectedOrderType, 
   minimumOrderAmount, 
   isMinimumOrderLoading, 
-  isMinimumOrderMet 
+  isMinimumOrderMet,
+  deliveryFee = 0
 }: PriceDetailsSectionProps) {
   // Calculate dynamic values
   const itemsTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
@@ -44,16 +46,20 @@ export function PriceDetailsSection({
   const discountAmount = appliedDiscount?.discountAmount || 0
   const subtotalAfterDiscount = itemsTotal - discountAmount
   
+  // Add delivery fee for delivery orders only
+  const applicableDeliveryFee = selectedOrderType === 'delivery' ? deliveryFee : 0
+  
   // Quebec taxes: GST (5%) + QST (9.975%) = ~15%
   // GST = Goods and Services Tax (Federal tax - 5%)
   // QST = Quebec Sales Tax (Provincial tax - 9.975%)
-  // These are calculated on the subtotal (after any discounts)
+  // These are calculated on the subtotal (after any discounts, including delivery fee)
+  const subtotalWithDelivery = subtotalAfterDiscount + applicableDeliveryFee
   const gstRate = 0.05
   const qstRate = 0.09975
-  const gst = subtotalAfterDiscount * gstRate
-  const qst = subtotalAfterDiscount * qstRate
+  const gst = subtotalWithDelivery * gstRate
+  const qst = subtotalWithDelivery * qstRate
   
-  const finalTotal = subtotalAfterDiscount + gst + qst
+  const finalTotal = subtotalWithDelivery + gst + qst
 
   return (
     <div className="bg-card rounded-lg border border-border p-6">
@@ -84,11 +90,23 @@ export function PriceDetailsSection({
           </div>
         )}
         
+        {/* Delivery Fee */}
+        {selectedOrderType === 'delivery' && applicableDeliveryFee > 0 && (
+          <div className="flex justify-between items-center">
+            <span className="text-foreground">
+              {language === 'fr' ? 'Frais de livraison' : 'Delivery fee'}
+            </span>
+            <span className="text-foreground">
+              {language === 'fr' ? `${applicableDeliveryFee.toFixed(2)} $` : `$${applicableDeliveryFee.toFixed(2)}`}
+            </span>
+          </div>
+        )}
+        
         <div className="border-t border-border pt-3">
           <div className="flex justify-between items-center mb-2">
             <span className="text-muted-foreground">Subtotal</span>
             <span className="text-foreground">
-              {language === 'fr' ? `${subtotalAfterDiscount.toFixed(2)} $` : `$${subtotalAfterDiscount.toFixed(2)}`}
+              {language === 'fr' ? `${subtotalWithDelivery.toFixed(2)} $` : `$${subtotalWithDelivery.toFixed(2)}`}
             </span>
           </div>
           
@@ -142,14 +160,26 @@ export function PriceDetailsSection({
                 <div className="flex-1 text-sm">
                   <p className="font-medium text-red-800">
                     {language === 'fr' 
-                      ? 'Minimum requis pour la livraison' 
-                      : 'Minimum required for delivery'
+                      ? 'Minimum de livraison non atteint' 
+                      : 'Delivery Minimum Not Met'
                     }
                   </p>
                   <p className="text-red-700 mt-1">
                     {language === 'fr' 
-                      ? `Ajoutez ${(minimumOrderAmount - finalTotal).toFixed(2)} $ de plus pour atteindre le minimum de ${minimumOrderAmount.toFixed(2)} $`
-                      : `Add $${(minimumOrderAmount - finalTotal).toFixed(2)} more to reach the $${minimumOrderAmount.toFixed(2)} minimum`
+                      ? `Articles alimentaires: ${subtotalAfterDiscount.toFixed(2)} $ / ${minimumOrderAmount.toFixed(2)} $ requis`
+                      : `Food subtotal: $${subtotalAfterDiscount.toFixed(2)} / $${minimumOrderAmount.toFixed(2)} required`
+                    }
+                  </p>
+                  <p className="text-red-700 mt-1">
+                    {language === 'fr' 
+                      ? `Ajoutez ${(minimumOrderAmount - subtotalAfterDiscount).toFixed(2)} $ d'articles alimentaires pour qualifier pour la livraison`
+                      : `Add $${(minimumOrderAmount - subtotalAfterDiscount).toFixed(2)} in food items to qualify for delivery`
+                    }
+                  </p>
+                  <p className="text-red-600 text-xs mt-2 opacity-80">
+                    {language === 'fr' 
+                      ? 'Les frais de livraison et taxes sont calculés séparément'
+                      : 'Delivery fees and taxes are calculated separately'
                     }
                   </p>
                 </div>
