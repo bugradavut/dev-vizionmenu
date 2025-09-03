@@ -33,9 +33,19 @@ interface OrderTotalSidebarProps {
     selectedOrderType?: 'dine_in' | 'takeaway' | 'delivery' | null
   }
   onTriggerValidation: () => boolean
+  isMinimumOrderMet?: boolean
+  selectedOrderType?: 'takeaway' | 'delivery' | null
 }
 
-export function OrderTotalSidebar({ language, formData, orderNotes = '', orderContext, onTriggerValidation }: OrderTotalSidebarProps) {
+export function OrderTotalSidebar({ 
+  language, 
+  formData, 
+  orderNotes = '', 
+  orderContext, 
+  onTriggerValidation,
+  isMinimumOrderMet = true,
+  selectedOrderType
+}: OrderTotalSidebarProps) {
   const router = useRouter()
   const { items, subtotal, tax, total, preOrder } = useCart()
   const t = translations[language as keyof typeof translations] || translations.en
@@ -43,6 +53,13 @@ export function OrderTotalSidebar({ language, formData, orderNotes = '', orderCo
   
   const handleConfirmOrder = async () => {
     if (isSubmitting) return
+    
+    // Check minimum order requirement first (for delivery orders)
+    if (selectedOrderType === 'delivery' && !isMinimumOrderMet) {
+      // Don't proceed if minimum order is not met
+      // The warning is already shown in PriceDetailsSection
+      return
+    }
     
     // Trigger validation and check if it passes
     const isValid = onTriggerValidation()
@@ -178,7 +195,7 @@ export function OrderTotalSidebar({ language, formData, orderNotes = '', orderCo
 
       <Button
         onClick={handleConfirmOrder}
-        disabled={isSubmitting}
+        disabled={isSubmitting || (selectedOrderType === 'delivery' && !isMinimumOrderMet)}
         className="w-full h-12 text-base font-semibold"
         size="lg"
       >
@@ -187,6 +204,8 @@ export function OrderTotalSidebar({ language, formData, orderNotes = '', orderCo
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
             {language === 'fr' ? 'Traitement...' : 'Processing...'}
           </>
+        ) : selectedOrderType === 'delivery' && !isMinimumOrderMet ? (
+          language === 'fr' ? 'Minimum requis non atteint' : 'Minimum Order Not Met'
         ) : (
           t.orderPage.checkout.confirmOrder || "Confirm Order"
         )}

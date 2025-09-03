@@ -167,7 +167,8 @@
       "Read(c:\\Users\\HP\\Desktop\\vision-menu\\vision-menu\\photos/**)",
       "Read(c:\\Users\\HP\\Desktop\\vision-menu\\vision-menu\\apps\\web\\src\\app\\order\\[chainSlug]/**)",
       "Read(c:\\Users\\HP\\Desktop\\vision-menu\\vision-menu\\photos/**)",
-      "Read(c:\\Users\\HP\\Desktop\\vision-menu\\vision-menu\\photos/**)"
+      "Read(c:\\Users\\HP\\Desktop\\vision-menu\\vision-menu\\photos/**)",
+      "Read(c:\\Users\\HP\\Desktop\\vision-menu\\vision-menu\\apps\\web\\src\\app\\order\\review\\components/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

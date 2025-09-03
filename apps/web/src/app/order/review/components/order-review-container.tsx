@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCart } from '../../contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
+import { useMinimumOrder } from '@/hooks/use-minimum-order'
 import { translations } from '@/lib/translations'
 import { OrderSummary } from './order-summary'
 import { CustomerInformationSection } from './customer-information-section'
@@ -36,6 +37,7 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   const [isFormValid, setIsFormValid] = useState(false)
   const [formData, setFormData] = useState<object | null>(null)
   const [orderNotes, setOrderNotes] = useState<string>('')
+  const [selectedOrderType, setSelectedOrderType] = useState<'takeaway' | 'delivery' | null>(null)
   const [appliedDiscount, setAppliedDiscount] = useState<{
     code: string
     discountAmount: number
@@ -44,10 +46,52 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   } | null>(null)
   const customerInfoRef = useRef<{ triggerValidation: () => boolean } | null>(null)
   
+  // Fetch minimum order amount for delivery validation
+  const { minimumOrderAmount, isLoading: isMinimumOrderLoading } = useMinimumOrder({
+    branchId: orderContext.branchId,
+    enabled: orderContext.source === 'web' // Only for web users
+  })
+  
   const handleValidationChange = (isValid: boolean, data: object) => {
     setIsFormValid(isValid)
     setFormData(data)
   }
+  
+  // Handle order type change from customer information section
+  const handleOrderTypeChange = (orderType: 'takeaway' | 'delivery' | null) => {
+    setSelectedOrderType(orderType)
+  }
+  
+  // Calculate order totals for minimum order validation
+  const orderTotals = useMemo(() => {
+    const itemsTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    const discountAmount = appliedDiscount?.discountAmount || 0
+    const subtotalAfterDiscount = itemsTotal - discountAmount
+    
+    // Quebec taxes: GST (5%) + QST (9.975%)
+    const gst = subtotalAfterDiscount * 0.05
+    const qst = subtotalAfterDiscount * 0.09975
+    const finalTotal = subtotalAfterDiscount + gst + qst
+    
+    return {
+      itemsTotal,
+      subtotalAfterDiscount,
+      gst,
+      qst,
+      finalTotal
+    }
+  }, [items, appliedDiscount])
+  
+  // Check if minimum order requirement is met for delivery orders
+  const isMinimumOrderMet = useMemo(() => {
+    // Takeaway orders don't have minimum requirements
+    if (selectedOrderType !== 'delivery') return true
+    
+    // No minimum set or still loading
+    if (!minimumOrderAmount || isMinimumOrderLoading) return true
+    
+    return orderTotals.finalTotal >= minimumOrderAmount
+  }, [selectedOrderType, minimumOrderAmount, isMinimumOrderLoading, orderTotals.finalTotal])
   
   // Function to trigger validation from child components
   const triggerFormValidation = () => {
@@ -86,6 +130,7 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
               language={language} 
               orderContext={orderContext}
               onValidationChange={handleValidationChange}
+              onOrderTypeChange={handleOrderTypeChange}
             />
             <PaymentMethodSection />
             <TipSection />
@@ -94,7 +139,15 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
           {/* Right Side - Order Summary & Details */}
           <div className="space-y-6">
             <OrderSummary items={items} language={language} />
-            <PriceDetailsSection items={items} language={language} appliedDiscount={appliedDiscount} />
+            <PriceDetailsSection 
+              items={items} 
+              language={language} 
+              appliedDiscount={appliedDiscount}
+              selectedOrderType={selectedOrderType}
+              minimumOrderAmount={minimumOrderAmount}
+              isMinimumOrderLoading={isMinimumOrderLoading}
+              isMinimumOrderMet={isMinimumOrderMet}
+            />
             <PromoCodeSection 
               items={items} 
               language={language} 
@@ -112,6 +165,8 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
               orderNotes={orderNotes}
               orderContext={orderContext}
               onTriggerValidation={triggerFormValidation}
+              isMinimumOrderMet={isMinimumOrderMet}
+              selectedOrderType={selectedOrderType}
             />
           </div>
         </div>

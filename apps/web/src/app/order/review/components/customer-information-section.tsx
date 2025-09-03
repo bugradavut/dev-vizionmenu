@@ -71,9 +71,10 @@ interface CustomerInformationSectionProps {
     selectedOrderType?: 'dine_in' | 'takeaway' | 'delivery' | null
   }
   onValidationChange?: (isValid: boolean, formData: ValidationData) => void
+  onOrderTypeChange?: (orderType: 'takeaway' | 'delivery' | null) => void
 }
 
-const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () => boolean }, CustomerInformationSectionProps>(({ language = 'en', orderContext, onValidationChange }, ref) => {
+const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () => boolean }, CustomerInformationSectionProps>(({ language = 'en', orderContext, onValidationChange, onOrderTypeChange }, ref) => {
   const { language: contextLanguage } = useLanguage()
   const t = translations[contextLanguage] || translations.en
   const currentLanguage = language || contextLanguage
@@ -207,6 +208,16 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
   const handleCustomerChange = (field: keyof CustomerInfo, value: string | OrderType) => {
     const newCustomerInfo = { ...customerInfo, [field]: value }
     setCustomerInfo(newCustomerInfo)
+    
+    // If orderType changed, notify parent (for minimum order logic)
+    if (field === 'orderType' && onOrderTypeChange) {
+      // Convert OrderType to the expected format for minimum order logic
+      if (value === 'takeaway' || value === 'delivery') {
+        onOrderTypeChange(value)
+      } else {
+        onOrderTypeChange(null) // dine_in doesn't need minimum order validation
+      }
+    }
     
     // Clear validation error for this field when user types (only if errors are being shown)
     if (showValidationErrors && validationErrors[field]) {

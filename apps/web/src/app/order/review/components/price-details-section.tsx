@@ -1,6 +1,6 @@
 "use client"
 
-import { Tag } from 'lucide-react'
+import { Tag, AlertTriangle } from 'lucide-react'
 
 interface CartItem {
   id: string
@@ -21,9 +21,21 @@ interface PriceDetailsSectionProps {
   items: CartItem[]
   language: string
   appliedDiscount?: CampaignDiscount | null
+  selectedOrderType?: 'takeaway' | 'delivery' | null
+  minimumOrderAmount?: number
+  isMinimumOrderLoading?: boolean
+  isMinimumOrderMet?: boolean
 }
 
-export function PriceDetailsSection({ items, language, appliedDiscount }: PriceDetailsSectionProps) {
+export function PriceDetailsSection({ 
+  items, 
+  language, 
+  appliedDiscount, 
+  selectedOrderType, 
+  minimumOrderAmount, 
+  isMinimumOrderLoading, 
+  isMinimumOrderMet 
+}: PriceDetailsSectionProps) {
   // Calculate dynamic values
   const itemsTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
@@ -120,6 +132,29 @@ export function PriceDetailsSection({ items, language, appliedDiscount }: PriceD
                 : `You saved $${discountAmount.toFixed(2)}`
               }
             </p>
+          )}
+          
+          {/* Minimum Order Warning for Delivery Orders */}
+          {selectedOrderType === 'delivery' && !isMinimumOrderLoading && minimumOrderAmount && minimumOrderAmount > 0 && !isMinimumOrderMet && (
+            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 text-sm">
+                  <p className="font-medium text-red-800">
+                    {language === 'fr' 
+                      ? 'Minimum requis pour la livraison' 
+                      : 'Minimum required for delivery'
+                    }
+                  </p>
+                  <p className="text-red-700 mt-1">
+                    {language === 'fr' 
+                      ? `Ajoutez ${(minimumOrderAmount - finalTotal).toFixed(2)} $ de plus pour atteindre le minimum de ${minimumOrderAmount.toFixed(2)} $`
+                      : `Add $${(minimumOrderAmount - finalTotal).toFixed(2)} more to reach the $${minimumOrderAmount.toFixed(2)} minimum`
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
