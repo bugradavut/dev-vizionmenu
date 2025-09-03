@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, CreditCard } from "lucide-react"
+import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, CreditCard, DollarSign } from "lucide-react"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
 import { useLanguage } from "@/contexts/language-context"
@@ -43,6 +43,7 @@ export default function BranchSettingsPage() {
   // Local state for input values to allow empty strings
   const [baseDelayInput, setBaseDelayInput] = useState("")
   const [deliveryDelayInput, setDeliveryDelayInput] = useState("")
+  const [minimumOrderInput, setMinimumOrderInput] = useState("")
   
   // Update local inputs when settings change from API
   React.useEffect(() => {
@@ -51,7 +52,10 @@ export default function BranchSettingsPage() {
       setBaseDelayInput(settings.timingSettings.baseDelay?.toString() || "")
       setDeliveryDelayInput(settings.timingSettings.deliveryDelay?.toString() || "")
     }
-  }, [settings.timingSettings, loading])
+    if (settings && !loading) {
+      setMinimumOrderInput(settings.minimumOrderAmount?.toString() || "")
+    }
+  }, [settings.timingSettings, settings.minimumOrderAmount, loading])
 
   // Handle save
   const handleSave = async () => {
@@ -98,6 +102,18 @@ export default function BranchSettingsPage() {
     const numValue = value === "" ? 0 : Number(value)
     if (!isNaN(numValue) && numValue >= 0) {
       handleTimingChange('deliveryDelay', numValue)
+    }
+  }
+
+  // Handle minimum order amount changes
+  const handleMinimumOrderChange = (value: string) => {
+    setMinimumOrderInput(value)
+    // Only update settings when value is valid or empty becomes 0
+    const numValue = value === "" ? 0 : Number(value)
+    if (!isNaN(numValue) && numValue >= 0) {
+      updateSettings({
+        minimumOrderAmount: numValue
+      })
     }
   }
 
@@ -241,7 +257,7 @@ export default function BranchSettingsPage() {
               <div className="space-y-6">
                 
                 {/* First Row: Auto-Ready & Payment Methods */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Auto-Ready System Card */}
                   <Card>
                     <CardHeader className="pb-3">
@@ -343,6 +359,55 @@ export default function BranchSettingsPage() {
                             }
                           })}
                         />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Minimum Order Amount Card */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-50 rounded-lg">
+                          <DollarSign className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base">Minimum Order Amount</CardTitle>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Set minimum order value required for checkout
+                          </p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="minimum-order" className="text-sm font-medium">Amount ($CAD)</Label>
+                        <div className="relative">
+                          <Input
+                            id="minimum-order"
+                            type="number"
+                            value={minimumOrderInput}
+                            onChange={(e) => handleMinimumOrderChange(e.target.value)}
+                            className="pr-12"
+                            placeholder="0.00"
+                            min="0"
+                            max="1000"
+                            step="0.01"
+                          />
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <span className="text-sm text-muted-foreground">CAD</span>
+                          </div>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {(settings.minimumOrderAmount || 0) === 0 ? (
+                            <span className="text-green-600">
+                              • No minimum order amount set
+                            </span>
+                          ) : (
+                            <span className="text-blue-600">
+                              • Orders below ${settings.minimumOrderAmount?.toFixed(2) || '0.00'} will be blocked
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

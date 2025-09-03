@@ -22,6 +22,7 @@ export interface BranchSettings {
   orderFlow: 'standard' | 'simplified';
   timingSettings: TimingSettings;
   paymentSettings: PaymentSettings;
+  minimumOrderAmount?: number;
 }
 
 export interface BranchSettingsResponse {
@@ -105,6 +106,7 @@ export const updateBranchSettings = async (
         orderFlow: settings.orderFlow,
         timingSettings: settings.timingSettings,
         paymentSettings: settings.paymentSettings,
+        minimumOrderAmount: settings.minimumOrderAmount,
       }),
     });
 
@@ -138,4 +140,5 @@ export const getDefaultSettings = (): BranchSettings => ({
     allowCounterPayment: false, // Default: counter payment disabled
     defaultPaymentMethod: 'online',
   },
+  minimumOrderAmount: 0, // Default: no minimum order amount
 });

@@ -166,7 +166,7 @@ export function MenuExperience({
           {/* Enhanced Header with Chain/Branch Info */}
           <div className="flex-shrink-0 bg-card border-b">
             <div className="flex items-center justify-between p-4">
-              {/* Left Side: Logo + Restaurant Info */}
+              {/* Left Side: Logo + Restaurant Info + Minimum Order */}
               <div className="flex items-center gap-4">
                 {/* Logo */}
                 {chain.logo_url && (
@@ -178,9 +178,24 @@ export function MenuExperience({
                 )}
                 
                 {/* Restaurant Info */}
-                <div>
-                  <h1 className="text-lg font-bold">{chain.name}</h1>
-                  <BranchSwitcher className="text-sm" />
+                <div className="flex items-center gap-4">
+                  <div>
+                    <h1 className="text-lg font-bold">{chain.name}</h1>
+                    <BranchSwitcher className="text-sm" />
+                  </div>
+                  
+                  {/* Minimum Order Amount - Desktop */}
+                  {orderContext.source === 'web' && (
+                    <div className="flex items-center">
+                      <OrderHeader 
+                        branchName={branch.name}
+                        branchId={branch.id}
+                        onSearch={() => {}} // We'll handle search on the right side
+                        hideTitle={true}
+                        showMinimumOrderOnly={true}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -190,6 +205,7 @@ export function MenuExperience({
                 <div>
                   <OrderHeader 
                     branchName={branch.name}
+                    branchId={branch.id}
                     branchAddress={typeof branch.address === 'string' ? branch.address : `${branch.address?.street || ''}, ${branch.address?.city || ''}`}
                     onSearch={setSearchQuery}
                     hideTitle={true}
@@ -253,7 +269,7 @@ export function MenuExperience({
           {/* Header with chain/branch info */}
           <div className="flex-shrink-0 bg-card border-b">
             <div className="flex items-center justify-between p-4">
-              {/* Left Side: Logo + Restaurant Info */}
+              {/* Left Side: Logo + Restaurant Info + Minimum Order */}
               <div className="flex items-center gap-3">
                 {/* Logo */}
                 {chain.logo_url && (
@@ -265,9 +281,22 @@ export function MenuExperience({
                 )}
                 
                 {/* Restaurant Info */}
-                <div>
-                  <div className="font-bold text-base">{chain.name}</div>
-                  <BranchSwitcher className="text-sm" />
+                <div className="flex items-center gap-3">
+                  <div>
+                    <div className="font-bold text-base">{chain.name}</div>
+                    <BranchSwitcher className="text-sm" />
+                  </div>
+                  
+                  {/* Minimum Order Amount - Tablet */}
+                  {orderContext.source === 'web' && (
+                    <OrderHeader 
+                      branchName={branch.name}
+                      branchId={branch.id}
+                      onSearch={() => {}}
+                      hideTitle={true}
+                      showMinimumOrderOnly={true}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -277,6 +306,7 @@ export function MenuExperience({
                 <div>
                   <OrderHeader 
                     branchName={branch.name}
+                    branchId={branch.id}
                     branchAddress={typeof branch.address === 'string' ? branch.address : `${branch.address?.street || ''}, ${branch.address?.city || ''}`}
                     onSearch={setSearchQuery}
                     hideTitle={true}
@@ -342,7 +372,7 @@ export function MenuExperience({
           <div className="bg-card border-b p-4">
             {/* Top Row: Logo + Restaurant Info + QR Info */}
             <div className="flex items-center justify-between mb-3">
-              {/* Left Side: Logo + Restaurant Info */}
+              {/* Left Side: Logo + Restaurant Info + Minimum Order */}
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 {/* Logo */}
                 {chain.logo_url && (
@@ -354,9 +384,24 @@ export function MenuExperience({
                 )}
                 
                 {/* Restaurant Info */}
-                <div className="min-w-0">
-                  <div className="font-bold text-base truncate">{chain.name}</div>
-                  <BranchSwitcher className="text-sm" />
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold text-base truncate">{chain.name}</div>
+                    <BranchSwitcher className="text-sm" />
+                  </div>
+                  
+                  {/* Minimum Order Amount - Mobile */}
+                  {orderContext.source === 'web' && (
+                    <div className="flex-shrink-0">
+                      <OrderHeader 
+                        branchName={branch.name}
+                        branchId={branch.id}
+                        onSearch={() => {}}
+                        hideTitle={true}
+                        showMinimumOrderOnly={true}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -381,6 +426,7 @@ export function MenuExperience({
             <div>
               <OrderHeader 
                 branchName={branch.name}
+                branchId={branch.id}
                 branchAddress={typeof branch.address === 'string' ? branch.address : `${branch.address?.street || ''}, ${branch.address?.city || ''}`}
                 onSearch={setSearchQuery}
                 hideTitle={true}

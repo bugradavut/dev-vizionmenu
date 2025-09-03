@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useOrderContext } from '../contexts/order-context'
 import { useCart } from '../contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
+import { useMinimumOrder } from '@/hooks/use-minimum-order'
 import { translations } from '@/lib/translations'
 import { MapPin, Store, Search, X, Globe, Clock } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -19,18 +20,29 @@ import {
 interface OrderHeaderProps {
   branchName?: string
   branchAddress?: string
+  branchId?: string
   onSearch?: (query: string) => void
   onPreOrderConfirm?: (date: string, time: string) => void
   hideTitle?: boolean
+  showMinimumOrderOnly?: boolean
 }
 
-export function OrderHeader({ branchName, onSearch, onPreOrderConfirm, hideTitle = false }: OrderHeaderProps) {
-  const { tableNumber, zone, isQROrder } = useOrderContext()
+export function OrderHeader({ branchName, branchId, onSearch, onPreOrderConfirm, hideTitle = false, showMinimumOrderOnly = false }: OrderHeaderProps) {
+  const { tableNumber, zone, isQROrder, source } = useOrderContext()
   const { preOrder, setPreOrder, clearPreOrder } = useCart()
   const { language, setLanguage } = useLanguage()
   const [searchQuery, setSearchQuery] = useState('')
   const [isPreOrderModalOpen, setIsPreOrderModalOpen] = useState(false)
   const t = translations[language] || translations.en
+  
+  // Fetch minimum order amount (only for web users)
+  const { minimumOrderAmount, isLoading: isMinimumOrderLoading } = useMinimumOrder({
+    branchId,
+    enabled: source === 'web' // Only fetch for web users, not QR users
+  })
+  
+  // DEBUG: Console log for debugging (remove in production)
+  // console.log('OrderHeader Debug:', { source, branchId, minimumOrderAmount, isMinimumOrderLoading })
 
   const handleSearch = (value: string) => {
     setSearchQuery(value)
@@ -88,11 +100,31 @@ export function OrderHeader({ branchName, onSearch, onPreOrderConfirm, hideTitle
     return targetDate
   }
 
+  // If showMinimumOrderOnly is true, only show minimum order amount
+  if (showMinimumOrderOnly) {
+    return (
+      <>
+        {source === 'web' && minimumOrderAmount > 0 && !isMinimumOrderLoading && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-md">
+            <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
+              {language === 'fr' ? 'Min. ' : 'Min. '}
+              {language === 'fr' 
+                ? `${minimumOrderAmount.toFixed(2)} $`
+                : `$${minimumOrderAmount.toFixed(2)}`
+              }
+            </span>
+          </div>
+        )}
+      </>
+    )
+  }
+
   // If hideTitle is true, only show the action items (search, language, schedule)
   if (hideTitle) {
     return (
       <>
         <div className="flex items-center gap-2 md:gap-4 w-full">
+          
           {/* Search Bar */}
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -195,14 +227,28 @@ export function OrderHeader({ branchName, onSearch, onPreOrderConfirm, hideTitle
 
   return (
     <div className="h-16 bg-card border-b border-border px-4 flex items-center justify-between">
-      {/* Left - Location Only */}
-      <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+      {/* Left - Location + Minimum Order */}
+      <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
+        {/* Restaurant Name */}
         <div className="flex items-center gap-2 text-muted-foreground min-w-0">
           <Store className="w-4 h-4 flex-shrink-0" />
           <span className="text-sm truncate">
             {branchName || 'Restaurant'}
           </span>
         </div>
+
+        {/* Minimum Order Amount - Web Users Only */}
+        {source === 'web' && minimumOrderAmount > 0 && !isMinimumOrderLoading && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-md flex-shrink-0">
+            <span className="text-sm font-medium text-amber-900 dark:text-amber-100 whitespace-nowrap">
+              {language === 'fr' ? 'Min. ' : 'Min. '}
+              {language === 'fr' 
+                ? `${minimumOrderAmount.toFixed(2)} $`
+                : `$${minimumOrderAmount.toFixed(2)}`
+              }
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Center/Right - QR Info + Search */}
