@@ -29,6 +29,7 @@ interface OrderTotals {
 }
 
 interface CampaignDiscount {
+  id?: string
   code: string
   discountAmount: number
   campaignType: 'percentage' | 'fixed_amount'
@@ -140,13 +141,41 @@ export function OrderTotalSidebar({
         subtotal,
         tax,
         total,
-        notes: orderNotes.trim() || undefined, // Add order notes
-        // NEW: Pre-order data from cart context
+        notes: orderNotes.trim() || undefined,
+        
+        // Pre-order data from cart context
         preOrder: preOrder.isPreOrder ? {
           isPreOrder: preOrder.isPreOrder,
           scheduledDate: preOrder.scheduledDate,
           scheduledTime: preOrder.scheduledTime,
           scheduledDateTime: preOrder.scheduledDateTime
+        } : undefined,
+        
+        // NEW: Comprehensive pricing breakdown (Phase 1)
+        pricing: {
+          itemsTotal: orderTotals.itemsTotal,
+          discountAmount: appliedDiscount?.discountAmount || 0,
+          deliveryFee: selectedOrderType === 'delivery' ? deliveryFee : 0,
+          gst: orderTotals.gst,
+          qst: orderTotals.qst,
+          tipAmount: orderTotals.tipAmount,
+          finalTotal: orderTotals.finalTotal
+        },
+        
+        // Campaign/discount details
+        campaign: appliedDiscount ? {
+          id: appliedDiscount.id || undefined,
+          code: appliedDiscount.code,
+          discountAmount: appliedDiscount.discountAmount,
+          campaignType: appliedDiscount.campaignType,
+          campaignValue: appliedDiscount.campaignValue
+        } : undefined,
+        
+        // Tip details
+        tipDetails: selectedTip ? {
+          amount: selectedTip.amount,
+          type: selectedTip.type,
+          value: selectedTip.value
         } : undefined
       }
       

@@ -28,11 +28,19 @@ export interface OrderItem {
 }
 
 export interface OrderPricing {
+  // Legacy fields (backward compatibility)
   subtotal: number;
   tax_amount: number;
   service_fee: number;
   delivery_fee: number;
   total: number;
+  
+  // NEW: Comprehensive pricing breakdown (Phase 1)
+  itemsTotal?: number;
+  discountAmount?: number;
+  gst?: number;
+  qst?: number;
+  tipAmount?: number;
 }
 
 export interface DeliveryAddress {
@@ -71,6 +79,20 @@ export interface Order {
   created_at: string;
   updated_at: string;
   items?: OrderItem[];
+  
+  // NEW: Campaign/discount details (Phase 1)
+  campaignDiscount?: {
+    code: string;
+    discountAmount: number;
+    couponId?: string;
+  } | null;
+  
+  // NEW: Tip details (Phase 1)  
+  tipDetails?: {
+    amount: number;
+    type: 'percentage' | 'fixed';
+    value: number;
+  } | null;
 }
 
 export interface OrderListParams {

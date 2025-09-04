@@ -38,13 +38,35 @@ export interface FrontendOrderData {
   total: number;
   tip?: number;
   notes?: string;
-  deliveryAddress?: FrontendAddressInfo; // Add separate delivery address field
+  deliveryAddress?: FrontendAddressInfo;
   // NEW: Pre-order fields
   preOrder?: {
     isPreOrder: boolean;
     scheduledDate?: string;
     scheduledTime?: string;
     scheduledDateTime?: Date;
+  };
+  // NEW: Comprehensive pricing breakdown (optional - for Phase 1 enhancement)
+  pricing?: {
+    itemsTotal: number;
+    discountAmount: number;
+    deliveryFee: number;
+    gst: number;
+    qst: number;
+    tipAmount: number;
+    finalTotal: number;
+  };
+  campaign?: {
+    id?: string;
+    code: string;
+    discountAmount: number;
+    campaignType: 'percentage' | 'fixed_amount';
+    campaignValue: number;
+  };
+  tipDetails?: {
+    amount: number;
+    type: 'percentage' | 'fixed';
+    value: number;
   };
 }
 
@@ -71,12 +93,34 @@ export interface BackendOrderData {
   tax: number;
   total: number;
   notes: string;
-  deliveryAddress?: FrontendAddressInfo; // Add separate delivery address field
-  // NEW: Pre-order fields
+  deliveryAddress?: FrontendAddressInfo;
+  // Pre-order fields
   isPreOrder?: boolean;
   scheduledDate?: string;
   scheduledTime?: string;
-  scheduledDateTime?: string; // ISO string for API
+  scheduledDateTime?: string;
+  // NEW: Comprehensive pricing breakdown (Phase 1)
+  pricing?: {
+    itemsTotal: number;
+    discountAmount: number;
+    deliveryFee: number;
+    gst: number;
+    qst: number;
+    tipAmount: number;
+    finalTotal: number;
+  };
+  campaign?: {
+    id?: string;
+    code: string;
+    discountAmount: number;
+    campaignType: 'percentage' | 'fixed_amount';
+    campaignValue: number;
+  };
+  tip?: {
+    amount: number;
+    type: 'percentage' | 'fixed';
+    value: number;
+  };
 }
 
 /**
@@ -88,7 +132,7 @@ export function mapOrderDataForAPI(
   tableNumber?: number,
   zone?: string
 ): BackendOrderData {
-  const { customerInfo, addressInfo, items, orderType, paymentMethod, subtotal, tax, total, tip, notes, preOrder } = frontendData;
+  const { customerInfo, addressInfo, items, orderType, paymentMethod, subtotal, tax, total, tip, notes, preOrder, pricing, campaign, tipDetails } = frontendData;
 
   // Combine order notes (NO delivery address in notes anymore!)
   const combinedNotes = [
@@ -128,16 +172,47 @@ export function mapOrderDataForAPI(
     },
     tableNumber,
     zone,
+    
+    // Legacy fields (backward compatibility)
     subtotal: subtotal + (tip || 0), // Include tip in subtotal for now
     tax,
     total: total + (tip || 0), // Include tip in total
+    
     notes: combinedNotes,
-    deliveryAddress, // Send delivery address separately
-    // NEW: Pre-order mapping
+    deliveryAddress,
+    
+    // Pre-order mapping
     isPreOrder: preOrder?.isPreOrder || false,
     scheduledDate: preOrder?.scheduledDate,
     scheduledTime: preOrder?.scheduledTime,
-    scheduledDateTime: preOrder?.scheduledDateTime?.toISOString()
+    scheduledDateTime: preOrder?.scheduledDateTime?.toISOString(),
+    
+    // NEW: Comprehensive pricing breakdown (Phase 1)
+    pricing: pricing ? {
+      itemsTotal: pricing.itemsTotal,
+      discountAmount: pricing.discountAmount,
+      deliveryFee: pricing.deliveryFee,
+      gst: pricing.gst,
+      qst: pricing.qst,
+      tipAmount: pricing.tipAmount,
+      finalTotal: pricing.finalTotal
+    } : undefined,
+    
+    // Campaign details
+    campaign: campaign ? {
+      id: campaign.id,
+      code: campaign.code,
+      discountAmount: campaign.discountAmount,
+      campaignType: campaign.campaignType,
+      campaignValue: campaign.campaignValue
+    } : undefined,
+    
+    // Tip details
+    tip: tipDetails ? {
+      amount: tipDetails.amount,
+      type: tipDetails.type,
+      value: tipDetails.value
+    } : undefined
   };
 }
 

@@ -840,31 +840,107 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                     </CardHeader>
                     <Separator />
                     <CardContent className="space-y-3 p-6">
-                      <div className="flex justify-between text-sm">
-                        <span>{t.orderDetail.subtotal}</span>
-                        <span>${order.pricing.subtotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>{t.orderDetail.tax}</span>
-                        <span>${order.pricing.tax_amount.toFixed(2)}</span>
-                      </div>
+                      {/* Items Total */}
+                      {(order.pricing.itemsTotal || 0) > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span>{language === 'fr' ? 'Articles' : 'Items'}</span>
+                          <span>${(order.pricing.itemsTotal || 0).toFixed(2)}</span>
+                        </div>
+                      )}
+                      
+                      {/* Campaign Discount */}
+                      {order.campaignDiscount && (order.pricing.discountAmount || 0) > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="flex items-center gap-1 text-green-600">
+                            <span>📍</span>
+                            {order.campaignDiscount.code}
+                          </span>
+                          <span className="text-green-600">
+                            -${(order.pricing.discountAmount || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Delivery Fee */}
+                      {order.pricing.delivery_fee > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span>{language === 'fr' ? 'Frais de livraison' : 'Delivery fee'}</span>
+                          <span>${order.pricing.delivery_fee.toFixed(2)}</span>
+                        </div>
+                      )}
+                      
+                      {/* Service Fee */}
                       {order.pricing.service_fee > 0 && (
                         <div className="flex justify-between text-sm">
                           <span>{t.orderDetail.serviceFee}</span>
                           <span>${order.pricing.service_fee.toFixed(2)}</span>
                         </div>
                       )}
-                      {order.pricing.delivery_fee > 0 && (
+                      
+                      {/* Subtotal (after discounts, before tax) */}
+                      <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
+                        <span>{t.orderDetail.subtotal}</span>
+                        <span>${order.pricing.subtotal.toFixed(2)}</span>
+                      </div>
+                      
+                      {/* Tax Breakdown: Show GST/QST if available, otherwise fallback to combined tax */}
+                      {(order.pricing.gst || 0) > 0 && (order.pricing.qst || 0) > 0 ? (
+                        <>
+                          <div className="flex justify-between text-sm">
+                            <span>GST</span>
+                            <span>${(order.pricing.gst || 0).toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>QST</span>
+                            <span>${(order.pricing.qst || 0).toFixed(2)}</span>
+                          </div>
+                        </>
+                      ) : (
                         <div className="flex justify-between text-sm">
-                          <span>{t.orderDetail.deliveryFee}</span>
-                          <span>${order.pricing.delivery_fee.toFixed(2)}</span>
+                          <span>{t.orderDetail.tax}</span>
+                          <span>${order.pricing.tax_amount.toFixed(2)}</span>
                         </div>
                       )}
+                      
+                      {/* Tip */}
+                      {order.tipDetails && (order.pricing.tipAmount || 0) > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="flex items-center gap-1">
+                            {language === 'fr' ? 'Pourboire' : 'Tip'}
+                            <span className="text-xs text-gray-500">
+                              ({order.tipDetails.type === 'percentage' 
+                                ? `${order.tipDetails.value}%` 
+                                : language === 'fr' ? 'fixe' : 'fixed'
+                              })
+                            </span>
+                          </span>
+                          <span>${(order.pricing.tipAmount || 0).toFixed(2)}</span>
+                        </div>
+                      )}
+                      
                       <Separator />
                       <div className="flex justify-between font-medium text-lg">
                         <span>{t.orderDetail.total}</span>
-                        <span>${order.pricing.total.toFixed(2)}</span>
+                        <div className="text-right">
+                          {order.campaignDiscount && (order.pricing.discountAmount || 0) > 0 ? (
+                            <>
+                              <span className="text-sm text-gray-500 line-through mr-2">
+                                ${(order.pricing.total + (order.pricing.discountAmount || 0)).toFixed(2)}
+                              </span>
+                              <br />
+                            </>
+                          ) : null}
+                          <span>${order.pricing.total.toFixed(2)}</span>
+                        </div>
                       </div>
+                      {order.campaignDiscount && (order.pricing.discountAmount || 0) > 0 && (
+                        <p className="text-sm text-green-600 text-right">
+                          {language === 'fr' 
+                            ? `Économisé ${(order.pricing.discountAmount || 0).toFixed(2)} $` 
+                            : `Saved $${(order.pricing.discountAmount || 0).toFixed(2)}`
+                          }
+                        </p>
+                      )}
                       <div className="text-center text-sm text-muted-foreground mt-2">
                         {t.orderDetail.payment}: {getPaymentMethodLabel(order.payment_method || 'cash')}
                       </div>

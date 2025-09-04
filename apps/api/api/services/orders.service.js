@@ -283,12 +283,34 @@ async function getOrderDetail(orderId, userBranch) {
     zone: existingOrder.zone || null,
     payment_method: existingOrder.payment_method,
     pricing: {
+      // Legacy fields (backward compatibility)
       subtotal: parseFloat(existingOrder.subtotal || 0),
       tax_amount: parseFloat(existingOrder.tax_amount || 0),
       service_fee: parseFloat(existingOrder.service_fee || 0),
       delivery_fee: parseFloat(existingOrder.delivery_fee || 0),
-      total: parseFloat(existingOrder.total_amount || 0)
+      total: parseFloat(existingOrder.total_amount || 0),
+      
+      // NEW: Comprehensive pricing breakdown
+      itemsTotal: parseFloat(existingOrder.items_subtotal || 0),
+      discountAmount: parseFloat(existingOrder.discount_amount || 0),
+      gst: parseFloat(existingOrder.gst_amount || 0),
+      qst: parseFloat(existingOrder.qst_amount || 0),
+      tipAmount: parseFloat(existingOrder.tip_amount || 0)
     },
+    
+    // Campaign/discount details
+    campaignDiscount: existingOrder.coupon_code ? {
+      code: existingOrder.coupon_code,
+      discountAmount: parseFloat(existingOrder.discount_amount || 0),
+      couponId: existingOrder.coupon_id
+    } : null,
+    
+    // Tip details
+    tipDetails: existingOrder.tip_amount > 0 ? {
+      amount: parseFloat(existingOrder.tip_amount || 0),
+      type: existingOrder.tip_type || 'fixed',
+      value: parseFloat(existingOrder.tip_value || 0)
+    } : null,
     notes: existingOrder.notes,
     special_instructions: existingOrder.special_instructions,
     estimated_ready_time: existingOrder.estimated_ready_time,
@@ -430,18 +452,57 @@ async function updateOrderStatus(orderId, updateData, userBranch) {
  * @returns {Object} Created order data
  */
 async function createOrder(orderData, branchId) {
-  const { customer, items, orderType, source, tableNumber, zone, notes, specialInstructions, deliveryAddress, preOrder } = orderData;
+  const { customer, items, orderType, source, tableNumber, zone, notes, specialInstructions, deliveryAddress, preOrder, pricing, campaign, tip } = orderData;
   
   // Only allow internal orders for now (third-party will be added in 2 weeks)
   if (!['qr_code', 'web'].includes(source)) {
     throw new Error('Only qr_code and web orders are supported currently');
   }
 
-  // Calculate order totals
-  const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const taxRate = 0.13; // 13% HST
-  const taxAmount = subtotal * taxRate;
-  const total = subtotal + taxAmount;
+  // Use comprehensive pricing if provided, otherwise calculate basic totals
+  let itemsSubtotal, discountAmount, deliveryFee, gstAmount, qstAmount, tipAmount, finalTotal;
+  let couponCode = null, couponId = null, tipType = null, tipValue = null;
+  
+  if (pricing) {
+    // Use provided comprehensive pricing breakdown
+    itemsSubtotal = parseFloat(pricing.itemsTotal || 0);
+    discountAmount = parseFloat(pricing.discountAmount || 0);
+    deliveryFee = parseFloat(pricing.deliveryFee || 0);
+    gstAmount = parseFloat(pricing.gst || 0);
+    qstAmount = parseFloat(pricing.qst || 0);
+    tipAmount = parseFloat(pricing.tipAmount || 0);
+    finalTotal = parseFloat(pricing.finalTotal || 0);
+    
+    // Campaign/coupon details
+    if (campaign) {
+      couponCode = campaign.code;
+      couponId = campaign.id || null;
+    }
+    
+    // Tip details
+    if (tip) {
+      tipAmount = parseFloat(tip.amount || 0);
+      tipType = tip.type; // 'percentage' or 'fixed'
+      tipValue = parseFloat(tip.value || 0);
+    }
+  } else {
+    // Fallback to basic calculation for backward compatibility
+    itemsSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    discountAmount = 0;
+    deliveryFee = 0;
+    
+    // Calculate Quebec tax structure properly
+    const subtotalWithDelivery = itemsSubtotal - discountAmount + deliveryFee;
+    gstAmount = subtotalWithDelivery * 0.05; // 5% GST
+    qstAmount = subtotalWithDelivery * 0.09975; // 9.975% QST
+    tipAmount = 0;
+    finalTotal = subtotalWithDelivery + gstAmount + qstAmount + tipAmount;
+  }
+  
+  // Legacy compatibility values
+  const subtotal = itemsSubtotal - discountAmount; // After discount for legacy field
+  const taxAmount = gstAmount + qstAmount; // Combined tax for legacy field
+  const total = finalTotal;
 
   // Handle pre-order data
   const isPreOrder = preOrder?.isPreOrder || false;
@@ -514,16 +575,31 @@ async function createOrder(orderData, branchId) {
     order_type: orderType,
     table_number: tableNumber || null,
     zone: zone || null,
-    delivery_address: deliveryAddress || null, // Add delivery address
+    delivery_address: deliveryAddress || null,
     order_status: initialStatus, // Dynamic status based on pre-order
     payment_status: 'pending',
+    
+    // Legacy pricing fields (maintained for backward compatibility)
     subtotal: subtotal,
     tax_amount: taxAmount,
     total_amount: total,
+    
+    // NEW: Comprehensive pricing breakdown
+    items_subtotal: itemsSubtotal,
+    discount_amount: discountAmount,
+    coupon_code: couponCode,
+    coupon_id: couponId,
+    delivery_fee: deliveryFee,
+    gst_amount: gstAmount,
+    qst_amount: qstAmount,
+    tip_amount: tipAmount,
+    tip_type: tipType,
+    tip_value: tipValue,
+    
     notes: notes || null,
     special_instructions: specialInstructions || null,
     third_party_platform: source === 'qr_code' ? null : source, // qr_code doesn't set platform
-    // NEW: Pre-order fields
+    // Pre-order fields
     is_pre_order: isPreOrder,
     scheduled_datetime: scheduledDateTime,
     scheduled_date: scheduledDate,

@@ -51,11 +51,15 @@ const createCustomerOrder = async (req, res) => {
       total,
       notes,
       deliveryAddress,
-      // NEW: Pre-order fields
+      // Pre-order fields
       isPreOrder,
       scheduledDate,
       scheduledTime,
-      scheduledDateTime
+      scheduledDateTime,
+      // NEW: Comprehensive pricing breakdown (Phase 1)
+      pricing,
+      campaign,
+      tip
     } = req.body;
     
     // Minimal validation - just ensure basic data exists
@@ -114,18 +118,41 @@ const createCustomerOrder = async (req, res) => {
         deliveryInstructions: deliveryAddress.deliveryInstructions || '',
         addressType: deliveryAddress.addressType || 'home'
       } : null,
-      pricing: {
-        subtotal: subtotal || 0,
-        tax_amount: tax || 0,
-        total: total || 0
-      },
-      // NEW: Pre-order data
+      
+      // Pre-order data
       preOrder: {
         isPreOrder: Boolean(isPreOrder),
         scheduledDate: scheduledDate || null,
         scheduledTime: scheduledTime || null,
         scheduledDateTime: parsedScheduledDateTime
-      }
+      },
+      
+      // NEW: Comprehensive pricing breakdown (Phase 1)
+      pricing: pricing ? {
+        itemsTotal: pricing.itemsTotal || 0,
+        discountAmount: pricing.discountAmount || 0,
+        deliveryFee: pricing.deliveryFee || 0,
+        gst: pricing.gst || 0,
+        qst: pricing.qst || 0,
+        tipAmount: pricing.tipAmount || 0,
+        finalTotal: pricing.finalTotal || 0
+      } : undefined,
+      
+      // Campaign/discount details
+      campaign: campaign ? {
+        id: campaign.id || undefined,
+        code: campaign.code,
+        discountAmount: campaign.discountAmount || 0,
+        campaignType: campaign.campaignType,
+        campaignValue: campaign.campaignValue || 0
+      } : undefined,
+      
+      // Tip details
+      tip: tip ? {
+        amount: tip.amount || 0,
+        type: tip.type,
+        value: tip.value || 0
+      } : undefined
     };
 
     // Create order using existing orders service
