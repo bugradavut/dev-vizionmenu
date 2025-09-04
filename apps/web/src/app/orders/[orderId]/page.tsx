@@ -16,10 +16,12 @@ import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle, Timer } from "lucide-react"
+import { ordersService } from "@/services/orders.service"
 import { getSourceIcon } from "@/assets/images"
 import Image from "next/image"
 import Link from "next/link"
 import { useOrderDetail } from "@/hooks/use-orders"
+import type { Order } from "@/services/orders.service"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
 import { useOrderTimer } from "@/hooks/use-order-timer"
@@ -59,11 +61,15 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
     error, 
     refetch,
     clearError,
-    updateStatus 
+    updateStatus,
+    setOrder
   } = useOrderDetail(orderId)
   
   // Timer state
   const [currentTime, setCurrentTime] = useState(new Date())
+  
+  // Timing adjustment loading state
+  const [timingLoading, setTimingLoading] = useState(false)
   
   // Partial refund state
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
@@ -255,25 +261,29 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
     }
 
     const timingSettings = settings.timingSettings
-    const kitchenPrepTime = timingSettings.baseDelay + timingSettings.temporaryBaseDelay
+    const baseKitchenPrepTime = timingSettings.baseDelay + timingSettings.temporaryBaseDelay
+    const individualAdjustment = order.individual_timing_adjustment || 0
+    const totalKitchenPrepTime = baseKitchenPrepTime + individualAdjustment
     
     // Use updated_at as reference time (when order moved to preparing)
     const prepStartTime = new Date(order.updated_at)
     const elapsedMinutes = (currentTime.getTime() - prepStartTime.getTime()) / (1000 * 60)
-    const remainingMinutes = Math.max(0, kitchenPrepTime - elapsedMinutes)
+    const remainingMinutes = Math.max(0, totalKitchenPrepTime - elapsedMinutes)
     
     const isComplete = remainingMinutes <= 0
-    const progressPercent = Math.min(100, (elapsedMinutes / kitchenPrepTime) * 100)
+    const progressPercent = Math.min(100, (elapsedMinutes / totalKitchenPrepTime) * 100)
     
     // Calculate remaining seconds for countdown
-    const remainingSeconds = isComplete ? 0 : Math.floor(((kitchenPrepTime * 60) - (elapsedMinutes * 60)) % 60)
+    const remainingSeconds = isComplete ? 0 : Math.floor(((totalKitchenPrepTime * 60) - (elapsedMinutes * 60)) % 60)
     const remainingMins = isComplete ? 0 : Math.floor(remainingMinutes)
 
     // Check if third-party order (requires manual completion)
     const isThirdParty = order.source && ['uber_eats', 'doordash', 'phone'].includes(order.source)
     
     return {
-      kitchenPrepTime,
+      kitchenPrepTime: totalKitchenPrepTime,
+      baseTime: baseKitchenPrepTime,
+      adjustment: individualAdjustment,
       elapsedMinutes: Math.floor(elapsedMinutes),
       remainingMinutes: remainingMins,
       remainingSeconds,
@@ -1058,6 +1068,102 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                               
                               return language === 'fr' ? 'Heure non spécifiée' : 'Time not specified';
                             })()}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Timing Adjustment Card - Show for active orders only */}
+                  {(order.status === 'preparing' || order.status === 'scheduled') && (
+                    <Card>
+                      <CardHeader className="px-6 py-4">
+                        <CardTitle className="flex items-center gap-2 text-base font-medium">
+                          <Clock className="h-5 w-5" />
+                          {language === 'fr' ? 'Ajustement de Timing' : 'Timing Adjustment'}
+                        </CardTitle>
+                      </CardHeader>
+                      <Separator />
+                      <CardContent className="p-6">
+                        <div className="space-y-4">
+                          {/* Current adjustment display - top, justified */}
+                          <div className="flex items-center justify-between mb-4">
+                            <span className="text-sm font-medium text-gray-700">
+                              {language === 'fr' ? 'Ajustement actuel:' : 'Current Adjustment:'}
+                            </span>
+                            <div className="relative">
+                              {timingLoading ? (
+                                <div className="flex items-center gap-2 px-3 py-1 bg-orange-50 border border-orange-200 rounded-lg">
+                                  <div className="flex space-x-1">
+                                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"></div>
+                                  </div>
+                                  <span className="text-sm text-orange-700 font-medium">Updating...</span>
+                                </div>
+                              ) : (
+                                <span className="text-lg font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-lg">
+                                  {(order.individual_timing_adjustment || 0) > 0 ? '+' : ''}
+                                  {order.individual_timing_adjustment || 0} min
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Separator between current adjustment and buttons */}
+                          <div className="border-t border-gray-200"></div>
+                          
+                          {/* Timing buttons - bottom, full width */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <button
+                              disabled={timingLoading}
+                              className="px-4 py-2 bg-orange-50 hover:bg-orange-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-md border border-primary transition-colors text-sm font-medium text-orange-700"
+                              onClick={async () => {
+                                try {
+                                  setTimingLoading(true);
+                                  
+                                  // Optimistic update - update local state immediately
+                                  const newAdjustment = (order.individual_timing_adjustment || 0) + 5;
+                                  setOrder((prev: Order | null) => prev ? { ...prev, individual_timing_adjustment: newAdjustment } : null);
+                                  
+                                  // Then make API call
+                                  await ordersService.updateOrderTiming(order.id, 5);
+                                } catch (error) {
+                                  console.error('Failed to add 5 minutes:', error);
+                                  // Revert optimistic update on error
+                                  refetch();
+                                } finally {
+                                  setTimingLoading(false);
+                                }
+                              }}
+                            >
+                              <span className="text-lg">+</span> 5min
+                            </button>
+                            
+                            <button
+                              disabled={timingLoading}
+                              className="px-4 py-2 bg-orange-50 hover:bg-orange-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-md border border-primary transition-colors text-sm font-medium text-orange-700"
+                              onClick={async () => {
+                                try {
+                                  setTimingLoading(true);
+                                  
+                                  // Optimistic update - update local state immediately
+                                  const newAdjustment = (order.individual_timing_adjustment || 0) + 10;
+                                  setOrder((prev: Order | null) => prev ? { ...prev, individual_timing_adjustment: newAdjustment } : null);
+                                  
+                                  // Then make API call
+                                  await ordersService.updateOrderTiming(order.id, 10);
+                                } catch (error) {
+                                  console.error('Failed to add 10 minutes:', error);
+                                  // Revert optimistic update on error
+                                  refetch();
+                                } finally {
+                                  setTimingLoading(false);
+                                }
+                              }}
+                            >
+                              <span className="text-lg">+</span> 10min
+                            </button>
                           </div>
                         </div>
                       </CardContent>

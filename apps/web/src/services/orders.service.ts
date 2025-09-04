@@ -80,6 +80,9 @@ export interface Order {
   updated_at: string;
   items?: OrderItem[];
   
+  // NEW: Individual timing adjustment (Phase 2 - +5min button feature)
+  individual_timing_adjustment?: number;
+  
   // NEW: Campaign/discount details (Phase 1)
   campaignDiscount?: {
     code: string;
@@ -93,6 +96,16 @@ export interface Order {
     type: 'percentage' | 'fixed';
     value: number;
   } | null;
+}
+
+export interface UpdateTimingResponse {
+  success: boolean;
+  message: string;
+  orderId: string;
+  customerName: string;
+  adjustmentApplied: number;
+  totalAdjustment: number;
+  orderStatus: string;
 }
 
 export interface OrderListParams {
@@ -291,6 +304,21 @@ class OrdersService {
         })) || [],
       })) || [],
     };
+  }
+
+  /**
+   * Update individual timing adjustment for an order (+5min button feature)
+   * @param orderId - Order ID
+   * @param adjustmentMinutes - Minutes to add (positive) or subtract (negative)
+   * @returns Promise<UpdateTimingResponse>
+   */
+  async updateOrderTiming(orderId: string, adjustmentMinutes: number): Promise<UpdateTimingResponse> {
+    const response = await apiClient.patch<UpdateTimingResponse>(
+      `/api/v1/orders/${orderId}/timing`,
+      { adjustmentMinutes }
+    );
+
+    return response.data;
   }
 
   /**

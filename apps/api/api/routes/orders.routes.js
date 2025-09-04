@@ -27,4 +27,7 @@ router.post('/', optionalAuth, ordersController.createOrder);
 // Check and auto-advance orders based on timing
 router.post('/timer-check', ordersController.checkOrderTimers);
 
+// Update individual order timing adjustment
+router.patch('/:orderId/timing', requireAuthWithBranch, ordersController.updateOrderTiming);
+
 module.exports = router;

@@ -182,6 +182,7 @@ interface UseOrderDetailActions {
   updateStatus: (statusData: OrderStatusUpdateRequest) => Promise<boolean>;
   refetch: () => Promise<void>;
   clearError: () => void;
+  setOrder: (order: Order | null | ((prev: Order | null) => Order | null)) => void;
 }
 
 interface UseOrderDetailReturn extends UseOrderDetailState, UseOrderDetailActions {}
@@ -295,6 +296,13 @@ export function useOrderDetail(orderId?: string): UseOrderDetailReturn {
     setState(prev => ({ ...prev, error: null }));
   }, []);
 
+  const setOrder = useCallback((order: Order | null | ((prev: Order | null) => Order | null)) => {
+    setState(prev => ({ 
+      ...prev, 
+      order: typeof order === 'function' ? order(prev.order) : order 
+    }));
+  }, []);
+
   // Auto-fetch on mount if orderId provided
   useEffect(() => {
     if (orderId) {
@@ -311,5 +319,6 @@ export function useOrderDetail(orderId?: string): UseOrderDetailReturn {
     updateStatus,
     refetch,
     clearError,
+    setOrder,
   };
 }

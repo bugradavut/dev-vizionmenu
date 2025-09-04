@@ -24,6 +24,7 @@ import { useOrderTimer } from "@/hooks/use-order-timer"
 import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/translations"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
+import { OrderTimingButton } from "@/components/order-timing-button"
 import type { Order } from "@/services/orders.service"
 
 // Kitchen Display interfaces - compatible with Order API types
@@ -264,19 +265,21 @@ export default function KitchenDisplayPage() {
     }
 
     const timingSettings = branchSettings.timingSettings
-    // Kitchen prep time - only base + temporary (no delivery time for kitchen)
-    const kitchenPrepTime = timingSettings.baseDelay + timingSettings.temporaryBaseDelay
-
-    // Find the corresponding API order to get updated_at timestamp
+    // Find the corresponding API order to get updated_at timestamp and individual adjustment
     const apiOrder = apiOrders.find(o => o.id === order.id)
     if (!apiOrder) return null
+
+    // Kitchen prep time - base + temporary + individual adjustment
+    const baseKitchenPrepTime = timingSettings.baseDelay + timingSettings.temporaryBaseDelay
+    const individualAdjustment = apiOrder.individual_timing_adjustment || 0
+    const totalKitchenPrepTime = baseKitchenPrepTime + individualAdjustment
 
     const prepStartTime = new Date(apiOrder.updated_at)
     const elapsedMs = currentTime.getTime() - prepStartTime.getTime() // Use currentTime for real-time updates
     const elapsedMinutes = elapsedMs / (1000 * 60)
     
-    const progressPercent = Math.min((elapsedMinutes / kitchenPrepTime) * 100, 100)
-    const remainingMs = Math.max(0, (kitchenPrepTime * 60 * 1000) - elapsedMs)
+    const progressPercent = Math.min((elapsedMinutes / totalKitchenPrepTime) * 100, 100)
+    const remainingMs = Math.max(0, (totalKitchenPrepTime * 60 * 1000) - elapsedMs)
     const remainingMinutes = Math.floor(remainingMs / (1000 * 60))
     const remainingSeconds = Math.floor((remainingMs % (1000 * 60)) / 1000)
     
@@ -290,11 +293,13 @@ export default function KitchenDisplayPage() {
       progressPercent,
       remainingMinutes,
       remainingSeconds,
-      totalMinutes: kitchenPrepTime,
+      totalMinutes: totalKitchenPrepTime,
+      baseMinutes: baseKitchenPrepTime,
+      adjustment: individualAdjustment,
       elapsedMinutes: elapsedDisplayMinutes,
-      isOverdue: elapsedMinutes >= kitchenPrepTime,
+      isOverdue: elapsedMinutes >= totalKitchenPrepTime,
       isThirdParty,
-      canAutoComplete: !isThirdParty && elapsedMinutes >= kitchenPrepTime,
+      canAutoComplete: !isThirdParty && elapsedMinutes >= totalKitchenPrepTime,
       remainingTimeFormatted: remainingMs > 0 
         ? `${String(remainingMinutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`
         : '00:00'
@@ -748,6 +753,17 @@ export default function KitchenDisplayPage() {
                                       </div>
                                     )}
                                     <div className="mt-2 flex gap-2">
+                                      {/* Timing Adjustment Button - Always show for active orders */}
+                                      <OrderTimingButton
+                                        orderId={order.id}
+                                        currentAdjustment={apiOrders.find(o => o.id === order.id)?.individual_timing_adjustment}
+                                        orderStatus={apiOrders.find(o => o.id === order.id)?.status || 'preparing'}
+                                        onUpdate={refetch}
+                                        size="sm"
+                                        variant="outline"
+                                        className="flex-shrink-0"
+                                      />
+                                      
                                       {timerData.isOverdue && (
                                         <Button 
                                           size="sm" 

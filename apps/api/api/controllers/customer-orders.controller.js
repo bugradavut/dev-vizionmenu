@@ -13,17 +13,18 @@ const { handleControllerError } = require('../helpers/error-handler');
  * @param {Object} timingSettings - Branch timing configuration
  * @returns {string} Estimated time string (e.g., "20 minutes")
  */
-function calculateEstimatedTime(orderType, timingSettings) {
-  const kitchenTime = (timingSettings.baseDelay || 20) + (timingSettings.temporaryBaseDelay || 0);
+function calculateEstimatedTime(orderType, timingSettings, individualAdjustment = 0) {
+  const baseKitchenTime = (timingSettings.baseDelay || 20) + (timingSettings.temporaryBaseDelay || 0);
+  const adjustedKitchenTime = baseKitchenTime + individualAdjustment;
   
   if (orderType === 'takeaway' || orderType === 'dine_in') {
-    // Takeaway/Dine-in: Only kitchen preparation time
-    const totalTime = Math.max(5, kitchenTime);
+    // Takeaway/Dine-in: Only kitchen preparation time + individual adjustment
+    const totalTime = Math.max(5, adjustedKitchenTime);
     return `${totalTime} minutes`;
   } else if (orderType === 'delivery') {
-    // Delivery: Kitchen + delivery time
+    // Delivery: Kitchen + delivery time (individual adjustment only affects kitchen time)
     const deliveryTime = (timingSettings.deliveryDelay || 15) + (timingSettings.temporaryDeliveryDelay || 0);
-    const totalTime = Math.max(10, kitchenTime + deliveryTime);
+    const totalTime = Math.max(10, adjustedKitchenTime + deliveryTime);
     return `${totalTime} minutes`;
   } else {
     // Fallback for unknown order types
@@ -163,7 +164,8 @@ const createCustomerOrder = async (req, res) => {
     try {
       const branchSettings = await branchesService.getBranchSettings(branchId);
       const timingSettings = branchSettings.settings?.timingSettings || {};
-      estimatedTime = calculateEstimatedTime(orderType, timingSettings);
+      // New orders don't have individual adjustments yet, so pass 0
+      estimatedTime = calculateEstimatedTime(orderType, timingSettings, 0);
     } catch (timingError) {
       console.warn('Failed to get branch timing settings, using default:', timingError.message);
     }
@@ -242,11 +244,12 @@ const getOrderStatus = async (req, res) => {
       // Extract branch_id from order (try multiple possible field names)
       const branchId = order.branch_id || req.params.branchId;
       const orderType = order.order_type || order.orderType || 'takeaway';
+      const individualAdjustment = order.individual_timing_adjustment || 0;
       
       if (branchId) {
         const branchSettings = await branchesService.getBranchSettings(branchId);
         const timingSettings = branchSettings.settings?.timingSettings || {};
-        estimatedTime = calculateEstimatedTime(orderType, timingSettings);
+        estimatedTime = calculateEstimatedTime(orderType, timingSettings, individualAdjustment);
       } else {
         // Fallback estimated time
         estimatedTime = orderType === 'delivery' ? '35 minutes' : '20 minutes';

@@ -288,11 +288,44 @@ const checkOrderTimers = async (req, res) => {
   }
 };
 
+/**
+ * PATCH /api/v1/orders/:orderId/timing
+ * Update individual timing adjustment for an order
+ */
+const updateOrderTiming = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { adjustmentMinutes } = req.body;
+    
+    // Validation
+    if (!orderId) {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Order ID is required' }
+      });
+    }
+    
+    if (typeof adjustmentMinutes !== 'number') {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'adjustmentMinutes must be a number' }
+      });
+    }
+
+    const userBranch = req.userBranch;
+    const result = await ordersService.updateOrderTiming(orderId, adjustmentMinutes, userBranch);
+
+    res.json({ data: result });
+    
+  } catch (error) {
+    handleControllerError(error, 'update order timing', res);
+  }
+};
+
 module.exports = {
   getOrders,
   getOrderDetail,
   updateOrderStatus,
   checkAutoAccept,
   createOrder,
-  checkOrderTimers
+  checkOrderTimers,
+  updateOrderTiming
 };

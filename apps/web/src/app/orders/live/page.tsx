@@ -103,20 +103,25 @@ export default function LiveOrdersPage() {
     }
 
     const timingSettings = settings.timingSettings
-    const kitchenPrepTime = timingSettings.baseDelay + timingSettings.temporaryBaseDelay
+    const baseKitchenPrepTime = timingSettings.baseDelay + timingSettings.temporaryBaseDelay
+    const individualAdjustment = order.individual_timing_adjustment || 0
+    const totalKitchenPrepTime = baseKitchenPrepTime + individualAdjustment
     
     // Use updated_at as reference time (when order moved to preparing)
     const prepStartTime = new Date(order.updated_at)
     const elapsedMinutes = (currentTime.getTime() - prepStartTime.getTime()) / (1000 * 60)
-    const remainingMinutes = Math.max(0, kitchenPrepTime - elapsedMinutes)
+    const remainingMinutes = Math.max(0, totalKitchenPrepTime - elapsedMinutes)
     
     const isComplete = remainingMinutes <= 0
-    const progressPercent = Math.min(100, (elapsedMinutes / kitchenPrepTime) * 100)
+    const progressPercent = Math.min(100, (elapsedMinutes / totalKitchenPrepTime) * 100)
     
     return {
       progressPercent,
       isComplete,
-      remainingMinutes: Math.floor(remainingMinutes)
+      remainingMinutes: Math.floor(remainingMinutes),
+      baseTime: baseKitchenPrepTime,
+      adjustment: individualAdjustment,
+      totalTime: totalKitchenPrepTime
     }
   }, [currentTime, settings.timingSettings])
 
@@ -538,7 +543,7 @@ export default function LiveOrdersPage() {
                     </div>
                   </div>
                   
-                  {/* Total and Action */}
+                  {/* Total, Timing, and Action */}
                   <div className="flex items-center justify-between">
                     <div className="text-xl font-bold text-foreground">
                       ${order.pricing.total.toFixed(2)}

@@ -60,6 +60,7 @@ async function getOrders(filters, userBranch) {
       notes,
       special_instructions,
       estimated_ready_time,
+      individual_timing_adjustment,
       third_party_order_id,
       third_party_platform,
       created_at,
@@ -209,6 +210,7 @@ async function getOrderDetail(orderId, userBranch) {
     const { data, error } = await query.single();
     existingOrder = data;
     findError = error;
+    
   } else {
     // Try as short order number (ORDER-XXXXX format)
     let query = supabase
@@ -253,6 +255,7 @@ async function getOrderDetail(orderId, userBranch) {
         
         existingOrder = result.data;
         findError = result.error;
+        
       } else {
         findError = { message: 'Order not found' };
       }
@@ -314,6 +317,9 @@ async function getOrderDetail(orderId, userBranch) {
     notes: existingOrder.notes,
     special_instructions: existingOrder.special_instructions,
     estimated_ready_time: existingOrder.estimated_ready_time,
+    
+    // NEW: Individual timing adjustment (Phase 2 - +5min button feature)
+    individual_timing_adjustment: existingOrder.individual_timing_adjustment || 0,
     scheduled_datetime: existingOrder.scheduled_datetime, // Pre-order scheduled datetime
     scheduled_date: existingOrder.scheduled_date, // Pre-order scheduled date  
     scheduled_time: existingOrder.scheduled_time, // Pre-order scheduled time
@@ -788,14 +794,14 @@ async function checkOrderTimers(branchId) {
     };
   }
 
-  // Calculate total preparation time in minutes
+  // Base kitchen prep time from branch settings
   // Kitchen prep time - only base + temporary (no delivery time for kitchen)
-  const kitchenPrepTime = timingSettings.baseDelay + timingSettings.temporaryBaseDelay;
+  const baseKitchenPrepTime = timingSettings.baseDelay + timingSettings.temporaryBaseDelay;
 
   // Get all preparing orders for this branch
   const { data: preparingOrders, error: ordersError } = await supabase
     .from('orders')
-    .select('id, order_status, created_at, updated_at, order_type, third_party_platform')
+    .select('id, order_status, created_at, updated_at, order_type, third_party_platform, individual_timing_adjustment')
     .eq('branch_id', branchId)
     .eq('order_status', 'preparing');
 
@@ -818,6 +824,11 @@ async function checkOrderTimers(branchId) {
 
   // Check each preparing order
   for (const order of preparingOrders) {
+    // Calculate individual prep time for this order
+    // Base prep time + individual adjustment (can be positive or negative)
+    const individualAdjustment = order.individual_timing_adjustment || 0;
+    const totalKitchenPrepTime = baseKitchenPrepTime + individualAdjustment;
+    
     // Use updated_at as the reference time (when it was moved to 'preparing')
     const prepStartTime = new Date(order.updated_at);
     const minutesSincePrepStart = (now.getTime() - prepStartTime.getTime()) / (1000 * 60);
@@ -825,23 +836,26 @@ async function checkOrderTimers(branchId) {
     let shouldAutoComplete = false;
     let reason = '';
 
-    // Auto-complete logic based on order type and timing
-    if (minutesSincePrepStart >= kitchenPrepTime) {
+    // Auto-complete logic based on order type and individual timing
+    if (minutesSincePrepStart >= totalKitchenPrepTime) {
       // For internal orders (QR code, web, or null platform), auto-complete is allowed
       if (!order.third_party_platform || ['qr_code', 'web'].includes(order.third_party_platform)) {
         shouldAutoComplete = true;
-        reason = `Internal order auto-completed after ${Math.round(minutesSincePrepStart)} minutes`;
+        const adjustmentInfo = individualAdjustment !== 0 ? ` (base: ${baseKitchenPrepTime}min, adjustment: ${individualAdjustment > 0 ? '+' : ''}${individualAdjustment}min)` : '';
+        reason = `Internal order auto-completed after ${Math.round(minutesSincePrepStart)} minutes${adjustmentInfo}`;
       }
       // For third-party orders, respect manual ready option
       else if (['uber_eats', 'doordash', 'phone'].includes(order.third_party_platform)) {
         // Third-party orders always require manual confirmation for completion
         // This is a business rule for external platform compatibility
         shouldAutoComplete = false;
-        reason = `Third-party order requires manual completion confirmation (${Math.round(minutesSincePrepStart)} min elapsed)`;
+        const adjustmentInfo = individualAdjustment !== 0 ? ` (adjusted time: ${totalKitchenPrepTime}min)` : '';
+        reason = `Third-party order requires manual completion confirmation (${Math.round(minutesSincePrepStart)} min elapsed)${adjustmentInfo}`;
       }
     } else {
-      const remainingMinutes = Math.ceil(kitchenPrepTime - minutesSincePrepStart);
-      reason = `Timer pending: ${remainingMinutes} minutes remaining`;
+      const remainingMinutes = Math.ceil(totalKitchenPrepTime - minutesSincePrepStart);
+      const adjustmentInfo = individualAdjustment !== 0 ? ` (adjusted: ${totalKitchenPrepTime}min total)` : '';
+      reason = `Timer pending: ${remainingMinutes} minutes remaining${adjustmentInfo}`;
     }
 
     if (shouldAutoComplete) {
@@ -871,7 +885,10 @@ async function checkOrderTimers(branchId) {
           status: 'completed',
           success: true,
           message: reason,
-          prepTime: Math.round(minutesSincePrepStart)
+          prepTime: Math.round(minutesSincePrepStart),
+          baseTime: baseKitchenPrepTime,
+          adjustment: individualAdjustment,
+          totalTime: totalKitchenPrepTime
         });
       }
     } else {
@@ -880,7 +897,11 @@ async function checkOrderTimers(branchId) {
         status: 'preparing',
         success: false,
         message: reason,
-        prepTime: Math.round(minutesSincePrepStart)
+        prepTime: Math.round(minutesSincePrepStart),
+        baseTime: baseKitchenPrepTime,
+        adjustment: individualAdjustment,
+        totalTime: totalKitchenPrepTime,
+        remainingTime: Math.ceil(totalKitchenPrepTime - minutesSincePrepStart)
       });
     }
   }
@@ -898,11 +919,89 @@ async function checkOrderTimers(branchId) {
   };
 }
 
+/**
+ * Update individual timing adjustment for an order
+ * @param {string} orderId - Order ID
+ * @param {number} adjustmentMinutes - Minutes to add/subtract
+ * @param {Object} userBranch - User branch context
+ * @returns {Object} Update result
+ */
+async function updateOrderTiming(orderId, adjustmentMinutes, userBranch) {
+  // Validation
+  if (!orderId) {
+    throw new Error('Order ID is required');
+  }
+  
+  if (typeof adjustmentMinutes !== 'number') {
+    throw new Error('Adjustment minutes must be a number');
+  }
+  
+  // Limit adjustment to reasonable range
+  if (adjustmentMinutes < -30 || adjustmentMinutes > 60) {
+    throw new Error('Adjustment must be between -30 and +60 minutes');
+  }
+
+  // Get current order to verify access and current adjustment
+  const { data: existingOrder, error: findError } = await supabase
+    .from('orders')
+    .select('id, order_status, individual_timing_adjustment, customer_name')
+    .eq('id', orderId)
+    .eq('branch_id', userBranch.branch_id)
+    .single();
+
+  if (findError || !existingOrder) {
+    throw new Error('Order not found or access denied');
+  }
+
+  // Only allow timing adjustments for active orders
+  const validStatuses = ['preparing', 'confirmed'];
+  if (!validStatuses.includes(existingOrder.order_status)) {
+    throw new Error(`Cannot adjust timing for order with status: ${existingOrder.order_status}`);
+  }
+
+  // Calculate new total adjustment
+  const currentAdjustment = existingOrder.individual_timing_adjustment || 0;
+  const newTotalAdjustment = currentAdjustment + adjustmentMinutes;
+  
+  // Ensure total adjustment stays within limits
+  if (newTotalAdjustment < -30 || newTotalAdjustment > 60) {
+    throw new Error('Total timing adjustment would exceed limits (-30 to +60 minutes)');
+  }
+
+  // Update the order
+  const { data: updatedOrder, error: updateError } = await supabase
+    .from('orders')
+    .update({
+      individual_timing_adjustment: newTotalAdjustment,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', orderId)
+    .eq('branch_id', userBranch.branch_id)
+    .select('id, customer_name, individual_timing_adjustment, order_status')
+    .single();
+
+  if (updateError) {
+    console.error('Order timing update error:', updateError);
+    throw new Error(`Failed to update order timing: ${updateError.message}`);
+  }
+
+  return {
+    success: true,
+    message: `Order timing adjusted by ${adjustmentMinutes > 0 ? '+' : ''}${adjustmentMinutes} minutes`,
+    orderId: updatedOrder.id,
+    customerName: updatedOrder.customer_name,
+    adjustmentApplied: adjustmentMinutes,
+    totalAdjustment: updatedOrder.individual_timing_adjustment,
+    orderStatus: updatedOrder.order_status
+  };
+}
+
 module.exports = {
   getOrders,
   getOrderDetail,
   updateOrderStatus,
   createOrder,
   checkAutoAccept,
-  checkOrderTimers
+  checkOrderTimers,
+  updateOrderTiming
 };
