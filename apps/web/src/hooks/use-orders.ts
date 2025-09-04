@@ -303,31 +303,7 @@ export function useOrderDetail(orderId?: string): UseOrderDetailReturn {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run on mount - ignoring deps intentionally
 
-  // Smart polling for order detail real-time updates
-  const silentRefreshDetail = useCallback(async () => {
-    if (currentOrderId && !state.loading) {
-      try {
-        // Silent refetch without showing loading state
-        const response = await ordersService.getOrderById(currentOrderId.includes('ORDER-') ? currentOrderId : `ORDER-${currentOrderId}`);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const transformedOrder = ordersService.transformOrder(response.data as any);
-        
-        setState(prev => ({
-          ...prev,
-          order: transformedOrder,
-        }));
-      } catch (err) {
-        console.debug('Silent order detail refresh failed:', err);
-      }
-    }
-  }, [currentOrderId, state.loading]);
 
-  // Use smart polling for order detail updates
-  useSmartPolling(silentRefreshDetail, {
-    interval: 10000, // 10 seconds for order details (more frequent)
-    enabled: !!currentOrderId, // Only enable if we have an order ID
-    fetchOnMount: false // Don't fetch on mount (already fetched in initial useEffect)
-  });
 
   return {
     ...state,

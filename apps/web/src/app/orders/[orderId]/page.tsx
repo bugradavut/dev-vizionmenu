@@ -160,17 +160,6 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
     }
   }
 
-  const getPaymentMethodLabel = (paymentMethod: string) => {
-    switch (paymentMethod?.toLowerCase()) {
-      case 'credit_card': return t.orderDetail.creditCard
-      case 'debit_card': return t.orderDetail.debitCard
-      case 'cash': return t.orderDetail.cash
-      case 'paypal': return t.orderDetail.paypal
-      case 'apple_pay': return t.orderDetail.applePay
-      case 'google_pay': return t.orderDetail.googlePay
-      default: return paymentMethod || t.orderDetail.notSpecified
-    }
-  }
 
   const formatEstimatedTime = (timestamp: string) => {
     if (!timestamp) return t.orderDetail.notSpecified
@@ -297,7 +286,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
 
   const timerInfo = getTimerInfo()
 
-  // Smart timer with auto-completion detection
+  // Timer for visual countdown ONLY - NO POLLING, NO REFETCHING
   useEffect(() => {
     // Clear any existing polling
     if (pollingIntervalRef.current) {
@@ -305,46 +294,20 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
       pollingIntervalRef.current = null
     }
 
+    // Only visual countdown timer for preparing orders - NO DATA FETCHING
     if (order?.status === 'preparing' && settings.timingSettings?.autoReady) {
-      // Visual countdown timer (every second)
+      // Visual countdown timer (every second) - ONLY updates currentTime state
       const visualTimer = setInterval(() => {
         setCurrentTime(new Date())
       }, 1000)
-      
-      // Check if timer is complete
-      const currentTimerInfo = getTimerInfo()
-      if (currentTimerInfo?.isComplete) {
-        // Timer completed, start frequent polling to catch backend auto-completion
-        pollingIntervalRef.current = setInterval(async () => {
-          try {
-            await refetch()
-            
-            // If order is now completed, stop polling
-            if (order?.status === 'completed') {
-              if (pollingIntervalRef.current) {
-                clearInterval(pollingIntervalRef.current)
-                pollingIntervalRef.current = null
-              }
-            }
-          } catch {
-            // Silent error handling
-          }
-        }, 5000) // 5 seconds for even faster detection
-        
-        return () => {
-          clearInterval(visualTimer)
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current)
-            pollingIntervalRef.current = null
-          }
-        }
-      }
       
       return () => {
         clearInterval(visualTimer)
       }
     }
-  }, [order?.status, order?.updated_at, settings.timingSettings?.autoReady, refetch, getTimerInfo])
+    
+    // NO POLLING - Payment Summary stays stable, no disappearing
+  }, [order?.status, settings.timingSettings?.autoReady])
   
   // Start timer service for auto-completion
   useEffect(() => {
@@ -840,48 +803,59 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                     </CardHeader>
                     <Separator />
                     <CardContent className="space-y-3 p-6">
-                      {/* Items Total */}
-                      {(order.pricing.itemsTotal || 0) > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span>{language === 'fr' ? 'Articles' : 'Items'}</span>
-                          <span>${(order.pricing.itemsTotal || 0).toFixed(2)}</span>
-                        </div>
+                      {/* Show comprehensive breakdown if available, otherwise show simple subtotal */}
+                      {(order.pricing.itemsTotal || 0) > 0 ? (
+                        <>
+                          {/* Items Total */}
+                          <div className="flex justify-between text-sm">
+                            <span>{language === 'fr' ? 'Articles' : 'Items'}</span>
+                            <span>${(order.pricing.itemsTotal || 0).toFixed(2)}</span>
+                          </div>
+                          
+                          {/* Campaign Discount */}
+                          {order.campaignDiscount && (order.pricing.discountAmount || 0) > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span className="flex items-center gap-1 text-green-600">
+                                <span>📍</span>
+                                {order.campaignDiscount.code}
+                              </span>
+                              <span className="text-green-600">
+                                -${(order.pricing.discountAmount || 0).toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Delivery Fee */}
+                          {order.pricing.delivery_fee > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span>{language === 'fr' ? 'Frais de livraison' : 'Delivery fee'}</span>
+                              <span>${order.pricing.delivery_fee.toFixed(2)}</span>
+                            </div>
+                          )}
+                          
+                          {/* Service Fee */}
+                          {order.pricing.service_fee > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span>{t.orderDetail.serviceFee}</span>
+                              <span>${order.pricing.service_fee.toFixed(2)}</span>
+                            </div>
+                          )}
+                          
+                          {/* Subtotal (calculated: items - discount + delivery + service fees) */}
+                          <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
+                            <span>{t.orderDetail.subtotal}</span>
+                            <span>${((order.pricing.itemsTotal || 0) - (order.pricing.discountAmount || 0) + (order.pricing.delivery_fee || 0) + (order.pricing.service_fee || 0)).toFixed(2)}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {/* Legacy simple subtotal display */}
+                          <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
+                            <span>{t.orderDetail.subtotal}</span>
+                            <span>${order.pricing.subtotal.toFixed(2)}</span>
+                          </div>
+                        </>
                       )}
-                      
-                      {/* Campaign Discount */}
-                      {order.campaignDiscount && (order.pricing.discountAmount || 0) > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="flex items-center gap-1 text-green-600">
-                            <span>📍</span>
-                            {order.campaignDiscount.code}
-                          </span>
-                          <span className="text-green-600">
-                            -${(order.pricing.discountAmount || 0).toFixed(2)}
-                          </span>
-                        </div>
-                      )}
-                      
-                      {/* Delivery Fee */}
-                      {order.pricing.delivery_fee > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span>{language === 'fr' ? 'Frais de livraison' : 'Delivery fee'}</span>
-                          <span>${order.pricing.delivery_fee.toFixed(2)}</span>
-                        </div>
-                      )}
-                      
-                      {/* Service Fee */}
-                      {order.pricing.service_fee > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span>{t.orderDetail.serviceFee}</span>
-                          <span>${order.pricing.service_fee.toFixed(2)}</span>
-                        </div>
-                      )}
-                      
-                      {/* Subtotal (after discounts, before tax) */}
-                      <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
-                        <span>{t.orderDetail.subtotal}</span>
-                        <span>${order.pricing.subtotal.toFixed(2)}</span>
-                      </div>
                       
                       {/* Tax Breakdown: Show GST/QST if available, otherwise fallback to combined tax */}
                       {(order.pricing.gst || 0) > 0 && (order.pricing.qst || 0) > 0 ? (
@@ -941,9 +915,6 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                           }
                         </p>
                       )}
-                      <div className="text-center text-sm text-muted-foreground mt-2">
-                        {t.orderDetail.payment}: {getPaymentMethodLabel(order.payment_method || 'cash')}
-                      </div>
                       <Separator className="my-3" />
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
