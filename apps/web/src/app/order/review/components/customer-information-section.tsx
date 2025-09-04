@@ -120,11 +120,27 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
   const [validationErrors, setValidationErrors] = useState<{[key: string]: boolean}>({})
   const [showValidationErrors, setShowValidationErrors] = useState(false)
   
+  // Address type specific required fields
+  const getRequiredAddressFields = (addressType: AddressType): (keyof DeliveryAddress)[] => {
+    const baseRequired: (keyof DeliveryAddress)[] = ['streetNumber', 'streetName', 'city', 'province', 'postalCode']
+    
+    switch (addressType) {
+      case 'apartment':
+        return [...baseRequired, 'unitNumber'] // Unit Number required for apartments
+      case 'office':
+        return baseRequired // Suite Number is optional for office
+      case 'home':
+      case 'other':
+      default:
+        return baseRequired
+    }
+  }
+
   // Required field validation 
   const validateForm = (showErrors: boolean = false) => {
     const errors: {[key: string]: boolean} = {}
     
-    // Check required fields: name, phone, email
+    // Check required customer info fields: name, phone, email
     if (!customerInfo.name.trim()) {
       errors.name = true
     }
@@ -133,6 +149,23 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
     }
     if (!customerInfo.email.trim()) {
       errors.email = true
+    }
+    
+    // Check delivery address fields if order type is delivery
+    if (customerInfo.orderType === 'delivery' && !orderContext?.isQROrder) {
+      const requiredAddressFields = getRequiredAddressFields(address.type)
+      
+      requiredAddressFields.forEach(field => {
+        const value = address[field]
+        if (!value || (typeof value === 'string' && !value.trim())) {
+          errors[`address_${field}`] = true
+        }
+      })
+      
+      // Special validation for postal code format
+      if (address.postalCode.trim() && !isValidCanadianPostalCode(address.postalCode)) {
+        errors.address_postalCode = true
+      }
     }
     
     const isValid = Object.keys(errors).length === 0
@@ -166,7 +199,34 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
       // Scroll to first empty field
       const firstEmptyField = Object.keys(validation.errors)[0]
       if (firstEmptyField) {
-        const element = document.getElementById(`customer-${firstEmptyField}`)
+        let element = null
+        
+        if (firstEmptyField.startsWith('address_')) {
+          // Handle address field errors
+          const fieldName = firstEmptyField.replace('address_', '')
+          
+          // Special handling for different field IDs
+          switch (fieldName) {
+            case 'streetNumber':
+              element = document.getElementById('street-number')
+              break
+            case 'streetName':
+              element = document.getElementById('street-name')
+              break
+            case 'unitNumber':
+              element = document.getElementById('unit-number')
+              break
+            case 'postalCode':
+              element = document.getElementById('postal-code')
+              break
+            default:
+              element = document.getElementById(fieldName)
+          }
+        } else {
+          // Handle customer info field errors
+          element = document.getElementById(`customer-${firstEmptyField}`)
+        }
+        
         if (element) {
           element.scrollIntoView({ 
             behavior: 'smooth', 
@@ -301,8 +361,23 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
 
   const handleAddressChange = (field: keyof DeliveryAddress, value: string) => {
     setAddress(prev => ({ ...prev, [field]: value }))
+    
+    // Clear validation error for this field when user types (only if errors are being shown)
+    const errorKey = `address_${field}`
+    if (showValidationErrors && validationErrors[errorKey]) {
+      setValidationErrors(prev => ({ ...prev, [errorKey]: false }))
+    }
+    
     // Trigger validation after state update (but don't show errors)
     setTimeout(() => validateForm(false), 0)
+  }
+
+  const handleAddressInputFocus = (fieldName: string) => {
+    // Clear red border when user focuses on address input (only if errors are being shown)
+    const errorKey = `address_${fieldName}`
+    if (showValidationErrors && validationErrors[errorKey]) {
+      setValidationErrors(prev => ({ ...prev, [errorKey]: false }))
+    }
   }
 
   return (
@@ -515,7 +590,8 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
                         placeholder="123"
                         value={address.streetNumber}
                         onChange={(e) => handleAddressChange('streetNumber', e.target.value)}
-                        className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
+                        onFocus={() => handleAddressInputFocus('streetNumber')}
+                        className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${showValidationErrors && validationErrors.address_streetNumber ? 'border-red-500 border-2' : ''}`}
                       />
                     </div>
                     <div className="space-y-1">
@@ -527,6 +603,7 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
                         placeholder="201"
                         value={address.unitNumber}
                         onChange={(e) => handleAddressChange('unitNumber', e.target.value)}
+                        onFocus={() => handleAddressInputFocus('unitNumber')}
                         className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
                       />
                     </div>
@@ -541,7 +618,7 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
                       value={address.streetName}
                       onChange={(value) => handleAddressChange('streetName', value)}
                       placeholder="Main Street"
-                      className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
+                      className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${showValidationErrors && validationErrors.address_streetName ? 'border-red-500 border-2' : ''}`}
                       language={language}
                     />
                   </div>
@@ -559,7 +636,8 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
                         placeholder="123"
                         value={address.streetNumber}
                         onChange={(e) => handleAddressChange('streetNumber', e.target.value)}
-                        className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
+                        onFocus={() => handleAddressInputFocus('streetNumber')}
+                        className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${showValidationErrors && validationErrors.address_streetNumber ? 'border-red-500 border-2' : ''}`}
                       />
                     </div>
                     <div className="col-span-3 space-y-1">
@@ -570,7 +648,7 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
                         value={address.streetName}
                         onChange={(value) => handleAddressChange('streetName', value)}
                         placeholder="Main Street"
-                        className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
+                        className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${showValidationErrors && validationErrors.address_streetName ? 'border-red-500 border-2' : ''}`}
                         language={language}
                       />
                     </div>
@@ -588,7 +666,8 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
                           placeholder="4B"
                           value={address.unitNumber}
                           onChange={(e) => handleAddressChange('unitNumber', e.target.value)}
-                          className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
+                          onFocus={() => handleAddressInputFocus('unitNumber')}
+                          className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${showValidationErrors && validationErrors.address_unitNumber ? 'border-red-500 border-2' : ''}`}
                         />
                       </div>
                       <div className="space-y-1">
@@ -600,6 +679,7 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
                           placeholder="1234 or #4B"
                           value={address.buzzerCode}
                           onChange={(e) => handleAddressChange('buzzerCode', e.target.value)}
+                          onFocus={() => handleAddressInputFocus('buzzerCode')}
                           className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
                         />
                       </div>
@@ -624,7 +704,7 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
                       }
                     }}
                     placeholder="Montreal"
-                    className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
+                    className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${showValidationErrors && validationErrors.address_city ? 'border-red-500 border-2' : ''}`}
                     language={language}
                     searchType="city"
                   />
@@ -634,7 +714,10 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
                     Province *
                   </Label>
                   <Select value={address.province} onValueChange={(value) => handleAddressChange('province', value)}>
-                    <SelectTrigger className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg">
+                    <SelectTrigger 
+                      className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${showValidationErrors && validationErrors.address_province ? 'border-red-500 border-2' : ''}`}
+                      onFocus={() => handleAddressInputFocus('province')}
+                    >
                       <SelectValue placeholder="QC" />
                     </SelectTrigger>
                     <SelectContent>
@@ -659,9 +742,11 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
                       handleAddressChange('postalCode', formatted)
                     }}
                     maxLength={7}
+                    onFocus={() => handleAddressInputFocus('postalCode')}
                     className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${
-                      address.postalCode && !isValidCanadianPostalCode(address.postalCode) 
-                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500' 
+                      (address.postalCode && !isValidCanadianPostalCode(address.postalCode)) || 
+                      (showValidationErrors && validationErrors.address_postalCode)
+                        ? 'border-red-500 border-2' 
                         : ''
                     }`}
                   />
@@ -678,6 +763,7 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
                   placeholder="Ring doorbell, leave at door, etc."
                   value={address.deliveryInstructions}
                   onChange={(e) => handleAddressChange('deliveryInstructions', e.target.value)}
+                  onFocus={() => handleAddressInputFocus('deliveryInstructions')}
                   className="h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg"
                 />
               </div>
