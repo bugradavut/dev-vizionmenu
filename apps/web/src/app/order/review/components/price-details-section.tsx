@@ -17,6 +17,12 @@ interface CampaignDiscount {
   campaignValue: number
 }
 
+interface SelectedTip {
+  amount: number
+  type: 'percentage' | 'fixed'
+  value: number
+}
+
 interface PriceDetailsSectionProps {
   items: CartItem[]
   language: string
@@ -26,6 +32,7 @@ interface PriceDetailsSectionProps {
   isMinimumOrderLoading?: boolean
   isMinimumOrderMet?: boolean
   deliveryFee?: number
+  selectedTip?: SelectedTip | null
 }
 
 export function PriceDetailsSection({ 
@@ -36,7 +43,8 @@ export function PriceDetailsSection({
   minimumOrderAmount, 
   isMinimumOrderLoading, 
   isMinimumOrderMet,
-  deliveryFee = 0
+  deliveryFee = 0,
+  selectedTip
 }: PriceDetailsSectionProps) {
   // Calculate dynamic values
   const itemsTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
@@ -48,18 +56,20 @@ export function PriceDetailsSection({
   
   // Add delivery fee for delivery orders only
   const applicableDeliveryFee = selectedOrderType === 'delivery' ? deliveryFee : 0
+  const subtotalWithDelivery = subtotalAfterDiscount + applicableDeliveryFee
   
   // Quebec taxes: GST (5%) + QST (9.975%) = ~15%
   // GST = Goods and Services Tax (Federal tax - 5%)
   // QST = Quebec Sales Tax (Provincial tax - 9.975%)
-  // These are calculated on the subtotal (after any discounts, including delivery fee)
-  const subtotalWithDelivery = subtotalAfterDiscount + applicableDeliveryFee
+  // Taxes are calculated on food + delivery fee only (tip is NOT taxable in Canada)
   const gstRate = 0.05
   const qstRate = 0.09975
   const gst = subtotalWithDelivery * gstRate
   const qst = subtotalWithDelivery * qstRate
   
-  const finalTotal = subtotalWithDelivery + gst + qst
+  // Add tip amount AFTER taxes (tip is not taxable)
+  const tipAmount = selectedTip?.amount || 0
+  const finalTotal = subtotalWithDelivery + gst + qst + tipAmount
 
   return (
     <div className="bg-card rounded-lg border border-border p-6">
@@ -102,6 +112,7 @@ export function PriceDetailsSection({
           </div>
         )}
         
+        
         <div className="border-t border-border pt-3">
           <div className="flex justify-between items-center mb-2">
             <span className="text-muted-foreground">Subtotal</span>
@@ -123,6 +134,24 @@ export function PriceDetailsSection({
               {language === 'fr' ? `${qst.toFixed(2)} $` : `$${qst.toFixed(2)}`}
             </span>
           </div>
+          
+          {/* Tip - shown after taxes as it's not taxable */}
+          {selectedTip && tipAmount > 0 && (
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-muted-foreground flex items-center gap-1">
+                {language === 'fr' ? 'Pourboire' : 'Tip'}
+                <span className="text-xs text-muted-foreground">
+                  ({selectedTip.type === 'percentage' 
+                    ? `${selectedTip.value}%` 
+                    : language === 'fr' ? 'fixe' : 'fixed'
+                  })
+                </span>
+              </span>
+              <span className="text-foreground">
+                {language === 'fr' ? `${tipAmount.toFixed(2)} $` : `$${tipAmount.toFixed(2)}`}
+              </span>
+            </div>
+          )}
         </div>
         
         <div className="border-t border-border pt-3">

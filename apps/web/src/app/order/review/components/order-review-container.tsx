@@ -49,6 +49,11 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
     campaignType: 'percentage' | 'fixed_amount'
     campaignValue: number
   } | null>(null)
+  const [selectedTip, setSelectedTip] = useState<{
+    amount: number
+    type: 'percentage' | 'fixed'
+    value: number
+  } | null>(null)
   const customerInfoRef = useRef<{ triggerValidation: () => boolean } | null>(null)
   
   // Fetch minimum order amount for delivery validation
@@ -83,20 +88,24 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
     const applicableDeliveryFee = selectedOrderType === 'delivery' ? deliveryFee : 0
     const subtotalWithDelivery = subtotalAfterDiscount + applicableDeliveryFee
     
-    // Quebec taxes: GST (5%) + QST (9.975%)
+    // Quebec taxes: GST (5%) + QST (9.975%) - calculated on food + delivery only (tip is NOT taxable)
     const gst = subtotalWithDelivery * 0.05
     const qst = subtotalWithDelivery * 0.09975
-    const finalTotal = subtotalWithDelivery + gst + qst
+    
+    // Add tip amount AFTER taxes (tip is not taxable in Canada)
+    const tipAmount = selectedTip?.amount || 0
+    const finalTotal = subtotalWithDelivery + gst + qst + tipAmount
     
     return {
       itemsTotal,
       subtotalAfterDiscount,
       subtotalWithDelivery,
+      tipAmount,
       gst,
       qst,
       finalTotal
     }
-  }, [items, appliedDiscount, selectedOrderType, deliveryFee])
+  }, [items, appliedDiscount, selectedOrderType, deliveryFee, selectedTip])
   
   // Check if minimum order requirement is met for delivery orders
   const isMinimumOrderMet = useMemo(() => {
@@ -110,6 +119,19 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
     return orderTotals.subtotalAfterDiscount >= minimumOrderAmount
   }, [selectedOrderType, minimumOrderAmount, isMinimumOrderLoading, orderTotals.subtotalAfterDiscount])
   
+  // Handle tip selection changes
+  const handleTipChange = (tipAmount: number, tipType: 'percentage' | 'fixed', tipValue: number) => {
+    if (tipAmount > 0) {
+      setSelectedTip({
+        amount: tipAmount,
+        type: tipType,
+        value: tipValue
+      })
+    } else {
+      setSelectedTip(null)
+    }
+  }
+
   // Function to trigger validation from child components
   const triggerFormValidation = () => {
     if (customerInfoRef.current && customerInfoRef.current.triggerValidation) {
@@ -150,7 +172,10 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
               onOrderTypeChange={handleOrderTypeChange}
             />
             <PaymentMethodSection />
-            <TipSection />
+            <TipSection 
+              subtotal={orderTotals.subtotalAfterDiscount} 
+              onTipChange={handleTipChange}
+            />
           </div>
 
           {/* Right Side - Order Summary & Details */}
@@ -165,6 +190,7 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
               isMinimumOrderLoading={isMinimumOrderLoading}
               isMinimumOrderMet={isMinimumOrderMet}
               deliveryFee={deliveryFee}
+              selectedTip={selectedTip}
             />
             <PromoCodeSection 
               items={items} 
