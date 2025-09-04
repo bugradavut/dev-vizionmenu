@@ -52,10 +52,30 @@ interface OrderSession {
   customerEmail?: string;
   items: OrderItem[];
   pricing: {
+    itemsTotal?: number;
     subtotal: number;
-    taxAmount: number;
+    subtotalWithDelivery?: number;
+    gst?: number;
+    qst?: number;
+    tipAmount?: number;
     total: number;
+    // Legacy fields for backward compatibility
+    subtotalAmount?: number;
+    taxAmount: number;
+    totalAmount?: number;
   };
+  campaignDiscount?: {
+    code: string;
+    discountAmount: number;
+    campaignType: 'percentage' | 'fixed_amount';
+    campaignValue: number;
+  } | null;
+  deliveryFee?: number;
+  tipDetails?: {
+    amount: number;
+    type: 'percentage' | 'fixed';
+    value: number;
+  } | null;
   orderType?: string;
   source?: string;
   branchId?: string; // Add branch ID for new order navigation
@@ -210,15 +230,29 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
 
   // Use sessionStorage data with API fallback
   // Get API pricing values (only use if they're greater than 0)
-  const apiSubtotal = (orderDetails?.pricing?.subtotal && orderDetails.pricing.subtotal > 0) ? orderDetails.pricing.subtotal : 0
   const apiTax = (orderDetails?.pricing?.taxAmount && orderDetails.pricing.taxAmount > 0) ? orderDetails.pricing.taxAmount : 0
   const apiTotal = (orderDetails?.pricing?.total && orderDetails.pricing.total > 0) ? orderDetails.pricing.total : 0
   
-  // Calculate pricing with proper fallback logic using the actual displayed items
+  // Calculate pricing with comprehensive breakdown from sessionStorage
   const displayedItems = orderItems.length > 0 ? orderItems : items;
-  const subtotal = apiSubtotal || sessionData?.pricing?.subtotal || displayedItems.reduce((total, item) => total + (item.price * item.quantity), 0)
-  const tax = apiTax || sessionData?.pricing?.taxAmount || subtotal * 0.13
-  const total = apiTotal || sessionData?.pricing?.total || subtotal + tax
+  
+  // Use sessionStorage pricing if available, otherwise calculate
+  const itemsTotal = sessionData?.pricing?.itemsTotal || displayedItems.reduce((total, item) => total + (item.price * item.quantity), 0)
+  const discountAmount = sessionData?.campaignDiscount?.discountAmount || 0
+  const subtotalAfterDiscount = itemsTotal - discountAmount
+  const deliveryFee = sessionData?.deliveryFee || 0
+  const subtotalWithDelivery = subtotalAfterDiscount + deliveryFee
+  
+  // Tax breakdown: Use sessionStorage GST/QST if available, otherwise fallback to API or calculate
+  const gst = sessionData?.pricing?.gst || (apiTax > 0 ? apiTax * 0.333 : subtotalWithDelivery * 0.05) // Estimate GST as 1/3 of total tax if from API
+  const qst = sessionData?.pricing?.qst || (apiTax > 0 ? apiTax * 0.667 : subtotalWithDelivery * 0.09975) // Estimate QST as 2/3 of total tax if from API
+  const totalTax = gst + qst
+  
+  // Tip amount
+  const tipAmount = sessionData?.tipDetails?.amount || 0
+  
+  // Final calculations with fallbacks
+  const total = apiTotal || sessionData?.pricing?.total || (subtotalWithDelivery + totalTax + tipAmount)
   
   // Extract customer info from sessionStorage with fallbacks
   const customerName = sessionData?.customerName || 'Customer';
@@ -670,32 +704,108 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                 </div>
               </div>
 
-              {/* Order Summary */}
+              {/* Comprehensive Order Summary */}
               <div className="border-t border-gray-200 pt-4">
                 <div className="space-y-2 text-sm mb-4">
+                  {/* Items Total */}
                   <div className="flex justify-between">
                     <span className="text-gray-600">
                       {language === 'fr' ? 'Articles' : 'Items'}
                     </span>
                     <span className="font-medium text-gray-900">
                       {language === 'fr' ? 
-                        `${subtotal.toFixed(2).replace('.', ',')} $` : 
-                        `$${subtotal.toFixed(2)}`
+                        `${itemsTotal.toFixed(2).replace('.', ',')} $` : 
+                        `$${itemsTotal.toFixed(2)}`
                       }
                     </span>
                   </div>
                   
-                  <div className="flex justify-between">
+                  {/* Campaign Discount */}
+                  {sessionData?.campaignDiscount && discountAmount > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 flex items-center gap-1">
+                        <span className="text-green-600">📍</span>
+                        {sessionData.campaignDiscount.code}
+                      </span>
+                      <span className="font-medium text-green-600">
+                        {language === 'fr' ? 
+                          `-${discountAmount.toFixed(2).replace('.', ',')} $` : 
+                          `-$${discountAmount.toFixed(2)}`
+                        }
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Delivery Fee */}
+                  {deliveryFee > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">
+                        {language === 'fr' ? 'Frais de livraison' : 'Delivery fee'}
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        {language === 'fr' ? 
+                          `${deliveryFee.toFixed(2).replace('.', ',')} $` : 
+                          `$${deliveryFee.toFixed(2)}`
+                        }
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Subtotal */}
+                  <div className="flex justify-between border-t border-gray-200 pt-2">
                     <span className="text-gray-600">
-                      {language === 'fr' ? 'Taxe (TVH)' : 'Tax (HST)'}
+                      {language === 'fr' ? 'Sous-total' : 'Subtotal'}
                     </span>
                     <span className="font-medium text-gray-900">
                       {language === 'fr' ? 
-                        `${tax.toFixed(2).replace('.', ',')} $` : 
-                        `$${tax.toFixed(2)}`
+                        `${subtotalWithDelivery.toFixed(2).replace('.', ',')} $` : 
+                        `$${subtotalWithDelivery.toFixed(2)}`
                       }
                     </span>
                   </div>
+                  
+                  {/* GST */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">GST</span>
+                    <span className="font-medium text-gray-900">
+                      {language === 'fr' ? 
+                        `${gst.toFixed(2).replace('.', ',')} $` : 
+                        `$${gst.toFixed(2)}`
+                      }
+                    </span>
+                  </div>
+                  
+                  {/* QST */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">QST</span>
+                    <span className="font-medium text-gray-900">
+                      {language === 'fr' ? 
+                        `${qst.toFixed(2).replace('.', ',')} $` : 
+                        `$${qst.toFixed(2)}`
+                      }
+                    </span>
+                  </div>
+                  
+                  {/* Tip */}
+                  {sessionData?.tipDetails && tipAmount > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 flex items-center gap-1">
+                        {language === 'fr' ? 'Pourboire' : 'Tip'}
+                        <span className="text-xs text-gray-500">
+                          ({sessionData.tipDetails.type === 'percentage' 
+                            ? `${sessionData.tipDetails.value}%` 
+                            : language === 'fr' ? 'fixe' : 'fixed'
+                          })
+                        </span>
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        {language === 'fr' ? 
+                          `${tipAmount.toFixed(2).replace('.', ',')} $` : 
+                          `$${tipAmount.toFixed(2)}`
+                        }
+                      </span>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="border-t border-gray-200 pt-3 mt-3">
@@ -703,13 +813,34 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                     <span className="font-semibold text-gray-900">
                       {language === 'fr' ? 'Total' : 'Total'}
                     </span>
-                    <span className="font-bold text-2xl text-gray-900">
-                      {language === 'fr' ? 
-                        `${total.toFixed(2).replace('.', ',')} $` : 
-                        `$${total.toFixed(2)}`
-                      }
-                    </span>
+                    <div className="text-right">
+                      {sessionData?.campaignDiscount && discountAmount > 0 ? (
+                        <>
+                          <span className="text-sm text-gray-500 line-through mr-2">
+                            {language === 'fr' ? 
+                              `${(total + discountAmount).toFixed(2).replace('.', ',')} $` : 
+                              `$${(total + discountAmount).toFixed(2)}`
+                            }
+                          </span>
+                          <br />
+                        </>
+                      ) : null}
+                      <span className="font-bold text-2xl text-gray-900">
+                        {language === 'fr' ? 
+                          `${total.toFixed(2).replace('.', ',')} $` : 
+                          `$${total.toFixed(2)}`
+                        }
+                      </span>
+                    </div>
                   </div>
+                  {sessionData?.campaignDiscount && discountAmount > 0 && (
+                    <p className="text-sm text-green-600 text-right mt-1">
+                      {language === 'fr' 
+                        ? `Vous avez économisé ${discountAmount.toFixed(2).replace('.', ',')} $` 
+                        : `You saved $${discountAmount.toFixed(2)}`
+                      }
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

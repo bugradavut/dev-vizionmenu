@@ -18,6 +18,29 @@ interface OrderFormData {
   address?: object;
 }
 
+interface OrderTotals {
+  itemsTotal: number
+  subtotalAfterDiscount: number
+  subtotalWithDelivery: number
+  tipAmount: number
+  gst: number
+  qst: number
+  finalTotal: number
+}
+
+interface CampaignDiscount {
+  code: string
+  discountAmount: number
+  campaignType: 'percentage' | 'fixed_amount'
+  campaignValue: number
+}
+
+interface SelectedTip {
+  amount: number
+  type: 'percentage' | 'fixed'
+  value: number
+}
+
 interface OrderTotalSidebarProps {
   language: string
   isFormValid: boolean
@@ -35,6 +58,10 @@ interface OrderTotalSidebarProps {
   onTriggerValidation: () => boolean
   isMinimumOrderMet?: boolean
   selectedOrderType?: 'takeaway' | 'delivery' | null
+  appliedDiscount?: CampaignDiscount | null
+  selectedTip?: SelectedTip | null
+  deliveryFee?: number
+  orderTotals: OrderTotals
 }
 
 export function OrderTotalSidebar({ 
@@ -44,7 +71,11 @@ export function OrderTotalSidebar({
   orderContext, 
   onTriggerValidation,
   isMinimumOrderMet = true,
-  selectedOrderType
+  selectedOrderType,
+  appliedDiscount,
+  selectedTip,
+  deliveryFee = 0,
+  orderTotals
 }: OrderTotalSidebarProps) {
   const router = useRouter()
   const { items, subtotal, tax, total, preOrder } = useCart()
@@ -128,7 +159,7 @@ export function OrderTotalSidebar({
       )
       
       if (result.success) {
-        // Store order confirmation data in sessionStorage (temporary)
+        // Store order confirmation data in sessionStorage (temporary) with comprehensive pricing details
         const confirmationData = {
           orderId: result.data.orderId,
           orderNumber: result.data.orderNumber || result.data.orderId.substring(0, 8).toUpperCase(),
@@ -138,9 +169,40 @@ export function OrderTotalSidebar({
           orderType: formData?.orderType || orderContext.selectedOrderType || 'takeaway',
           source: orderContext.source || 'web',
           branchId: orderContext.branchId, // Add branch ID for new order navigation
-          subtotalAmount: subtotal.toFixed(2),
-          taxAmount: tax.toFixed(2),
-          totalAmount: total.toFixed(2),
+          
+          // Comprehensive pricing breakdown
+          pricing: {
+            itemsTotal: orderTotals.itemsTotal,
+            subtotal: orderTotals.subtotalAfterDiscount,
+            subtotalWithDelivery: orderTotals.subtotalWithDelivery,
+            gst: orderTotals.gst,
+            qst: orderTotals.qst,
+            tipAmount: orderTotals.tipAmount,
+            total: orderTotals.finalTotal,
+            // Legacy fields for backward compatibility
+            subtotalAmount: orderTotals.subtotalAfterDiscount,
+            taxAmount: orderTotals.gst + orderTotals.qst,
+            totalAmount: orderTotals.finalTotal
+          },
+          
+          // Discount details
+          campaignDiscount: appliedDiscount ? {
+            code: appliedDiscount.code,
+            discountAmount: appliedDiscount.discountAmount,
+            campaignType: appliedDiscount.campaignType,
+            campaignValue: appliedDiscount.campaignValue
+          } : null,
+          
+          // Delivery fee
+          deliveryFee: selectedOrderType === 'delivery' ? deliveryFee : 0,
+          
+          // Tip details
+          tipDetails: selectedTip ? {
+            amount: selectedTip.amount,
+            type: selectedTip.type,
+            value: selectedTip.value
+          } : null,
+          
           items: items.map(item => ({
             id: item.id,
             name: item.name,

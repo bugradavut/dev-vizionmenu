@@ -211,6 +211,10 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
               onTriggerValidation={triggerFormValidation}
               isMinimumOrderMet={isMinimumOrderMet}
               selectedOrderType={selectedOrderType}
+              appliedDiscount={appliedDiscount}
+              selectedTip={selectedTip}
+              deliveryFee={deliveryFee}
+              orderTotals={orderTotals}
             />
           </div>
         </div>
