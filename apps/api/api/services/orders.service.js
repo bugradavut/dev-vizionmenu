@@ -63,6 +63,10 @@ async function getOrders(filters, userBranch) {
       individual_timing_adjustment,
       third_party_order_id,
       third_party_platform,
+      is_pre_order,
+      scheduled_date,
+      scheduled_time,
+      scheduled_datetime,
       created_at,
       updated_at,
       order_items(
@@ -149,6 +153,12 @@ async function getOrders(filters, userBranch) {
       notes: order.notes,
       specialInstructions: order.special_instructions,
       estimatedReadyTime: order.estimated_ready_time,
+      
+      // Pre-order fields
+      is_pre_order: order.is_pre_order || false,
+      scheduled_date: order.scheduled_date,
+      scheduled_time: order.scheduled_time,
+      scheduled_datetime: order.scheduled_datetime,
       
       // NEW: Individual timing adjustment (Phase 2 - +5min button feature) 
       individual_timing_adjustment: order.individual_timing_adjustment || 0,

@@ -11,7 +11,7 @@ import {
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Table2, LayoutGrid, ArrowRight, Search, X, RefreshCw, AlertCircle } from "lucide-react"
+import { Table2, LayoutGrid, ArrowRight, Search, X, RefreshCw, AlertCircle, Clock } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -417,12 +417,100 @@ export default function LiveOrdersPage() {
                     </TableCell>
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">${order.pricing.total.toFixed(2)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(order.created_at).toLocaleTimeString('en-CA', { 
-                        timeZone: 'America/Toronto',
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
+                    <TableCell className="text-sm">
+                      {order.status === 'scheduled' ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3 text-orange-600" />
+                            <span className="text-xs font-medium text-orange-700">Pre-order</span>
+                          </div>
+                          <div className="text-sm font-semibold text-orange-800">
+                            {(() => {
+                              // Build from separate date and time fields for accurate display
+                              if (order.scheduled_date && order.scheduled_time) {
+                                // Parse date and time separately to avoid timezone issues
+                                const dateStr = order.scheduled_date; // '2025-08-28'
+                                const timeStr = order.scheduled_time; // '11:45:00'
+                                
+                                // Create date object in local time (not UTC)
+                                const [year, month, day] = dateStr.split('-').map(Number);
+                                const [hour, minute] = timeStr.split(':').map(Number);
+                                
+                                const scheduledDate = new Date(year, month - 1, day, hour, minute);
+                                const today = new Date();
+                                const tomorrow = new Date(today);
+                                tomorrow.setDate(today.getDate() + 1);
+                                
+                                // Check if it's today or tomorrow
+                                if (scheduledDate.toDateString() === today.toDateString()) {
+                                  return `Today ${scheduledDate.toLocaleTimeString('en-CA', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true
+                                  })}`;
+                                } else if (scheduledDate.toDateString() === tomorrow.toDateString()) {
+                                  return `Tomorrow ${scheduledDate.toLocaleTimeString('en-CA', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true
+                                  })}`;
+                                } else {
+                                  return scheduledDate.toLocaleString('en-CA', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true
+                                  });
+                                }
+                              }
+                              
+                              // Fallback to scheduled_datetime if separate fields not available
+                              if (order.scheduled_datetime) {
+                                const scheduledDate = new Date(order.scheduled_datetime);
+                                const today = new Date();
+                                const tomorrow = new Date(today);
+                                tomorrow.setDate(today.getDate() + 1);
+                                
+                                if (scheduledDate.toDateString() === today.toDateString()) {
+                                  return `Today ${scheduledDate.toLocaleTimeString('en-CA', {
+                                    timeZone: 'America/Toronto',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true
+                                  })}`;
+                                } else if (scheduledDate.toDateString() === tomorrow.toDateString()) {
+                                  return `Tomorrow ${scheduledDate.toLocaleTimeString('en-CA', {
+                                    timeZone: 'America/Toronto',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true
+                                  })}`;
+                                } else {
+                                  return scheduledDate.toLocaleString('en-CA', {
+                                    timeZone: 'America/Toronto',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true
+                                  });
+                                }
+                              }
+                              
+                              return 'Time not specified';
+                            })()}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {new Date(order.created_at).toLocaleTimeString('en-CA', { 
+                            timeZone: 'America/Toronto',
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-center">
                       <Link href={`/orders/${order.orderNumber}?context=live`}>
@@ -512,7 +600,7 @@ export default function LiveOrdersPage() {
                       <div className="text-right">
                         <div className="space-y-1.5">
                           <div className="text-sm font-bold text-foreground">{order.orderNumber}</div>
-                          {(() => {
+{(() => {
                             const timerInfo = getOrderTimerInfo(order)
                             if (timerInfo && settings.timingSettings?.autoReady) {
                               return (
@@ -532,11 +620,86 @@ export default function LiveOrdersPage() {
                             return null
                           })()}
                           <div className="text-xs text-muted-foreground">
-                            {new Date(order.created_at).toLocaleTimeString('en-CA', { 
-                              timeZone: 'America/Toronto',
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
+                            {order.status === 'scheduled' ? (
+                              // Pre-order: Show scheduled time instead of created time
+                              (() => {
+                                if (order.scheduled_date && order.scheduled_time) {
+                                  const dateStr = order.scheduled_date;
+                                  const timeStr = order.scheduled_time;
+                                  
+                                  const [year, month, day] = dateStr.split('-').map(Number);
+                                  const [hour, minute] = timeStr.split(':').map(Number);
+                                  
+                                  const scheduledDate = new Date(year, month - 1, day, hour, minute);
+                                  const today = new Date();
+                                  const tomorrow = new Date(today);
+                                  tomorrow.setDate(today.getDate() + 1);
+                                  
+                                  if (scheduledDate.toDateString() === today.toDateString()) {
+                                    return `Today ${scheduledDate.toLocaleTimeString('en-CA', {
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })}`;
+                                  } else if (scheduledDate.toDateString() === tomorrow.toDateString()) {
+                                    return `Tomorrow ${scheduledDate.toLocaleTimeString('en-CA', {
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })}`;
+                                  } else {
+                                    return scheduledDate.toLocaleString('en-CA', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    });
+                                  }
+                                }
+                                
+                                if (order.scheduled_datetime) {
+                                  const scheduledDate = new Date(order.scheduled_datetime);
+                                  const today = new Date();
+                                  const tomorrow = new Date(today);
+                                  tomorrow.setDate(today.getDate() + 1);
+                                  
+                                  if (scheduledDate.toDateString() === today.toDateString()) {
+                                    return `Today ${scheduledDate.toLocaleTimeString('en-CA', {
+                                      timeZone: 'America/Toronto',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })}`;
+                                  } else if (scheduledDate.toDateString() === tomorrow.toDateString()) {
+                                    return `Tomorrow ${scheduledDate.toLocaleTimeString('en-CA', {
+                                      timeZone: 'America/Toronto',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })}`;
+                                  } else {
+                                    return scheduledDate.toLocaleString('en-CA', {
+                                      timeZone: 'America/Toronto',
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    });
+                                  }
+                                }
+                                
+                                return 'Time not specified';
+                              })()
+                            ) : (
+                              // Regular order: Show created time
+                              new Date(order.created_at).toLocaleTimeString('en-CA', { 
+                                timeZone: 'America/Toronto',
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })
+                            )}
                           </div>
                         </div>
                       </div>
