@@ -149,6 +149,10 @@ async function getOrders(filters, userBranch) {
       notes: order.notes,
       specialInstructions: order.special_instructions,
       estimatedReadyTime: order.estimated_ready_time,
+      
+      // NEW: Individual timing adjustment (Phase 2 - +5min button feature) 
+      individual_timing_adjustment: order.individual_timing_adjustment || 0,
+      
       items: (order.order_items || []).map(item => ({
         id: item.id,
         name: item.menu_item_name,

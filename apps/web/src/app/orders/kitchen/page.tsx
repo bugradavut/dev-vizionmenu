@@ -16,7 +16,8 @@ import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Clock, ChefHat, CheckCircle2, ChevronDown, ChevronUp, Columns, Table, AlertCircle, Search, X, RefreshCw, Utensils } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Clock, ChefHat, CheckCircle2, ChevronDown, ChevronUp, Columns, Table, AlertCircle, Search, X, RefreshCw, Utensils, ClockPlus } from "lucide-react"
 import { useOrders } from "@/hooks/use-orders"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
@@ -24,8 +25,8 @@ import { useOrderTimer } from "@/hooks/use-order-timer"
 import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/translations"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
-import { OrderTimingButton } from "@/components/order-timing-button"
 import type { Order } from "@/services/orders.service"
+import { ordersService } from "@/services/orders.service"
 
 // Kitchen Display interfaces - compatible with Order API types
 interface KitchenOrderItem {
@@ -103,6 +104,8 @@ export default function KitchenDisplayPage() {
   const [viewType, setViewType] = useState<'kanban' | 'table'>('kanban')
   const [searchQuery, setSearchQuery] = useState("")
   const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set())
+  const [timingLoading, setTimingLoading] = useState<Set<string>>(new Set())
+  const [optimisticAdjustments, setOptimisticAdjustments] = useState<Map<string, number>>(new Map())
 
   // Local storage utilities for kitchen item completion state
   const getCompletedItems = useCallback((orderId: string): string[] => {
@@ -152,6 +155,7 @@ export default function KitchenDisplayPage() {
   // Transform API orders to kitchen format with local storage merge
   useEffect(() => {
     if (apiOrders.length > 0) {
+      
       const transformedOrders = apiOrders.map(order => {
         const kitchenOrder = transformOrderForKitchen(order);
         
@@ -169,6 +173,19 @@ export default function KitchenDisplayPage() {
       });
       
       setKitchenOrders(transformedOrders)
+      
+      // Clear optimistic adjustments when fresh data arrives from server
+      setOptimisticAdjustments(prev => {
+        const newMap = new Map(prev);
+        apiOrders.forEach(order => {
+          if (newMap.has(order.id)) {
+            // Clear optimistic state when we receive fresh data from server
+            // This ensures the real DB value is displayed
+            newMap.delete(order.id);
+          }
+        });
+        return newMap;
+      });
     } else {
       setKitchenOrders([])
     }
@@ -702,7 +719,7 @@ export default function KitchenDisplayPage() {
                             key={`preparing-${order.id}`}
                             className="animate-in fade-in-0 slide-in-from-left-2 duration-500"
                           >
-                            <Card className={`hover:shadow-lg transition-all duration-300 ease-in-out ${
+                            <Card className={`relative hover:shadow-lg transition-all duration-300 ease-in-out ${
                               order.isPreOrder 
                                 ? 'bg-white border-yellow-200 border-2' 
                                 : ''
@@ -752,23 +769,12 @@ export default function KitchenDisplayPage() {
                                         Third-party orders require manual completion
                                       </div>
                                     )}
-                                    <div className="mt-2 flex gap-2">
-                                      {/* Timing Adjustment Button - Always show for active orders */}
-                                      <OrderTimingButton
-                                        orderId={order.id}
-                                        currentAdjustment={apiOrders.find(o => o.id === order.id)?.individual_timing_adjustment}
-                                        orderStatus={apiOrders.find(o => o.id === order.id)?.status || 'preparing'}
-                                        onUpdate={refetch}
-                                        size="sm"
-                                        variant="outline"
-                                        className="flex-shrink-0"
-                                      />
-                                      
-                                      {timerData.isOverdue && (
+                                    {timerData.isOverdue && (
+                                      <div className="mt-2">
                                         <Button 
                                           size="sm" 
                                           disabled={updatingOrders.has(order.id)}
-                                          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                                          className="w-full bg-green-600 hover:bg-green-700 text-white"
                                           onClick={async () => {
                                             setUpdatingOrders(prev => new Set(prev).add(order.id))
                                             try {
@@ -801,15 +807,142 @@ export default function KitchenDisplayPage() {
                                             </>
                                           )}
                                         </Button>
-                                      )}
-                                    </div>
+                                      </div>
+                                    )}
                                   </div>
                                 )
                               })()}
                               
                               {/* Order Items with Checkboxes */}
                               <div className="mb-3 pb-3 border-b border-gray-200">
-                                <div className="space-y-2">
+                                <div className="space-y-2 relative">
+                                  {/* Timing Adjustment Popover - Top Right Corner */}
+                                  <div className="absolute top-0 right-0">
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button 
+                                          size="sm" 
+                                          variant="ghost" 
+                                          className="h-6 w-6 p-0 hover:bg-gray-100 rounded-full"
+                                          title="Timing Adjustment"
+                                        >
+                                          <Clock className="h-3 w-3 text-gray-500" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-64 p-4" align="end">
+                                        <div className="space-y-3">
+                                          {/* Current Adjustment Display */}
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-xs font-medium text-gray-600">Current Adjustment:</span>
+                                            <div className="relative">
+                                              {timingLoading.has(order.id) ? (
+                                                <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded">
+                                                  <div className="flex space-x-0.5">
+                                                    <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                                    <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                                    <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>
+                                                  </div>
+                                                  <span className="text-xs text-blue-700 font-medium">...</span>
+                                                </div>
+                                              ) : (
+                                                <span className="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-200 px-2 py-1 rounded">
+                                                  {(() => {
+                                                    const apiOrder = apiOrders.find(o => o.id === order.id);
+                                                    const dbAdjustment = apiOrder?.individual_timing_adjustment || 0;
+                                                    const optimisticAdjustment = optimisticAdjustments.get(order.id);
+                                                    // Use optimistic value only if it exists, otherwise use DB value
+                                                    const currentAdjustment = optimisticAdjustment !== undefined ? optimisticAdjustment : dbAdjustment;
+                                                    return `${currentAdjustment > 0 ? '+' : ''}${currentAdjustment} min`;
+                                                  })()}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                          
+                                          {/* Timing Adjustment Buttons */}
+                                          <div className="border-t border-gray-200 pt-3">
+                                            <div className="grid grid-cols-2 gap-3">
+                                              <button
+                                                disabled={timingLoading.has(order.id)}
+                                                className="inline-flex items-center justify-center gap-1 px-4 py-2 bg-gray-50 hover:bg-gray-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-md border border-gray-200 transition-colors text-sm font-medium text-gray-700 w-full"
+                                                onClick={async () => {
+                                                  try {
+                                                    setTimingLoading(prev => new Set(prev).add(order.id));
+                                                    
+                                                    // Optimistic update - update local state immediately
+                                                    const apiOrder = apiOrders.find(o => o.id === order.id);
+                                                    const currentAdjustment = apiOrder?.individual_timing_adjustment || 0;
+                                                    const newAdjustment = currentAdjustment + 5;
+                                                    setOptimisticAdjustments(prev => new Map(prev).set(order.id, newAdjustment));
+                                                    
+                                                    // Then make API call and refetch fresh data
+                                                    await ordersService.updateOrderTiming(order.id, 5);
+                                                    // Refetch fresh data to show real DB value
+                                                    await refetch();
+                                                  } catch (error) {
+                                                    console.error('Failed to add 5 minutes:', error);
+                                                    // Revert optimistic update on error
+                                                    setOptimisticAdjustments(prev => {
+                                                      const newMap = new Map(prev);
+                                                      newMap.delete(order.id);
+                                                      return newMap;
+                                                    });
+                                                  } finally {
+                                                    setTimingLoading(prev => {
+                                                      const newSet = new Set(prev);
+                                                      newSet.delete(order.id);
+                                                      return newSet;
+                                                    });
+                                                  }
+                                                }}
+                                              >
+                                                <ClockPlus className="h-3 w-3" />
+                                                5min
+                                              </button>
+                                              
+                                              <button
+                                                disabled={timingLoading.has(order.id)}
+                                                className="inline-flex items-center justify-center gap-1 px-4 py-2 bg-gray-50 hover:bg-gray-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-md border border-gray-200 transition-colors text-sm font-medium text-gray-700 w-full"
+                                                onClick={async () => {
+                                                  try {
+                                                    setTimingLoading(prev => new Set(prev).add(order.id));
+                                                    
+                                                    // Optimistic update - update local state immediately
+                                                    const apiOrder = apiOrders.find(o => o.id === order.id);
+                                                    const currentAdjustment = apiOrder?.individual_timing_adjustment || 0;
+                                                    const newAdjustment = currentAdjustment + 10;
+                                                    setOptimisticAdjustments(prev => new Map(prev).set(order.id, newAdjustment));
+                                                    
+                                                    // Then make API call and refetch fresh data
+                                                    await ordersService.updateOrderTiming(order.id, 10);
+                                                    // Refetch fresh data to show real DB value
+                                                    await refetch();
+                                                  } catch (error) {
+                                                    console.error('Failed to add 10 minutes:', error);
+                                                    // Revert optimistic update on error
+                                                    setOptimisticAdjustments(prev => {
+                                                      const newMap = new Map(prev);
+                                                      newMap.delete(order.id);
+                                                      return newMap;
+                                                    });
+                                                  } finally {
+                                                    setTimingLoading(prev => {
+                                                      const newSet = new Set(prev);
+                                                      newSet.delete(order.id);
+                                                      return newSet;
+                                                    });
+                                                  }
+                                                }}
+                                              >
+                                                <ClockPlus className="h-3 w-3" />
+                                                10min
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  </div>
                                   {(() => {
                                     const isExpanded = expandedOrders.has(order.id)
                                     const maxVisibleItems = 2
@@ -1136,7 +1269,136 @@ export default function KitchenDisplayPage() {
                                 <td colSpan={7} className="px-6 py-6">
                                   <div className="space-y-4">
                                     <div className="flex items-center justify-between mb-4">
-                                      <h4 className="text-sm font-semibold text-gray-900">{t.kitchenDisplay.orderItems}</h4>
+                                      <div className="flex items-center gap-3">
+                                        <h4 className="text-sm font-semibold text-gray-900">{t.kitchenDisplay.orderItems}</h4>
+                                        
+                                        {/* Timing Adjustment Popover - Next to Order Items title */}
+                                        <Popover>
+                                          <PopoverTrigger asChild>
+                                            <Button 
+                                              size="sm" 
+                                              variant="ghost" 
+                                              className="h-6 w-6 p-0 hover:bg-gray-100 rounded-full"
+                                              title="Timing Adjustment"
+                                            >
+                                              <Clock className="h-3 w-3 text-gray-500" />
+                                            </Button>
+                                          </PopoverTrigger>
+                                          <PopoverContent className="w-64 p-4" align="start">
+                                            <div className="space-y-3">
+                                              {/* Current Adjustment Display */}
+                                              <div className="flex items-center justify-between">
+                                                <span className="text-xs font-medium text-gray-600">Current Adjustment:</span>
+                                                <div className="relative">
+                                                  {timingLoading.has(order.id) ? (
+                                                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded">
+                                                      <div className="flex space-x-0.5">
+                                                        <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                                        <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                                        <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>
+                                                      </div>
+                                                      <span className="text-xs text-blue-700 font-medium">...</span>
+                                                    </div>
+                                                  ) : (
+                                                    <span className="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-200 px-2 py-1 rounded">
+                                                      {(() => {
+                                                        const apiOrder = apiOrders.find(o => o.id === order.id);
+                                                        const dbAdjustment = apiOrder?.individual_timing_adjustment || 0;
+                                                        const optimisticAdjustment = optimisticAdjustments.get(order.id);
+                                                        // Use optimistic value only if it exists, otherwise use DB value
+                                                        const currentAdjustment = optimisticAdjustment !== undefined ? optimisticAdjustment : dbAdjustment;
+                                                        return `${currentAdjustment > 0 ? '+' : ''}${currentAdjustment} min`;
+                                                      })()}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              </div>
+                                              
+                                              {/* Timing Adjustment Buttons */}
+                                              <div className="border-t border-gray-200 pt-3">
+                                                <div className="grid grid-cols-2 gap-3">
+                                                  <button
+                                                    disabled={timingLoading.has(order.id)}
+                                                    className="inline-flex items-center justify-center gap-1 px-4 py-2 bg-gray-50 hover:bg-gray-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-md border border-gray-200 transition-colors text-sm font-medium text-gray-700 w-full"
+                                                    onClick={async () => {
+                                                      try {
+                                                        setTimingLoading(prev => new Set(prev).add(order.id));
+                                                        
+                                                        // Optimistic update - update local state immediately
+                                                        const apiOrder = apiOrders.find(o => o.id === order.id);
+                                                        const currentAdjustment = apiOrder?.individual_timing_adjustment || 0;
+                                                        const newAdjustment = currentAdjustment + 5;
+                                                        setOptimisticAdjustments(prev => new Map(prev).set(order.id, newAdjustment));
+                                                        
+                                                        // Then make API call and refetch fresh data
+                                                        await ordersService.updateOrderTiming(order.id, 5);
+                                                        // Refetch fresh data to show real DB value
+                                                        await refetch();
+                                                      } catch (error) {
+                                                        console.error('Failed to add 5 minutes:', error);
+                                                        // Revert optimistic update on error
+                                                        setOptimisticAdjustments(prev => {
+                                                          const newMap = new Map(prev);
+                                                          newMap.delete(order.id);
+                                                          return newMap;
+                                                        });
+                                                      } finally {
+                                                        setTimingLoading(prev => {
+                                                          const newSet = new Set(prev);
+                                                          newSet.delete(order.id);
+                                                          return newSet;
+                                                        });
+                                                      }
+                                                    }}
+                                                  >
+                                                    <ClockPlus className="h-3 w-3" />
+                                                    5min
+                                                  </button>
+                                                  
+                                                  <button
+                                                    disabled={timingLoading.has(order.id)}
+                                                    className="inline-flex items-center justify-center gap-1 px-4 py-2 bg-gray-50 hover:bg-gray-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-md border border-gray-200 transition-colors text-sm font-medium text-gray-700 w-full"
+                                                    onClick={async () => {
+                                                      try {
+                                                        setTimingLoading(prev => new Set(prev).add(order.id));
+                                                        
+                                                        // Optimistic update - update local state immediately
+                                                        const apiOrder = apiOrders.find(o => o.id === order.id);
+                                                        const currentAdjustment = apiOrder?.individual_timing_adjustment || 0;
+                                                        const newAdjustment = currentAdjustment + 10;
+                                                        setOptimisticAdjustments(prev => new Map(prev).set(order.id, newAdjustment));
+                                                        
+                                                        // Then make API call and refetch fresh data
+                                                        await ordersService.updateOrderTiming(order.id, 10);
+                                                        // Refetch fresh data to show real DB value
+                                                        await refetch();
+                                                      } catch (error) {
+                                                        console.error('Failed to add 10 minutes:', error);
+                                                        // Revert optimistic update on error
+                                                        setOptimisticAdjustments(prev => {
+                                                          const newMap = new Map(prev);
+                                                          newMap.delete(order.id);
+                                                          return newMap;
+                                                        });
+                                                      } finally {
+                                                        setTimingLoading(prev => {
+                                                          const newSet = new Set(prev);
+                                                          newSet.delete(order.id);
+                                                          return newSet;
+                                                        });
+                                                      }
+                                                    }}
+                                                  >
+                                                    <ClockPlus className="h-3 w-3" />
+                                                    10min
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      
                                       {order.status === 'preparing' && (
                                         <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
                                           {order.items.filter(item => item.isCompleted).length} {t.kitchenDisplay.of} {order.items.length} {t.kitchenDisplay.completed}

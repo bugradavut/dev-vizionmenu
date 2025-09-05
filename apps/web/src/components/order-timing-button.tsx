@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Plus, Clock, AlertTriangle, ClockPlus } from 'lucide-react'
+import { Loader2, Clock, AlertTriangle, ClockPlus } from 'lucide-react'
 import { ordersService, type UpdateTimingResponse } from '@/services/orders.service'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/contexts/language-context'

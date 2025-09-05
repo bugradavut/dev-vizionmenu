@@ -289,6 +289,10 @@ class OrdersService {
       third_party_platform: apiOrder.third_party_platform || undefined,
       created_at: apiOrder.timestamps?.createdAt || apiOrder.created_at,
       updated_at: apiOrder.timestamps?.updatedAt || apiOrder.updated_at,
+      
+      // NEW: Individual timing adjustment (Phase 2 - +5min button feature)
+      individual_timing_adjustment: apiOrder.individual_timing_adjustment || 0,
+      
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       items: apiOrder.items?.map((item: any) => ({
         id: item.id,
