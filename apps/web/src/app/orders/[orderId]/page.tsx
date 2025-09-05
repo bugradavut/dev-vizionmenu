@@ -167,36 +167,6 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   }
 
 
-  const formatEstimatedTime = (timestamp: string) => {
-    if (!timestamp) return t.orderDetail.notSpecified
-    
-    try {
-      const date = new Date(timestamp)
-      const now = new Date()
-      
-      // If it's today, show time only
-      if (date.toDateString() === now.toDateString()) {
-        return date.toLocaleTimeString('en-CA', { 
-          timeZone: 'America/Toronto',
-          hour: '2-digit', 
-          minute: '2-digit',
-          hour12: false 
-        })
-      }
-      
-      // If it's different day, show date and time
-      return date.toLocaleString('en-CA', {
-        timeZone: 'America/Toronto',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      })
-    } catch {
-      return t.orderDetail.invalidTime
-    }
-  }
 
   const getStatusBadge = (status: string) => {
     // Ensure status is a valid string
@@ -694,7 +664,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                     
                                     {/* Special Instructions - Kitchen Display format */}
                                     {item.special_instructions && (
-                                      <div className="text-sm text-orange-600 italic">
+                                      <div className="text-sm text-primary italic">
                                         {item.special_instructions}
                                       </div>
                                     )}
@@ -941,10 +911,6 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                             minute: '2-digit'
                           })}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">{t.orderDetail.estTime}</span>
-                          <span>{formatEstimatedTime(order.estimated_ready_time || '')}</span>
-                        </div>
                         {/* Pre-order scheduled time */}
                         {order.status === 'scheduled' && (
                           <div className="flex justify-between">
@@ -1093,16 +1059,16 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                             </span>
                             <div className="relative">
                               {timingLoading ? (
-                                <div className="flex items-center gap-2 px-3 py-1 bg-orange-50 border border-orange-200 rounded-lg">
+                                <div className="flex items-center gap-2 px-3 py-1 bg-gray-50 border border-gray-200 rounded-lg">
                                   <div className="flex space-x-1">
-                                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"></div>
+                                    <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                    <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                    <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce"></div>
                                   </div>
-                                  <span className="text-sm text-orange-700 font-medium">Updating...</span>
+                                  <span className="text-sm text-gray-600 font-medium">Updating...</span>
                                 </div>
                               ) : (
-                                <span className="text-lg font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-lg">
+                                <span className="text-lg font-bold text-gray-700 bg-gray-100 border border-gray-200 px-3 py-1 rounded-lg">
                                   {(order.individual_timing_adjustment || 0) > 0 ? '+' : ''}
                                   {order.individual_timing_adjustment || 0} min
                                 </span>
@@ -1110,14 +1076,61 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                             </div>
                           </div>
                           
-                          {/* Separator between current adjustment and buttons */}
+                          {/* Preparation Timer - show when timer is available */}
+                          {timerInfo && (
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Timer className="h-4 w-4 text-gray-500" />
+                                  <span className="text-sm font-medium text-gray-700">
+                                    Preparation Timer
+                                  </span>
+                                </div>
+                                <div className="text-sm font-mono font-bold text-gray-600">
+                                  {timerInfo.isComplete ? (
+                                    <span className="text-primary animate-pulse">00:00</span>
+                                  ) : (
+                                    <span>
+                                      {String(timerInfo.remainingMinutes).padStart(2, '0')}:
+                                      {String(timerInfo.remainingSeconds).padStart(2, '0')}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Progress bar */}
+                              <div className="w-full bg-gray-300 rounded-full h-2">
+                                <div 
+                                  className={`h-2 rounded-full transition-all duration-500 ${
+                                    timerInfo.isComplete 
+                                      ? 'bg-primary animate-pulse' 
+                                      : 'bg-primary'
+                                  }`}
+                                  style={{ width: `${Math.min(timerInfo.progressPercent, 100)}%` }}
+                                ></div>
+                              </div>
+                              
+                              {/* Status text - only show when timer is complete */}
+                              {timerInfo.isComplete && (
+                                <div className="text-xs text-gray-500">
+                                  {timerInfo.canAutoComplete ? (
+                                    <span className="font-medium text-primary">Ready for completion</span>
+                                  ) : (
+                                    <span className="font-medium">Manual completion required (third-party order)</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Separator between timer/adjustment and buttons */}
                           <div className="border-t border-gray-200"></div>
                           
                           {/* Timing buttons - bottom, full width */}
                           <div className="grid grid-cols-2 gap-3">
                             <button
                               disabled={timingLoading}
-                              className="inline-flex items-center justify-center gap-1 px-4 py-2 bg-orange-50 hover:bg-orange-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-md border border-primary transition-colors text-sm font-medium text-orange-700"
+                              className="inline-flex items-center justify-center gap-1 px-4 py-2 bg-gray-50 hover:bg-gray-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-md border border-gray-200 transition-colors text-sm font-medium text-gray-700"
                               onClick={async () => {
                                 try {
                                   setTimingLoading(true);
@@ -1143,7 +1156,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                             
                             <button
                               disabled={timingLoading}
-                              className="inline-flex items-center justify-center gap-1 px-4 py-2 bg-orange-50 hover:bg-orange-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-md border border-primary transition-colors text-sm font-medium text-orange-700"
+                              className="inline-flex items-center justify-center gap-1 px-4 py-2 bg-gray-50 hover:bg-gray-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-md border border-gray-200 transition-colors text-sm font-medium text-gray-700"
                               onClick={async () => {
                                 try {
                                   setTimingLoading(true);
@@ -1179,52 +1192,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                     </CardHeader>
                     <Separator />
                     <CardContent className="space-y-3 p-6">
-                      {/* Auto-Ready Timer Display */}
-                      {timerInfo && (
-                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Timer className="h-4 w-4 text-orange-600" />
-                              <span className="text-sm font-medium text-orange-900">
-                                Preparation Timer
-                              </span>
-                            </div>
-                            <div className="text-sm font-mono font-bold text-orange-700">
-                              {timerInfo.isComplete ? (
-                                <span className="text-green-600 animate-pulse">00:00</span>
-                              ) : (
-                                <span>
-                                  {String(timerInfo.remainingMinutes).padStart(2, '0')}:
-                                  {String(timerInfo.remainingSeconds).padStart(2, '0')}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {/* Progress bar */}
-                          <div className="w-full bg-gray-300 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full transition-all duration-500 ${
-                                timerInfo.isComplete 
-                                  ? 'bg-green-500 animate-pulse' 
-                                  : 'bg-orange-500'
-                              }`}
-                              style={{ width: `${Math.min(timerInfo.progressPercent, 100)}%` }}
-                            ></div>
-                          </div>
-                          
-                          {/* Status text - only show when timer is complete */}
-                          {timerInfo.isComplete && (
-                            <div className="text-xs text-orange-700">
-                              {timerInfo.canAutoComplete ? (
-                                <span className="font-medium text-green-700">Ready for completion</span>
-                              ) : (
-                                <span className="font-medium">Manual completion required (third-party order)</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      {/* Timer moved to Timing Adjustment section for better organization */}
 
                       {/* Order Status Actions */}
                       {order.status === 'scheduled' && (

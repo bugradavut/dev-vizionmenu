@@ -912,9 +912,15 @@ async function checkOrderTimers(branchId) {
     orders: processedOrders,
     branchName: branchData.name,
     timingSettings: {
-      kitchenPrepTime,
+      totalPrepTime: baseKitchenPrepTime,
       autoReady: timingSettings.autoReady,
-      breakdown: timingSettings
+      breakdown: {
+        baseDelay: timingSettings.baseDelay,
+        temporaryBaseDelay: timingSettings.temporaryBaseDelay,
+        deliveryDelay: timingSettings.deliveryDelay,
+        temporaryDeliveryDelay: timingSettings.temporaryDeliveryDelay,
+        manualReadyOption: timingSettings.manualReadyOption || false
+      }
     }
   };
 }
