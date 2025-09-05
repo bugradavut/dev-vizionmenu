@@ -11,7 +11,7 @@ import {
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Table2, LayoutGrid, ArrowRight, Search, X, RefreshCw, AlertCircle, Clock } from "lucide-react"
+import { Table2, LayoutGrid, ArrowRight, Search, X, RefreshCw, AlertCircle } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -419,12 +419,7 @@ export default function LiveOrdersPage() {
                     <TableCell className="text-sm text-muted-foreground">${order.pricing.total.toFixed(2)}</TableCell>
                     <TableCell className="text-sm">
                       {order.status === 'scheduled' ? (
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3 text-orange-600" />
-                            <span className="text-xs font-medium text-orange-700">Pre-order</span>
-                          </div>
-                          <div className="text-sm font-semibold text-orange-800">
+                        <div className="text-sm font-semibold text-orange-800">
                             {(() => {
                               // Build from separate date and time fields for accurate display
                               if (order.scheduled_date && order.scheduled_time) {
@@ -500,7 +495,6 @@ export default function LiveOrdersPage() {
                               
                               return 'Time not specified';
                             })()}
-                          </div>
                         </div>
                       ) : (
                         <span className="text-muted-foreground">
@@ -619,10 +613,9 @@ export default function LiveOrdersPage() {
                             }
                             return null
                           })()}
-                          <div className="text-xs text-muted-foreground">
-                            {order.status === 'scheduled' ? (
-                              // Pre-order: Show scheduled time instead of created time
-                              (() => {
+                          {order.status === 'scheduled' ? (
+                            <div className="text-sm font-bold text-orange-800">
+                              {(() => {
                                 if (order.scheduled_date && order.scheduled_time) {
                                   const dateStr = order.scheduled_date;
                                   const timeStr = order.scheduled_time;
@@ -691,16 +684,17 @@ export default function LiveOrdersPage() {
                                 }
                                 
                                 return 'Time not specified';
-                              })()
-                            ) : (
-                              // Regular order: Show created time
-                              new Date(order.created_at).toLocaleTimeString('en-CA', { 
+                              })()}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(order.created_at).toLocaleTimeString('en-CA', { 
                                 timeZone: 'America/Toronto',
                                 hour: '2-digit', 
                                 minute: '2-digit' 
-                              })
-                            )}
-                          </div>
+                              })}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
