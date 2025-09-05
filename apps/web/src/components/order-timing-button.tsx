@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Plus, Clock, AlertTriangle } from 'lucide-react'
+import { Loader2, Plus, Clock, AlertTriangle, ClockPlus } from 'lucide-react'
 import { ordersService, type UpdateTimingResponse } from '@/services/orders.service'
 import { useToast } from '@/hooks/use-toast'
 import { useLanguage } from '@/contexts/language-context'
@@ -98,7 +98,7 @@ export function OrderTimingButton({
           <Loader2 className="h-3 w-3 animate-spin" />
         ) : (
           <>
-            <Plus className="h-3 w-3 mr-1" />
+            <ClockPlus className="h-3 w-3 mr-1" />
             5min
           </>
         )}
@@ -120,7 +120,7 @@ export function OrderTimingButton({
               <Loader2 className="h-3 w-3 animate-spin" />
             ) : (
               <>
-                <Plus className="h-3 w-3 mr-1" />
+                <ClockPlus className="h-3 w-3 mr-1" />
                 10min
               </>
             )}

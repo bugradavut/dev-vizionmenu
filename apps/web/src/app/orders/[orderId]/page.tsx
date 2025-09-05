@@ -15,7 +15,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle, Timer } from "lucide-react"
+import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle, Timer, ClockPlus } from "lucide-react"
 import { ordersService } from "@/services/orders.service"
 import { getSourceIcon } from "@/assets/images"
 import Image from "next/image"
@@ -1117,7 +1117,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                           <div className="grid grid-cols-2 gap-3">
                             <button
                               disabled={timingLoading}
-                              className="px-4 py-2 bg-orange-50 hover:bg-orange-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-md border border-primary transition-colors text-sm font-medium text-orange-700"
+                              className="inline-flex items-center justify-center gap-1 px-4 py-2 bg-orange-50 hover:bg-orange-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-md border border-primary transition-colors text-sm font-medium text-orange-700"
                               onClick={async () => {
                                 try {
                                   setTimingLoading(true);
@@ -1137,12 +1137,13 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                 }
                               }}
                             >
-                              <span className="text-lg">+</span> 5min
+                              <ClockPlus className="w-4 h-4" />
+                              5min
                             </button>
                             
                             <button
                               disabled={timingLoading}
-                              className="px-4 py-2 bg-orange-50 hover:bg-orange-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-md border border-primary transition-colors text-sm font-medium text-orange-700"
+                              className="inline-flex items-center justify-center gap-1 px-4 py-2 bg-orange-50 hover:bg-orange-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-md border border-primary transition-colors text-sm font-medium text-orange-700"
                               onClick={async () => {
                                 try {
                                   setTimingLoading(true);
@@ -1162,7 +1163,8 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                 }
                               }}
                             >
-                              <span className="text-lg">+</span> 10min
+                              <ClockPlus className="w-4 h-4" />
+                              10min
                             </button>
                           </div>
                         </div>
