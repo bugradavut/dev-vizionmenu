@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Calendar, Clock, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { addDays, format, isToday, isTomorrow, parseISO } from 'date-fns'
+import { enCA, fr } from 'date-fns/locale'
 
 interface PreOrderModalProps {
   isOpen: boolean
@@ -26,41 +28,32 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
   const t = translations[language] || translations.en
   
   const [currentStep, setCurrentStep] = useState<ModalStep>('date')
-  const [selectedDate, setSelectedDate] = useState<string>(currentSchedule?.date || 'today')
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>()
   const [selectedTime, setSelectedTime] = useState<string>(currentSchedule?.time || '')
   const [isLoading, setIsLoading] = useState(false)
 
-  // Generate next 10 days
-  const generateDates = () => {
-    const dates = []
+  // Helper functions for date conversion
+  const convertStringToDate = (dateString: string): Date => {
     const today = new Date()
-    
-    for (let i = 0; i < 10; i++) {
-      const date = new Date(today)
-      date.setDate(today.getDate() + i)
-      
-      let label = ''
-      if (i === 0) {
-        label = language === 'fr' ? "Aujourd'hui" : 'Today'
-      } else if (i === 1) {
-        label = language === 'fr' ? 'Demain' : 'Tomorrow'
-      } else {
-        label = date.toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA', {
-          weekday: 'short',
-          month: 'short',
-          day: 'numeric'
-        })
-      }
-      
-      dates.push({
-        value: i === 0 ? 'today' : i === 1 ? 'tomorrow' : date.toISOString().split('T')[0],
-        label,
-        date
-      })
+    if (dateString === 'today') {
+      return today
+    } else if (dateString === 'tomorrow') {
+      return addDays(today, 1)
+    } else {
+      return parseISO(dateString)
     }
-    
-    return dates
   }
+
+  const convertDateToString = (date: Date): string => {
+    if (isToday(date)) {
+      return 'today'
+    } else if (isTomorrow(date)) {
+      return 'tomorrow'
+    } else {
+      return format(date, 'yyyy-MM-dd')
+    }
+  }
+
 
   // Generate time slots (15-minute intervals from 11:00 AM to 10:00 PM)
   const generateTimeSlots = () => {
@@ -89,7 +82,6 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
     return slots
   }
 
-  const dates = generateDates()
   const timeSlots = generateTimeSlots()
 
   // Initialize modal state based on current schedule when modal opens
@@ -97,12 +89,14 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
     if (isOpen) {
       if (currentSchedule?.date && currentSchedule?.time) {
         // If there's a current schedule, show it and go to time step
-        setSelectedDate(currentSchedule.date)
+        setSelectedDate(convertStringToDate(currentSchedule.date))
         setSelectedTime(currentSchedule.time)
         setCurrentStep('time') // Go directly to time step for editing
       } else {
         // Reset to default state for new scheduling
-        setSelectedDate('today')
+        const initialDate = new Date()
+        initialDate.setHours(0, 0, 0, 0)
+        setSelectedDate(initialDate)
         setSelectedTime('')
         setCurrentStep('date')
       }
@@ -121,14 +115,16 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
   }
 
   const handleConfirm = async () => {
-    if (!selectedTime) return
+    if (!selectedTime || !selectedDate) return
     
     setIsLoading(true)
     
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1500))
     
-    onConfirm(selectedDate, selectedTime)
+    // Convert Date back to string format for backward compatibility
+    const dateString = convertDateToString(selectedDate)
+    onConfirm(dateString, selectedTime)
     onClose()
     
     // State will be managed by useEffect based on new currentSchedule prop
@@ -141,16 +137,150 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
   }
 
   // Get formatted display for selected date
-  const getDateDisplay = (dateValue: string) => {
-    if (dateValue === 'today') return language === 'fr' ? "Aujourd'hui" : 'Today'
-    if (dateValue === 'tomorrow') return language === 'fr' ? 'Demain' : 'Tomorrow'
+  const getDateDisplay = (date: Date) => {
+    if (isToday(date)) return language === 'fr' ? "Aujourd'hui" : 'Today'
+    if (isTomorrow(date)) return language === 'fr' ? 'Demain' : 'Tomorrow'
     
-    const date = new Date(dateValue)
-    return date.toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA', {
-      weekday: 'long',
-      month: 'short', 
-      day: 'numeric'
+    return format(date, 'EEEE, MMM d', {
+      locale: language === 'fr' ? fr : enCA
     })
+  }
+
+  // Custom calendar component - Best Practice: Manual layout control
+  const CustomCalendar = () => {
+    const handleDateSelect = (date: Date) => {
+      const normalizedDate = new Date(date)
+      normalizedDate.setHours(0, 0, 0, 0)
+      setSelectedDate(normalizedDate)
+    }
+
+    // Generate calendar data manually for full control
+    const generateCalendarData = () => {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+      const startDate = new Date(startOfMonth)
+      startDate.setDate(startDate.getDate() - startOfMonth.getDay()) // Start from Sunday
+      
+      const weeks = []
+      let currentWeek = []
+      const currentDate = new Date(startDate)
+
+      for (let i = 0; i < 42; i++) { // 6 weeks × 7 days
+        if (currentDate > endOfMonth && currentWeek.length === 0) break
+        
+        currentWeek.push(new Date(currentDate))
+        
+        if (currentWeek.length === 7) {
+          weeks.push(currentWeek)
+          currentWeek = []
+        }
+        
+        currentDate.setDate(currentDate.getDate() + 1)
+      }
+      
+      if (currentWeek.length > 0) {
+        weeks.push(currentWeek)
+      }
+      
+      return weeks
+    }
+
+    const weeks = generateCalendarData()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const monthName = format(today, 'MMMM yyyy', { 
+      locale: language === 'fr' ? fr : enCA 
+    })
+
+    const isDateDisabled = (date: Date) => date < today
+    const isDateSelected = (date: Date) => 
+      selectedDate && format(date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
+    const isDateToday = (date: Date) => isToday(date)
+    const isCurrentMonth = (date: Date) => date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear()
+
+    return (
+      <div className="w-full space-y-4">
+        {/* Custom Header with Navigation */}
+        <div className="flex items-center justify-between px-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              // Handle previous month logic if needed
+            }}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          
+          <h3 className="text-base font-semibold">
+            {monthName}
+          </h3>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              // Handle next month logic if needed
+            }}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Custom Calendar Grid */}
+        <div className="w-full">
+          {/* Day Headers */}
+          <div className="grid grid-cols-7 mb-2">
+            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+              <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar Weeks */}
+          <div className="space-y-1">
+            {weeks.map((week, weekIndex) => (
+              <div key={weekIndex} className="grid grid-cols-7 gap-1">
+                {week.map((date, dayIndex) => {
+                  const disabled = isDateDisabled(date)
+                  const selected = isDateSelected(date)
+                  const todayDate = isDateToday(date)
+                  const currentMonth = isCurrentMonth(date)
+                  
+                  return (
+                    <Button
+                      key={dayIndex}
+                      variant="ghost"
+                      size="sm"
+                      disabled={disabled}
+                      className={`
+                        h-10 w-full p-0 text-sm font-medium transition-colors rounded-lg
+                        focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary
+                        hover:bg-accent hover:text-accent-foreground
+                        disabled:hover:bg-transparent disabled:opacity-30 disabled:cursor-not-allowed
+                        ${!currentMonth ? 'text-muted-foreground/40' : ''}
+                        ${todayDate && !selected ? 'bg-accent text-accent-foreground font-bold ring-2 ring-primary/20' : ''}
+                        ${selected ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}
+                      `}
+                      onClick={() => !disabled && handleDateSelect(date)}
+                    >
+                      {format(date, 'd')}
+                    </Button>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -208,37 +338,9 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
                 }
               </p>
               
-              <ScrollArea className="h-80">
-                <div className="grid grid-cols-1 gap-3 pr-4">
-                  {dates.map((date) => (
-                    <button
-                      key={date.value}
-                      onClick={() => setSelectedDate(date.value)}
-                      className={`p-4 text-left rounded-xl border-2 transition-all hover:shadow-md ${
-                        selectedDate === date.value
-                          ? 'border-primary bg-primary/10 text-primary shadow-lg'
-                          : 'border-border hover:border-primary/30'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="font-semibold text-base block">{date.label}</span>
-                          {date.value === 'today' && (
-                            <span className="text-xs text-muted-foreground">
-                              {language === 'fr' ? 'Prêt dans 25 minutes' : 'Ready in 25 minutes'}
-                            </span>
-                          )}
-                        </div>
-                        {selectedDate === date.value && (
-                          <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                            <div className="w-2 h-2 rounded-full bg-white" />
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </ScrollArea>
+              <CustomCalendar />
+
+
 
               {/* Date Step Actions */}
               <div className="flex gap-3 pt-4">
@@ -266,7 +368,7 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
             <div className="space-y-4">
               <div className="p-3 bg-muted/50 rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  {language === 'fr' ? 'Sélectionné:' : 'Selected:'} <span className="font-medium text-foreground">{getDateDisplay(selectedDate)}</span>
+                  {language === 'fr' ? 'Sélectionné:' : 'Selected:'} <span className="font-medium text-foreground">{selectedDate ? getDateDisplay(selectedDate) : ''}</span>
                 </p>
               </div>
               
