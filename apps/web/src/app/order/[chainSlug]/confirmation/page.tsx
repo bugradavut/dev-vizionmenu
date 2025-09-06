@@ -6,7 +6,7 @@ import { orderService } from '@/services/order-service';
 import { useLanguage } from '@/contexts/language-context';
 import { translations } from '@/lib/translations';
 import { useCart } from '../../contexts/cart-context';
-import { Check, Package, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Check, Package, CheckCircle2, RefreshCw, TicketPercent } from 'lucide-react';
 
 interface OrderDetails {
   orderId: string;
@@ -724,7 +724,7 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                   {sessionData?.campaignDiscount && discountAmount > 0 && (
                     <div className="flex justify-between">
                       <span className="text-gray-600 flex items-center gap-1">
-                        <span className="text-green-600">📍</span>
+                        <TicketPercent className="h-4 w-4 text-green-600" />
                         {sessionData.campaignDiscount.code}
                       </span>
                       <span className="font-medium text-green-600">

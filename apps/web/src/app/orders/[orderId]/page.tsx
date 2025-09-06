@@ -15,7 +15,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle, Timer, ClockPlus } from "lucide-react"
+import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle, Timer, ClockPlus, TicketPercent } from "lucide-react"
 import { ordersService } from "@/services/orders.service"
 import { getSourceIcon } from "@/assets/images"
 import Image from "next/image"
@@ -796,7 +796,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                           {order.campaignDiscount && (order.pricing.discountAmount || 0) > 0 && (
                             <div className="flex justify-between text-sm">
                               <span className="flex items-center gap-1 text-green-600">
-                                <span>📍</span>
+                                <TicketPercent className="h-4 w-4" />
                                 {order.campaignDiscount.code}
                               </span>
                               <span className="text-green-600">

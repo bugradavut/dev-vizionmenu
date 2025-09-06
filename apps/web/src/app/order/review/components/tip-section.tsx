@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -12,6 +12,53 @@ interface TipSectionProps {
 export function TipSection({ subtotal, onTipChange }: TipSectionProps) {
   const [selectedTip, setSelectedTip] = useState<'none' | '10' | '15' | '18' | 'custom_percent' | 'fixed_amount'>('none')
   const [customTip, setCustomTip] = useState('')
+
+  // 🔧 FIX: Recalculate tip when subtotal changes
+  useEffect(() => {
+    if (selectedTip === 'none') return
+    
+    // Recalculate tip based on current subtotal and selected option
+    let tipAmount = 0
+    const tipType: 'percentage' | 'fixed' = selectedTip === 'fixed_amount' ? 'fixed' : 'percentage'
+    let tipValue = 0
+
+    switch (selectedTip) {
+      case '10':
+        tipAmount = parseFloat(calculateTip(10))
+        tipValue = 10
+        break
+      case '15':
+        tipAmount = parseFloat(calculateTip(15))
+        tipValue = 15
+        break
+      case '18':
+        tipAmount = parseFloat(calculateTip(18))
+        tipValue = 18
+        break
+      case 'custom_percent':
+        if (customTip) {
+          const percentValue = parseFloat(customTip)
+          if (!isNaN(percentValue) && percentValue > 0) {
+            const limitedValue = Math.min(Math.max(percentValue, 0), 100)
+            tipAmount = subtotal * limitedValue / 100
+            tipValue = limitedValue
+          }
+        }
+        break
+      case 'fixed_amount':
+        if (customTip) {
+          const fixedValue = parseFloat(customTip)
+          if (!isNaN(fixedValue) && fixedValue > 0) {
+            const limitedValue = Math.min(fixedValue, subtotal * 5)
+            tipAmount = limitedValue
+            tipValue = limitedValue
+          }
+        }
+        break
+    }
+
+    onTipChange?.(tipAmount, tipType, tipValue)
+  }, [subtotal, selectedTip, customTip]) // 🔧 FIX: Removed onTipChange from dependencies to prevent infinite loop
   
   const calculateTip = (percentage: number) => {
     return (subtotal * percentage / 100).toFixed(2)
