@@ -11,6 +11,11 @@ export interface Campaign {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  // 🆕 NEW FIELD: Usage statistics from backend
+  usage_stats?: {
+    totalUsages: number;
+    totalSavings: number;
+  };
 }
 
 export interface CreateCampaignData {
@@ -58,4 +63,19 @@ export interface CampaignsListResponse {
   total: number;
   page: number;
   limit: number;
+}
+
+// 🆕 NEW: Campaign Status Management
+export enum CampaignStatus {
+  ACTIVE = 'active',           // is_active=true AND not expired  
+  EXPIRED = 'expired',         // valid_until < today
+  INACTIVE = 'inactive',       // is_active=false AND not expired
+  ALL = 'all'
+}
+
+// 🆕 NEW: Helper function to determine campaign status
+export function getCampaignStatus(campaign: Campaign): CampaignStatus {
+  const isExpired = new Date(campaign.valid_until) < new Date()
+  if (isExpired) return CampaignStatus.EXPIRED
+  return campaign.is_active ? CampaignStatus.ACTIVE : CampaignStatus.INACTIVE
 }

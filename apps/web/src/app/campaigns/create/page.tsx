@@ -17,6 +17,8 @@ import { CreateCampaignDialog } from '@/components/create-campaign-dialog'
 import { EditCampaignDialog } from '@/components/edit-campaign-dialog'
 import { DeleteCampaignDialog } from '@/components/delete-campaign-dialog'
 import { CampaignCard } from '@/components/campaign-card'
+import { CampaignFilterTabs } from '@/components/campaign-filter-tabs'
+import { RepeatCampaignDialog } from '@/components/repeat-campaign-dialog'
 
 // Contexts & Utils
 import { useLanguage } from '@/contexts/language-context'
@@ -27,6 +29,7 @@ import { campaignsService } from '@/services/campaigns.service'
 
 // Types
 import { Campaign } from '@/types/campaign'
+import { getCampaignStatus, CampaignStatus } from '@/types/campaign'
 
 export default function CreateCampaignPage() {
   const { language } = useLanguage()
@@ -36,7 +39,10 @@ export default function CreateCampaignPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isRepeatDialogOpen, setIsRepeatDialogOpen] = useState(false)
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
+  // 🆕 NEW: Filter state management
+  const [activeFilter, setActiveFilter] = useState<CampaignStatus>(CampaignStatus.ALL)
 
   // Fetch campaigns
   useEffect(() => {
@@ -72,6 +78,11 @@ export default function CreateCampaignPage() {
     setIsDeleteDialogOpen(true)
   }
 
+  const handleRepeatCampaign = (campaign: Campaign) => {
+    setSelectedCampaign(campaign)
+    setIsRepeatDialogOpen(true)
+  }
+
   const handleToggleStatus = async (campaignId: string) => {
     try {
       const campaign = campaigns.find(c => c.id === campaignId)
@@ -88,6 +99,12 @@ export default function CreateCampaignPage() {
       toast.error(error instanceof Error ? error.message : 'Failed to toggle status')
     }
   }
+
+  // 🆕 NEW: Filter campaigns based on selected filter
+  const filteredCampaigns = campaigns.filter(campaign => {
+    if (activeFilter === CampaignStatus.ALL) return true
+    return getCampaignStatus(campaign) === activeFilter
+  })
 
 
   return (
@@ -153,19 +170,24 @@ export default function CreateCampaignPage() {
                         <h2 className="text-xl font-semibold">
                           {language === 'fr' ? 'Campagnes existantes' : 'Existing Campaigns'}
                         </h2>
-                        <p className="text-sm text-muted-foreground">
-                          {campaigns.length} {language === 'fr' ? 'campagne(s)' : 'campaign(s)'}
-                        </p>
                       </div>
+
+                      {/* 🆕 FILTER TABS */}
+                      <CampaignFilterTabs
+                        campaigns={campaigns}
+                        activeFilter={activeFilter}
+                        onFilterChange={setActiveFilter}
+                      />
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {campaigns.map((campaign) => (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {filteredCampaigns.map((campaign) => (
                           <CampaignCard
                             key={campaign.id}
                             campaign={campaign}
                             onEdit={handleEditCampaign}
                             onDelete={handleDeleteCampaign}
                             onToggleStatus={handleToggleStatus}
+                            onRepeat={handleRepeatCampaign}
                             isLoading={false}
                           />
                         ))}
@@ -196,6 +218,13 @@ export default function CreateCampaignPage() {
         campaign={selectedCampaign}
         open={isDeleteDialogOpen} 
         onOpenChange={setIsDeleteDialogOpen}
+        onSuccess={handleCampaignCreated}
+      />
+
+      <RepeatCampaignDialog 
+        campaign={selectedCampaign}
+        open={isRepeatDialogOpen} 
+        onOpenChange={setIsRepeatDialogOpen}
         onSuccess={handleCampaignCreated}
       />
     </AuthGuard>

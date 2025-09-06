@@ -660,6 +660,22 @@ async function createOrder(orderData, branchId) {
     throw new Error('Failed to create order items');
   }
 
+  // Record coupon usage if coupon was applied
+  if (couponId && discountAmount > 0) {
+    const { error: usageError } = await supabase
+      .from('coupon_usages')
+      .insert({
+        coupon_id: couponId,
+        order_id: createdOrder.id,
+        discount_amount: discountAmount
+      });
+
+    if (usageError) {
+      console.error('Coupon usage recording error:', usageError);
+      // Don't rollback order - coupon usage is supplementary data
+    }
+  }
+
   return {
     order: {
       id: createdOrder.id,

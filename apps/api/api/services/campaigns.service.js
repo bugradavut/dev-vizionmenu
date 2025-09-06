@@ -42,9 +42,18 @@ async function getCampaigns(branchId, { page = 1, limit = 50, isActive = null } 
       throw new Error(`Failed to fetch campaigns: ${error.message}`);
     }
 
+    // Add usage stats for each campaign
+    const campaignsWithStats = await Promise.all((data || []).map(async (campaign) => {
+      const stats = await getCampaignStats(campaign.id);
+      return {
+        ...campaign,
+        usage_stats: stats
+      };
+    }));
+
     return {
-      campaigns: data || [],
-      total: count || data?.length || 0,
+      campaigns: campaignsWithStats,
+      total: count || campaignsWithStats?.length || 0,
       page,
       limit
     };
@@ -168,7 +177,6 @@ async function createCampaign(branchId, campaignData, createdBy) {
  */
 async function updateCampaign(campaignId, branchId, updateData) {
   try {
-    console.log('updateCampaign called with:', { campaignId, branchId, updateData });
     
     const {
       code,
@@ -377,6 +385,51 @@ async function recordCampaignUsage(couponId, orderId, discountAmount) {
   }
 }
 
+/**
+ * Get campaign usage statistics
+ */
+async function getCampaignStats(campaignId) {
+  try {
+    // Get campaign's branch_id first
+    const { data: campaign, error: campaignError } = await supabase
+      .from('coupons')
+      .select('branch_id')
+      .eq('id', campaignId)
+      .single();
+
+    if (campaignError) {
+      throw new Error(`Failed to fetch campaign: ${campaignError.message}`);
+    }
+
+    // Get usage stats filtered by branch
+    const { data: usageStats, error } = await supabase
+      .from('coupon_usages')
+      .select(`
+        id, 
+        discount_amount, 
+        used_at,
+        orders!inner(branch_id)
+      `)
+      .eq('coupon_id', campaignId)
+      .eq('orders.branch_id', campaign.branch_id); // Filter by campaign's branch
+
+    if (error) {
+      throw new Error(`Failed to fetch campaign stats: ${error.message}`);
+    }
+
+    const totalUsages = usageStats?.length || 0;
+    const totalSavings = usageStats?.reduce((sum, usage) => sum + usage.discount_amount, 0) || 0;
+
+    return {
+      totalUsages,
+      totalSavings: Math.round(totalSavings * 100) / 100
+    };
+  } catch (error) {
+    console.error('getCampaignStats error:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getCampaigns,
   getCampaignById,
@@ -384,5 +437,6 @@ module.exports = {
   updateCampaign,
   deleteCampaign,
   validateCampaignCode,
-  recordCampaignUsage
+  recordCampaignUsage,
+  getCampaignStats
 };

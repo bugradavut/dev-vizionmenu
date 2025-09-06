@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { Card, CardDescription, CardTitle } from '@/components/ui/card'
+import { Card, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { 
@@ -12,17 +12,20 @@ import {
   Percent,
   DollarSign,
   Calendar,
-  Target
+  Target,
+  TrendingUp,
+  RotateCcw
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/language-context'
-import { translations } from '@/lib/translations'
 import type { Campaign } from '@/types/campaign'
+import { getCampaignStatus, CampaignStatus } from '@/types/campaign'
 
 interface CampaignCardProps {
   campaign: Campaign
   onEdit: (campaign: Campaign) => void
   onDelete: (campaign: Campaign) => void
   onToggleStatus: (campaignId: string) => void
+  onRepeat?: (campaign: Campaign) => void
   isLoading?: boolean
 }
 
@@ -31,10 +34,10 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
   onEdit,
   onDelete,
   onToggleStatus,
+  onRepeat,
   isLoading = false
 }) => {
   const { language } = useLanguage()
-  const t = translations[language] || translations.en
   const [isToggling, setIsToggling] = useState(false)
 
   const handleToggleStatus = async () => {
@@ -56,6 +59,12 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
     onDelete(campaign)
   }
 
+  const handleRepeat = () => {
+    if (onRepeat) {
+      onRepeat(campaign)
+    }
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA')
   }
@@ -69,11 +78,12 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
   }
 
   const isExpired = new Date(campaign.valid_until) < new Date()
+  const campaignStatus = getCampaignStatus(campaign)
 
   return (
-    <Card className={`${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+    <Card className={`${isLoading ? 'opacity-50 pointer-events-none' : ''} relative`}>
       {/* Top section with icon, info, and badge */}
-      <div className="p-4">
+      <div className="p-4 pb-16">
         <div className="flex gap-3">
           {/* Campaign Icon */}
           <div className={`w-16 h-16 rounded-lg flex items-center justify-center shrink-0 ${
@@ -103,11 +113,9 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
               </div>
             </div>
             
-            <CardDescription className="text-sm mb-2">
-              {campaign.type === 'percentage' ? t.campaigns.percentage : t.campaigns.fixedAmount}
-            </CardDescription>
             
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            {/* Date and Categories */}
+            <div className="flex items-center gap-3 text-xs text-muted-foreground mb-1">
               <div className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
                 <span>{language === 'fr' ? 'Jusqu\'au' : 'Until'} {formatDate(campaign.valid_until)}</span>
@@ -118,6 +126,12 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
                   <span>{language === 'fr' ? 'Catégories spécifiques' : 'Specific categories'}</span>
                 </div>
               )}
+            </div>
+            
+            {/* Usage Stats - Always in consistent position */}
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <TrendingUp className="w-3 h-3" />
+              <span>{campaign.usage_stats?.totalUsages || 0} {language === 'fr' ? 'utilisations' : 'uses'}</span>
             </div>
           </div>
           
@@ -144,8 +158,8 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
         </div>
       </div>
       
-      {/* Bottom action buttons */}
-      <div className="border-t border-gray-200 dark:border-gray-700 flex">
+      {/* 🆕 ENHANCED ACTION BUTTONS */}
+      <div className="absolute bottom-0 w-full border-t border-gray-200 dark:border-gray-700 flex">
         <Button 
           variant="ghost" 
           onClick={handleEdit}
@@ -155,24 +169,37 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
           {language === 'fr' ? 'Modifier' : 'Edit'}
         </Button>
         
-        <Button 
-          variant="ghost" 
-          onClick={handleToggleStatus}
-          disabled={isToggling || isExpired}
-          className="flex-1 rounded-none border-r border-gray-200 dark:border-gray-700 h-12 text-sm font-medium flex items-center justify-center gap-2"
-        >
-          {campaign.is_active ? (
-            <>
-              <ShieldX className="w-4 h-4" />
-              {language === 'fr' ? 'Désactiver' : 'Deactivate'}
-            </>
-          ) : (
-            <>
-              <Check className="w-4 h-4" />
-              {language === 'fr' ? 'Activer' : 'Activate'}
-            </>
-          )}
-        </Button>
+        {/* Conditional Middle Button: Repeat for expired, Toggle for active/inactive */}
+        {campaignStatus === CampaignStatus.EXPIRED ? (
+          <Button 
+            variant="ghost" 
+            onClick={handleRepeat}
+            disabled={!onRepeat}
+            className="flex-1 rounded-none border-r border-gray-200 dark:border-gray-700 h-12 text-sm font-medium flex items-center justify-center gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+          >
+            <RotateCcw className="w-4 h-4" />
+            {language === 'fr' ? 'Répéter' : 'Repeat'}
+          </Button>
+        ) : (
+          <Button 
+            variant="ghost" 
+            onClick={handleToggleStatus}
+            disabled={isToggling}
+            className="flex-1 rounded-none border-r border-gray-200 dark:border-gray-700 h-12 text-sm font-medium flex items-center justify-center gap-2"
+          >
+            {campaign.is_active ? (
+              <>
+                <ShieldX className="w-4 h-4" />
+                {language === 'fr' ? 'Désactiver' : 'Deactivate'}
+              </>
+            ) : (
+              <>
+                <Check className="w-4 h-4" />
+                {language === 'fr' ? 'Activer' : 'Activate'}
+              </>
+            )}
+          </Button>
+        )}
         
         <Button 
           variant="ghost" 
