@@ -19,6 +19,7 @@ import { DeleteCampaignDialog } from '@/components/delete-campaign-dialog'
 import { CampaignCard } from '@/components/campaign-card'
 import { CampaignFilterTabs } from '@/components/campaign-filter-tabs'
 import { RepeatCampaignDialog } from '@/components/repeat-campaign-dialog'
+import { CampaignLoadingSkeleton } from '@/components/campaign-loading-skeleton'
 
 // Contexts & Utils
 import { useLanguage } from '@/contexts/language-context'
@@ -36,6 +37,7 @@ export default function CreateCampaignPage() {
   const t = translations[language] || translations.en
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -48,10 +50,13 @@ export default function CreateCampaignPage() {
   useEffect(() => {
     const fetchCampaigns = async () => {
       try {
+        setIsLoading(true)
         const response = await campaignsService.getCampaigns()
         setCampaigns(response.data?.campaigns || [])
       } catch (error) {
         console.error('Failed to fetch campaigns:', error)
+      } finally {
+        setIsLoading(false)
       }
     }
 
@@ -145,7 +150,9 @@ export default function CreateCampaignPage() {
             <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-12">
-                  {campaigns.length === 0 ? (
+                  {isLoading ? (
+                    <CampaignLoadingSkeleton count={6} />
+                  ) : campaigns.length === 0 ? (
                     <Card className="text-center py-12">
                       <CardContent>
                         <Tag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
