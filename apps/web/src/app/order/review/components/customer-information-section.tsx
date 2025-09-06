@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, forwardRef, useImperativeHandle } from 'react'
+import React, { useState, forwardRef, useImperativeHandle, useCallback } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,6 +30,29 @@ function isValidCanadianPostalCode(postalCode: string): boolean {
   // Canadian postal code regex: Letter-Number-Letter Number-Letter-Number
   const canadianPostalRegex = /^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$/
   return canadianPostalRegex.test(postalCode)
+}
+
+// Email validation utility
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+// Canadian phone number utilities
+function cleanPhoneNumber(phone: string): string {
+  return phone.replace(/[^\d]/g, '') // Remove all non-digits
+}
+
+function isValidCanadianPhone(phone: string): boolean {
+  const cleaned = cleanPhoneNumber(phone)
+  
+  // 10 digits (example: 4165551234)
+  if (cleaned.length === 10) return true
+  
+  // 11 digits starting with 1 (example: 14165551234)
+  if (cleaned.length === 11 && cleaned.startsWith('1')) return true
+  
+  return false
 }
 
 type OrderType = 'dine_in' | 'takeaway' | 'delivery'
@@ -146,9 +169,13 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
     }
     if (!customerInfo.phone.trim()) {
       errors.phone = true
+    } else if (!isValidCanadianPhone(customerInfo.phone)) {
+      errors.phone_format = true
     }
     if (!customerInfo.email.trim()) {
       errors.email = true
+    } else if (!isValidEmail(customerInfo.email)) {
+      errors.email_format = true
     }
     
     // Check delivery address fields if order type is delivery
@@ -186,14 +213,33 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
   }
   
   // Public method to trigger validation from parent
-  const triggerValidation = () => {
+  const triggerValidation = useCallback(() => {
     const validation = validateForm(true) // Show errors when called from confirm button
     
     if (!validation.isValid) {
-      // Show toast notification for missing fields
+      // Determine the most appropriate error message
+      let toastMessage: string = t.orderPage.review.validationError // Default message
+      
+      // Check for specific format errors first
+      if (validation.errors.email_format) {
+        toastMessage = currentLanguage === 'fr' 
+          ? 'Veuillez entrer une adresse courriel valide'
+          : 'Please enter a valid email address'
+      } else if (validation.errors.phone_format) {
+        toastMessage = currentLanguage === 'fr' 
+          ? 'Veuillez entrer un numéro de téléphone canadien valide'
+          : 'Please enter a valid Canadian phone number'
+      } else if (Object.keys(validation.errors).some(key => key.includes('address_'))) {
+        // Address-related errors
+        toastMessage = currentLanguage === 'fr' 
+          ? 'Veuillez remplir tous les champs d\'adresse requis'
+          : 'Please fill in all required address fields'
+      }
+      
+      // Show toast notification
       toast({
         variant: "destructive",
-        description: t.orderPage.review.validationError,
+        description: toastMessage,
       })
       
       // Scroll to first empty field
@@ -223,8 +269,9 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
               element = document.getElementById(fieldName)
           }
         } else {
-          // Handle customer info field errors
-          element = document.getElementById(`customer-${firstEmptyField}`)
+          // Handle customer info field errors (including format errors)
+          const fieldName = firstEmptyField.replace('_format', '') // Remove format suffix if exists
+          element = document.getElementById(`customer-${fieldName}`)
         }
         
         if (element) {
@@ -240,7 +287,7 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
     }
     
     return true
-  }
+  }, [validateForm, currentLanguage, toast, t.orderPage.review.validationError])
 
   const addressTypes = [
     { value: 'home', label: 'Home/House', icon: Home },
@@ -280,8 +327,12 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
     }
     
     // Clear validation error for this field when user types (only if errors are being shown)
-    if (showValidationErrors && validationErrors[field]) {
-      setValidationErrors(prev => ({ ...prev, [field]: false }))
+    if (showValidationErrors && (validationErrors[field] || validationErrors[`${field}_format`])) {
+      setValidationErrors(prev => ({ 
+        ...prev, 
+        [field]: false,
+        [`${field}_format`]: false
+      }))
     }
     
     // Always update parent with current form data
@@ -294,8 +345,16 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
     // Check if form is valid (but don't show errors yet)
     const errors: {[key: string]: boolean} = {}
     if (!newCustomerInfo.name.trim()) errors.name = true
-    if (!newCustomerInfo.phone.trim()) errors.phone = true  
-    if (!newCustomerInfo.email.trim()) errors.email = true
+    if (!newCustomerInfo.phone.trim()) {
+      errors.phone = true
+    } else if (!isValidCanadianPhone(newCustomerInfo.phone)) {
+      errors.phone_format = true
+    }
+    if (!newCustomerInfo.email.trim()) {
+      errors.email = true
+    } else if (!isValidEmail(newCustomerInfo.email)) {
+      errors.email_format = true
+    }
     const isValid = Object.keys(errors).length === 0
     
     onValidationChange?.(isValid, formData)
@@ -303,8 +362,12 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
   
   const handleInputFocus = (fieldName: string) => {
     // Clear red border when user focuses on input (only if errors are being shown)
-    if (showValidationErrors && validationErrors[fieldName]) {
-      setValidationErrors(prev => ({ ...prev, [fieldName]: false }))
+    if (showValidationErrors && (validationErrors[fieldName] || validationErrors[`${fieldName}_format`])) {
+      setValidationErrors(prev => ({ 
+        ...prev, 
+        [fieldName]: false,
+        [`${fieldName}_format`]: false
+      }))
     }
   }
 
@@ -419,7 +482,7 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
               onChange={(e) => handleCustomerChange('phone', (e.target as HTMLInputElement).value)}
               onBlur={(e) => handleCustomerChange('phone', (e.target as HTMLInputElement).value)}
               onInput={(e) => handleCustomerChange('phone', (e.target as HTMLInputElement).value)}
-              className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${showValidationErrors && validationErrors.phone ? 'border-red-500 border-2' : ''}`}
+              className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${showValidationErrors && (validationErrors.phone || validationErrors.phone_format) ? 'border-red-500 border-2' : ''}`}
               onFocus={() => handleInputFocus('phone')}
             />
           </div>
@@ -438,7 +501,7 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
             onChange={(e) => handleCustomerChange('email', (e.target as HTMLInputElement).value)}
             onBlur={(e) => handleCustomerChange('email', (e.target as HTMLInputElement).value)}
             onInput={(e) => handleCustomerChange('email', (e.target as HTMLInputElement).value)}
-            className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${showValidationErrors && validationErrors.email ? 'border-red-500 border-2' : ''}`}
+            className={`h-10 border-gray-300 focus:border-[#FF6922] focus:ring-[#FF6922] rounded-lg ${showValidationErrors && (validationErrors.email || validationErrors.email_format) ? 'border-red-500 border-2' : ''}`}
             onFocus={() => handleInputFocus('email')}
           />
           <p className="text-xs text-gray-500">
