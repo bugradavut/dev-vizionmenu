@@ -660,19 +660,40 @@ async function createOrder(orderData, branchId) {
     throw new Error('Failed to create order items');
   }
 
-  // Record coupon usage if coupon was applied
+  // Record coupon usage if coupon was applied (with multi-tenant security)
   if (couponId && discountAmount > 0) {
-    const { error: usageError } = await supabase
-      .from('coupon_usages')
-      .insert({
-        coupon_id: couponId,
-        order_id: createdOrder.id,
-        discount_amount: discountAmount
-      });
+    
+    // SECURITY: Verify coupon belongs to the same branch as the order
+    const { data: couponBranch, error: couponError } = await supabase
+      .from('coupons')
+      .select('branch_id')
+      .eq('id', couponId)
+      .single();
 
-    if (usageError) {
-      console.error('Coupon usage recording error:', usageError);
-      // Don't rollback order - coupon usage is supplementary data
+    if (couponError || !couponBranch || couponBranch.branch_id !== branchId) {
+      console.error('Multi-tenant security violation: Coupon does not belong to order branch', {
+        couponId,
+        orderId: createdOrder.id,
+        orderBranch: branchId,
+        couponBranch: couponBranch?.branch_id
+      });
+      // Don't record usage for security violation
+    } else {
+      // Safe to record usage - coupon and order are from same branch
+      const { error: usageError } = await supabase
+        .from('coupon_usages')
+        .insert({
+          coupon_id: couponId,
+          order_id: createdOrder.id,
+          discount_amount: discountAmount
+        });
+
+      if (usageError) {
+        console.error('Coupon usage recording error:', usageError);
+        // Don't rollback order - coupon usage is supplementary data
+      } else {
+        console.log('Coupon usage recorded successfully');
+      }
     }
   }
 

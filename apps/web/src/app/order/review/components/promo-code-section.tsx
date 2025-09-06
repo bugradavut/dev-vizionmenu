@@ -16,6 +16,7 @@ interface CartItem {
 }
 
 interface CampaignDiscount {
+  id: string
   code: string
   discountAmount: number
   campaignType: 'percentage' | 'fixed_amount'
@@ -67,6 +68,7 @@ export function PromoCodeSection({ items, language, branchId = '550e8400-e29b-41
       
       if (response.ok && result.data) {
         const discount = {
+          id: result.data.campaign.id,
           code: campaignCode.toUpperCase(),
           discountAmount: result.data.discountAmount,
           campaignType: result.data.campaign.type,

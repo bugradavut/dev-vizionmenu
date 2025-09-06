@@ -44,6 +44,7 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   const [orderNotes, setOrderNotes] = useState<string>('')
   const [selectedOrderType, setSelectedOrderType] = useState<'takeaway' | 'delivery' | null>(initialOrderType)
   const [appliedDiscount, setAppliedDiscount] = useState<{
+    id: string
     code: string
     discountAmount: number
     campaignType: 'percentage' | 'fixed_amount'

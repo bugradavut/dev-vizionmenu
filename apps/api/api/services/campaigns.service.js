@@ -390,35 +390,29 @@ async function recordCampaignUsage(couponId, orderId, discountAmount) {
  */
 async function getCampaignStats(campaignId) {
   try {
-    // Get campaign's branch_id first
-    const { data: campaign, error: campaignError } = await supabase
-      .from('coupons')
-      .select('branch_id')
-      .eq('id', campaignId)
-      .single();
-
-    if (campaignError) {
-      throw new Error(`Failed to fetch campaign: ${campaignError.message}`);
-    }
-
-    // Get usage stats filtered by branch
+    // Get usage stats with order information
     const { data: usageStats, error } = await supabase
       .from('coupon_usages')
       .select(`
         id, 
         discount_amount, 
         used_at,
-        orders!inner(branch_id)
+        orders(branch_id),
+        coupons(branch_id)
       `)
-      .eq('coupon_id', campaignId)
-      .eq('orders.branch_id', campaign.branch_id); // Filter by campaign's branch
+      .eq('coupon_id', campaignId);
 
     if (error) {
       throw new Error(`Failed to fetch campaign stats: ${error.message}`);
     }
 
-    const totalUsages = usageStats?.length || 0;
-    const totalSavings = usageStats?.reduce((sum, usage) => sum + usage.discount_amount, 0) || 0;
+    // Filter usage stats to ensure coupon and order are from same branch (multi-tenancy)
+    const validUsageStats = usageStats?.filter(usage => {
+      return usage.orders?.branch_id === usage.coupons?.branch_id;
+    }) || [];
+
+    const totalUsages = validUsageStats.length;
+    const totalSavings = validUsageStats.reduce((sum, usage) => sum + usage.discount_amount, 0) || 0;
 
     return {
       totalUsages,

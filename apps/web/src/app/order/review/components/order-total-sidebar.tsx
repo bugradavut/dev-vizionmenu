@@ -29,7 +29,7 @@ interface OrderTotals {
 }
 
 interface CampaignDiscount {
-  id?: string
+  id: string
   code: string
   discountAmount: number
   campaignType: 'percentage' | 'fixed_amount'
@@ -164,7 +164,7 @@ export function OrderTotalSidebar({
         
         // Campaign/discount details
         campaign: appliedDiscount ? {
-          id: appliedDiscount.id || undefined,
+          id: appliedDiscount.id,
           code: appliedDiscount.code,
           discountAmount: appliedDiscount.discountAmount,
           campaignType: appliedDiscount.campaignType,
