@@ -52,7 +52,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   const { settings } = useBranchSettings({ branchId: branchId || undefined })
   
   // Initialize timer service for auto-completion
-  const { startTimer, stopTimer } = useOrderTimer()
+  const { startTimer, stopTimer, runManualCheck } = useOrderTimer()
   
   // Real API integration
   const { 
@@ -70,6 +70,9 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   
   // Timing adjustment loading state
   const [timingLoading, setTimingLoading] = useState(false)
+  
+  // Auto-ready state
+  const [isAutoCompleting, setIsAutoCompleting] = useState(false)
   
   // Partial refund state
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
@@ -265,6 +268,44 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   }, [order, currentTime, settings.timingSettings])
 
   const timerInfo = getTimerInfo()
+
+  // Auto-complete with 10-second delay
+  useEffect(() => {
+    let delayTimer: NodeJS.Timeout | null = null
+
+    const handleAutoComplete = async () => {
+      if (isAutoCompleting) return
+      
+      try {
+        setIsAutoCompleting(true)
+        await runManualCheck()
+        await refetch()
+      } catch {
+        // Silent error handling
+      } finally {
+        setIsAutoCompleting(false)
+      }
+    }
+
+    // Only auto-complete when timer is ready
+    if (
+      timerInfo?.isComplete && 
+      timerInfo?.canAutoComplete && 
+      order?.status === 'preparing' &&
+      !isAutoCompleting
+    ) {
+      // 10 second delay before auto-completion
+      delayTimer = setTimeout(() => {
+        handleAutoComplete()
+      }, 10000)
+    }
+
+    return () => {
+      if (delayTimer) {
+        clearTimeout(delayTimer)
+      }
+    }
+  }, [timerInfo?.isComplete, timerInfo?.canAutoComplete, order?.status, isAutoCompleting, runManualCheck, refetch])
 
   // Timer for visual countdown ONLY - NO POLLING, NO REFETCHING
   useEffect(() => {
@@ -1110,10 +1151,12 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                 ></div>
                               </div>
                               
-                              {/* Status text - only show when timer is complete */}
-                              {timerInfo.isComplete && (
+                              {/* Status text - only show when timer is complete or auto-completing */}
+                              {(timerInfo.isComplete || isAutoCompleting) && (
                                 <div className="text-xs text-gray-500">
-                                  {timerInfo.canAutoComplete ? (
+                                  {isAutoCompleting ? (
+                                    <span className="font-medium text-primary animate-pulse">Auto-completing order...</span>
+                                  ) : timerInfo.canAutoComplete ? (
                                     <span className="font-medium text-primary">Ready for completion</span>
                                   ) : (
                                     <span className="font-medium">Manual completion required (third-party order)</span>
@@ -1273,13 +1316,13 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                           {/* Mark Ready Button */}
                           <Button 
                             onClick={() => handleStatusUpdate('completed')}
-                            disabled={updatingStatus !== null}
+                            disabled={updatingStatus !== null || isAutoCompleting}
                             className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors"
                           >
-                            {updatingStatus === 'completed' ? (
+                            {(updatingStatus === 'completed' || isAutoCompleting) ? (
                               <>
                                 <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                                {t.orderDetail.markingReady}
+                                {isAutoCompleting ? 'Auto-completing...' : t.orderDetail.markingReady}
                               </>
                             ) : (
                               t.orderDetail.markReady
