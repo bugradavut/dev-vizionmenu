@@ -89,8 +89,10 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
     if (isOpen) {
       if (currentSchedule?.date && currentSchedule?.time) {
         // If there's a current schedule, show it and go to time step
-        setSelectedDate(convertStringToDate(currentSchedule.date))
+        const scheduledDate = convertStringToDate(currentSchedule.date)
+        setSelectedDate(scheduledDate)
         setSelectedTime(currentSchedule.time)
+        setCurrentMonth(new Date(scheduledDate.getFullYear(), scheduledDate.getMonth(), 1)) // Navigate to scheduled month
         setCurrentStep('time') // Go directly to time step for editing
       } else {
         // Reset to default state for new scheduling
@@ -98,6 +100,7 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
         initialDate.setHours(0, 0, 0, 0)
         setSelectedDate(initialDate)
         setSelectedTime('')
+        setCurrentMonth(new Date()) // Reset to current month
         setCurrentStep('date')
       }
       setIsLoading(false)
@@ -146,6 +149,9 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
     })
   }
 
+  // Calendar navigation state
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+
   // Custom calendar component - Best Practice: Manual layout control
   const CustomCalendar = () => {
     const handleDateSelect = (date: Date) => {
@@ -154,13 +160,22 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
       setSelectedDate(normalizedDate)
     }
 
+    // Month navigation handlers
+    const goToPreviousMonth = () => {
+      setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+    }
+
+    const goToNextMonth = () => {
+      setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+    }
+
     // Generate calendar data manually for full control
     const generateCalendarData = () => {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+      const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
+      const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
       const startDate = new Date(startOfMonth)
       startDate.setDate(startDate.getDate() - startOfMonth.getDay()) // Start from Sunday
       
@@ -192,7 +207,7 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
-    const monthName = format(today, 'MMMM yyyy', { 
+    const monthName = format(currentMonth, 'MMMM yyyy', { 
       locale: language === 'fr' ? fr : enCA 
     })
 
@@ -200,7 +215,7 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
     const isDateSelected = (date: Date) => 
       selectedDate && format(date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
     const isDateToday = (date: Date) => isToday(date)
-    const isCurrentMonth = (date: Date) => date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear()
+    const isCurrentMonth = (date: Date) => date.getMonth() === currentMonth.getMonth() && date.getFullYear() === currentMonth.getFullYear()
 
     return (
       <div className="w-full space-y-4">
@@ -210,9 +225,7 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0"
-            onClick={() => {
-              // Handle previous month logic if needed
-            }}
+            onClick={goToPreviousMonth}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -225,9 +238,7 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0"
-            onClick={() => {
-              // Handle next month logic if needed
-            }}
+            onClick={goToNextMonth}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
