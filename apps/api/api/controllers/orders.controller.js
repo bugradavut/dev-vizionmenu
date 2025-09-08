@@ -4,6 +4,8 @@
 // =====================================================
 
 const ordersService = require('../services/orders.service');
+const commissionService = require('../services/commission.service');
+const orderSourceService = require('../services/order-source.service');
 const { handleControllerError } = require('../helpers/error-handler');
 
 /**
@@ -161,23 +163,16 @@ const checkAutoAccept = async (req, res) => {
 
 /**
  * POST /api/v1/orders
- * Create a new order (for internal orders: QR code, web)
+ * Create a new order (for internal orders: QR code, web) with commission calculation
  */
 const createOrder = async (req, res) => {
   try {
-    const { customer, items, orderType, source, tableNumber, notes, specialInstructions } = req.body;
+    const { customer, items, orderType, source, tableNumber, notes, specialInstructions, total } = req.body;
     
     // Validation
     if (!customer || !items || !orderType || !source) {
       return res.status(400).json({
         error: { code: 'VALIDATION_ERROR', message: 'customer, items, orderType, and source are required' }
-      });
-    }
-
-    // Only allow internal orders for now (third-party will be added in 2 weeks)
-    if (!['qr_code', 'web'].includes(source)) {
-      return res.status(400).json({
-        error: { code: 'INVALID_SOURCE', message: 'Only qr_code and web orders are supported currently' }
       });
     }
 
@@ -195,45 +190,115 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Use order service to create order
-    const orderData = { customer, items, orderType, source, tableNumber, notes, specialInstructions };
-    const createResult = await ordersService.createOrder(orderData, branchId);
+    // COMMISSION ENGINE INTEGRATION
+    // 1. DETECT ORDER SOURCE
+    const orderSource = orderSourceService.detectOrderSource(req);
+    
+    if (!orderSourceService.isValidSource(orderSource)) {
+      return res.status(400).json({
+        error: { 
+          code: 'INVALID_ORDER_SOURCE', 
+          message: `Invalid order source detected: ${orderSource}` 
+        }
+      });
+    }
 
-    // Trigger auto-accept check for Simplified Flow
+    // 2. CALCULATE COMMISSION (use total from request or calculate from items)
+    let orderTotal = total;
+    if (!orderTotal) {
+      // Calculate total from items if not provided
+      orderTotal = items.reduce((sum, item) => {
+        return sum + (item.price * item.quantity);
+      }, 0);
+    }
+
+    const commission = await commissionService.calculateCommission(
+      orderTotal,
+      branchId,
+      orderSource
+    );
+
+    // 3. CREATE ORDER WITH COMMISSION DATA
+    const orderData = { 
+      customer, 
+      items, 
+      orderType, 
+      source, 
+      tableNumber, 
+      notes, 
+      specialInstructions,
+      // Add commission fields
+      order_source: orderSource,
+      commission_rate: commission.rate,
+      commission_amount: commission.commissionAmount,
+      net_amount: commission.netAmount,
+      commission_status: 'pending'
+    };
+    
+    const createResult = await ordersService.createOrderWithCommission(orderData, branchId);
+
+    // 4. LOG COMMISSION TRANSACTION
+    try {
+      await commissionService.logCommissionTransaction({
+        orderId: createResult.order.id,
+        branchId: branchId,
+        commissionRate: commission.rate,
+        orderTotal: orderTotal,
+        commissionAmount: commission.commissionAmount,
+        netAmount: commission.netAmount,
+        sourceType: orderSource
+      });
+    } catch (commissionError) {
+      console.error('Failed to log commission transaction:', commissionError);
+      // Don't fail the order creation, just log the error
+    }
+
+    // 5. AUTO-ACCEPT CHECK (existing logic)
     let autoAcceptResult = null;
     try {
-      // Use order service for auto-accept check instead of internal HTTP call
       autoAcceptResult = await ordersService.checkAutoAccept(createResult.order.id, branchId);
     } catch (error) {
       console.error('Auto-accept check failed:', error);
       // Don't fail the order creation, just log the error
     }
 
-    // Success response
+    // Success response with commission data
     res.status(201).json({
       data: {
         order: {
           id: createResult.order.id,
           orderNumber: createResult.order.orderNumber,
           status: autoAcceptResult?.status || createResult.order.status,
-          total: createResult.order.total,
-          createdAt: createResult.order.createdAt
+          total: orderTotal,
+          createdAt: createResult.order.createdAt,
+          // Commission information (internal use)
+          orderSource: orderSource,
+          commissionRate: commission.rate,
+          commissionAmount: commission.commissionAmount,
+          netAmount: commission.netAmount
         },
         autoAccepted: autoAcceptResult?.autoAccepted || false,
-        autoAcceptMessage: autoAcceptResult?.message || null
+        autoAcceptMessage: autoAcceptResult?.message || null,
+        commission: {
+          source: orderSource,
+          rate: commission.rate,
+          amount: commission.commissionAmount,
+          netToRestaurant: commission.netAmount
+        }
       }
     });
 
   } catch (error) {
-    console.error('Create order endpoint error:', error);
+    console.error('Create order with commission endpoint error:', error);
     
-    // Handle specific errors from service
-    if (error.message === 'Only qr_code and web orders are supported currently') {
-      return res.status(400).json({
-        error: { code: 'INVALID_SOURCE', message: error.message }
+    // Handle commission-specific errors
+    if (error.message.includes('Commission calculation failed')) {
+      return res.status(500).json({
+        error: { code: 'COMMISSION_ERROR', message: 'Failed to calculate commission' }
       });
     }
     
+    // Handle existing errors
     if (error.message === 'Failed to create order' || error.message === 'Failed to create order items') {
       return res.status(500).json({
         error: { code: 'CREATE_FAILED', message: error.message }

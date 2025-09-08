@@ -251,7 +251,9 @@
       "Read(/c:\\Users\\HP\\Desktop\\vision-menu\\vision-menu\\apps\\web\\src\\services/**)",
       "Read(/c:\\Users\\HP\\Desktop\\vision-menu\\vision-menu\\apps\\web\\src\\app\\orders\\[orderId]/**)",
       "Read(/c:\\Users\\HP\\Desktop\\vision-menu\\vision-menu\\apps\\web\\src\\app\\orders\\[orderId]/**)",
-      "Read(/c:\\Users\\HP\\Desktop\\vision-menu\\vision-menu/**)"
+      "Read(/c:\\Users\\HP\\Desktop\\vision-menu\\vision-menu/**)",
+      "WebFetch(domain:www.postman.com)",
+      "WebFetch(domain:developer.uber.com)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

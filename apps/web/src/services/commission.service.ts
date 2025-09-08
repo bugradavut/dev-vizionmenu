@@ -1,0 +1,201 @@
+"use client";
+
+/**
+ * Commission Service
+ * Handles all commission-related API operations
+ */
+
+import { apiClient } from './api-client';
+
+export interface CommissionRate {
+  source_type: string;
+  default_rate: number;
+  chain_rate: number | null;
+  effective_rate: number;
+  has_override: boolean;
+  is_active: boolean;
+}
+
+export interface ChainCommissionSettings {
+  chainId: string;
+  settings: CommissionRate[];
+}
+
+export interface DefaultCommissionRate {
+  source_type: string;
+  default_rate: number;
+  description?: string;
+}
+
+export interface UpdateRateRequest {
+  rate: number;
+}
+
+export interface BulkUpdateRequest {
+  rates: {
+    sourceType: string;
+    rate: number;
+  }[];
+}
+
+export interface CommissionSummary {
+  dateRange: string;
+  summary: CommissionSummaryItem[];
+}
+
+export interface CommissionSummaryItem {
+  [key: string]: unknown;
+}
+
+export interface BulkUpdateResponse {
+  updated: number;
+  total: number;
+  results: BulkUpdateResult[];
+}
+
+export interface BulkUpdateResult {
+  sourceType: string;
+  success: boolean;
+  result?: CommissionRate;
+  error?: string;
+}
+
+class CommissionService {
+  /**
+   * Get default commission rates for all source types
+   */
+  async getDefaultRates(): Promise<DefaultCommissionRate[]> {
+    try {
+      console.log('🔄 Fetching default commission rates...');
+      const response = await apiClient.get('/api/v1/commission/defaults');
+      
+      console.log('✅ Default rates response:', response);
+      return (response.data as { rates?: DefaultCommissionRate[] }).rates || [];
+      
+    } catch (error) {
+      console.error('❌ Error fetching default rates:', error);
+      throw new Error('Failed to fetch default commission rates');
+    }
+  }
+
+  /**
+   * Update default commission rate for a source type
+   */
+  async updateDefaultRate(sourceType: string, rate: number): Promise<DefaultCommissionRate> {
+    try {
+      console.log(`🔄 Updating default rate for ${sourceType} to ${rate}%`);
+      const response = await apiClient.put(`/api/v1/commission/defaults/${sourceType}`, {
+        rate: rate
+      });
+      
+      console.log('✅ Default rate updated:', response);
+      return (response.data as { rate: DefaultCommissionRate }).rate;
+      
+    } catch (error) {
+      console.error('❌ Error updating default rate:', error);
+      throw new Error(`Failed to update default rate for ${sourceType}`);
+    }
+  }
+
+  /**
+   * Get commission settings for a specific chain
+   */
+  async getChainSettings(chainId: string): Promise<ChainCommissionSettings> {
+    try {
+      console.log(`🔄 Fetching commission settings for chain: ${chainId}`);
+      const response = await apiClient.get(`/api/v1/commission/settings/${chainId}`);
+      
+      console.log('✅ Chain settings response:', response);
+      const responseData = response.data as { chainId: string; settings?: CommissionRate[] };
+      return {
+        chainId: responseData.chainId,
+        settings: responseData.settings || []
+      };
+      
+    } catch (error) {
+      console.error('❌ Error fetching chain settings:', error);
+      throw new Error(`Failed to fetch commission settings for chain ${chainId}`);
+    }
+  }
+
+  /**
+   * Set or update chain-specific commission rate for a source type
+   */
+  async setChainRate(chainId: string, sourceType: string, rate: number): Promise<CommissionRate> {
+    try {
+      console.log(`🔄 Setting chain rate for ${chainId}/${sourceType} to ${rate}%`);
+      const response = await apiClient.put(`/api/v1/commission/settings/${chainId}/${sourceType}`, {
+        rate: rate
+      });
+      
+      console.log('✅ Chain rate updated:', response);
+      return (response.data as { setting: CommissionRate }).setting;
+      
+    } catch (error) {
+      console.error('❌ Error setting chain rate:', error);
+      throw new Error(`Failed to set commission rate for ${sourceType}`);
+    }
+  }
+
+  /**
+   * Remove chain-specific override (revert to default)
+   */
+  async removeChainOverride(chainId: string, sourceType: string): Promise<void> {
+    try {
+      console.log(`🔄 Removing chain override for ${chainId}/${sourceType}`);
+      const response = await apiClient.delete(`/api/v1/commission/settings/${chainId}/${sourceType}`);
+      
+      console.log('✅ Chain override removed:', response);
+      
+    } catch (error) {
+      console.error('❌ Error removing chain override:', error);
+      throw new Error(`Failed to remove override for ${sourceType}`);
+    }
+  }
+
+  /**
+   * Bulk update multiple commission rates for a chain
+   */
+  async bulkUpdateChainRates(chainId: string, rates: BulkUpdateRequest['rates']): Promise<BulkUpdateResponse> {
+    try {
+      console.log(`🔄 Bulk updating rates for chain: ${chainId}`, rates);
+      const response = await apiClient.post(`/api/v1/commission/settings/${chainId}/bulk`, {
+        rates: rates
+      });
+      
+      console.log('✅ Bulk update response:', response);
+      return response.data as BulkUpdateResponse;
+      
+    } catch (error) {
+      console.error('❌ Error bulk updating chain rates:', error);
+      throw new Error('Failed to bulk update commission rates');
+    }
+  }
+
+  /**
+   * Get commission summary and statistics
+   */
+  async getCommissionSummary(dateRange: '7d' | '30d' | '90d' = '7d'): Promise<CommissionSummary> {
+    try {
+      console.log(`🔄 Fetching commission summary for ${dateRange}`);
+      const response = await apiClient.get(`/api/v1/commission/summary`, {
+        dateRange: dateRange
+      });
+      
+      console.log('✅ Commission summary response:', response);
+      const responseData = response.data as { dateRange: string; summary?: CommissionSummaryItem[] };
+      return {
+        dateRange: responseData.dateRange,
+        summary: responseData.summary || []
+      };
+      
+    } catch (error) {
+      console.error('❌ Error fetching commission summary:', error);
+      throw new Error('Failed to fetch commission summary');
+    }
+  }
+}
+
+// Export singleton instance
+export const commissionService = new CommissionService();
+export default commissionService;

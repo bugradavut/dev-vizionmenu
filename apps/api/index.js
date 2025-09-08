@@ -54,6 +54,7 @@ const adminBranchRoutes = require('./routes/admin-branch.routes');
 const chainUsersRoutes = require('./routes/chain-users.routes');
 const platformAdminRoutes = require('./routes/platform-admin.routes');
 const customerChainsRoutes = require('./routes/customer-chains.routes');
+const commissionRoutes = require('./routes/commission');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -140,6 +141,9 @@ app.use('/api/v1/users/chain', chainUsersRoutes);
 
 // Use platform admin routes (platform admin management)
 app.use('/api/v1/admin', platformAdminRoutes);
+
+// Use commission routes (protected)
+app.use('/api/v1/commission', commissionRoutes);
 
 // Catch all other routes
 app.use('*', (req, res) => {

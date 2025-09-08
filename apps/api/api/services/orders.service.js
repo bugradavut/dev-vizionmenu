@@ -1053,11 +1053,171 @@ async function updateOrderTiming(orderId, adjustmentMinutes, userBranch) {
   };
 }
 
+/**
+ * Create order with commission calculation
+ * Enhanced version of createOrder with commission fields
+ */
+async function createOrderWithCommission(orderData, branchId) {
+  const { 
+    customer, 
+    items, 
+    orderType, 
+    source, 
+    tableNumber, 
+    zone, 
+    notes, 
+    specialInstructions, 
+    deliveryAddress, 
+    preOrder, 
+    pricing, 
+    campaign, 
+    tip,
+    // Commission fields
+    order_source,
+    commission_rate,
+    commission_amount,
+    net_amount,
+    commission_status
+  } = orderData;
+  
+  // Use comprehensive pricing if provided, otherwise calculate basic totals
+  let itemsSubtotal, discountAmount, deliveryFee, gstAmount, qstAmount, tipAmount, finalTotal;
+  let couponCode = null, couponId = null, tipType = null, tipValue = null;
+  
+  if (pricing) {
+    // Use provided comprehensive pricing breakdown
+    itemsSubtotal = parseFloat(pricing.itemsTotal || 0);
+    discountAmount = parseFloat(pricing.discountAmount || 0);
+    deliveryFee = parseFloat(pricing.deliveryFee || 0);
+    gstAmount = parseFloat(pricing.gst || 0);
+    qstAmount = parseFloat(pricing.qst || 0);
+    tipAmount = parseFloat(pricing.tipAmount || 0);
+    finalTotal = parseFloat(pricing.finalTotal || 0);
+    
+    // Campaign/coupon details
+    if (campaign) {
+      couponCode = campaign.code;
+      couponId = campaign.id || null;
+    }
+    
+    // Tip details
+    if (tip) {
+      tipAmount = parseFloat(tip.amount || 0);
+      tipType = tip.type || 'percentage';
+      tipValue = parseFloat(tip.value || 0);
+    }
+  } else {
+    // Calculate basic totals from items
+    itemsSubtotal = items.reduce((sum, item) => {
+      return sum + (parseFloat(item.price) * parseInt(item.quantity));
+    }, 0);
+    
+    // Simple calculation (no taxes/fees for basic orders)
+    discountAmount = 0;
+    deliveryFee = 0;
+    gstAmount = 0;
+    qstAmount = 0;
+    tipAmount = parseFloat(tip?.amount || 0);
+    finalTotal = itemsSubtotal + tipAmount;
+  }
+
+  // Generate unique order number
+  const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`;
+
+  // Create order with commission data
+  const { data: order, error: orderError } = await supabase
+    .from('orders')
+    .insert({
+      branch_id: branchId,
+      customer_name: customer.name,
+      customer_phone: customer.phone,
+      customer_email: customer.email || null,
+      order_type: orderType,
+      table_number: tableNumber || null,
+      zone: zone || null,
+      notes: notes || null,
+      special_instructions: specialInstructions || null,
+      delivery_address: deliveryAddress || null,
+      order_number: orderNumber,
+      order_source: source,
+      order_status: 'pending',
+      items_subtotal: itemsSubtotal,
+      discount_amount: discountAmount,
+      delivery_fee: deliveryFee,
+      gst_amount: gstAmount,
+      qst_amount: qstAmount,
+      tip_amount: tipAmount,
+      tip_type: tipType,
+      tip_value: tipValue,
+      total: finalTotal,
+      coupon_code: couponCode,
+      coupon_id: couponId,
+      is_pre_order: preOrder?.isPreOrder || false,
+      scheduled_for: preOrder?.scheduledTime || null,
+      // Commission fields
+      order_source: order_source,
+      commission_rate: commission_rate,
+      commission_amount: commission_amount,
+      net_amount: net_amount,
+      commission_status: commission_status || 'pending'
+    })
+    .select()
+    .single();
+
+  if (orderError) {
+    console.error('Failed to create order with commission:', orderError);
+    throw new Error(`Failed to create order: ${orderError.message}`);
+  }
+
+  // Create order items
+  const orderItems = items.map(item => ({
+    order_id: order.id,
+    menu_item_id: item.menuItemId,
+    quantity: item.quantity,
+    unit_price: parseFloat(item.price),
+    item_total: parseFloat(item.price) * parseInt(item.quantity),
+    variations: item.variations || null,
+    special_instructions: item.specialInstructions || null
+  }));
+
+  const { data: createdItems, error: itemsError } = await supabase
+    .from('order_items')
+    .insert(orderItems)
+    .select();
+
+  if (itemsError) {
+    console.error('Failed to create order items:', itemsError);
+    // Clean up the order if items creation failed
+    await supabase.from('orders').delete().eq('id', order.id);
+    throw new Error(`Failed to create order items: ${itemsError.message}`);
+  }
+
+  console.log(`✅ Order created successfully with commission: ${orderNumber} (${order.id}) - Commission: ${commission_rate}% = $${commission_amount}`);
+
+  return {
+    order: {
+      id: order.id,
+      orderNumber: order.order_number,
+      status: order.order_status,
+      total: order.total,
+      commission: {
+        source: order_source,
+        rate: commission_rate,
+        amount: commission_amount,
+        netAmount: net_amount
+      },
+      createdAt: order.created_at
+    },
+    items: createdItems
+  };
+}
+
 module.exports = {
   getOrders,
   getOrderDetail,
   updateOrderStatus,
   createOrder,
+  createOrderWithCommission,
   checkAutoAccept,
   checkOrderTimers,
   updateOrderTiming

@@ -69,6 +69,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 title: language === 'fr' ? 'Administrateurs Plateforme' : 'Platform Admins',
                 url: "/admin-settings/platform-admins",
               },
+              {
+                title: language === 'fr' ? 'Commission' : 'Commission',
+                url: "/admin-settings/commission",
+              },
             ],
           },
         ],
