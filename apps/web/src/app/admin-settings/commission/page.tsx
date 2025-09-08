@@ -31,7 +31,7 @@ import {
   Percent, 
   Globe,
   QrCode,
-  Truck,
+  Smartphone,
   Building2,
   Settings,
   Info
@@ -57,8 +57,6 @@ const sourceTypeConfig = [
     type: 'website',
     label: 'Website Orders',
     labelFr: 'Commandes Site Web',
-    description: 'Orders from restaurant website (standard commission)',
-    descriptionFr: 'Commandes du site web du restaurant (commission standard)',
     icon: Globe,
     color: 'bg-blue-500'
   },
@@ -66,47 +64,15 @@ const sourceTypeConfig = [
     type: 'qr', 
     label: 'QR Code Orders',
     labelFr: 'Commandes Code QR',
-    description: 'In-restaurant QR code orders (reduced commission)',
-    descriptionFr: 'Commandes par code QR en restaurant (commission réduite)',
     icon: QrCode,
     color: 'bg-green-500'
   },
   {
-    type: 'delivery',
-    label: 'Uber Direct Delivery',
-    labelFr: 'Livraison Uber Direct',
-    description: 'Future: Uber Direct delivery integration (no commission)',
-    descriptionFr: 'Futur: Intégration livraison Uber Direct (sans commission)',
-    icon: Truck,
-    color: 'bg-indigo-600',
-    badge: 'Future'
-  },
-  {
-    type: 'uber_eats',
-    label: 'Uber Eats',
-    labelFr: 'Uber Eats',
-    description: 'Third-party platform orders (no commission)',
-    descriptionFr: 'Commandes plateforme tierce (sans commission)',
-    icon: Truck,
-    color: 'bg-black'
-  },
-  {
-    type: 'doordash',
-    label: 'DoorDash',
-    labelFr: 'DoorDash', 
-    description: 'Third-party platform orders (no commission)',
-    descriptionFr: 'Commandes plateforme tierce (sans commission)',
-    icon: Truck,
-    color: 'bg-red-500'
-  },
-  {
-    type: 'skipthedishes',
-    label: 'Skip The Dishes',
-    labelFr: 'Skip The Dishes',
-    description: 'Third-party platform orders (no commission)', 
-    descriptionFr: 'Commandes plateforme tierce (sans commission)',
-    icon: Truck,
-    color: 'bg-yellow-500'
+    type: 'mobile_app',
+    label: 'Mobile App Orders',
+    labelFr: 'Commandes App Mobile',
+    icon: Smartphone,
+    color: 'bg-purple-500'
   }
 ]
 
@@ -138,7 +104,7 @@ export default function CommissionSettingsPage() {
       setCommissionRates(sourceTypeConfig.map(config => ({
         source_type: config.type,
         default_rate: getDefaultRate(config.type),
-        description: config.description
+        description: ''
       })))
     } catch (error) {
       console.error('Failed to fetch commission rates:', error)
@@ -174,19 +140,12 @@ export default function CommissionSettingsPage() {
     const defaults: Record<string, string> = {
       website: '3.00',        // Standard commission for web orders
       qr: '1.00',            // Reduced commission for in-restaurant QR orders
-      delivery: '0.00',      // Future Uber Direct integration (no commission for now)
-      uber_eats: '0.00',     // Third-party platform (no commission)
-      doordash: '0.00',      // Third-party platform (no commission)
-      skipthedishes: '0.00'  // Third-party platform (no commission)
+      mobile_app: '2.00'     // Mobile app commission (future implementation)
     }
     return defaults[sourceType] || '0.00'
   }
 
 
-  const getCurrentRate = (sourceType: string): string => {
-    const rate = commissionRates.find(r => r.source_type === sourceType)
-    return rate?.default_rate || getDefaultRate(sourceType)
-  }
 
   // Load default rates from API
   const loadDefaultRates = async () => {
@@ -202,6 +161,38 @@ export default function CommissionSettingsPage() {
       console.error('Failed to load default rates:', error)
       // Keep using mock data
     }
+  }
+
+  // Load chain-specific rates for info modal
+  const [chainCommissionRates, setChainCommissionRates] = useState<{
+    source_type: string;
+    has_override: boolean;
+    chain_rate: number | null;
+    effective_rate: number;
+  }[]>([])
+  const [loadingChainRates, setLoadingChainRates] = useState(false)
+
+  const loadChainCommissionRates = async (chainId: string) => {
+    try {
+      setLoadingChainRates(true)
+      const response = await commissionService.getChainSettings(chainId)
+      setChainCommissionRates(response.settings)
+    } catch (error) {
+      console.error('Failed to load chain commission rates:', error)
+      setChainCommissionRates([])
+    } finally {
+      setLoadingChainRates(false)
+    }
+  }
+
+  const getChainSpecificRate = (sourceType: string): string => {
+    const chainRate = chainCommissionRates.find(r => r.source_type === sourceType)
+    if (chainRate?.has_override && chainRate.chain_rate !== null) {
+      return chainRate.chain_rate.toString()
+    }
+    // Fallback to default rate
+    const defaultRate = commissionRates.find(r => r.source_type === sourceType)
+    return defaultRate?.default_rate || getDefaultRate(sourceType)
   }
 
   // Load default rates on mount
@@ -385,6 +376,7 @@ export default function CommissionSettingsPage() {
                             onClick={() => {
                               setSelectedChainInfo(chain)
                               setShowInfoModal(true)
+                              loadChainCommissionRates(chain.id)
                             }}
                             className="flex-1 rounded-none border-r border-gray-200 dark:border-gray-700 h-12 text-sm font-medium flex items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                           >
@@ -471,54 +463,70 @@ export default function CommissionSettingsPage() {
                     <h4 className="font-medium text-sm text-muted-foreground mb-3 uppercase tracking-wider">
                       {language === 'fr' ? 'Taux de Commission Actuels' : 'Current Commission Rates'}
                     </h4>
-                    <div className="grid gap-3">
-                      {sourceTypeConfig
-                        .map((config) => {
-                          const IconComponent = config.icon
-                          const currentRate = getCurrentRate(config.type)
-                          const label = language === 'fr' ? config.labelFr : config.label
-                          const description = language === 'fr' ? config.descriptionFr : config.description
-                          
-                          return (
-                            <div key={config.type} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                              <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-lg ${config.color.replace('bg-', 'bg-opacity-10 bg-')} text-white`}>
-                                  <IconComponent className="h-4 w-4" style={{ color: config.color.replace('bg-', '') }} />
+{loadingChainRates ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {sourceTypeConfig
+                          .map((config) => {
+                            const IconComponent = config.icon
+                            const currentRate = getChainSpecificRate(config.type)
+                            const label = language === 'fr' ? config.labelFr : config.label
+                            
+                            // Check if this is a custom rate
+                            const chainRate = chainCommissionRates.find(r => r.source_type === config.type)
+                            const isCustom = chainRate?.has_override && chainRate.chain_rate !== null
+                            
+                            return (
+                              <div key={config.type} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                                {/* Left: Icon + Label */}
+                                <div className="flex items-center gap-4">
+                                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                    config.color === 'bg-black' 
+                                      ? 'bg-gray-200 dark:bg-gray-600' 
+                                      : config.color.replace('bg-', 'bg-') + ' bg-opacity-20 dark:bg-opacity-30'
+                                  }`}>
+                                    <IconComponent className="w-5 h-5" style={{ 
+                                      color: config.color.replace('bg-', '#')
+                                        .replace('black', '#4b5563')
+                                        .replace('red-500', '#dc2626')
+                                        .replace('yellow-500', '#d97706')
+                                        .replace('blue-500', '#2563eb')
+                                        .replace('green-500', '#16a34a')
+                                        .replace('purple-500', '#9333ea')
+                                    }} />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <h4 className="font-medium text-gray-900 dark:text-gray-100">{label}</h4>
+                                      {isCustom && (
+                                        <Badge variant="secondary" className="text-xs px-2 py-1">
+                                          {language === 'fr' ? 'Custom' : 'Custom'}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                      {isCustom 
+                                        ? (language === 'fr' ? 'Taux personnalisé' : 'Custom rate')
+                                        : (language === 'fr' ? 'Taux par défaut' : 'Default rate')
+                                      }
+                                    </p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="font-medium text-sm">{label}</p>
-                                  <p className="text-xs text-muted-foreground">{description}</p>
+
+                                {/* Right: Rate */}
+                                <div className="text-right">
+                                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{currentRate}%</div>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <div className="font-bold text-lg">{currentRate}%</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {language === 'fr' ? 'par défaut' : 'default'}
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })}
-                    </div>
+                            )
+                          })}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Notice */}
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
-                      <div>
-                        <h5 className="font-medium text-blue-900 dark:text-blue-100 text-sm mb-1">
-                          {language === 'fr' ? 'Information' : 'Information'}
-                        </h5>
-                        <p className="text-xs text-blue-800 dark:text-blue-200">
-                          {language === 'fr' 
-                            ? 'Cette chaîne utilise actuellement les taux de commission par défaut. Vous pouvez configurer des taux personnalisés en cliquant sur "Configurer".'
-                            : 'This chain is currently using default commission rates. You can configure custom rates by clicking "Configure".'
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               )}
             </DialogContent>
@@ -535,6 +543,10 @@ export default function CommissionSettingsPage() {
             onSave={() => {
               // Refresh chain data or show success message
               fetchChains()
+              // If info modal is open, refresh chain commission rates
+              if (selectedChainInfo && showInfoModal) {
+                loadChainCommissionRates(selectedChainInfo.id)
+              }
             }}
           />
         </SidebarInset>

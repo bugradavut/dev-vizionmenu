@@ -9,6 +9,13 @@ const commissionService = {
   // Get commission rate for branch and source
   async getCommissionRate(branchId, sourceType) {
     try {
+      // Validate source type - only allow website, qr, mobile_app
+      const validSourceTypes = ['website', 'qr', 'mobile_app'];
+      if (!validSourceTypes.includes(sourceType)) {
+        console.warn(`Invalid source type: ${sourceType}. Only ${validSourceTypes.join(', ')} are allowed.`);
+        return 0.0; // No commission for invalid source types
+      }
+
       // 1. Check branch-specific rates first
       const { data: branchRate, error: branchError } = await supabase
         .from('commission_settings')
@@ -33,12 +40,23 @@ const commissionService = {
         return parseFloat(defaultRate.default_rate);
       }
       
-      // 3. Final fallback to website rate (3%)
-      return 3.0;
+      // 3. Final fallback based on source type
+      const defaultRates = {
+        website: 3.0,     // Standard commission for web orders
+        qr: 1.0,          // Reduced commission for in-restaurant QR orders
+        mobile_app: 2.0   // Mobile app commission
+      };
+      return defaultRates[sourceType] || 0.0;
       
     } catch (error) {
       console.error('Error getting commission rate:', error);
-      return 3.0; // Safe fallback
+      // Safe fallback based on source type
+      const defaultRates = {
+        website: 3.0,
+        qr: 1.0,
+        mobile_app: 2.0
+      };
+      return defaultRates[sourceType] || 0.0;
     }
   },
 

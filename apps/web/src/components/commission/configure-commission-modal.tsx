@@ -11,21 +11,18 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { 
   Globe,
   QrCode,
-  Truck,
+  Smartphone,
   Save,
   RotateCcw,
   AlertCircle,
-  Percent,
-  Calculator
+  Percent
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/language-context'
 import { useToast } from '@/hooks/use-toast'
-import { Card, CardContent } from '@/components/ui/card'
 import type { Chain } from '@/services/chains.service'
 import { commissionService } from '@/services/commission.service'
 import type { CommissionRate as APICommissionRate } from '@/services/commission.service'
@@ -45,8 +42,6 @@ const sourceTypeConfig = [
     type: 'website',
     label: 'Website Orders',
     labelFr: 'Commandes Site Web',
-    description: 'Orders from restaurant website (standard commission)',
-    descriptionFr: 'Commandes du site web du restaurant (commission standard)',
     icon: Globe,
     color: 'bg-blue-500',
     priority: 1
@@ -55,52 +50,17 @@ const sourceTypeConfig = [
     type: 'qr', 
     label: 'QR Code Orders',
     labelFr: 'Commandes Code QR',
-    description: 'In-restaurant QR code orders (reduced commission)',
-    descriptionFr: 'Commandes par code QR en restaurant (commission réduite)',
     icon: QrCode,
     color: 'bg-green-500',
     priority: 2
   },
   {
-    type: 'delivery',
-    label: 'Uber Direct Delivery',
-    labelFr: 'Livraison Uber Direct',
-    description: 'Future: Uber Direct delivery integration (no commission)',
-    descriptionFr: 'Futur: Intégration livraison Uber Direct (sans commission)',
-    icon: Truck,
-    color: 'bg-indigo-600',
-    badge: 'Future',
+    type: 'mobile_app',
+    label: 'Mobile App Orders',
+    labelFr: 'Commandes App Mobile',
+    icon: Smartphone,
+    color: 'bg-purple-500',
     priority: 3
-  },
-  {
-    type: 'uber_eats',
-    label: 'Uber Eats',
-    labelFr: 'Uber Eats',
-    description: 'Third-party platform orders (no commission)',
-    descriptionFr: 'Commandes plateforme tierce (sans commission)',
-    icon: Truck,
-    color: 'bg-black',
-    priority: 4
-  },
-  {
-    type: 'doordash',
-    label: 'DoorDash',
-    labelFr: 'DoorDash', 
-    description: 'Third-party platform orders (no commission)',
-    descriptionFr: 'Commandes plateforme tierce (sans commission)',
-    icon: Truck,
-    color: 'bg-red-500',
-    priority: 5
-  },
-  {
-    type: 'skipthedishes',
-    label: 'Skip The Dishes',
-    labelFr: 'Skip The Dishes',
-    description: 'Third-party platform orders (no commission)', 
-    descriptionFr: 'Commandes plateforme tierce (sans commission)',
-    icon: Truck,
-    color: 'bg-yellow-500',
-    priority: 6
   }
 ]
 
@@ -118,9 +78,6 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
   const [saving, setSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   
-  // Calculator states
-  const [calculatorAmount, setCalculatorAmount] = useState<string>('100.00')
-  const [selectedSourceType, setSelectedSourceType] = useState<string>('website')
 
   const fetchCommissionSettings = React.useCallback(async () => {
     if (!chain) return
@@ -171,10 +128,7 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
     const defaults: Record<string, number> = {
       website: 3.00,     // Standard commission for web orders
       qr: 1.00,          // Reduced commission for in-restaurant QR orders
-      delivery: 0.00,    // Future Uber Direct integration (no commission for now)
-      uber_eats: 0.00,   // Third-party platform (no commission)
-      doordash: 0.00,    // Third-party platform (no commission)
-      skipthedishes: 0.00 // Third-party platform (no commission)
+      mobile_app: 2.00   // Mobile app commission (future implementation)
     }
     return defaults[sourceType] || 0.00
   }
@@ -283,23 +237,6 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
     onClose()
   }
 
-  // Calculator logic
-  const calculatePreview = () => {
-    if (!calculatorAmount) return { orderAmount: 0, commissionRate: 0, commissionAmount: 0, netAmount: 0 }
-    
-    const amount = parseFloat(calculatorAmount) || 0
-    const rateConfig = commissionRates.find(r => r.source_type === selectedSourceType)
-    const rate = rateConfig?.effective_rate || 0
-    const commissionAmount = (amount * rate) / 100
-    const netAmount = amount - commissionAmount
-    
-    return {
-      orderAmount: amount,
-      commissionRate: rate,
-      commissionAmount: parseFloat(commissionAmount.toFixed(2)),
-      netAmount: parseFloat(netAmount.toFixed(2))
-    }
-  }
 
   if (!chain) return null
 
@@ -323,8 +260,11 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="animate-spin h-10 w-10 border-3 border-primary border-t-transparent rounded-full" />
+          <div className="text-center py-16">
+            <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              {language === 'fr' ? 'Chargement des paramètres de commission...' : 'Loading commission settings...'}
+            </p>
           </div>
         ) : (
           <div className="space-y-6 overflow-y-auto max-h-[calc(95vh-200px)] pr-2">
@@ -352,8 +292,8 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
               </Button>
             </div>
 
-            {/* Commission Sources Grid */}
-            <div className="grid gap-4">
+            {/* Commission Sources List */}
+            <div className="space-y-3">
               {commissionRates
                 .sort((a, b) => {
                   const aConfig = sourceTypeConfig.find(c => c.type === a.source_type)
@@ -366,225 +306,80 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
 
                   const IconComponent = sourceConfig.icon
                   const label = language === 'fr' ? sourceConfig.labelFr : sourceConfig.label
-                  const description = language === 'fr' ? sourceConfig.descriptionFr : sourceConfig.description
-
-                  const isZeroCommission = rateConfig.effective_rate === 0
-                  const isCustomized = rateConfig.has_override
 
                   return (
-                    <Card 
+                    <div 
                       key={rateConfig.source_type} 
-                      className={`group hover:shadow-md transition-all duration-200 border-l-4 ${
-                        isCustomized ? 'ring-2 ring-blue-200 dark:ring-blue-800' : ''
-                      }`} 
-                      style={{ 
-                        borderLeftColor: sourceConfig.color.replace('bg-', '#').replace('black', '#000000').replace('red-500', '#ef4444').replace('yellow-500', '#eab308').replace('blue-500', '#3b82f6').replace('green-500', '#22c55e').replace('indigo-600', '#4f46e5')
-                      }}
+                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
                     >
-                      <CardContent className="p-5">
-                        <div className="flex items-start gap-4">
-                          {/* Icon & Status */}
-                          <div className="flex flex-col items-center gap-2">
-                            <div className={`p-3 rounded-xl shadow-sm ${sourceConfig.color.replace('bg-', 'bg-').replace('bg-black', 'bg-gray-800')} bg-opacity-10 border`}>
-                              <IconComponent className="h-6 w-6 text-white" style={{ 
-                                color: sourceConfig.color.replace('bg-', '#').replace('black', '#374151').replace('red-500', '#ef4444').replace('yellow-500', '#eab308').replace('blue-500', '#3b82f6').replace('green-500', '#22c55e').replace('indigo-600', '#4f46e5')
-                              }} />
-                            </div>
-                            {sourceConfig.badge && (
-                              <Badge variant="secondary" className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                                {sourceConfig.badge}
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-semibold text-base">{label}</h4>
-                              {isCustomized && (
-                                <Badge className="text-xs px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                  {language === 'fr' ? 'Personnalisé' : 'Custom'}
-                                </Badge>
-                              )}
-                              {isZeroCommission && (
-                                <Badge variant="outline" className="text-xs px-2 py-1 text-green-700 border-green-300 bg-green-50 dark:text-green-400 dark:border-green-700 dark:bg-green-900/20">
-                                  {language === 'fr' ? 'Sans Commission' : 'No Commission'}
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{description}</p>
-                            <div className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                              {language === 'fr' ? 'Taux par défaut:' : 'Default rate:'} <strong>{rateConfig.default_rate}%</strong>
-                            </div>
-                          </div>
-
-                          {/* Controls */}
-                          <div className="flex flex-col items-end gap-3 min-w-[120px]">
-                            {/* Override Toggle */}
-                            <div className="flex items-center gap-2">
-                              <Label className="text-sm font-medium">
-                                {language === 'fr' ? 'Personnaliser' : 'Override'}
-                              </Label>
-                              <Switch
-                                checked={rateConfig.has_override}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    updateRate(rateConfig.source_type, rateConfig.default_rate.toString(), true)
-                                  } else {
-                                    updateRate(rateConfig.source_type, '0', false)
-                                  }
-                                }}
-                                className="data-[state=checked]:bg-blue-600"
-                              />
-                            </div>
-
-                            {/* Rate Input */}
-                            <div className="flex items-center gap-2">
-                              <div className="relative">
-                                <Input
-                                  type="number"
-                                  step="0.1"
-                                  min="0"
-                                  max="100"
-                                  value={rateConfig.has_override ? (rateConfig.chain_rate?.toString() || '') : rateConfig.default_rate.toString()}
-                                  onChange={(e) => updateRate(rateConfig.source_type, e.target.value, rateConfig.has_override)}
-                                  disabled={!rateConfig.has_override}
-                                  className={`w-20 text-center font-mono text-sm ${
-                                    !rateConfig.has_override ? 'bg-muted text-muted-foreground' : 'focus:ring-blue-500'
-                                  }`}
-                                />
-                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">%</span>
-                              </div>
-                            </div>
-                          </div>
+                      {/* Left: Icon + Label + Default */}
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          sourceConfig.color === 'bg-black' 
+                            ? 'bg-gray-200 dark:bg-gray-600' 
+                            : sourceConfig.color.replace('bg-', 'bg-') + ' bg-opacity-20 dark:bg-opacity-30'
+                        }`}>
+                          <IconComponent className="w-5 h-5" style={{ 
+                            color: sourceConfig.color.replace('bg-', '#')
+                              .replace('black', '#4b5563')
+                              .replace('red-500', '#dc2626')
+                              .replace('yellow-500', '#d97706')
+                              .replace('blue-500', '#2563eb')
+                              .replace('green-500', '#16a34a')
+                              .replace('purple-500', '#9333ea')
+                          }} />
                         </div>
-                      </CardContent>
-                    </Card>
+                        <div>
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100">{label}</h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {language === 'fr' ? 'Défaut:' : 'Default:'} {rateConfig.default_rate}%
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right: Custom Toggle + Input */}
+                      <div className="flex items-center gap-6">
+                        {/* Custom Toggle */}
+                        <div className="flex items-center gap-2">
+                          <Label className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+                            {language === 'fr' ? 'Custom' : 'Custom'}
+                          </Label>
+                          <Switch
+                            checked={rateConfig.has_override}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                updateRate(rateConfig.source_type, rateConfig.default_rate.toString(), true)
+                              } else {
+                                updateRate(rateConfig.source_type, '0', false)
+                              }
+                            }}
+                          />
+                        </div>
+
+                        {/* Rate Input */}
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="100"
+                            value={rateConfig.has_override ? (rateConfig.chain_rate?.toString() || '') : rateConfig.default_rate.toString()}
+                            onChange={(e) => updateRate(rateConfig.source_type, e.target.value, rateConfig.has_override)}
+                            disabled={!rateConfig.has_override}
+                            className={`w-16 h-9 text-center font-medium ${
+                              !rateConfig.has_override 
+                                ? 'bg-white dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' 
+                                : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'
+                            }`}
+                          />
+                          <span className="text-sm text-gray-500 font-medium">%</span>
+                        </div>
+                      </div>
+                    </div>
                   )
                 })}
             </div>
 
-            {/* Enhanced Real-time Calculator */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
-                    <Calculator className="h-5 w-5 text-blue-600 dark:text-blue-300" />
-                  </div>
-                  {language === 'fr' ? 'Calculateur de Commission' : 'Commission Calculator'}
-                </h3>
-                <Badge variant="outline" className="text-xs bg-white/80 dark:bg-gray-800/80">
-                  {language === 'fr' ? 'Temps Réel' : 'Real-time'}
-                </Badge>
-              </div>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                {/* Input Controls */}
-                <div className="lg:col-span-2 space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                      {language === 'fr' ? 'Montant de la Commande' : 'Order Amount'}
-                    </Label>
-                    <div className="relative mt-2">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">$</span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={calculatorAmount}
-                        onChange={(e) => setCalculatorAmount(e.target.value)}
-                        className="pl-8 text-center font-mono text-lg bg-white dark:bg-gray-800 border-blue-200 dark:border-blue-700 focus:ring-blue-500"
-                        placeholder="100.00"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                      {language === 'fr' ? 'Source de Commande' : 'Order Source'}
-                    </Label>
-                    <select
-                      value={selectedSourceType}
-                      onChange={(e) => setSelectedSourceType(e.target.value)}
-                      className="w-full mt-2 p-3 border border-blue-200 dark:border-blue-700 rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {sourceTypeConfig.map((config) => {
-                        const rate = commissionRates.find(r => r.source_type === config.type)?.effective_rate || 0
-                        const label = language === 'fr' ? config.labelFr : config.label
-                        return (
-                          <option key={config.type} value={config.type}>
-                            {label} • {rate}%
-                          </option>
-                        )
-                      })}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Results Display */}
-                <div className="lg:col-span-3">
-                  {(() => {
-                    const preview = calculatePreview()
-                    const selectedConfig = sourceTypeConfig.find(c => c.type === selectedSourceType)
-                    const selectedLabel = language === 'fr' ? selectedConfig?.labelFr : selectedConfig?.label
-                    
-                    return (
-                      <div className="bg-white dark:bg-gray-900 rounded-xl p-5 border border-blue-200 dark:border-blue-700 shadow-sm">
-                        <div className="flex items-center gap-2 mb-4">
-                          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100">
-                            {language === 'fr' ? 'Aperçu du Calcul' : 'Calculation Preview'}
-                          </h4>
-                        </div>
-                        
-                        <div className="space-y-3">
-                          {/* Order Amount */}
-                          <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              <span className="font-medium">{language === 'fr' ? 'Montant Total' : 'Order Total'}</span>
-                            </div>
-                            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                              ${preview.orderAmount.toFixed(2)}
-                            </span>
-                          </div>
-
-                          {/* Commission Calculation */}
-                          <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                            <div className="flex flex-col">
-                              <span className="font-medium text-red-600 dark:text-red-400">
-                                {language === 'fr' ? 'Commission VizionMenu' : 'VizionMenu Commission'}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {selectedLabel} • {preview.commissionRate}%
-                              </span>
-                            </div>
-                            <span className="text-lg font-bold text-red-600 dark:text-red-400">
-                              -${preview.commissionAmount.toFixed(2)}
-                            </span>
-                          </div>
-
-                          {/* Net Amount */}
-                          <div className="flex items-center justify-between py-3 bg-green-50 dark:bg-green-900/20 rounded-lg px-4 border-l-4 border-green-500">
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-green-700 dark:text-green-400">
-                                {language === 'fr' ? 'Restaurant Reçoit' : 'Restaurant Receives'}
-                              </span>
-                              <span className="text-xs text-green-600 dark:text-green-500">
-                                {language === 'fr' ? 'Montant net après commission' : 'Net amount after commission'}
-                              </span>
-                            </div>
-                            <span className="text-xl font-bold text-green-700 dark:text-green-400">
-                              ${preview.netAmount.toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })()}
-                </div>
-              </div>
-            </div>
 
             {/* Warning */}
             {hasChanges && (
