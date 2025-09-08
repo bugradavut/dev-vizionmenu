@@ -31,9 +31,7 @@ import {
   Percent, 
   Globe,
   QrCode,
-  Smartphone,
   Truck,
-  ShoppingBag,
   Building2,
   Settings,
   Info
@@ -59,8 +57,8 @@ const sourceTypeConfig = [
     type: 'website',
     label: 'Website Orders',
     labelFr: 'Commandes Site Web',
-    description: 'Orders from restaurant website',
-    descriptionFr: 'Commandes du site web du restaurant',
+    description: 'Orders from restaurant website (standard commission)',
+    descriptionFr: 'Commandes du site web du restaurant (commission standard)',
     icon: Globe,
     color: 'bg-blue-500'
   },
@@ -68,45 +66,27 @@ const sourceTypeConfig = [
     type: 'qr', 
     label: 'QR Code Orders',
     labelFr: 'Commandes Code QR',
-    description: 'In-restaurant QR code orders (lowest commission)',
-    descriptionFr: 'Commandes par code QR en restaurant (commission la plus basse)',
+    description: 'In-restaurant QR code orders (reduced commission)',
+    descriptionFr: 'Commandes par code QR en restaurant (commission réduite)',
     icon: QrCode,
     color: 'bg-green-500'
   },
   {
-    type: 'mobile_app',
-    label: 'Mobile App Orders', 
-    labelFr: 'Commandes Application Mobile',
-    description: 'Orders from mobile application (future)',
-    descriptionFr: 'Commandes de l\'application mobile (futur)',
-    icon: Smartphone,
-    color: 'bg-purple-500',
-    badge: 'Future'
-  },
-  {
-    type: 'takeaway',
-    label: 'Takeaway/Pickup',
-    labelFr: 'À Emporter',
-    description: 'Customer pickup orders',
-    descriptionFr: 'Commandes à emporter par le client',
-    icon: ShoppingBag,
-    color: 'bg-orange-500'
-  },
-  {
     type: 'delivery',
-    label: 'Direct Delivery',
-    labelFr: 'Livraison Directe',
-    description: 'Restaurant direct delivery orders',
-    descriptionFr: 'Commandes de livraison directe du restaurant',
+    label: 'Uber Direct Delivery',
+    labelFr: 'Livraison Uber Direct',
+    description: 'Future: Uber Direct delivery integration (no commission)',
+    descriptionFr: 'Futur: Intégration livraison Uber Direct (sans commission)',
     icon: Truck,
-    color: 'bg-blue-600'
+    color: 'bg-indigo-600',
+    badge: 'Future'
   },
   {
     type: 'uber_eats',
     label: 'Uber Eats',
     labelFr: 'Uber Eats',
-    description: 'Third-party delivery platform (no commission)',
-    descriptionFr: 'Plateforme de livraison tierce (sans commission)',
+    description: 'Third-party platform orders (no commission)',
+    descriptionFr: 'Commandes plateforme tierce (sans commission)',
     icon: Truck,
     color: 'bg-black'
   },
@@ -114,8 +94,8 @@ const sourceTypeConfig = [
     type: 'doordash',
     label: 'DoorDash',
     labelFr: 'DoorDash', 
-    description: 'Third-party delivery platform (no commission)',
-    descriptionFr: 'Plateforme de livraison tierce (sans commission)',
+    description: 'Third-party platform orders (no commission)',
+    descriptionFr: 'Commandes plateforme tierce (sans commission)',
     icon: Truck,
     color: 'bg-red-500'
   },
@@ -123,8 +103,8 @@ const sourceTypeConfig = [
     type: 'skipthedishes',
     label: 'Skip The Dishes',
     labelFr: 'Skip The Dishes',
-    description: 'Third-party delivery platform (no commission)', 
-    descriptionFr: 'Plateforme de livraison tierce (sans commission)',
+    description: 'Third-party platform orders (no commission)', 
+    descriptionFr: 'Commandes plateforme tierce (sans commission)',
     icon: Truck,
     color: 'bg-yellow-500'
   }
@@ -192,16 +172,14 @@ export default function CommissionSettingsPage() {
 
   const getDefaultRate = (sourceType: string): string => {
     const defaults: Record<string, string> = {
-      website: '3.00',
-      qr: '1.00', 
-      mobile_app: '2.00',
-      takeaway: '2.00',
-      delivery: '2.50',
-      uber_eats: '0.00',
-      doordash: '0.00',
-      skipthedishes: '0.00'
+      website: '3.00',        // Standard commission for web orders
+      qr: '1.00',            // Reduced commission for in-restaurant QR orders
+      delivery: '0.00',      // Future Uber Direct integration (no commission for now)
+      uber_eats: '0.00',     // Third-party platform (no commission)
+      doordash: '0.00',      // Third-party platform (no commission)
+      skipthedishes: '0.00'  // Third-party platform (no commission)
     }
-    return defaults[sourceType] || '3.00'
+    return defaults[sourceType] || '0.00'
   }
 
 
@@ -495,7 +473,6 @@ export default function CommissionSettingsPage() {
                     </h4>
                     <div className="grid gap-3">
                       {sourceTypeConfig
-                        .filter(config => config.type !== 'mobile_app') // Hide future implementation
                         .map((config) => {
                           const IconComponent = config.icon
                           const currentRate = getCurrentRate(config.type)
