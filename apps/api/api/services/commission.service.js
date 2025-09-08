@@ -145,7 +145,7 @@ const commissionService = {
   },
 
   // Get chain-specific commission settings
-  async getBranchSettings(chainId) {
+  async getChainSettings(chainId) {
     try {
       const { data, error } = await supabase
         .from('commission_settings')
@@ -164,25 +164,57 @@ const commissionService = {
   },
 
   // Set chain-specific commission rate
-  async setBranchRate(chainId, sourceType, rate, isActive = true) {
+  async setChainRate(chainId, sourceType, rate, isActive = true) {
     try {
+      console.log(`💾 Setting chain rate: ${chainId} / ${sourceType} = ${rate}%`);
+      
       const { data, error } = await supabase
         .from('commission_settings')
-        .upsert({
-          chain_id: chainId, // Updated to use chain_id instead of branch_id
-          source_type: sourceType,
-          commission_rate: rate,
-          is_active: isActive,
-          updated_at: new Date().toISOString()
-        })
+        .upsert(
+          {
+            chain_id: chainId,
+            source_type: sourceType,
+            commission_rate: rate,
+            is_active: isActive,
+            updated_at: new Date().toISOString()
+          },
+          {
+            onConflict: 'chain_id,source_type', // Specify the conflict columns
+            ignoreDuplicates: false // Update on conflict
+          }
+        )
         .select()
         .single();
       
-      if (error) throw new Error(`Failed to set chain rate: ${error.message}`);
+      if (error) {
+        console.error('❌ Database error:', error);
+        throw new Error(`Failed to set chain rate: ${error.message}`);
+      }
+      
+      console.log('✅ Chain rate set successfully:', data);
       return data;
       
     } catch (error) {
-      console.error('Error setting chain rate:', error);
+      console.error('❌ Error setting chain rate:', error);
+      throw error;
+    }
+  },
+
+  // Remove chain-specific override
+  async removeChainOverride(chainId, sourceType) {
+    try {
+      const { data, error } = await supabase
+        .from('commission_settings')
+        .delete()
+        .eq('chain_id', chainId)
+        .eq('source_type', sourceType)
+        .select();
+      
+      if (error) throw new Error(`Failed to remove chain override: ${error.message}`);
+      return data;
+      
+    } catch (error) {
+      console.error('Error removing chain override:', error);
       throw error;
     }
   },

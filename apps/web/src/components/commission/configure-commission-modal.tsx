@@ -74,6 +74,7 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
   const { toast } = useToast()
   
   const [commissionRates, setCommissionRates] = useState<CommissionRate[]>([])
+  const [initialRates, setInitialRates] = useState<CommissionRate[]>([]) // Başlangıç state'i
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
@@ -88,6 +89,7 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
       // Fetch commission settings from API
       const response = await commissionService.getChainSettings(chain.id)
       setCommissionRates(response.settings)
+      setInitialRates(response.settings) // Başlangıç state'ini kaydet
       setHasChanges(false)
       
     } catch (error) {
@@ -105,6 +107,7 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
       }))
       
       setCommissionRates(mockData)
+      setInitialRates(mockData) // Başlangıç state'ini kaydet
       setHasChanges(false)
       
       toast({
@@ -136,7 +139,7 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
   const updateRate = (sourceType: string, newRate: string, useOverride: boolean) => {
     const rateValue = parseFloat(newRate) || 0
     
-    if (rateValue < 0 || rateValue > 100) {
+    if (useOverride && (rateValue < 0 || rateValue > 100)) {
       toast({
         title: "Invalid Rate",
         description: "Rate must be between 0% and 100%",
@@ -160,14 +163,54 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
     setHasChanges(true)
   }
 
-  const resetToDefaults = () => {
-    setCommissionRates(prev => prev.map(rate => ({
-      ...rate,
-      chain_rate: null,
-      effective_rate: rate.default_rate,
-      has_override: false
-    })))
-    setHasChanges(true)
+  const resetToDefaults = async () => {
+    if (!chain) return
+    
+    try {
+      // Confirm reset action
+      const confirmReset = confirm(
+        language === 'fr' 
+          ? 'Êtes-vous sûr de vouloir réinitialiser tous les taux aux valeurs par défaut?'
+          : 'Are you sure you want to reset all rates to default values?'
+      )
+      if (!confirmReset) return
+      
+      setSaving(true)
+      
+      // Remove all chain overrides
+      for (const rate of commissionRates) {
+        if (rate.has_override) {
+          await commissionService.removeChainOverride(chain.id, rate.source_type)
+        }
+      }
+      
+      // Update local state
+      setCommissionRates(prev => prev.map(rate => ({
+        ...rate,
+        chain_rate: null,
+        effective_rate: rate.default_rate,
+        has_override: false
+      })))
+      
+      toast({
+        title: "Success",
+        description: "All rates reset to default values",
+      })
+      
+      setHasChanges(false)
+      onSave()
+      onClose() // Modal'ı kapat
+      
+    } catch (error) {
+      console.error('❌ Failed to reset rates:', error)
+      toast({
+        title: "Error",
+        description: "Failed to reset commission rates",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleSave = async () => {
@@ -197,9 +240,14 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
         await commissionService.bulkUpdateChainRates(chain.id, updates)
       }
 
-      // Handle removals
-      for (const removal of removals) {
-        await commissionService.removeChainOverride(chain.id, removal.source_type)
+      // Handle removals (rates that had overrides initially but now don't)
+      for (const rate of commissionRates) {
+        const initialRate = initialRates.find(r => r.source_type === rate.source_type)
+        // Eğer başlangıçta override varsa ama şimdi yoksa, remove et
+        if (!rate.has_override && initialRate?.has_override) {
+          console.log(`🗑️ Removing override for ${rate.source_type}`)
+          await commissionService.removeChainOverride(chain.id, rate.source_type)
+        }
       }
 
       toast({
@@ -207,6 +255,8 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
         description: `Commission rates updated for ${chain.name}`,
       })
 
+      // Initial state'i güncelle
+      setInitialRates([...commissionRates])
       setHasChanges(false)
       onSave()
       onClose()
@@ -285,9 +335,14 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
                 variant="outline"
                 size="sm"
                 onClick={resetToDefaults}
-                className="flex items-center gap-2 hover:bg-destructive hover:text-destructive-foreground"
+                disabled={saving}
+                className="flex items-center gap-2 hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
               >
-                <RotateCcw className="h-4 w-4" />
+                {saving ? (
+                  <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                ) : (
+                  <RotateCcw className="h-4 w-4" />
+                )}
                 {language === 'fr' ? 'Réinitialiser' : 'Reset All'}
               </Button>
             </div>
@@ -348,9 +403,11 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
                             checked={rateConfig.has_override}
                             onCheckedChange={(checked) => {
                               if (checked) {
+                                // Switch açıldığında: default rate ile başla
                                 updateRate(rateConfig.source_type, rateConfig.default_rate.toString(), true)
                               } else {
-                                updateRate(rateConfig.source_type, '0', false)
+                                // Switch kapatıldığında: custom rate'i sıfırla, effective_rate'i default yap
+                                updateRate(rateConfig.source_type, rateConfig.default_rate.toString(), false)
                               }
                             }}
                           />
@@ -363,7 +420,10 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
                             step="0.1"
                             min="0"
                             max="100"
-                            value={rateConfig.has_override ? (rateConfig.chain_rate?.toString() || '') : rateConfig.default_rate.toString()}
+                            value={rateConfig.has_override 
+                              ? (rateConfig.chain_rate?.toString() || rateConfig.default_rate.toString())
+                              : rateConfig.default_rate.toString()
+                            }
                             onChange={(e) => updateRate(rateConfig.source_type, e.target.value, rateConfig.has_override)}
                             disabled={!rateConfig.has_override}
                             className={`w-16 h-9 text-center font-medium ${

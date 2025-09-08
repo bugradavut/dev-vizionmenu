@@ -91,7 +91,7 @@ async function getChainSettings(req, res) {
     console.log(`📊 Getting commission settings for chain: ${chainId}`);
     
     // Get chain-specific rates (if any)
-    const chainSettings = await commissionService.getBranchSettings(chainId);
+    const chainSettings = await commissionService.getChainSettings(chainId);
     
     // Get default rates as fallback
     const defaultRates = await commissionService.getDefaultRates();
@@ -157,7 +157,7 @@ async function setChainRate(req, res) {
     }
     
     // Set the rate (this will upsert)
-    const result = await commissionService.setBranchRate(chainId, sourceType, rate);
+    const result = await commissionService.setChainRate(chainId, sourceType, rate);
     
     res.json({
       success: true,
@@ -188,7 +188,7 @@ async function removeChainOverride(req, res) {
     console.log(`📊 Removing chain override for ${chainId}/${sourceType}`);
     
     // Remove the override by setting is_active to false
-    await commissionService.setBranchRate(chainId, sourceType, 0, false);
+    await commissionService.removeChainOverride(chainId, sourceType);
     
     res.json({
       success: true,
@@ -275,7 +275,7 @@ async function bulkUpdateChainRates(req, res) {
     const results = [];
     for (const rateConfig of rates) {
       try {
-        const result = await commissionService.setBranchRate(
+        const result = await commissionService.setChainRate(
           chainId, 
           rateConfig.sourceType, 
           rateConfig.rate
