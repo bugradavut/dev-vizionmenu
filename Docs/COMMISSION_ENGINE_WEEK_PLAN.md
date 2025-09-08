@@ -1183,27 +1183,159 @@ PHASE 4 COMPLETED:
 
 ---
 
+## 🆕 **NEXT PRIORITY: BRANCH-LEVEL COMMISSION SETTINGS**
+
+### **📋 NEW REQUIREMENT FROM MANAGEMENT:**
+**Priority**: HIGH - Required before MVP launch  
+**Date**: September 8, 2025  
+**Requirement**: Branch-specific commission settings in addition to chain-level settings
+
+### **🎯 BUSINESS CASE:**
+Currently commission system works at **chain level**:
+- McDonald's chain → All McDonald's branches use same rates
+- Burger King chain → All Burger King branches use same rates
+
+**NEW REQUIREMENT**: **Branch-level granularity**:
+- McDonald's Galata: Website 4% (high traffic area)
+- McDonald's Beşiktaş: Website 2% (low profit margin location)  
+- Other McDonald's branches: Use chain default (3%)
+
+### **🏗️ IMPLEMENTATION APPROACH:**
+
+#### **UI Architecture Decision: TAB-BASED SYSTEM**
+Following menu management pattern (`/menu` page with tabs):
+
+**Current**: `/admin-settings/commission` → Single view (chain settings)
+**New Structure**: `/admin-settings/commission` → Two tabs:
+
+```
+Tab 1: "Chain Settings" (existing system unchanged)
+├── Chain commission cards
+├── Configure modal for chain-wide rates  
+└── All current functionality preserved
+
+Tab 2: "Branch Settings" (NEW)  
+├── Chain selector dropdown (Shadcn Select)
+├── Branch selector dropdown (Shadcn Select) 
+├── Commission configuration (same modal as chains)
+├── Default rate display (shows chain defaults for comparison)
+└── Override capability per branch per source type
+```
+
+#### **Tab Implementation Pattern:**
+Using same structure as `/menu/page.tsx`:
+```tsx
+<Tabs defaultValue="chains" className="w-full">
+  <TabsList className="grid w-max grid-cols-2">
+    <TabsTrigger value="chains">Chain Settings</TabsTrigger>
+    <TabsTrigger value="branches">Branch Settings</TabsTrigger>
+  </TabsList>
+  
+  <TabsContent value="chains">
+    {/* Current chain commission system */}
+  </TabsContent>
+  
+  <TabsContent value="branches">
+    {/* NEW branch commission system */}
+  </TabsContent>
+</Tabs>
+```
+
+#### **Branch Settings Tab UI Flow:**
+1. **Chain Selection**: Dropdown showing all chains (filtered by platform admin access)
+2. **Branch Selection**: Dropdown showing branches for selected chain
+3. **Commission Display**: Shows current rates with chain defaults for comparison
+4. **Override System**: Same toggle-based override system as chains
+5. **Inheritance Logic**: Branch inherits chain rates unless overridden
+
+#### **Technical Implementation:**
+
+**Database**: ✅ Ready (commission_settings table supports both chain_id and branch_id)
+**Backend API**: ✅ Ready (already supports branch-level operations)  
+**Frontend**: ⏳ Needs tab restructure + branch selector UI
+
+#### **UI Components to Create:**
+1. **BranchSettingsTab** - Main tab content component
+2. **ChainBranchSelector** - Dual dropdown component for chain/branch selection
+3. **BranchCommissionForm** - Branch-specific commission configuration
+4. **CommissionInheritanceDisplay** - Shows chain vs branch rates comparison
+
+#### **User Experience Flow:**
+```
+1. Platform admin navigates to /admin-settings/commission
+2. Clicks "Branch Settings" tab
+3. Selects chain from dropdown (e.g., "McDonald's")
+4. Selects specific branch (e.g., "Galata Şubesi")
+5. Sees current rates with chain defaults shown:
+   - Website: [4.0%] (Chain: 3.0%) 
+   - QR Code: [Use Chain] (Chain: 1.0%)
+   - Mobile: [2.5%] (Chain: 2.0%)
+6. Can toggle custom rates on/off per source type
+7. Saves changes - affects only that specific branch
+```
+
+#### **Development Estimates:**
+- **Tab Restructure**: 2-3 hours
+- **Branch Selector UI**: 3-4 hours  
+- **Branch Settings Logic**: 4-5 hours
+- **Testing & Polish**: 2-3 hours
+- **Total**: 12-15 hours (~2 working days)
+
+### **🔄 INHERITANCE LOGIC:**
+```
+Priority Order (Highest to Lowest):
+1. Branch-specific override (if exists)
+2. Chain-level setting (if exists)  
+3. Platform default rate (fallback)
+
+Example:
+- Platform Default: Website 3%
+- McDonald's Chain: Website 3.5% 
+- McDonald's Galata Branch: Website 4%
+→ Galata uses 4%, other McDonald's use 3.5%
+```
+
+### **📝 QUESTIONS RESOLVED:**
+1. **Priority**: HIGH - MVP requirement ✅
+2. **Permissions**: Platform admin only ✅  
+3. **Chain defaults**: Preserved, not affected by branch overrides ✅
+4. **UI approach**: Tab-based system like menu management ✅
+5. **Dropdowns**: Shadcn Select components ✅
+6. **Comparison display**: Show chain defaults alongside branch rates ✅
+
+---
+
 ## 🤖 **AI ASSISTANT CONTEXT**
 
 This document outlines the implementation plan for VizionMenu's Commission Engine system. The goal is to enable platform-level commission collection from restaurant orders based on different order sources (website, QR code, third-party platforms).
 
+**LATEST UPDATE - September 8, 2025:**
+- ✅ **Chain-level Commission System**: 100% COMPLETE
+- ⏳ **Branch-level Commission System**: NEW PRIORITY for MVP
+
 **Key Implementation Notes for AI:**
-- All 4 weekly tasks are interconnected and form a single Commission Engine system
-- Database changes are minimal - leveraging existing orders table structure
-- ⚠️ **CRITICAL**: Stripe Connect integration is required but NOT YET IMPLEMENTED
-- Current commission rates: Website 3%, Mobile 2%, QR 1%, Uber/DoorDash 0%
-- Platform admin gets full control over commission rates per source and per restaurant
-- System must be transparent to end customers (commission is backend-only)
-- Mobile app integration is future implementation (rate structure ready)
+- Chain-level system fully operational and production-ready
+- Database schema supports both chain_id and branch_id (ready for branch-level)
+- Backend APIs support both chain and branch operations
+- Frontend needs tab restructure to support branch-level interface
+- UI follows menu management pattern with tab-based architecture
+
+**Branch-Level Requirements:**
+- Tab-based UI: "Chain Settings" + "Branch Settings"  
+- Dual dropdown selector: Chain → Branch selection
+- Inheritance system: Branch overrides chain defaults
+- Same commission modal interface for consistency
+- Platform admin controls both chain and branch levels
 
 **Current VizionMenu Architecture:**
 - Multi-tenant system with branch-level data isolation
-- Existing Stripe payment processing (⚠️ Connect setup needed)
+- Existing Stripe payment processing (Connect setup for future)
 - Platform admin dashboard for system-wide management
-- Order processing system ready for commission logic integration
+- Commission system: Chain-level ✅ | Branch-level ⏳
 
-**Immediate Priority Items:**
-1. Stripe Connect account setup (required for restaurant payouts)
-2. Database schema implementation with correct commission rates
-3. Order source detection implementation
-4. Commission calculation logic integration
+**Immediate Next Session Priorities:**
+1. Tab-based UI restructure for /admin-settings/commission page
+2. Branch selector dropdown components (Shadcn Select)
+3. Branch settings tab with inheritance logic
+4. Commission configuration integration for branch-level
+5. Testing and validation for branch-specific rate overrides

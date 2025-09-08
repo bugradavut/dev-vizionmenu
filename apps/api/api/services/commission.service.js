@@ -255,6 +255,220 @@ const commissionService = {
       console.error('Error getting commission summary:', error);
       throw error;
     }
+  },
+
+  // =====================================================
+  // BRANCH-SPECIFIC COMMISSION METHODS
+  // =====================================================
+
+  // Get branch-specific commission settings
+  async getBranchSettings(branchId) {
+    try {
+      console.log(`📊 Getting commission settings for branch: ${branchId}`);
+      
+      // Get branch information including chain_id
+      const { data: branchInfo, error: branchInfoError } = await supabase
+        .from('branches')
+        .select('chain_id')
+        .eq('id', branchId)
+        .single();
+      
+      if (branchInfoError) throw new Error(`Failed to fetch branch info: ${branchInfoError.message}`);
+      
+      // Get default rates
+      const defaultRates = await this.getDefaultRates();
+      
+      // Get chain-specific rates if available
+      let chainSettings = [];
+      if (branchInfo.chain_id) {
+        try {
+          chainSettings = await this.getChainSettings(branchInfo.chain_id);
+        } catch (error) {
+          console.warn('Could not load chain settings, using defaults:', error.message);
+          chainSettings = [];
+        }
+      }
+      
+      // Get branch-specific rates (if any)
+      const { data: branchSettings, error: branchError } = await supabase
+        .from('commission_settings')
+        .select('*')
+        .eq('branch_id', branchId)
+        .eq('is_active', true)
+        .order('source_type');
+      
+      if (branchError) throw new Error(`Failed to fetch branch settings: ${branchError.message}`);
+      
+      // Combine results with proper inheritance: Branch > Chain > Default
+      const settings = defaultRates.map(defaultRate => {
+        const chainOverride = chainSettings.find(setting => 
+          setting.source_type === defaultRate.source_type
+        );
+        const branchOverride = branchSettings.find(setting => 
+          setting.source_type === defaultRate.source_type
+        );
+        
+        return {
+          source_type: defaultRate.source_type,
+          default_rate: parseFloat(defaultRate.default_rate),
+          chain_rate: chainOverride ? parseFloat(chainOverride.effective_rate || chainOverride.commission_rate) : null,
+          branch_rate: branchOverride ? parseFloat(branchOverride.commission_rate) : null,
+          effective_rate: branchOverride 
+            ? parseFloat(branchOverride.commission_rate)
+            : chainOverride 
+              ? parseFloat(chainOverride.effective_rate || chainOverride.commission_rate)
+              : parseFloat(defaultRate.default_rate),
+          has_override: !!branchOverride,
+          is_active: branchOverride ? branchOverride.is_active : true
+        };
+      });
+      
+      return settings;
+      
+    } catch (error) {
+      console.error('Error getting branch settings:', error);
+      throw error;
+    }
+  },
+
+  // Set branch-specific commission rate
+  async setBranchRate(branchId, sourceType, rate, isActive = true) {
+    try {
+      console.log(`💾 Setting branch rate: ${branchId} / ${sourceType} = ${rate}%`);
+      
+      // First try to update existing record
+      const { data: existingData, error: selectError } = await supabase
+        .from('commission_settings')
+        .select('id')
+        .eq('branch_id', branchId)
+        .eq('source_type', sourceType)
+        .maybeSingle();
+
+      if (selectError) throw new Error(`Failed to check existing rate: ${selectError.message}`);
+
+      let data, error;
+      
+      if (existingData) {
+        // Update existing record
+        const { data: updateData, error: updateError } = await supabase
+          .from('commission_settings')
+          .update({
+            commission_rate: rate,
+            is_active: isActive,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingData.id)
+          .select()
+          .single();
+        
+        data = updateData;
+        error = updateError;
+      } else {
+        // Insert new record
+        const { data: insertData, error: insertError } = await supabase
+          .from('commission_settings')
+          .insert({
+            branch_id: branchId,
+            source_type: sourceType,
+            commission_rate: rate,
+            is_active: isActive,
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+        
+        data = insertData;
+        error = insertError;
+      }
+      
+      if (error) {
+        console.error('❌ Database error:', error);
+        throw new Error(`Failed to set branch rate: ${error.message}`);
+      }
+      
+      console.log('✅ Branch rate set successfully:', data);
+      return data;
+      
+    } catch (error) {
+      console.error('❌ Error setting branch rate:', error);
+      throw error;
+    }
+  },
+
+  // Remove branch-specific override
+  async removeBranchOverride(branchId, sourceType) {
+    try {
+      const { data, error } = await supabase
+        .from('commission_settings')
+        .delete()
+        .eq('branch_id', branchId)
+        .eq('source_type', sourceType)
+        .select();
+      
+      if (error) throw new Error(`Failed to remove branch override: ${error.message}`);
+      return data;
+      
+    } catch (error) {
+      console.error('Error removing branch override:', error);
+      throw error;
+    }
+  },
+
+  // Bulk update multiple branch rates
+  async bulkUpdateBranchRates(branchId, rates) {
+    try {
+      console.log(`📊 Bulk updating rates for branch: ${branchId}`, rates);
+      
+      const results = [];
+      for (const rateConfig of rates) {
+        try {
+          const result = await this.setBranchRate(
+            branchId, 
+            rateConfig.sourceType, 
+            rateConfig.rate
+          );
+          results.push({
+            sourceType: rateConfig.sourceType,
+            success: true,
+            result: result
+          });
+        } catch (error) {
+          results.push({
+            sourceType: rateConfig.sourceType,
+            success: false,
+            error: error.message
+          });
+        }
+      }
+      
+      return results;
+      
+    } catch (error) {
+      console.error('Error bulk updating branch rates:', error);
+      throw error;
+    }
+  },
+
+  // Reset branch to chain/default rates
+  async resetBranchRates(branchId) {
+    try {
+      console.log(`🔄 Resetting all branch rates for: ${branchId}`);
+      
+      const { data, error } = await supabase
+        .from('commission_settings')
+        .delete()
+        .eq('branch_id', branchId)
+        .select();
+      
+      if (error) throw new Error(`Failed to reset branch rates: ${error.message}`);
+      
+      console.log('✅ Branch rates reset successfully');
+      return data;
+      
+    } catch (error) {
+      console.error('Error resetting branch rates:', error);
+      throw error;
+    }
   }
 };
 

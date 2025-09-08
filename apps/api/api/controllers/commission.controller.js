@@ -316,6 +316,201 @@ async function bulkUpdateChainRates(req, res) {
   }
 }
 
+// =====================================================
+// BRANCH-SPECIFIC COMMISSION CONTROLLERS
+// =====================================================
+
+/**
+ * Get branch-specific commission settings
+ * GET /api/v1/commission/branch-settings/:branchId
+ */
+async function getBranchSettings(req, res) {
+  try {
+    const { branchId } = req.params;
+    
+    console.log(`📊 Getting commission settings for branch: ${branchId}`);
+    
+    const settings = await commissionService.getBranchSettings(branchId);
+    
+    res.json({
+      success: true,
+      data: {
+        branchId: branchId,
+        settings: settings
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting branch settings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch branch commission settings',
+      message: error.message
+    });
+  }
+}
+
+/**
+ * Set or update branch-specific commission rate
+ * PUT /api/v1/commission/branch-settings/:branchId/:sourceType
+ */
+async function setBranchRate(req, res) {
+  try {
+    const { branchId, sourceType } = req.params;
+    const { rate } = req.body;
+    
+    console.log(`📊 Setting branch rate for ${branchId}/${sourceType} to ${rate}%`);
+    
+    // Validation
+    if (!branchId || !sourceType || rate === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'Branch ID, source type, and rate are required'
+      });
+    }
+    
+    if (rate < 0 || rate > 100) {
+      return res.status(400).json({
+        success: false,
+        error: 'Rate must be between 0 and 100'
+      });
+    }
+    
+    // Set the rate (this will upsert)
+    const result = await commissionService.setBranchRate(branchId, sourceType, rate);
+    
+    res.json({
+      success: true,
+      data: {
+        setting: result
+      },
+      message: `Branch-specific rate set for ${sourceType}`
+    });
+    
+  } catch (error) {
+    console.error('❌ Error setting branch rate:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to set branch commission rate',
+      message: error.message
+    });
+  }
+}
+
+/**
+ * Remove branch-specific override (revert to chain/default)
+ * DELETE /api/v1/commission/branch-settings/:branchId/:sourceType
+ */
+async function removeBranchOverride(req, res) {
+  try {
+    const { branchId, sourceType } = req.params;
+    
+    console.log(`📊 Removing branch override for ${branchId}/${sourceType}`);
+    
+    await commissionService.removeBranchOverride(branchId, sourceType);
+    
+    res.json({
+      success: true,
+      message: `Branch override removed for ${sourceType}, now using chain/default rate`
+    });
+    
+  } catch (error) {
+    console.error('❌ Error removing branch override:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to remove branch override',
+      message: error.message
+    });
+  }
+}
+
+/**
+ * Bulk update multiple branch rates
+ * POST /api/v1/commission/branch-settings/:branchId/bulk
+ */
+async function bulkUpdateBranchRates(req, res) {
+  try {
+    const { branchId } = req.params;
+    const { rates } = req.body; // Array of { sourceType, rate }
+    
+    console.log(`📊 Bulk updating rates for branch: ${branchId}`, rates);
+    
+    // Validation
+    if (!branchId || !Array.isArray(rates)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Branch ID and rates array are required'
+      });
+    }
+    
+    // Validate each rate
+    for (const rateConfig of rates) {
+      if (!rateConfig.sourceType || rateConfig.rate === undefined) {
+        return res.status(400).json({
+          success: false,
+          error: 'Each rate config must have sourceType and rate'
+        });
+      }
+      
+      if (rateConfig.rate < 0 || rateConfig.rate > 100) {
+        return res.status(400).json({
+          success: false,
+          error: `Rate for ${rateConfig.sourceType} must be between 0 and 100`
+        });
+      }
+    }
+    
+    // Update all rates
+    const results = await commissionService.bulkUpdateBranchRates(branchId, rates);
+    const successCount = results.filter(r => r.success).length;
+    
+    res.json({
+      success: successCount === rates.length,
+      data: {
+        updated: successCount,
+        total: rates.length,
+        results: results
+      },
+      message: `Updated ${successCount}/${rates.length} branch commission rates`
+    });
+    
+  } catch (error) {
+    console.error('❌ Error bulk updating branch rates:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to bulk update branch rates',
+      message: error.message
+    });
+  }
+}
+
+/**
+ * Reset branch to chain/default rates
+ * DELETE /api/v1/commission/branch-settings/:branchId/reset
+ */
+async function resetBranchRates(req, res) {
+  try {
+    const { branchId } = req.params;
+    
+    console.log(`🔄 Resetting all branch rates for: ${branchId}`);
+    
+    await commissionService.resetBranchRates(branchId);
+    
+    res.json({
+      success: true,
+      message: 'All branch-specific rates have been reset to chain/default values'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error resetting branch rates:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reset branch rates',
+      message: error.message
+    });
+  }
+}
+
 module.exports = {
   getDefaultRates,
   updateDefaultRate,
@@ -323,5 +518,10 @@ module.exports = {
   setChainRate,
   removeChainOverride,
   getCommissionSummary,
-  bulkUpdateChainRates
+  bulkUpdateChainRates,
+  getBranchSettings,
+  setBranchRate,
+  removeBranchOverride,
+  bulkUpdateBranchRates,
+  resetBranchRates
 };

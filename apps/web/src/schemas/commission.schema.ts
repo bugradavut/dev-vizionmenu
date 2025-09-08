@@ -114,14 +114,14 @@ export const safeValidateRateUpdate = (update: unknown) => {
 
 // Form field validation helpers
 export const getFieldError = (error: z.ZodError, fieldPath: string): string | undefined => {
-  const fieldError = error.issues.find((err: any) => 
+  const fieldError = error.issues.find((err: z.ZodIssue) => 
     err.path.join('.') === fieldPath
   )
   return fieldError?.message
 }
 
 export const hasFieldError = (error: z.ZodError, fieldPath: string): boolean => {
-  return error.issues.some((err: any) => err.path.join('.') === fieldPath)
+  return error.issues.some((err: z.ZodIssue) => err.path.join('.') === fieldPath)
 }
 
 // Custom validation rules
@@ -146,7 +146,7 @@ export const customValidations = {
   }
 }
 
-export default {
+const commissionSchemas = {
   commissionRateSchema,
   commissionFormSchema,
   rateUpdateSchema,
@@ -163,3 +163,5 @@ export default {
   hasFieldError,
   customValidations
 }
+
+export default commissionSchemas

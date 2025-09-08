@@ -11,6 +11,7 @@ export interface CommissionRate {
   source_type: string;
   default_rate: number;
   chain_rate: number | null;
+  branch_rate?: number | null;
   effective_rate: number;
   has_override: boolean;
   is_active: boolean;
@@ -192,6 +193,97 @@ class CommissionService {
     } catch (error) {
       console.error('❌ Error fetching commission summary:', error);
       throw new Error('Failed to fetch commission summary');
+    }
+  }
+
+  /**
+   * Get commission settings for a specific branch
+   */
+  async getBranchSettings(branchId: string): Promise<ChainCommissionSettings> {
+    try {
+      console.log(`🔄 Fetching commission settings for branch: ${branchId}`);
+      const response = await apiClient.get(`/api/v1/commission/branch-settings/${branchId}`);
+      
+      console.log('✅ Branch settings response:', response);
+      const responseData = response.data as { branchId: string; settings?: CommissionRate[] };
+      return {
+        chainId: branchId, // Using chainId field for consistency, but it's actually branchId
+        settings: responseData.settings || []
+      };
+      
+    } catch (error) {
+      console.error('❌ Error fetching branch settings:', error);
+      throw new Error(`Failed to fetch commission settings for branch ${branchId}`);
+    }
+  }
+
+  /**
+   * Set or update branch-specific commission rate for a source type
+   */
+  async setBranchRate(branchId: string, sourceType: string, rate: number): Promise<CommissionRate> {
+    try {
+      console.log(`🔄 Setting branch rate for ${branchId}/${sourceType} to ${rate}%`);
+      const response = await apiClient.put(`/api/v1/commission/branch-settings/${branchId}/${sourceType}`, {
+        rate: rate
+      });
+      
+      console.log('✅ Branch rate updated:', response);
+      return (response.data as { setting: CommissionRate }).setting;
+      
+    } catch (error) {
+      console.error('❌ Error setting branch rate:', error);
+      throw new Error(`Failed to set commission rate for ${sourceType}`);
+    }
+  }
+
+  /**
+   * Remove branch-specific override (revert to chain default)
+   */
+  async removeBranchOverride(branchId: string, sourceType: string): Promise<void> {
+    try {
+      console.log(`🔄 Removing branch override for ${branchId}/${sourceType}`);
+      const response = await apiClient.delete(`/api/v1/commission/branch-settings/${branchId}/${sourceType}`);
+      
+      console.log('✅ Branch override removed:', response);
+      
+    } catch (error) {
+      console.error('❌ Error removing branch override:', error);
+      throw new Error(`Failed to remove override for ${sourceType}`);
+    }
+  }
+
+  /**
+   * Bulk update multiple commission rates for a branch
+   */
+  async bulkUpdateBranchRates(branchId: string, rates: BulkUpdateRequest['rates']): Promise<BulkUpdateResponse> {
+    try {
+      console.log(`🔄 Bulk updating rates for branch: ${branchId}`, rates);
+      const response = await apiClient.post(`/api/v1/commission/branch-settings/${branchId}/bulk`, {
+        rates: rates
+      });
+      
+      console.log('✅ Bulk update response:', response);
+      return response.data as BulkUpdateResponse;
+      
+    } catch (error) {
+      console.error('❌ Error bulk updating branch rates:', error);
+      throw new Error('Failed to bulk update commission rates');
+    }
+  }
+
+  /**
+   * Reset all branch-specific rates to chain defaults
+   */
+  async resetBranchRates(branchId: string): Promise<void> {
+    try {
+      console.log(`🔄 Resetting all branch rates for: ${branchId}`);
+      const response = await apiClient.post(`/api/v1/commission/branch-settings/${branchId}/reset`);
+      
+      console.log('✅ Branch rates reset:', response);
+      
+    } catch (error) {
+      console.error('❌ Error resetting branch rates:', error);
+      throw new Error('Failed to reset branch commission rates');
     }
   }
 }

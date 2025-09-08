@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Globe,
   QrCode,
@@ -21,11 +22,14 @@ import {
   RotateCcw,
   AlertCircle,
   Percent,
-  AlertTriangle
+  AlertTriangle,
+  Building2,
+  Store
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/language-context'
 import type { Chain } from '@/services/chains.service'
 import { useCommissionSettings } from '@/hooks/useCommissionSettings'
+import { BranchSettingsTab } from './branch-settings-tab'
 
 interface ConfigureCommissionModalProps {
   isOpen: boolean
@@ -68,6 +72,7 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
   onSave
 }) => {
   const { language } = useLanguage()
+  const [activeTab, setActiveTab] = useState('chain')
   
   // Use our enterprise-grade custom hook
   const {
@@ -132,7 +137,7 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[900px] max-h-[95vh] overflow-hidden">
+      <DialogContent className="sm:max-w-[600px] max-h-[95vh] overflow-hidden">
         <DialogHeader className="pb-4">
           <DialogTitle className="flex items-center gap-3 text-xl">
             <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
@@ -157,8 +162,24 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
             </p>
           </div>
         ) : (
-          <div className="space-y-6 overflow-y-auto max-h-[calc(95vh-200px)] pr-2">
-            {/* Header Actions */}
+          <div className="space-y-6 overflow-y-auto max-h-[calc(95vh-200px)] px-1">
+            {/* Tabs Container */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="chain" className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  <span>{language === 'fr' ? 'Paramètres de Chaîne' : 'Chain Settings'}</span>
+                </TabsTrigger>
+                <TabsTrigger value="branch" className="flex items-center gap-2">
+                  <Store className="h-4 w-4" />
+                  <span>{language === 'fr' ? 'Paramètres de Succursale' : 'Branch Settings'}</span>
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Chain Settings Tab */}
+              <TabsContent value="chain" className="mt-6">
+                <div className="space-y-6">
+                  {/* Header Actions */}
             <div className="flex items-center justify-between pb-2 border-b border-border">
               <div>
                 <h3 className="text-lg font-semibold">
@@ -166,8 +187,8 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   {language === 'fr' 
-                    ? 'Personnalisez les taux pour chaque source de commande'
-                    : 'Customize rates for each order source'
+                    ? 'Définir les taux par défaut pour toute la chaîne'
+                    : 'Set default rates for the entire chain'
                   }
                 </p>
               </div>
@@ -278,8 +299,15 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
                     </div>
                   )
                 })}
-            </div>
+                  </div>
+                </div>
+              </TabsContent>
 
+              {/* Branch Settings Tab */}
+              <TabsContent value="branch" className="mt-6">
+                <BranchSettingsTab chain={chain} />
+              </TabsContent>
+            </Tabs>
 
             {/* Error Display */}
             {error && (
@@ -306,6 +334,8 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
           </div>
         )}
 
+        {/* Only show footer for Chain Settings tab */}
+        {activeTab === 'chain' && (
         <DialogFooter>
           <Button variant="outline" onClick={handleClose} disabled={saving}>
             {language === 'fr' ? 'Annuler' : 'Cancel'}
@@ -326,6 +356,7 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
             }
           </Button>
         </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   )

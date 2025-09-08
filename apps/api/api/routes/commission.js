@@ -95,4 +95,58 @@ router.get('/summary',
   commissionController.getCommissionSummary
 );
 
+// =====================================================
+// BRANCH-SPECIFIC COMMISSION SETTINGS
+// =====================================================
+
+/**
+ * @route   GET /api/v1/commission/branch-settings/:branchId
+ * @desc    Get commission settings for a specific branch
+ * @access  Platform Admin only
+ */
+router.get('/branch-settings/:branchId', 
+  requirePlatformAdmin, 
+  commissionController.getBranchSettings
+);
+
+/**
+ * @route   PUT /api/v1/commission/branch-settings/:branchId/:sourceType
+ * @desc    Set or update branch-specific commission rate
+ * @access  Platform Admin only
+ */
+router.put('/branch-settings/:branchId/:sourceType', 
+  requirePlatformAdmin, 
+  commissionController.setBranchRate
+);
+
+/**
+ * @route   DELETE /api/v1/commission/branch-settings/:branchId/:sourceType
+ * @desc    Remove branch-specific override (revert to chain/default)
+ * @access  Platform Admin only
+ */
+router.delete('/branch-settings/:branchId/:sourceType', 
+  requirePlatformAdmin, 
+  commissionController.removeBranchOverride
+);
+
+/**
+ * @route   POST /api/v1/commission/branch-settings/:branchId/bulk
+ * @desc    Bulk update multiple commission rates for a branch
+ * @access  Platform Admin only
+ */
+router.post('/branch-settings/:branchId/bulk', 
+  requirePlatformAdmin, 
+  commissionController.bulkUpdateBranchRates
+);
+
+/**
+ * @route   DELETE /api/v1/commission/branch-settings/:branchId/reset
+ * @desc    Reset all branch-specific rates to chain/default values
+ * @access  Platform Admin only
+ */
+router.delete('/branch-settings/:branchId/reset', 
+  requirePlatformAdmin, 
+  commissionController.resetBranchRates
+);
+
 module.exports = router;

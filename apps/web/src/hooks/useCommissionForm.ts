@@ -31,6 +31,7 @@ type UseCommissionFormReturn = {
   isSubmitting: boolean
   isDirty: boolean
   errors: Record<string, string>
+  handleSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>
   actions: CommissionFormActions
 }
 
@@ -246,6 +247,7 @@ export const useCommissionForm = ({
     isSubmitting: form.formState.isSubmitting,
     isDirty: form.formState.isDirty,
     errors,
+    handleSubmit,
     actions: {
       updateRate,
       resetRate,
