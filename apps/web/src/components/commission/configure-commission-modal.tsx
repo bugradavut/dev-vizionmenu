@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { 
   Globe,
   QrCode,
@@ -19,16 +20,12 @@ import {
   Save,
   RotateCcw,
   AlertCircle,
-  Percent
+  Percent,
+  AlertTriangle
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/language-context'
-import { useToast } from '@/hooks/use-toast'
 import type { Chain } from '@/services/chains.service'
-import { commissionService } from '@/services/commission.service'
-import type { CommissionRate as APICommissionRate } from '@/services/commission.service'
-
-// Use the interface from the service
-type CommissionRate = APICommissionRate
+import { useCommissionSettings } from '@/hooks/useCommissionSettings'
 
 interface ConfigureCommissionModalProps {
   isOpen: boolean
@@ -71,208 +68,50 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
   onSave
 }) => {
   const { language } = useLanguage()
-  const { toast } = useToast()
   
-  const [commissionRates, setCommissionRates] = useState<CommissionRate[]>([])
-  const [initialRates, setInitialRates] = useState<CommissionRate[]>([]) // Başlangıç state'i
-  const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [hasChanges, setHasChanges] = useState(false)
-  
+  // Use our enterprise-grade custom hook
+  const {
+    rates: commissionRates,
+    loading,
+    saving,
+    hasChanges,
+    error,
+    updateRate,
+    resetToDefaults: resetRatesHook,
+    saveChanges,
+    refreshSettings,
+    clearChanges
+  } = useCommissionSettings({ chain, isOpen })
 
-  const fetchCommissionSettings = React.useCallback(async () => {
-    if (!chain) return
-
-    try {
-      setLoading(true)
-      
-      // Fetch commission settings from API
-      const response = await commissionService.getChainSettings(chain.id)
-      setCommissionRates(response.settings)
-      setInitialRates(response.settings) // Başlangıç state'ini kaydet
-      setHasChanges(false)
-      
-    } catch (error) {
-      console.error('Failed to fetch commission settings:', error)
-      
-      // Fallback to mock data if API fails
-      console.log('🔄 Using fallback mock data...')
-      const mockData: CommissionRate[] = sourceTypeConfig.map(config => ({
-        source_type: config.type,
-        default_rate: getDefaultRate(config.type),
-        chain_rate: null,
-        effective_rate: getDefaultRate(config.type),
-        has_override: false,
-        is_active: true
-      }))
-      
-      setCommissionRates(mockData)
-      setInitialRates(mockData) // Başlangıç state'ini kaydet
-      setHasChanges(false)
-      
-      toast({
-        title: "Warning",
-        description: "Using default rates - API connection failed",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [chain, toast])
-
-  // Load commission settings when modal opens
+  // Load settings when modal opens
   useEffect(() => {
     if (isOpen && chain) {
-      fetchCommissionSettings()
+      refreshSettings()
     }
-  }, [isOpen, chain, fetchCommissionSettings])
+  }, [isOpen, chain, refreshSettings])
 
-  const getDefaultRate = (sourceType: string): number => {
-    const defaults: Record<string, number> = {
-      website: 3.00,     // Standard commission for web orders
-      qr: 1.00,          // Reduced commission for in-restaurant QR orders
-      mobile_app: 2.00   // Mobile app commission (future implementation)
-    }
-    return defaults[sourceType] || 0.00
+  // Enhanced reset with confirmation and modal closure
+  const handleResetToDefaults = async () => {
+    const confirmReset = confirm(
+      language === 'fr' 
+        ? 'Êtes-vous sûr de vouloir réinitialiser tous les taux aux valeurs par défaut?'
+        : 'Are you sure you want to reset all rates to default values?'
+    )
+    if (!confirmReset) return
+    
+    await resetRatesHook()
+    onSave()
+    onClose() // Close modal after reset
   }
 
-  const updateRate = (sourceType: string, newRate: string, useOverride: boolean) => {
-    const rateValue = parseFloat(newRate) || 0
-    
-    if (useOverride && (rateValue < 0 || rateValue > 100)) {
-      toast({
-        title: "Invalid Rate",
-        description: "Rate must be between 0% and 100%",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setCommissionRates(prev => prev.map(rate => {
-      if (rate.source_type === sourceType) {
-        return {
-          ...rate,
-          chain_rate: useOverride ? rateValue : null,
-          effective_rate: useOverride ? rateValue : rate.default_rate,
-          has_override: useOverride
-        }
-      }
-      return rate
-    }))
-    
-    setHasChanges(true)
-  }
-
-  const resetToDefaults = async () => {
-    if (!chain) return
-    
-    try {
-      // Confirm reset action
-      const confirmReset = confirm(
-        language === 'fr' 
-          ? 'Êtes-vous sûr de vouloir réinitialiser tous les taux aux valeurs par défaut?'
-          : 'Are you sure you want to reset all rates to default values?'
-      )
-      if (!confirmReset) return
-      
-      setSaving(true)
-      
-      // Remove all chain overrides
-      for (const rate of commissionRates) {
-        if (rate.has_override) {
-          await commissionService.removeChainOverride(chain.id, rate.source_type)
-        }
-      }
-      
-      // Update local state
-      setCommissionRates(prev => prev.map(rate => ({
-        ...rate,
-        chain_rate: null,
-        effective_rate: rate.default_rate,
-        has_override: false
-      })))
-      
-      toast({
-        title: "Success",
-        description: "All rates reset to default values",
-      })
-      
-      setHasChanges(false)
-      onSave()
-      onClose() // Modal'ı kapat
-      
-    } catch (error) {
-      console.error('❌ Failed to reset rates:', error)
-      toast({
-        title: "Error",
-        description: "Failed to reset commission rates",
-        variant: "destructive",
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
-
+  // Enhanced save with callback
   const handleSave = async () => {
-    if (!chain || !hasChanges) return
-
-    try {
-      setSaving(true)
-      
-      // Prepare bulk update data for overrides
-      const updates = commissionRates
-        .filter(rate => rate.has_override && rate.chain_rate !== null)
-        .map(rate => ({
-          sourceType: rate.source_type,
-          rate: rate.chain_rate!
-        }))
-
-      // Prepare removals (rates that had overrides but now don't)
-      const removals = commissionRates
-        .filter(rate => !rate.has_override && rate.chain_rate !== null)
-
-      console.log('💾 Saving commission rates for chain:', chain.id)
-      console.log('📊 Updates:', updates)
-      console.log('🗑️ Removals:', removals)
-
-      // Handle updates
-      if (updates.length > 0) {
-        await commissionService.bulkUpdateChainRates(chain.id, updates)
-      }
-
-      // Handle removals (rates that had overrides initially but now don't)
-      for (const rate of commissionRates) {
-        const initialRate = initialRates.find(r => r.source_type === rate.source_type)
-        // Eğer başlangıçta override varsa ama şimdi yoksa, remove et
-        if (!rate.has_override && initialRate?.has_override) {
-          console.log(`🗑️ Removing override for ${rate.source_type}`)
-          await commissionService.removeChainOverride(chain.id, rate.source_type)
-        }
-      }
-
-      toast({
-        title: "Success",
-        description: `Commission rates updated for ${chain.name}`,
-      })
-
-      // Initial state'i güncelle
-      setInitialRates([...commissionRates])
-      setHasChanges(false)
-      onSave()
-      onClose()
-      
-    } catch (error) {
-      console.error('❌ Failed to save commission settings:', error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save commission settings",
-        variant: "destructive",
-      })
-    } finally {
-      setSaving(false)
-    }
+    await saveChanges()
+    onSave()
+    onClose()
   }
 
+  // Enhanced close with unsaved changes warning
   const handleClose = () => {
     if (hasChanges) {
       const confirmClose = confirm(
@@ -281,9 +120,10 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
           : 'You have unsaved changes. Are you sure you want to close?'
       )
       if (!confirmClose) return
+      
+      clearChanges() // Clear unsaved changes
     }
     
-    setHasChanges(false)
     onClose()
   }
 
@@ -334,7 +174,7 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
               <Button
                 variant="outline"
                 size="sm"
-                onClick={resetToDefaults}
+                onClick={handleResetToDefaults}
                 disabled={saving}
                 className="flex items-center gap-2 hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
               >
@@ -441,21 +281,27 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
             </div>
 
 
-            {/* Warning */}
+            {/* Error Display */}
+            {error && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  {error}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Changes Warning */}
             {hasChanges && (
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                      {language === 'fr' 
-                        ? 'Les nouveaux taux s\'appliqueront uniquement aux nouvelles commandes.'
-                        : 'New rates will only apply to future orders.'
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {language === 'fr' 
+                    ? 'Les nouveaux taux s\'appliqueront uniquement aux nouvelles commandes.'
+                    : 'New rates will only apply to future orders.'
+                  }
+                </AlertDescription>
+              </Alert>
             )}
           </div>
         )}
