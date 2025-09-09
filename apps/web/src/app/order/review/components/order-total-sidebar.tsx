@@ -22,10 +22,14 @@ interface OrderTotals {
   itemsTotal: number
   subtotalAfterDiscount: number
   subtotalWithDelivery: number
+  subtotalWithDeliveryAndTip: number
   tipAmount: number
   gst: number
   qst: number
   finalTotal: number
+  applicableDeliveryFee: number
+  isFreeDelivery: boolean
+  deliverySavings: number
 }
 
 interface CampaignDiscount {
@@ -62,6 +66,8 @@ interface OrderTotalSidebarProps {
   appliedDiscount?: CampaignDiscount | null
   selectedTip?: SelectedTip | null
   deliveryFee?: number
+  baseDeliveryFee?: number
+  freeDeliveryThreshold?: number
   orderTotals: OrderTotals
 }
 
@@ -76,6 +82,8 @@ export function OrderTotalSidebar({
   appliedDiscount,
   selectedTip,
   deliveryFee = 0,
+  baseDeliveryFee = 0,
+  freeDeliveryThreshold = 0,
   orderTotals
 }: OrderTotalSidebarProps) {
   const router = useRouter()
@@ -222,8 +230,15 @@ export function OrderTotalSidebar({
             campaignValue: appliedDiscount.campaignValue
           } : null,
           
-          // Delivery fee
-          deliveryFee: selectedOrderType === 'delivery' ? deliveryFee : 0,
+          // Delivery fee information  
+          deliveryFee: selectedOrderType === 'delivery' ? orderTotals.applicableDeliveryFee || 0 : 0,
+          deliveryInfo: selectedOrderType === 'delivery' ? {
+            appliedFee: orderTotals.applicableDeliveryFee || 0,
+            baseFee: baseDeliveryFee,
+            isFree: orderTotals.isFreeDelivery || false,
+            threshold: freeDeliveryThreshold,
+            savings: orderTotals.deliverySavings || 0
+          } : null,
           
           // Tip details
           tipDetails: selectedTip ? {

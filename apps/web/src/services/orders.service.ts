@@ -96,6 +96,15 @@ export interface Order {
     type: 'percentage' | 'fixed';
     value: number;
   } | null;
+  
+  // NEW: Free delivery information (Phase 3)
+  deliveryInfo?: {
+    appliedFee: number;
+    baseFee: number;
+    isFree: boolean;
+    threshold: number;
+    savings: number;
+  } | null;
 }
 
 export interface UpdateTimingResponse {
@@ -271,11 +280,19 @@ class OrdersService {
       zone: apiOrder.zone || undefined,
       payment_method: apiOrder.payment_method || undefined,
       pricing: {
+        // Legacy fields (backward compatibility)
         subtotal: apiOrder.pricing?.subtotal || apiOrder.subtotal || 0,
         tax_amount: apiOrder.pricing?.taxAmount || apiOrder.tax_amount || 0,
         service_fee: apiOrder.pricing?.serviceFee || apiOrder.service_fee || 0,
         delivery_fee: apiOrder.pricing?.deliveryFee || apiOrder.delivery_fee || 0,
         total: apiOrder.pricing?.total || apiOrder.total_amount || 0,
+        
+        // NEW: Comprehensive pricing breakdown (Phase 1)
+        itemsTotal: apiOrder.pricing?.itemsTotal || 0,
+        discountAmount: apiOrder.pricing?.discountAmount || 0,
+        gst: apiOrder.pricing?.gst || 0,
+        qst: apiOrder.pricing?.qst || 0,
+        tipAmount: apiOrder.pricing?.tipAmount || 0,
       },
       notes: apiOrder.notes || undefined,
       special_instructions: apiOrder.specialInstructions || apiOrder.special_instructions || undefined,
@@ -292,6 +309,15 @@ class OrdersService {
       
       // NEW: Individual timing adjustment (Phase 2 - +5min button feature)
       individual_timing_adjustment: apiOrder.individual_timing_adjustment || 0,
+      
+      // NEW: Campaign/discount details (Phase 1)
+      campaignDiscount: apiOrder.campaignDiscount || null,
+      
+      // NEW: Tip details (Phase 1)
+      tipDetails: apiOrder.tipDetails || null,
+      
+      // NEW: Free delivery information (Phase 3)
+      deliveryInfo: apiOrder.deliveryInfo || null,
       
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       items: apiOrder.items?.map((item: any) => ({

@@ -24,6 +24,7 @@ export interface BranchSettings {
   paymentSettings: PaymentSettings;
   minimumOrderAmount?: number;
   deliveryFee?: number;
+  freeDeliveryThreshold?: number;
 }
 
 export interface BranchSettingsResponse {
@@ -109,6 +110,7 @@ export const updateBranchSettings = async (
         paymentSettings: settings.paymentSettings,
         minimumOrderAmount: settings.minimumOrderAmount,
         deliveryFee: settings.deliveryFee,
+        freeDeliveryThreshold: settings.freeDeliveryThreshold,
       }),
     });
 
@@ -144,4 +146,5 @@ export const getDefaultSettings = (): BranchSettings => ({
   },
   minimumOrderAmount: 0, // Default: no minimum order amount
   deliveryFee: 0, // Default: no delivery fee
+  freeDeliveryThreshold: 0, // Default: no free delivery threshold
 });

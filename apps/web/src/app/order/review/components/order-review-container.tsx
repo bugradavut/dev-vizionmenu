@@ -63,8 +63,8 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
     enabled: orderContext.source === 'web' // Only for web users
   })
   
-  // Fetch delivery fee for the branch
-  const { deliveryFee } = useDeliveryFee({
+  // Fetch delivery fee and free delivery threshold for the branch
+  const { deliveryFee, freeDeliveryThreshold } = useDeliveryFee({
     branchId: orderContext.branchId,
     enabled: true // Always enabled for all users
   })
@@ -79,14 +79,22 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
     setSelectedOrderType(orderType)
   }
   
-  // Calculate order totals for minimum order validation
+  // Calculate order totals with dynamic delivery fee calculation
   const orderTotals = useMemo(() => {
     const itemsTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
     const discountAmount = appliedDiscount?.discountAmount || 0
     const subtotalAfterDiscount = itemsTotal - discountAmount
     
-    // Add delivery fee for delivery orders only
-    const applicableDeliveryFee = selectedOrderType === 'delivery' ? deliveryFee : 0
+    // ✅ NEW: Calculate dynamic delivery fee based on free delivery threshold
+    const calculateDeliveryFee = () => {
+      if (selectedOrderType !== 'delivery') return 0;
+      if (freeDeliveryThreshold > 0 && subtotalAfterDiscount >= freeDeliveryThreshold) {
+        return 0; // FREE DELIVERY! 🎉
+      }
+      return deliveryFee; // Normal delivery fee
+    };
+    
+    const applicableDeliveryFee = calculateDeliveryFee();
     const subtotalWithDelivery = subtotalAfterDiscount + applicableDeliveryFee
     
     // ✅ NEW CANADA TAX RULES: Add tip amount BEFORE taxes (tip is now taxable)
@@ -100,6 +108,10 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
     // Final total: subtotal + tip + taxes
     const finalTotal = subtotalWithDeliveryAndTip + gst + qst
     
+    // ✅ NEW: Free delivery metadata
+    const isFreeDelivery = selectedOrderType === 'delivery' && freeDeliveryThreshold > 0 && subtotalAfterDiscount >= freeDeliveryThreshold;
+    const deliverySavings = isFreeDelivery ? deliveryFee : 0;
+    
     return {
       itemsTotal,
       subtotalAfterDiscount,
@@ -108,9 +120,12 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
       tipAmount,
       gst,
       qst,
-      finalTotal
+      finalTotal,
+      applicableDeliveryFee, // ✅ NEW: Calculated delivery fee
+      isFreeDelivery, // ✅ NEW: Free delivery flag
+      deliverySavings // ✅ NEW: Amount saved on delivery
     }
-  }, [items, appliedDiscount, selectedOrderType, deliveryFee, selectedTip])
+  }, [items, appliedDiscount, selectedOrderType, deliveryFee, freeDeliveryThreshold, selectedTip])
   
   // Check if minimum order requirement is met for delivery orders
   const isMinimumOrderMet = useMemo(() => {
@@ -194,8 +209,12 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
               minimumOrderAmount={minimumOrderAmount}
               isMinimumOrderLoading={isMinimumOrderLoading}
               isMinimumOrderMet={isMinimumOrderMet}
-              deliveryFee={deliveryFee}
+              deliveryFee={orderTotals.applicableDeliveryFee}
+              baseDeliveryFee={deliveryFee}
+              freeDeliveryThreshold={freeDeliveryThreshold}
+              isFreeDelivery={orderTotals.isFreeDelivery}
               selectedTip={selectedTip}
+              userSource={orderContext.source}
             />
             <PromoCodeSection 
               items={items} 
@@ -218,7 +237,9 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
               selectedOrderType={selectedOrderType}
               appliedDiscount={appliedDiscount}
               selectedTip={selectedTip}
-              deliveryFee={deliveryFee}
+              deliveryFee={orderTotals.applicableDeliveryFee}
+              baseDeliveryFee={deliveryFee}
+              freeDeliveryThreshold={freeDeliveryThreshold}
               orderTotals={orderTotals}
             />
           </div>

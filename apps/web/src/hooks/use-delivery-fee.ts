@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { getDeliveryFee } from '@/services/delivery-fee.service'
+import { getDeliveryInfo } from '@/services/delivery-fee.service'
 
 interface UseDeliveryFeeOptions {
   branchId?: string;
@@ -12,6 +12,7 @@ interface UseDeliveryFeeOptions {
 
 interface UseDeliveryFeeReturn {
   deliveryFee: number;
+  freeDeliveryThreshold: number;
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
@@ -24,12 +25,14 @@ export const useDeliveryFee = (options: UseDeliveryFeeOptions = {}): UseDelivery
   const { branchId, enabled = true } = options;
   
   const [deliveryFee, setDeliveryFee] = useState<number>(0);
+  const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchDeliveryFee = async () => {
+  const fetchDeliveryInfo = async () => {
     if (!branchId || !enabled) {
       setDeliveryFee(0);
+      setFreeDeliveryThreshold(0);
       return;
     }
 
@@ -37,24 +40,27 @@ export const useDeliveryFee = (options: UseDeliveryFeeOptions = {}): UseDelivery
     setError(null);
     
     try {
-      const fee = await getDeliveryFee(branchId);
-      setDeliveryFee(fee);
+      const info = await getDeliveryInfo(branchId);
+      setDeliveryFee(info.deliveryFee);
+      setFreeDeliveryThreshold(info.freeDeliveryThreshold);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch delivery fee');
+      setError(err instanceof Error ? err.message : 'Failed to fetch delivery info');
       setDeliveryFee(0); // Fallback to 0 on error
+      setFreeDeliveryThreshold(0);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDeliveryFee();
+    fetchDeliveryInfo();
   }, [branchId, enabled]);
 
   return {
     deliveryFee,
+    freeDeliveryThreshold,
     isLoading,
     error,
-    refetch: fetchDeliveryFee,
+    refetch: fetchDeliveryInfo,
   };
 };

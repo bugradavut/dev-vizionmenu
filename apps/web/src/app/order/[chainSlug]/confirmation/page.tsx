@@ -76,6 +76,13 @@ interface OrderSession {
     campaignValue: number;
   } | null;
   deliveryFee?: number;
+  deliveryInfo?: {
+    appliedFee: number;
+    baseFee: number;
+    isFree: boolean;
+    threshold: number;
+    savings: number;
+  } | null;
   tipDetails?: {
     amount: number;
     type: 'percentage' | 'fixed';
@@ -784,18 +791,33 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                     </div>
                   )}
                   
-                  {/* Delivery Fee */}
-                  {deliveryFee > 0 && (
+                  {/* Delivery Fee - Enhanced with Free Delivery Support */}
+                  {(deliveryFee > 0 || sessionData?.deliveryInfo?.isFree) && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600">
+                      <span className="text-gray-600 flex items-center gap-2">
                         {language === 'fr' ? 'Frais de livraison' : 'Delivery fee'}
+                        {sessionData?.deliveryInfo?.isFree && (
+                          <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+                            {language === 'fr' ? 'GRATUIT!' : 'FREE!'}
+                          </span>
+                        )}
                       </span>
-                      <span className="font-medium text-gray-900">
-                        {language === 'fr' ? 
-                          `${deliveryFee.toFixed(2).replace('.', ',')} $` : 
-                          `$${deliveryFee.toFixed(2)}`
-                        }
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {sessionData?.deliveryInfo?.isFree && sessionData?.deliveryInfo?.baseFee > 0 && (
+                          <span className="text-gray-400 line-through text-sm">
+                            {language === 'fr' ? 
+                              `${sessionData.deliveryInfo.baseFee.toFixed(2).replace('.', ',')} $` : 
+                              `$${sessionData.deliveryInfo.baseFee.toFixed(2)}`
+                            }
+                          </span>
+                        )}
+                        <span className={`font-medium ${sessionData?.deliveryInfo?.isFree ? 'text-green-600' : 'text-gray-900'}`}>
+                          {language === 'fr' ? 
+                            `${deliveryFee.toFixed(2).replace('.', ',')} $` : 
+                            `$${deliveryFee.toFixed(2)}`
+                          }
+                        </span>
+                      </div>
                     </div>
                   )}
                   

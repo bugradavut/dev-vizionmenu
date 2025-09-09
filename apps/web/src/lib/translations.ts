@@ -483,7 +483,18 @@ export const translations = {
       deliveryFeeTitle: "Delivery Fee",
       deliveryFeeDesc: "Set delivery fee for delivery orders", 
       noDeliveryFee: "No delivery fee set (free delivery)",
-      deliveryFeeApplied: "{amount} will be added to delivery orders"
+      deliveryFeeApplied: "{amount} will be added to delivery orders",
+      
+      // Free Delivery Threshold
+      freeDeliveryThreshold: "Free Delivery Threshold",
+      freeDeliveryThresholdDesc: "Orders above this amount qualify for free delivery",
+      noFreeDelivery: "Free delivery is disabled", 
+      freeDeliveryEnabled: "Orders over {amount} qualify for free delivery",
+      
+      // Customer-facing free delivery messages
+      freeDeliveryPromo: "Add {amount} more for FREE delivery!",
+      freeDeliveryApplied: "You saved {amount} on delivery!",
+      freeDeliveryBadge: "FREE!"
     },
     
     // Order Notifications
@@ -1504,7 +1515,18 @@ export const translations = {
       deliveryFeeTitle: "Frais de livraison",
       deliveryFeeDesc: "Définir les frais de livraison pour les commandes à livrer",
       noDeliveryFee: "Aucun frais de livraison défini (livraison gratuite)",
-      deliveryFeeApplied: "{amount} sera ajouté aux commandes de livraison"
+      deliveryFeeApplied: "{amount} sera ajouté aux commandes de livraison",
+      
+      // Free Delivery Threshold - Canadian French
+      freeDeliveryThreshold: "Seuil de livraison gratuite",
+      freeDeliveryThresholdDesc: "Les commandes supérieures à ce montant bénéficient de la livraison gratuite",
+      noFreeDelivery: "La livraison gratuite est désactivée",
+      freeDeliveryEnabled: "Les commandes de plus de {amount} bénéficient de la livraison gratuite",
+      
+      // Customer-facing free delivery messages - Canadian French
+      freeDeliveryPromo: "Ajoutez {amount} de plus pour la livraison GRATUITE !",
+      freeDeliveryApplied: "Vous économisez {amount} sur la livraison !",
+      freeDeliveryBadge: "GRATUIT !"
     },
     
     // Order Notifications - Canadian French

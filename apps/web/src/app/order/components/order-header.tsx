@@ -105,8 +105,8 @@ export function OrderHeader({ branchName, branchId, onSearch, onPreOrderConfirm,
     return (
       <>
         {source === 'web' && minimumOrderAmount > 0 && !isMinimumOrderLoading && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-md">
-            <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800 rounded-md">
+            <span className="text-sm font-medium text-orange-900 dark:text-orange-100">
               {language === 'fr' ? 'Min. ' : 'Min. '}
               {language === 'fr' 
                 ? `${minimumOrderAmount.toFixed(2)} $`
@@ -239,8 +239,8 @@ export function OrderHeader({ branchName, branchId, onSearch, onPreOrderConfirm,
 
         {/* Minimum Order Amount - Web Users Only */}
         {source === 'web' && minimumOrderAmount > 0 && !isMinimumOrderLoading && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-md flex-shrink-0">
-            <span className="text-sm font-medium text-amber-900 dark:text-amber-100 whitespace-nowrap">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800 rounded-md flex-shrink-0">
+            <span className="text-sm font-medium text-orange-900 dark:text-orange-100 whitespace-nowrap">
               {language === 'fr' ? 'Min. ' : 'Min. '}
               {language === 'fr' 
                 ? `${minimumOrderAmount.toFixed(2)} $`

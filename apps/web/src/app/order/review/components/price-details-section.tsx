@@ -32,7 +32,11 @@ interface PriceDetailsSectionProps {
   isMinimumOrderLoading?: boolean
   isMinimumOrderMet?: boolean
   deliveryFee?: number
+  baseDeliveryFee?: number
+  freeDeliveryThreshold?: number
+  isFreeDelivery?: boolean
   selectedTip?: SelectedTip | null
+  userSource?: 'qr' | 'web'
 }
 
 export function PriceDetailsSection({ 
@@ -44,7 +48,11 @@ export function PriceDetailsSection({
   isMinimumOrderLoading, 
   isMinimumOrderMet,
   deliveryFee = 0,
-  selectedTip
+  baseDeliveryFee = 0,
+  freeDeliveryThreshold = 0,
+  isFreeDelivery = false,
+  selectedTip,
+  userSource = 'web'
 }: PriceDetailsSectionProps) {
   // Calculate dynamic values
   const itemsTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
@@ -54,7 +62,7 @@ export function PriceDetailsSection({
   const discountAmount = appliedDiscount?.discountAmount || 0
   const subtotalAfterDiscount = itemsTotal - discountAmount
   
-  // Add delivery fee for delivery orders only
+  // Add delivery fee for delivery orders only (using calculated delivery fee)
   const applicableDeliveryFee = selectedOrderType === 'delivery' ? deliveryFee : 0
   const subtotalWithDelivery = subtotalAfterDiscount + applicableDeliveryFee
   
@@ -120,14 +128,26 @@ export function PriceDetailsSection({
         )}
         
         {/* Delivery Fee */}
-        {selectedOrderType === 'delivery' && applicableDeliveryFee > 0 && (
+        {selectedOrderType === 'delivery' && (
           <div className="flex justify-between items-center">
-            <span className="text-foreground">
+            <span className="text-foreground flex items-center gap-2">
               {language === 'fr' ? 'Frais de livraison' : 'Delivery fee'}
+              {isFreeDelivery && (
+                <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+                  {language === 'fr' ? 'GRATUIT!' : 'FREE!'}
+                </span>
+              )}
             </span>
-            <span className="text-foreground">
-              {language === 'fr' ? `${applicableDeliveryFee.toFixed(2)} $` : `$${applicableDeliveryFee.toFixed(2)}`}
-            </span>
+            <div className="flex items-center gap-2">
+              {isFreeDelivery && baseDeliveryFee > 0 && (
+                <span className="text-muted-foreground line-through text-sm">
+                  {language === 'fr' ? `${baseDeliveryFee.toFixed(2)} $` : `$${baseDeliveryFee.toFixed(2)}`}
+                </span>
+              )}
+              <span className={`text-foreground ${isFreeDelivery ? 'text-green-600 font-medium' : ''}`}>
+                {language === 'fr' ? `${applicableDeliveryFee.toFixed(2)} $` : `$${applicableDeliveryFee.toFixed(2)}`}
+              </span>
+            </div>
           </div>
         )}
         
@@ -216,6 +236,37 @@ export function PriceDetailsSection({
               </div>
             </div>
           )}
+          
+          {/* ✅ NEW: Free delivery progress bar (web delivery only) - Show only when NOT qualified yet */}
+          {userSource === 'web' && selectedOrderType === 'delivery' && freeDeliveryThreshold > 0 && subtotalAfterDiscount > 0 && !isFreeDelivery && (
+            <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-medium text-blue-700">
+                    {language === 'fr' 
+                      ? `Gratuite à ${freeDeliveryThreshold.toFixed(2)} $`
+                      : `Free delivery at $${freeDeliveryThreshold.toFixed(2)}`
+                    }
+                  </p>
+                  <p className="text-sm text-blue-600">
+                    {language === 'fr' 
+                      ? `${(freeDeliveryThreshold - subtotalAfterDiscount).toFixed(2)} $ restant`
+                      : `$${(freeDeliveryThreshold - subtotalAfterDiscount).toFixed(2)} to go`
+                    }
+                  </p>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ 
+                      width: `${Math.min((subtotalAfterDiscount / freeDeliveryThreshold) * 100, 100)}%` 
+                    }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     </div>

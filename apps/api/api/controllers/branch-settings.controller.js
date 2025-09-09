@@ -81,6 +81,20 @@ const updateBranchSettings = async (req, res) => {
       settingsData.deliveryFee = fee;
     }
 
+    // Validate free delivery threshold if provided
+    if (settingsData.freeDeliveryThreshold !== undefined) {
+      const threshold = parseFloat(settingsData.freeDeliveryThreshold);
+      if (isNaN(threshold) || threshold < 0 || threshold > 10000) {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_FREE_DELIVERY_THRESHOLD',
+            message: 'Free delivery threshold must be a number between 0 and 10000',
+          },
+        });
+      }
+      settingsData.freeDeliveryThreshold = threshold;
+    }
+
     const result = await branchSettingsService.updateBranchSettings(branchId, settingsData);
     
     res.json({ data: result });
@@ -149,6 +163,32 @@ const getBranchDeliveryFee = async (req, res) => {
  * Get branch information (public endpoint)
  * GET /api/v1/customer/branch/:branchId/info
  */
+const getBranchDeliveryInfo = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+
+    if (!branchId) {
+      return res.status(400).json({
+        error: {
+          code: 'MISSING_BRANCH_ID',
+          message: 'Branch ID is required',
+        },
+      });
+    }
+
+    const deliveryInfo = await branchSettingsService.getBranchDeliveryInfo(branchId);
+    
+    res.json({ 
+      data: { 
+        branchId,
+        ...deliveryInfo
+      } 
+    });
+  } catch (error) {
+    handleControllerError(error, 'get branch delivery info', res);
+  }
+};
+
 const getBranchInfo = async (req, res) => {
   try {
     const { branchId } = req.params;
@@ -175,5 +215,6 @@ module.exports = {
   updateBranchSettings,
   getBranchMinimumOrder,
   getBranchDeliveryFee,
+  getBranchDeliveryInfo,
   getBranchInfo,
 };

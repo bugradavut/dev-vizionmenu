@@ -18,6 +18,11 @@ router.get('/branch/:branchId/delivery-fee',
   branchSettingsController.getBranchDeliveryFee
 );
 
+// Get branch delivery info (public) - includes delivery fee and free delivery threshold
+router.get('/branch/:branchId/delivery-info', 
+  branchSettingsController.getBranchDeliveryInfo
+);
+
 // Get branch information (public)
 router.get('/branch/:branchId/info', 
   branchSettingsController.getBranchInfo

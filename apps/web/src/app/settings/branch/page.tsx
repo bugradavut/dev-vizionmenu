@@ -45,6 +45,7 @@ export default function BranchSettingsPage() {
   const [deliveryDelayInput, setDeliveryDelayInput] = useState("")
   const [minimumOrderInput, setMinimumOrderInput] = useState("")
   const [deliveryFeeInput, setDeliveryFeeInput] = useState("")
+  const [freeDeliveryThresholdInput, setFreeDeliveryThresholdInput] = useState("")
   
   // Update local inputs when settings change from API
   React.useEffect(() => {
@@ -56,8 +57,9 @@ export default function BranchSettingsPage() {
     if (settings && !loading) {
       setMinimumOrderInput(settings.minimumOrderAmount?.toString() || "")
       setDeliveryFeeInput(settings.deliveryFee?.toString() || "")
+      setFreeDeliveryThresholdInput(settings.freeDeliveryThreshold?.toString() || "")
     }
-  }, [settings.timingSettings, settings.minimumOrderAmount, settings.deliveryFee, loading])
+  }, [settings.timingSettings, settings.minimumOrderAmount, settings.deliveryFee, settings.freeDeliveryThreshold, loading])
 
   // Handle save
   const handleSave = async () => {
@@ -127,6 +129,18 @@ export default function BranchSettingsPage() {
     if (!isNaN(numValue) && numValue >= 0) {
       updateSettings({
         deliveryFee: numValue
+      })
+    }
+  }
+
+  // Handle free delivery threshold changes
+  const handleFreeDeliveryThresholdChange = (value: string) => {
+    setFreeDeliveryThresholdInput(value)
+    // Only update settings when value is valid or empty becomes 0
+    const numValue = value === "" ? 0 : Number(value)
+    if (!isNaN(numValue) && numValue >= 0) {
+      updateSettings({
+        freeDeliveryThreshold: numValue
       })
     }
   }
@@ -441,9 +455,10 @@ export default function BranchSettingsPage() {
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-3">
+                    <CardContent className="space-y-4">
+                      {/* Base Delivery Fee Input */}
                       <div className="space-y-2">
-                        <Label htmlFor="delivery-fee" className="text-sm font-medium">Fee ($CAD)</Label>
+                        <Label htmlFor="delivery-fee" className="text-sm font-medium">Base Fee ($CAD)</Label>
                         <div className="relative">
                           <Input
                             id="delivery-fee"
@@ -468,6 +483,40 @@ export default function BranchSettingsPage() {
                           ) : (
                             <span className="text-blue-600">
                               • {t.settingsBranch.deliveryFeeApplied.replace('{amount}', `$${settings.deliveryFee?.toFixed(2) || '0.00'}`)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Free Delivery Threshold Input */}
+                      <div className="space-y-2">
+                        <Label htmlFor="free-delivery-threshold" className="text-sm font-medium">
+                          {t.settingsBranch.freeDeliveryThreshold} ($CAD)
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            id="free-delivery-threshold"
+                            type="number"
+                            value={freeDeliveryThresholdInput}
+                            onChange={(e) => handleFreeDeliveryThresholdChange(e.target.value)}
+                            className="pr-12"
+                            placeholder="0.00"
+                            min="0"
+                            max="10000"
+                            step="0.01"
+                          />
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <span className="text-sm text-muted-foreground">CAD</span>
+                          </div>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {(settings.freeDeliveryThreshold || 0) === 0 ? (
+                            <span className="text-blue-600">
+                              • {t.settingsBranch.noFreeDelivery}
+                            </span>
+                          ) : (
+                            <span className="text-blue-600">
+                              • {t.settingsBranch.freeDeliveryEnabled.replace('{amount}', `$${settings.freeDeliveryThreshold?.toFixed(2) || '0.00'}`)}
                             </span>
                           )}
                         </div>

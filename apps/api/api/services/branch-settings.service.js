@@ -17,7 +17,7 @@ async function getBranchSettings(branchId) {
   }
 
   try {
-    // Get branch data with settings, minimum_order_amount, and delivery_fee
+    // Get branch data with settings, minimum_order_amount, delivery_fee, and free_delivery_threshold
     const { data: branchData, error: branchError } = await supabase
       .from('branches')
       .select(`
@@ -25,7 +25,8 @@ async function getBranchSettings(branchId) {
         name,
         settings,
         minimum_order_amount,
-        delivery_fee
+        delivery_fee,
+        free_delivery_threshold
       `)
       .eq('id', branchId)
       .single();
@@ -58,6 +59,7 @@ async function getBranchSettings(branchId) {
       },
       minimumOrderAmount: branchData.minimum_order_amount || 0,
       deliveryFee: branchData.delivery_fee || 0,
+      freeDeliveryThreshold: branchData.free_delivery_threshold || 0,
     };
 
     return {
@@ -94,7 +96,8 @@ async function updateBranchSettings(branchId, settingsData) {
       timingSettings,
       paymentSettings,
       minimumOrderAmount = 0,
-      deliveryFee = 0
+      deliveryFee = 0,
+      freeDeliveryThreshold = 0
     } = settingsData;
 
     // Validate minimum order amount
@@ -105,6 +108,11 @@ async function updateBranchSettings(branchId, settingsData) {
     // Validate delivery fee
     if (deliveryFee < 0 || deliveryFee > 100) {
       throw new Error('Delivery fee must be between 0 and 100');
+    }
+
+    // Validate free delivery threshold
+    if (freeDeliveryThreshold < 0 || freeDeliveryThreshold > 10000) {
+      throw new Error('Free delivery threshold must be between 0 and 10000');
     }
 
     // Prepare settings JSON (excluding minimumOrderAmount and deliveryFee)
@@ -131,6 +139,7 @@ async function updateBranchSettings(branchId, settingsData) {
         settings: settingsJson,
         minimum_order_amount: minimumOrderAmount,
         delivery_fee: deliveryFee,
+        free_delivery_threshold: freeDeliveryThreshold,
         updated_at: new Date().toISOString(),
       })
       .eq('id', branchId)
@@ -139,7 +148,8 @@ async function updateBranchSettings(branchId, settingsData) {
         name,
         settings,
         minimum_order_amount,
-        delivery_fee
+        delivery_fee,
+        free_delivery_threshold
       `)
       .single();
 
@@ -160,6 +170,7 @@ async function updateBranchSettings(branchId, settingsData) {
         ...settingsJson,
         minimumOrderAmount: updatedBranch.minimum_order_amount || 0,
         deliveryFee: updatedBranch.delivery_fee || 0,
+        freeDeliveryThreshold: updatedBranch.free_delivery_threshold || 0,
       },
     };
   } catch (error) {
@@ -225,6 +236,41 @@ async function getBranchDeliveryFee(branchId) {
 }
 
 /**
+ * Get branch delivery info (public endpoint for customer orders)
+ * @param {string} branchId - The branch ID
+ * @returns {Promise<Object>} Delivery fee and free delivery threshold
+ */
+async function getBranchDeliveryInfo(branchId) {
+  if (!branchId) {
+    throw new Error('Branch ID is required');
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('branches')
+      .select('delivery_fee, free_delivery_threshold')
+      .eq('id', branchId)
+      .single();
+
+    if (error) {
+      throw new Error(`Database error: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error('Branch not found');
+    }
+
+    return {
+      deliveryFee: data.delivery_fee || 0,
+      freeDeliveryThreshold: data.free_delivery_threshold || 0,
+    };
+  } catch (error) {
+    console.error('Error getting branch delivery info:', error);
+    throw error;
+  }
+}
+
+/**
  * Get branch information (public endpoint for customer orders)
  * @param {string} branchId - The branch ID
  * @returns {Promise<Object>} Branch information with id, name, address
@@ -267,5 +313,6 @@ module.exports = {
   updateBranchSettings,
   getBranchMinimumOrder,
   getBranchDeliveryFee,
+  getBranchDeliveryInfo,
   getBranchInfo,
 };

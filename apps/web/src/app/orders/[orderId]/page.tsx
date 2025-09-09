@@ -862,11 +862,27 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                             </div>
                           )}
                           
-                          {/* Delivery Fee */}
-                          {order.pricing.delivery_fee > 0 && (
+                          {/* ✅ NEW: Enhanced Delivery Fee with Free Delivery Support */}
+                          {(order.pricing.delivery_fee > 0 || order.deliveryInfo?.isFree || order.order_type?.toLowerCase() === 'delivery') && (
                             <div className="flex justify-between text-sm">
-                              <span>{language === 'fr' ? 'Frais de livraison' : 'Delivery fee'}</span>
-                              <span>${order.pricing.delivery_fee.toFixed(2)}</span>
+                              <span className="flex items-center gap-2">
+                                {language === 'fr' ? 'Frais de livraison' : 'Delivery fee'}
+                                {order.deliveryInfo?.isFree && (
+                                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+                                    {language === 'fr' ? 'GRATUIT!' : 'FREE!'}
+                                  </span>
+                                )}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                {order.deliveryInfo?.isFree && order.deliveryInfo?.baseFee > 0 && (
+                                  <span className="text-gray-500 line-through text-sm">
+                                    ${order.deliveryInfo.baseFee.toFixed(2)}
+                                  </span>
+                                )}
+                                <span className={`${order.deliveryInfo?.isFree ? 'text-green-600 font-medium' : ''}`}>
+                                  ${(order.pricing.delivery_fee || 0).toFixed(2)}
+                                </span>
+                              </div>
                             </div>
                           )}
                           
@@ -886,6 +902,30 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         </>
                       ) : (
                         <>
+                          {/* Legacy pricing - show delivery fee if it exists OR if it's a delivery order */}
+                          {(order.pricing.delivery_fee > 0 || order.deliveryInfo?.isFree || order.order_type?.toLowerCase() === 'delivery') && (
+                            <div className="flex justify-between text-sm">
+                              <span className="flex items-center gap-2">
+                                {language === 'fr' ? 'Frais de livraison' : 'Delivery fee'}
+                                {order.deliveryInfo?.isFree && (
+                                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+                                    {language === 'fr' ? 'GRATUIT!' : 'FREE!'}
+                                  </span>
+                                )}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                {order.deliveryInfo?.isFree && order.deliveryInfo?.baseFee > 0 && (
+                                  <span className="text-gray-500 line-through text-sm">
+                                    ${order.deliveryInfo.baseFee.toFixed(2)}
+                                  </span>
+                                )}
+                                <span className={`${order.deliveryInfo?.isFree ? 'text-green-600 font-medium' : ''}`}>
+                                  ${(order.pricing.delivery_fee || 0).toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          
                           {/* Legacy simple subtotal display */}
                           <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
                             <span>{t.orderDetail.subtotal}</span>
@@ -928,14 +968,26 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                           <span>${order.pricing.total.toFixed(2)}</span>
                         </div>
                       </div>
-                      {order.campaignDiscount && (order.pricing.discountAmount || 0) > 0 && (
-                        <p className="text-sm text-green-600 text-right">
-                          {language === 'fr' 
-                            ? `Économisé ${(order.pricing.discountAmount || 0).toFixed(2)} $` 
-                            : `Saved $${(order.pricing.discountAmount || 0).toFixed(2)}`
-                          }
-                        </p>
-                      )}
+                      {/* Savings Messages */}
+                      <div className="space-y-1">
+                        {order.campaignDiscount && (order.pricing.discountAmount || 0) > 0 && (
+                          <p className="text-sm text-green-600 text-right">
+                            {language === 'fr' 
+                              ? `Économisé ${(order.pricing.discountAmount || 0).toFixed(2)} $ avec ${order.campaignDiscount.code}` 
+                              : `Saved $${(order.pricing.discountAmount || 0).toFixed(2)} with ${order.campaignDiscount.code}`
+                            }
+                          </p>
+                        )}
+                        {/* ✅ NEW: Free Delivery Savings */}
+                        {order.deliveryInfo?.isFree && order.deliveryInfo?.savings > 0 && (
+                          <p className="text-sm text-green-600 text-right">
+                            {language === 'fr' 
+                              ? `Économisé ${order.deliveryInfo.savings.toFixed(2)} $ sur la livraison` 
+                              : `Saved $${order.deliveryInfo.savings.toFixed(2)} on delivery`
+                            }
+                          </p>
+                        )}
+                      </div>
                       <Separator className="my-3" />
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">

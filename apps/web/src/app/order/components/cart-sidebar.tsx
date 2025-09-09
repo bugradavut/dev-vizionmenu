@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, Minus, Trash2, ShoppingBag, Loader2, Utensils, Bike, Clock } from 'lucide-react'
+import { Plus, Minus, Trash2, ShoppingBag, Loader2, Utensils, Bike, Clock, Check } from 'lucide-react'
 import { useCart } from '../contexts/cart-context'
 import { useOrderContext } from '../contexts/order-context'
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 import { useResponsiveClasses } from '@/hooks/use-responsive'
 import { getCustomerBranchSettings, type TimingSettings } from '@/services/customer-branch-settings.service'
+import { useDeliveryFee } from '@/hooks/use-delivery-fee'
 
 
 export function CartSidebar() {
@@ -41,6 +42,12 @@ export function CartSidebar() {
     isQROrder ? 'dine_in' : 'takeaway'
   )
   const [timingSettings, setTimingSettings] = useState<TimingSettings | null>(null)
+  
+  // Fetch delivery fee and free delivery threshold for free delivery promotion
+  const { deliveryFee, freeDeliveryThreshold } = useDeliveryFee({
+    branchId: branchId || undefined,
+    enabled: !!branchId
+  })
 
   // Load branch timing settings
   useEffect(() => {
@@ -210,16 +217,16 @@ export function CartSidebar() {
             if (!readyTimeInfo) return null
             
             return (
-              <Card className="bg-orange-50 border-orange-200 p-4 mb-4">
+              <Card className="bg-orange-50 dark:bg-orange-950/50 border-orange-200 dark:border-orange-800 p-4 mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Clock className="w-5 h-5 text-orange-600" />
+                  <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                   </div>
                   <div className="flex-1">
-                    <div className="text-sm text-orange-600 font-medium">
+                    <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">
                       {t.orderPage.orderReadyFor}
                     </div>
-                    <div className="text-lg font-bold text-orange-900">
+                    <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
                       {readyTimeInfo.timeString} <span className="text-sm font-normal">({readyTimeInfo.totalMinutes} min)</span>
                     </div>
                   </div>
@@ -239,6 +246,28 @@ export function CartSidebar() {
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-3">{t.orderPage.cart.empty}</h3>
               <p className="text-base text-muted-foreground/80 leading-relaxed">{t.orderPage.cart.emptyMessage}</p>
+              
+              {/* ✅ NEW: Free delivery promo for empty cart (web users) */}
+              {source === 'web' && freeDeliveryThreshold > 0 && deliveryFee > 0 && (
+                <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-sm">
+                  <div className="text-center space-y-2">
+                    <div className="flex items-center justify-center">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-2">
+                        <Bike className="w-4 h-4 text-green-600" />
+                      </div>
+                      <span className="text-lg font-bold text-green-700">
+                        {language === 'fr' ? 'LIVRAISON GRATUITE' : 'FREE DELIVERY'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-green-600 font-medium">
+                      {language === 'fr' 
+                        ? `Sur les commandes de ${freeDeliveryThreshold.toFixed(2)} $+`
+                        : `On orders $${freeDeliveryThreshold.toFixed(2)}+`
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -323,6 +352,74 @@ export function CartSidebar() {
                 </Card>
               ))}
             </div>
+            
+            {/* ✅ NEW: Free delivery promotion for non-empty cart (web users) */}
+            {source === 'web' && freeDeliveryThreshold > 0 && deliveryFee > 0 && (
+              <div className="mt-4">
+                {(() => {
+                  const currentSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                  const isEligibleForFree = currentSubtotal >= freeDeliveryThreshold;
+                  const amountNeeded = freeDeliveryThreshold - currentSubtotal;
+                  
+                  if (!isEligibleForFree) {
+                    // Show progress bar for free delivery
+                    return (
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <p className="text-sm font-medium text-blue-700">
+                              {language === 'fr' 
+                                ? `Gratuite à ${freeDeliveryThreshold.toFixed(2)} $`
+                                : `Free delivery at $${freeDeliveryThreshold.toFixed(2)}`
+                              }
+                            </p>
+                            <p className="text-sm text-blue-600">
+                              {language === 'fr' 
+                                ? `${amountNeeded.toFixed(2)} $ restant`
+                                : `$${amountNeeded.toFixed(2)} to go`
+                              }
+                            </p>
+                          </div>
+                          <div className="w-full bg-blue-200 rounded-full h-2">
+                            <div 
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{ 
+                                width: `${Math.min((currentSubtotal / freeDeliveryThreshold) * 100, 100)}%` 
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    // Show completed state with green color and check mark
+                    return (
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <p className="text-sm font-medium text-green-700">
+                              {language === 'fr' 
+                                ? `Livraison gratuite`
+                                : `Free delivery`
+                              }
+                            </p>
+                            <div className="flex items-center gap-1 text-green-600">
+                              <Check className="w-4 h-4" />
+                              <p className="text-sm font-medium">
+                                {language === 'fr' ? 'Éligible' : 'Applied'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="w-full bg-green-200 rounded-full h-2">
+                            <div className="bg-green-600 h-2 rounded-full w-full transition-all duration-500"></div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                })()}
+              </div>
+            )}
 
           </div>
         )}
