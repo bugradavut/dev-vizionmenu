@@ -89,18 +89,22 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
     const applicableDeliveryFee = selectedOrderType === 'delivery' ? deliveryFee : 0
     const subtotalWithDelivery = subtotalAfterDiscount + applicableDeliveryFee
     
-    // Quebec taxes: GST (5%) + QST (9.975%) - calculated on food + delivery only (tip is NOT taxable)
-    const gst = subtotalWithDelivery * 0.05
-    const qst = subtotalWithDelivery * 0.09975
-    
-    // Add tip amount AFTER taxes (tip is not taxable in Canada)
+    // ✅ NEW CANADA TAX RULES: Add tip amount BEFORE taxes (tip is now taxable)
     const tipAmount = selectedTip?.amount || 0
-    const finalTotal = subtotalWithDelivery + gst + qst + tipAmount
+    const subtotalWithDeliveryAndTip = subtotalWithDelivery + tipAmount
+    
+    // Quebec taxes: GST (5%) + QST (9.975%) - calculated on food + delivery + tip
+    const gst = subtotalWithDeliveryAndTip * 0.05
+    const qst = subtotalWithDeliveryAndTip * 0.09975
+    
+    // Final total: subtotal + tip + taxes
+    const finalTotal = subtotalWithDeliveryAndTip + gst + qst
     
     return {
       itemsTotal,
       subtotalAfterDiscount,
       subtotalWithDelivery,
+      subtotalWithDeliveryAndTip,
       tipAmount,
       gst,
       qst,

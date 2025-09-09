@@ -315,16 +315,17 @@ function OrderConfirmationContent() {
   const deliveryFee = sessionData?.deliveryFee || 0
   const subtotalWithDelivery = subtotalAfterDiscount + deliveryFee
   
-  // Tax breakdown: Use sessionStorage GST/QST if available, otherwise fallback to API or calculate
-  const gst = sessionData?.pricing?.gst || (apiTax > 0 ? apiTax * 0.333 : subtotalWithDelivery * 0.05) // Estimate GST as 1/3 of total tax if from API
-  const qst = sessionData?.pricing?.qst || (apiTax > 0 ? apiTax * 0.667 : subtotalWithDelivery * 0.09975) // Estimate QST as 2/3 of total tax if from API
+  // ✅ NEW CANADA TAX RULES: Tip amount added BEFORE taxes
+  const tipAmount = sessionData?.tipDetails?.amount || 0
+  const subtotalWithDeliveryAndTip = subtotalWithDelivery + tipAmount
+  
+  // Tax breakdown: Use sessionStorage GST/QST if available, otherwise calculate on subtotal + tip
+  const gst = sessionData?.pricing?.gst || (apiTax > 0 ? apiTax * 0.333 : subtotalWithDeliveryAndTip * 0.05) // Estimate GST as 1/3 of total tax if from API
+  const qst = sessionData?.pricing?.qst || (apiTax > 0 ? apiTax * 0.667 : subtotalWithDeliveryAndTip * 0.09975) // Estimate QST as 2/3 of total tax if from API
   const totalTax = gst + qst
   
-  // Tip amount
-  const tipAmount = sessionData?.tipDetails?.amount || 0
-  
   // Final calculations with fallbacks  
-  const total = apiTotal || sessionData?.pricing?.total || (subtotalWithDelivery + totalTax + tipAmount)
+  const total = apiTotal || sessionData?.pricing?.total || (subtotalWithDeliveryAndTip + totalTax)
   
   // Extract customer info from sessionStorage with fallbacks
   const customerName = sessionData?.customerName || 'Customer';
@@ -808,6 +809,27 @@ function OrderConfirmationContent() {
                     </div>
                   )}
                   
+                  {/* ✅ NEW: Tip shown AFTER items but BEFORE delivery fee (new Canada tax rules) */}
+                  {sessionData?.tipDetails && tipAmount > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 flex items-center gap-1">
+                        {language === 'fr' ? 'Pourboire' : 'Tip'}
+                        <span className="text-xs text-gray-500">
+                          ({sessionData.tipDetails.type === 'percentage' 
+                            ? `${sessionData.tipDetails.value}%` 
+                            : language === 'fr' ? 'fixe' : 'fixed'
+                          })
+                        </span>
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        {language === 'fr' ? 
+                          `${tipAmount.toFixed(2).replace('.', ',')} $` : 
+                          `$${tipAmount.toFixed(2)}`
+                        }
+                      </span>
+                    </div>
+                  )}
+                  
                   {/* Delivery Fee */}
                   {deliveryFee > 0 && (
                     <div className="flex justify-between">
@@ -823,15 +845,15 @@ function OrderConfirmationContent() {
                     </div>
                   )}
                   
-                  {/* Subtotal */}
+                  {/* Subtotal (including tip before taxes) */}
                   <div className="flex justify-between border-t border-gray-200 pt-2">
                     <span className="text-gray-600">
                       {language === 'fr' ? 'Sous-total' : 'Subtotal'}
                     </span>
                     <span className="font-medium text-gray-900">
                       {language === 'fr' ? 
-                        `${subtotalWithDelivery.toFixed(2).replace('.', ',')} $` : 
-                        `$${subtotalWithDelivery.toFixed(2)}`
+                        `${subtotalWithDeliveryAndTip.toFixed(2).replace('.', ',')} $` : 
+                        `$${subtotalWithDeliveryAndTip.toFixed(2)}`
                       }
                     </span>
                   </div>
@@ -857,27 +879,6 @@ function OrderConfirmationContent() {
                       }
                     </span>
                   </div>
-                  
-                  {/* Tip */}
-                  {sessionData?.tipDetails && tipAmount > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 flex items-center gap-1">
-                        {language === 'fr' ? 'Pourboire' : 'Tip'}
-                        <span className="text-xs text-gray-500">
-                          ({sessionData.tipDetails.type === 'percentage' 
-                            ? `${sessionData.tipDetails.value}%` 
-                            : language === 'fr' ? 'fixe' : 'fixed'
-                          })
-                        </span>
-                      </span>
-                      <span className="font-medium text-gray-900">
-                        {language === 'fr' ? 
-                          `${tipAmount.toFixed(2).replace('.', ',')} $` : 
-                          `$${tipAmount.toFixed(2)}`
-                        }
-                      </span>
-                    </div>
-                  )}
                 </div>
                 
                 <div className="border-t border-gray-200 pt-3 mt-3">

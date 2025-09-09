@@ -510,13 +510,14 @@ async function createOrder(orderData, branchId) {
     itemsSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     discountAmount = 0;
     deliveryFee = 0;
-    
-    // Calculate Quebec tax structure properly
-    const subtotalWithDelivery = itemsSubtotal - discountAmount + deliveryFee;
-    gstAmount = subtotalWithDelivery * 0.05; // 5% GST
-    qstAmount = subtotalWithDelivery * 0.09975; // 9.975% QST
     tipAmount = 0;
-    finalTotal = subtotalWithDelivery + gstAmount + qstAmount + tipAmount;
+    
+    // ✅ NEW CANADA TAX RULES: Calculate Quebec tax structure with tip before taxes
+    const subtotalWithDelivery = itemsSubtotal - discountAmount + deliveryFee;
+    const subtotalWithDeliveryAndTip = subtotalWithDelivery + tipAmount;
+    gstAmount = subtotalWithDeliveryAndTip * 0.05; // 5% GST on subtotal + tip
+    qstAmount = subtotalWithDeliveryAndTip * 0.09975; // 9.975% QST on subtotal + tip
+    finalTotal = subtotalWithDeliveryAndTip + gstAmount + qstAmount;
   }
   
   // Legacy compatibility values

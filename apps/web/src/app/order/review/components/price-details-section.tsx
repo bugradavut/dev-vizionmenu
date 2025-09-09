@@ -58,18 +58,19 @@ export function PriceDetailsSection({
   const applicableDeliveryFee = selectedOrderType === 'delivery' ? deliveryFee : 0
   const subtotalWithDelivery = subtotalAfterDiscount + applicableDeliveryFee
   
+  // ✅ NEW CANADA TAX RULES: Tip is now calculated BEFORE taxes and IS taxable
   // Quebec taxes: GST (5%) + QST (9.975%) = ~15%
   // GST = Goods and Services Tax (Federal tax - 5%)
   // QST = Quebec Sales Tax (Provincial tax - 9.975%)
-  // Taxes are calculated on food + delivery fee only (tip is NOT taxable in Canada)
+  const tipAmount = selectedTip?.amount || 0
+  const subtotalWithDeliveryAndTip = subtotalWithDelivery + tipAmount
+  
   const gstRate = 0.05
   const qstRate = 0.09975
-  const gst = subtotalWithDelivery * gstRate
-  const qst = subtotalWithDelivery * qstRate
+  const gst = subtotalWithDeliveryAndTip * gstRate
+  const qst = subtotalWithDeliveryAndTip * qstRate
   
-  // Add tip amount AFTER taxes (tip is not taxable)
-  const tipAmount = selectedTip?.amount || 0
-  const finalTotal = subtotalWithDelivery + gst + qst + tipAmount
+  const finalTotal = subtotalWithDeliveryAndTip + gst + qst
 
   return (
     <div className="bg-card rounded-lg border border-border p-6">
@@ -100,6 +101,24 @@ export function PriceDetailsSection({
           </div>
         )}
         
+        {/* ✅ NEW: Tip shown AFTER items but BEFORE subtotal (new Canada tax rules) */}
+        {selectedTip && tipAmount > 0 && (
+          <div className="flex justify-between items-center">
+            <span className="text-foreground flex items-center gap-1">
+              {language === 'fr' ? 'Pourboire' : 'Tip'}
+              <span className="text-xs text-muted-foreground">
+                ({selectedTip.type === 'percentage' 
+                  ? `${selectedTip.value}%` 
+                  : language === 'fr' ? 'fixe' : 'fixed'
+                })
+              </span>
+            </span>
+            <span className="text-foreground">
+              {language === 'fr' ? `${tipAmount.toFixed(2)} $` : `$${tipAmount.toFixed(2)}`}
+            </span>
+          </div>
+        )}
+        
         {/* Delivery Fee */}
         {selectedOrderType === 'delivery' && applicableDeliveryFee > 0 && (
           <div className="flex justify-between items-center">
@@ -117,7 +136,7 @@ export function PriceDetailsSection({
           <div className="flex justify-between items-center mb-2">
             <span className="text-muted-foreground">Subtotal</span>
             <span className="text-foreground">
-              {language === 'fr' ? `${subtotalWithDelivery.toFixed(2)} $` : `$${subtotalWithDelivery.toFixed(2)}`}
+              {language === 'fr' ? `${subtotalWithDeliveryAndTip.toFixed(2)} $` : `$${subtotalWithDeliveryAndTip.toFixed(2)}`}
             </span>
           </div>
           
@@ -134,24 +153,6 @@ export function PriceDetailsSection({
               {language === 'fr' ? `${qst.toFixed(2)} $` : `$${qst.toFixed(2)}`}
             </span>
           </div>
-          
-          {/* Tip - shown after taxes as it's not taxable */}
-          {selectedTip && tipAmount > 0 && (
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-muted-foreground flex items-center gap-1">
-                {language === 'fr' ? 'Pourboire' : 'Tip'}
-                <span className="text-xs text-muted-foreground">
-                  ({selectedTip.type === 'percentage' 
-                    ? `${selectedTip.value}%` 
-                    : language === 'fr' ? 'fixe' : 'fixed'
-                  })
-                </span>
-              </span>
-              <span className="text-foreground">
-                {language === 'fr' ? `${tipAmount.toFixed(2)} $` : `$${tipAmount.toFixed(2)}`}
-              </span>
-            </div>
-          )}
         </div>
         
         <div className="border-t border-border pt-3">

@@ -846,6 +846,22 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                             </div>
                           )}
                           
+                          {/* ✅ NEW: Tip shown AFTER items but BEFORE delivery fees (new Canada tax rules) */}
+                          {order.tipDetails && (order.pricing.tipAmount || 0) > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span className="flex items-center gap-1">
+                                {language === 'fr' ? 'Pourboire' : 'Tip'}
+                                <span className="text-xs text-gray-500">
+                                  ({order.tipDetails.type === 'percentage' 
+                                    ? `${order.tipDetails.value}%` 
+                                    : language === 'fr' ? 'fixe' : 'fixed'
+                                  })
+                                </span>
+                              </span>
+                              <span>${(order.pricing.tipAmount || 0).toFixed(2)}</span>
+                            </div>
+                          )}
+                          
                           {/* Delivery Fee */}
                           {order.pricing.delivery_fee > 0 && (
                             <div className="flex justify-between text-sm">
@@ -862,10 +878,10 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                             </div>
                           )}
                           
-                          {/* Subtotal (calculated: items - discount + delivery + service fees) */}
+                          {/* Subtotal (calculated: items - discount + delivery + service fees + tip) - NEW TAX RULES */}
                           <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
                             <span>{t.orderDetail.subtotal}</span>
-                            <span>${((order.pricing.itemsTotal || 0) - (order.pricing.discountAmount || 0) + (order.pricing.delivery_fee || 0) + (order.pricing.service_fee || 0)).toFixed(2)}</span>
+                            <span>${((order.pricing.itemsTotal || 0) - (order.pricing.discountAmount || 0) + (order.pricing.delivery_fee || 0) + (order.pricing.service_fee || 0) + (order.pricing.tipAmount || 0)).toFixed(2)}</span>
                           </div>
                         </>
                       ) : (
@@ -894,22 +910,6 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         <div className="flex justify-between text-sm">
                           <span>{t.orderDetail.tax}</span>
                           <span>${order.pricing.tax_amount.toFixed(2)}</span>
-                        </div>
-                      )}
-                      
-                      {/* Tip */}
-                      {order.tipDetails && (order.pricing.tipAmount || 0) > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="flex items-center gap-1">
-                            {language === 'fr' ? 'Pourboire' : 'Tip'}
-                            <span className="text-xs text-gray-500">
-                              ({order.tipDetails.type === 'percentage' 
-                                ? `${order.tipDetails.value}%` 
-                                : language === 'fr' ? 'fixe' : 'fixed'
-                              })
-                            </span>
-                          </span>
-                          <span>${(order.pricing.tipAmount || 0).toFixed(2)}</span>
                         </div>
                       )}
                       
