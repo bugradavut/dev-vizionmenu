@@ -32,12 +32,25 @@ export interface OrderSubmissionResponse {
     taxAmount: number;
     total: number;
   };
+  branch?: {
+    id: string;
+    name: string;
+    address: string;
+  };
 }
 
 export interface OrderSubmissionError {
   code: string;
   message: string;
   field?: string;
+}
+
+export interface BranchInfo {
+  id: string;
+  name: string;
+  address: string;
+  phone?: string;
+  email?: string;
 }
 
 export class OrderSubmissionService {
@@ -122,6 +135,40 @@ export class OrderSubmissionService {
           error: {
             code: result.error?.code || 'API_ERROR',
             message: result.error?.message || 'Failed to get order status'
+          }
+        };
+      }
+
+      return {
+        success: true,
+        data: result.data
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error instanceof Error ? error.message : 'Network error occurred'
+        }
+      };
+    }
+  }
+
+  /**
+   * Get branch information by ID
+   */
+  async getBranchInfo(branchId: string): Promise<{ success: true; data: BranchInfo } | { success: false; error: OrderSubmissionError }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/customer/branch/${branchId}/info`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: {
+            code: result.error?.code || 'API_ERROR',
+            message: result.error?.message || 'Failed to get branch information'
           }
         };
       }

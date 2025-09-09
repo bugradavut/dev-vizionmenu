@@ -224,9 +224,48 @@ async function getBranchDeliveryFee(branchId) {
   }
 }
 
+/**
+ * Get branch information (public endpoint for customer orders)
+ * @param {string} branchId - The branch ID
+ * @returns {Promise<Object>} Branch information with id, name, address
+ */
+async function getBranchInfo(branchId) {
+  if (!branchId) {
+    throw new Error('Branch ID is required');
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('branches')
+      .select('id, name, address, phone, email')
+      .eq('id', branchId)
+      .single();
+
+    if (error) {
+      throw new Error(`Database error: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error('Branch not found');
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      address: data.address || 'Address not available',
+      phone: data.phone || null,
+      email: data.email || null,
+    };
+  } catch (error) {
+    console.error('Error getting branch info:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getBranchSettings,
   updateBranchSettings,
   getBranchMinimumOrder,
   getBranchDeliveryFee,
+  getBranchInfo,
 };

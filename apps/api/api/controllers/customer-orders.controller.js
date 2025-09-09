@@ -261,6 +261,23 @@ const getOrderStatus = async (req, res) => {
       estimatedTime = orderType === 'delivery' ? '35 minutes' : '20 minutes';
     }
 
+    // Get branch information for display
+    let branchInfo = null;
+    try {
+      if (order.branch_id) {
+        const branch = await branchesService.getBranchById(order.branch_id);
+        if (branch) {
+          branchInfo = {
+            id: branch.id,
+            name: branch.name,
+            address: branch.address || 'Address not available'
+          };
+        }
+      }
+    } catch (branchError) {
+      console.warn('Failed to load branch info for order:', branchError.message);
+    }
+
     // Return public information including order items for confirmation page
     res.json({ 
       data: {
@@ -289,7 +306,8 @@ const getOrderStatus = async (req, res) => {
           subtotal: parseFloat(order.subtotal || 0),
           taxAmount: parseFloat(order.tax_amount || 0),
           total: parseFloat(order.total_amount || 0)
-        }
+        },
+        branch: branchInfo
       }
     });
     

@@ -247,6 +247,26 @@ async function updateBranchSettings(branchId, settingsData, userId) {
 }
 
 /**
+ * Get branch by ID (basic info only)
+ * @param {string} branchId - Branch ID
+ * @returns {Object} Branch basic info
+ */
+async function getBranchById(branchId) {
+  const { data: branchData, error: branchError } = await supabase
+    .from('branches')
+    .select('id, name, address, phone, email')
+    .eq('id', branchId)
+    .eq('is_active', true)
+    .single();
+
+  if (branchError || !branchData) {
+    throw new Error('Branch not found');
+  }
+
+  return branchData;
+}
+
+/**
  * Get all branches belonging to a specific chain
  * Used for hierarchical user management
  * @param {string} chainId - Chain ID
@@ -318,5 +338,6 @@ async function getBranchesByChain(chainId, currentUserId) {
 module.exports = {
   getBranchSettings,
   updateBranchSettings,
+  getBranchById,
   getBranchesByChain
 };

@@ -21,6 +21,11 @@ interface OrderDetails {
     total: number;
   };
   items?: OrderItem[];
+  branch?: {
+    id: string;
+    name: string;
+    address: string;
+  };
 }
 
 interface OrderItem {
@@ -481,6 +486,27 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                     )}
                   </span>
                 </div>
+                
+                {/* Branch Information */}
+                {orderDetails?.branch && (
+                  <>
+                    <div className="flex items-center py-2">
+                      <span className="text-gray-500 text-sm">{t.orderTracking.branchName}</span>
+                      <div className="flex-1 border-b border-dotted border-gray-300 mx-3"></div>
+                      <span className="font-medium text-gray-900 bg-gray-50 border border-gray-200 px-3 py-1 rounded-lg">
+                        {orderDetails.branch.name}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center py-2">
+                      <span className="text-gray-500 text-sm">{t.orderTracking.branchAddress}</span>
+                      <div className="flex-1 border-b border-dotted border-gray-300 mx-3"></div>
+                      <span className="font-medium text-gray-900 bg-gray-50 border border-gray-200 px-3 py-1 rounded-lg text-xs">
+                        {orderDetails.branch.address}
+                      </span>
+                    </div>
+                  </>
+                )}
                 
                 <div className="flex items-center py-2">
                   <span className="text-gray-500 text-sm">{language === 'fr' ? 'Heure' : 'Time'}</span>

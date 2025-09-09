@@ -145,9 +145,35 @@ const getBranchDeliveryFee = async (req, res) => {
   }
 };
 
+/**
+ * Get branch information (public endpoint)
+ * GET /api/v1/customer/branch/:branchId/info
+ */
+const getBranchInfo = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+
+    if (!branchId) {
+      return res.status(400).json({
+        error: {
+          code: 'MISSING_BRANCH_ID',
+          message: 'Branch ID is required',
+        },
+      });
+    }
+
+    const branchInfo = await branchSettingsService.getBranchInfo(branchId);
+    
+    res.json({ data: branchInfo });
+  } catch (error) {
+    handleControllerError(error, 'get branch info', res);
+  }
+};
+
 module.exports = {
   getBranchSettings,
   updateBranchSettings,
   getBranchMinimumOrder,
   getBranchDeliveryFee,
+  getBranchInfo,
 };

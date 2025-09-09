@@ -18,4 +18,9 @@ router.get('/branch/:branchId/delivery-fee',
   branchSettingsController.getBranchDeliveryFee
 );
 
+// Get branch information (public)
+router.get('/branch/:branchId/info', 
+  branchSettingsController.getBranchInfo
+);
+
 module.exports = router;

@@ -726,7 +726,9 @@ export const translations = {
       contactTitle: "Need Help?",
       callRestaurant: "Call Restaurant",
       callForUpdates: "For order updates and questions",
-      refresh: "Refresh Status"
+      refresh: "Refresh Status",
+      branchName: "Restaurant",
+      branchAddress: "Address"
     },
     
     // Customer Order Page
@@ -1745,7 +1747,9 @@ export const translations = {
       contactTitle: "Besoin d'aide?",
       callRestaurant: "Appeler le restaurant",
       callForUpdates: "Pour les mises à jour et questions",
-      refresh: "Actualiser le statut"
+      refresh: "Actualiser le statut",
+      branchName: "Restaurant",
+      branchAddress: "Adresse"
     },
     
     // Customer Order Page - Canadian French

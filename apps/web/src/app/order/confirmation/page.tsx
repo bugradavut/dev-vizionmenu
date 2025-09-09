@@ -6,7 +6,7 @@ import { orderService } from '@/services/order-service';
 import { useLanguage } from '@/contexts/language-context';
 import { translations } from '@/lib/translations';
 import { useCart } from '../contexts/cart-context';
-import { Check, Package, CheckCircle2, RefreshCw, TicketPercent } from 'lucide-react';
+import { Check, Package, CheckCircle2, RefreshCw, TicketPercent, MapPin } from 'lucide-react';
 
 interface OrderDetails {
   orderId: string;
@@ -21,6 +21,11 @@ interface OrderDetails {
     total: number;
   };
   items?: OrderItem[];
+  branch?: {
+    id: string;
+    name: string;
+    address: string;
+  };
 }
 
 interface OrderItem {
@@ -553,6 +558,30 @@ function OrderConfirmationContent() {
                     )}
                   </span>
                 </div>
+                
+                {/* Branch Information */}
+                {orderDetails?.branch && (
+                  <>
+                    <div className="flex items-center py-2">
+                      <span className="text-gray-500 text-sm">{t.orderTracking.branchName}</span>
+                      <div className="flex-1 border-b border-dotted border-gray-300 mx-3"></div>
+                      <span className="font-medium text-gray-900 bg-gray-50 border border-gray-200 px-3 py-1 rounded-lg">
+                        {orderDetails.branch.name}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-start py-2">
+                      <span className="text-gray-500 text-sm mt-1">{t.orderTracking.branchAddress}</span>
+                      <div className="flex-1 border-b border-dotted border-gray-300 mx-3 mt-3"></div>
+                      <div className="flex items-start gap-2 max-w-xs">
+                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <span className="text-xs text-gray-600 leading-relaxed">
+                          {orderDetails.branch.address}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
                 
                 <div className="flex items-center py-2">
                   <span className="text-gray-500 text-sm">{language === 'fr' ? 'Heure' : 'Time'}</span>
