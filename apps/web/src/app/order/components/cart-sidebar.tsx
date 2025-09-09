@@ -126,11 +126,33 @@ export function CartSidebar() {
     if (zone) searchParams.set('zone', zone)
     searchParams.set('orderType', selectedOrderType)
     
-    // UPDATED: Use chainSlug in URL path
-    const reviewUrl = chainSlug 
-      ? `/order/${chainSlug}/review?${searchParams.toString()}`
-      : `/order/review?${searchParams.toString()}` // Fallback for backward compatibility
+    // Find chainSlug - first try from context, then from localStorage
+    let effectiveChainSlug = chainSlug
     
+    if (!effectiveChainSlug && branchId) {
+      // Try to find chainSlug from localStorage branch selections
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && key.startsWith('selected-branch-')) {
+            const branchData = JSON.parse(localStorage.getItem(key) || '{}')
+            if (branchData.id === branchId) {
+              effectiveChainSlug = key.replace('selected-branch-', '')
+              break
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error finding chain slug:', error)
+      }
+    }
+    
+    // Navigate with chainSlug (required for new architecture)
+    if (!effectiveChainSlug) {
+      throw new Error('Chain slug is required for review page')
+    }
+    
+    const reviewUrl = `/order/${effectiveChainSlug}/review?${searchParams.toString()}`
     router.push(reviewUrl)
     
     // Reset loading state after navigation

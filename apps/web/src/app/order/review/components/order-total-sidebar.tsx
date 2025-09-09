@@ -261,10 +261,11 @@ export function OrderTotalSidebar({
           sessionStorage.setItem('vizion-order-confirmation', JSON.stringify(confirmationData));
         }
         
-        // UPDATED: Navigate to confirmation page with chainSlug
-        const confirmationUrl = orderContext.chainSlug 
-          ? `/order/${orderContext.chainSlug}/confirmation?orderId=${result.data.orderId}`
-          : `/order/confirmation?orderId=${result.data.orderId}` // Fallback for backward compatibility
+        // Navigate to confirmation page with chainSlug (required)
+        if (!orderContext.chainSlug) {
+          throw new Error('Chain slug is required for confirmation page');
+        }
+        const confirmationUrl = `/order/${orderContext.chainSlug}/confirmation?orderId=${result.data.orderId}`
         
         router.push(confirmationUrl)
       } else {
