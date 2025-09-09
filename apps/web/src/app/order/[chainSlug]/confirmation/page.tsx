@@ -501,7 +501,7 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                     <div className="flex items-center py-2">
                       <span className="text-gray-500 text-sm">{t.orderTracking.branchAddress}</span>
                       <div className="flex-1 border-b border-dotted border-gray-300 mx-3"></div>
-                      <span className="font-medium text-gray-900 bg-gray-50 border border-gray-200 px-3 py-1 rounded-lg text-xs">
+                      <span className="font-medium text-gray-900 bg-gray-50 border border-gray-200 px-3 py-1 rounded-lg text-xs max-w-xs break-words text-right">
                         {orderDetails.branch.address}
                       </span>
                     </div>
