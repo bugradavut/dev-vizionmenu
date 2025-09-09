@@ -67,14 +67,10 @@ class CommissionService {
    */
   async getDefaultRates(): Promise<DefaultCommissionRate[]> {
     try {
-      console.log('🔄 Fetching default commission rates...');
       const response = await apiClient.get('/api/v1/commission/defaults');
-      
-      console.log('✅ Default rates response:', response);
       return (response.data as { rates?: DefaultCommissionRate[] }).rates || [];
-      
     } catch (error) {
-      console.error('❌ Error fetching default rates:', error);
+      console.error('Error fetching default rates:', error);
       throw new Error('Failed to fetch default commission rates');
     }
   }
@@ -84,16 +80,12 @@ class CommissionService {
    */
   async updateDefaultRate(sourceType: string, rate: number): Promise<DefaultCommissionRate> {
     try {
-      console.log(`🔄 Updating default rate for ${sourceType} to ${rate}%`);
       const response = await apiClient.put(`/api/v1/commission/defaults/${sourceType}`, {
         rate: rate
       });
-      
-      console.log('✅ Default rate updated:', response);
       return (response.data as { rate: DefaultCommissionRate }).rate;
-      
     } catch (error) {
-      console.error('❌ Error updating default rate:', error);
+      console.error('Error updating default rate:', error);
       throw new Error(`Failed to update default rate for ${sourceType}`);
     }
   }
@@ -103,18 +95,14 @@ class CommissionService {
    */
   async getChainSettings(chainId: string): Promise<ChainCommissionSettings> {
     try {
-      console.log(`🔄 Fetching commission settings for chain: ${chainId}`);
       const response = await apiClient.get(`/api/v1/commission/settings/${chainId}`);
-      
-      console.log('✅ Chain settings response:', response);
       const responseData = response.data as { chainId: string; settings?: CommissionRate[] };
       return {
         chainId: responseData.chainId,
         settings: responseData.settings || []
       };
-      
     } catch (error) {
-      console.error('❌ Error fetching chain settings:', error);
+      console.error('Error fetching chain settings:', error);
       throw new Error(`Failed to fetch commission settings for chain ${chainId}`);
     }
   }
@@ -124,16 +112,12 @@ class CommissionService {
    */
   async setChainRate(chainId: string, sourceType: string, rate: number): Promise<CommissionRate> {
     try {
-      console.log(`🔄 Setting chain rate for ${chainId}/${sourceType} to ${rate}%`);
       const response = await apiClient.put(`/api/v1/commission/settings/${chainId}/${sourceType}`, {
         rate: rate
       });
-      
-      console.log('✅ Chain rate updated:', response);
       return (response.data as { setting: CommissionRate }).setting;
-      
     } catch (error) {
-      console.error('❌ Error setting chain rate:', error);
+      console.error('Error setting chain rate:', error);
       throw new Error(`Failed to set commission rate for ${sourceType}`);
     }
   }
@@ -143,13 +127,9 @@ class CommissionService {
    */
   async removeChainOverride(chainId: string, sourceType: string): Promise<void> {
     try {
-      console.log(`🔄 Removing chain override for ${chainId}/${sourceType}`);
-      const response = await apiClient.delete(`/api/v1/commission/settings/${chainId}/${sourceType}`);
-      
-      console.log('✅ Chain override removed:', response);
-      
+      await apiClient.delete(`/api/v1/commission/settings/${chainId}/${sourceType}`);
     } catch (error) {
-      console.error('❌ Error removing chain override:', error);
+      console.error('Error removing chain override:', error);
       throw new Error(`Failed to remove override for ${sourceType}`);
     }
   }
@@ -159,16 +139,12 @@ class CommissionService {
    */
   async bulkUpdateChainRates(chainId: string, rates: BulkUpdateRequest['rates']): Promise<BulkUpdateResponse> {
     try {
-      console.log(`🔄 Bulk updating rates for chain: ${chainId}`, rates);
       const response = await apiClient.post(`/api/v1/commission/settings/${chainId}/bulk`, {
         rates: rates
       });
-      
-      console.log('✅ Bulk update response:', response);
       return response.data as BulkUpdateResponse;
-      
     } catch (error) {
-      console.error('❌ Error bulk updating chain rates:', error);
+      console.error('Error bulk updating chain rates:', error);
       throw new Error('Failed to bulk update commission rates');
     }
   }
@@ -178,20 +154,16 @@ class CommissionService {
    */
   async getCommissionSummary(dateRange: '7d' | '30d' | '90d' = '7d'): Promise<CommissionSummary> {
     try {
-      console.log(`🔄 Fetching commission summary for ${dateRange}`);
       const response = await apiClient.get(`/api/v1/commission/summary`, {
         dateRange: dateRange
       });
-      
-      console.log('✅ Commission summary response:', response);
       const responseData = response.data as { dateRange: string; summary?: CommissionSummaryItem[] };
       return {
         dateRange: responseData.dateRange,
         summary: responseData.summary || []
       };
-      
     } catch (error) {
-      console.error('❌ Error fetching commission summary:', error);
+      console.error('Error fetching commission summary:', error);
       throw new Error('Failed to fetch commission summary');
     }
   }
@@ -201,18 +173,14 @@ class CommissionService {
    */
   async getBranchSettings(branchId: string): Promise<ChainCommissionSettings> {
     try {
-      console.log(`🔄 Fetching commission settings for branch: ${branchId}`);
       const response = await apiClient.get(`/api/v1/commission/branch-settings/${branchId}`);
-      
-      console.log('✅ Branch settings response:', response);
       const responseData = response.data as { branchId: string; settings?: CommissionRate[] };
       return {
         chainId: branchId, // Using chainId field for consistency, but it's actually branchId
         settings: responseData.settings || []
       };
-      
     } catch (error) {
-      console.error('❌ Error fetching branch settings:', error);
+      console.error('Error fetching branch settings:', error);
       throw new Error(`Failed to fetch commission settings for branch ${branchId}`);
     }
   }
@@ -222,16 +190,12 @@ class CommissionService {
    */
   async setBranchRate(branchId: string, sourceType: string, rate: number): Promise<CommissionRate> {
     try {
-      console.log(`🔄 Setting branch rate for ${branchId}/${sourceType} to ${rate}%`);
       const response = await apiClient.put(`/api/v1/commission/branch-settings/${branchId}/${sourceType}`, {
         rate: rate
       });
-      
-      console.log('✅ Branch rate updated:', response);
       return (response.data as { setting: CommissionRate }).setting;
-      
     } catch (error) {
-      console.error('❌ Error setting branch rate:', error);
+      console.error('Error setting branch rate:', error);
       throw new Error(`Failed to set commission rate for ${sourceType}`);
     }
   }
@@ -241,13 +205,9 @@ class CommissionService {
    */
   async removeBranchOverride(branchId: string, sourceType: string): Promise<void> {
     try {
-      console.log(`🔄 Removing branch override for ${branchId}/${sourceType}`);
-      const response = await apiClient.delete(`/api/v1/commission/branch-settings/${branchId}/${sourceType}`);
-      
-      console.log('✅ Branch override removed:', response);
-      
+      await apiClient.delete(`/api/v1/commission/branch-settings/${branchId}/${sourceType}`);
     } catch (error) {
-      console.error('❌ Error removing branch override:', error);
+      console.error('Error removing branch override:', error);
       throw new Error(`Failed to remove override for ${sourceType}`);
     }
   }
@@ -257,35 +217,16 @@ class CommissionService {
    */
   async bulkUpdateBranchRates(branchId: string, rates: BulkUpdateRequest['rates']): Promise<BulkUpdateResponse> {
     try {
-      console.log(`🔄 Bulk updating rates for branch: ${branchId}`, rates);
       const response = await apiClient.post(`/api/v1/commission/branch-settings/${branchId}/bulk`, {
         rates: rates
       });
-      
-      console.log('✅ Bulk update response:', response);
       return response.data as BulkUpdateResponse;
-      
     } catch (error) {
-      console.error('❌ Error bulk updating branch rates:', error);
+      console.error('Error bulk updating branch rates:', error);
       throw new Error('Failed to bulk update commission rates');
     }
   }
 
-  /**
-   * Reset all branch-specific rates to chain defaults
-   */
-  async resetBranchRates(branchId: string): Promise<void> {
-    try {
-      console.log(`🔄 Resetting all branch rates for: ${branchId}`);
-      const response = await apiClient.post(`/api/v1/commission/branch-settings/${branchId}/reset`);
-      
-      console.log('✅ Branch rates reset:', response);
-      
-    } catch (error) {
-      console.error('❌ Error resetting branch rates:', error);
-      throw new Error('Failed to reset branch commission rates');
-    }
-  }
 }
 
 // Export singleton instance

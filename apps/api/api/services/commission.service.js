@@ -311,12 +311,12 @@ const commissionService = {
         return {
           source_type: defaultRate.source_type,
           default_rate: parseFloat(defaultRate.default_rate),
-          chain_rate: chainOverride ? parseFloat(chainOverride.effective_rate || chainOverride.commission_rate) : null,
+          chain_rate: chainOverride ? parseFloat(chainOverride.commission_rate) : null,
           branch_rate: branchOverride ? parseFloat(branchOverride.commission_rate) : null,
           effective_rate: branchOverride 
             ? parseFloat(branchOverride.commission_rate)
             : chainOverride 
-              ? parseFloat(chainOverride.effective_rate || chainOverride.commission_rate)
+              ? parseFloat(chainOverride.commission_rate)
               : parseFloat(defaultRate.default_rate),
           has_override: !!branchOverride,
           is_active: branchOverride ? branchOverride.is_active : true
@@ -454,6 +454,15 @@ const commissionService = {
     try {
       console.log(`🔄 Resetting all branch rates for: ${branchId}`);
       
+      // First check what exists
+      const { data: existing, error: selectError } = await supabase
+        .from('commission_settings')
+        .select('*')
+        .eq('branch_id', branchId);
+      
+      if (selectError) throw new Error(`Failed to query existing rates: ${selectError.message}`);
+      console.log(`Found ${existing?.length || 0} existing branch rates:`, existing);
+      
       const { data, error } = await supabase
         .from('commission_settings')
         .delete()
@@ -462,7 +471,7 @@ const commissionService = {
       
       if (error) throw new Error(`Failed to reset branch rates: ${error.message}`);
       
-      console.log('✅ Branch rates reset successfully');
+      console.log('✅ Branch rates reset successfully. Deleted:', data);
       return data;
       
     } catch (error) {

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { 
@@ -19,7 +19,6 @@ import {
   QrCode,
   Smartphone,
   AlertCircle,
-  RotateCcw,
   Save
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/language-context'
@@ -70,10 +69,25 @@ export const BranchSettingsTab: React.FC<BranchSettingsTabProps> = ({
   const [branches, setBranches] = useState<Branch[]>([])
   const [selectedBranchId, setSelectedBranchId] = useState<string>('')
   const [branchRates, setBranchRates] = useState<CommissionRate[]>([])
+  const [originalRates, setOriginalRates] = useState<CommissionRate[]>([]) // Track original state for rollback
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [hasChanges, setHasChanges] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Computed state for changes detection
+  const hasChanges = useMemo(() => {
+    if (originalRates.length === 0 || branchRates.length === 0) return false
+    
+    return branchRates.some(current => {
+      const original = originalRates.find(orig => orig.source_type === current.source_type)
+      if (!original) return current.has_override
+      
+      return (
+        current.has_override !== original.has_override ||
+        current.branch_rate !== original.branch_rate
+      )
+    })
+  }, [branchRates, originalRates])
 
   // Load branches for the current chain on mount
   useEffect(() => {
@@ -111,8 +125,12 @@ export const BranchSettingsTab: React.FC<BranchSettingsTabProps> = ({
 
       // Load branch-specific commission settings
       const branchData = await commissionService.getBranchSettings(branchId)
-      setBranchRates(branchData.settings || [])
-      setHasChanges(false)
+      const rates = branchData.settings || []
+      
+      
+      // Set both current and original state for change tracking
+      setBranchRates(rates)
+      setOriginalRates(JSON.parse(JSON.stringify(rates))) // Deep clone
     } catch (error) {
       console.error('Failed to load commission rates:', error)
       setError('Failed to load commission settings')
@@ -129,6 +147,7 @@ export const BranchSettingsTab: React.FC<BranchSettingsTabProps> = ({
       }))
       
       setBranchRates(mockRates)
+      setOriginalRates(JSON.parse(JSON.stringify(mockRates)))
     } finally {
       setLoading(false)
     }
@@ -181,7 +200,6 @@ export const BranchSettingsTab: React.FC<BranchSettingsTabProps> = ({
       }
     })
     
-    setHasChanges(true)
     setError(null)
   }
 
@@ -205,69 +223,45 @@ export const BranchSettingsTab: React.FC<BranchSettingsTabProps> = ({
     }
   }
 
-  const resetBranchRates = async () => {
-    const confirmReset = confirm(
-      language === 'fr' 
-        ? 'Êtes-vous sûr de vouloir supprimer tous les taux personnalisés de cette succursale?'
-        : 'Are you sure you want to remove all custom rates for this branch?'
-    )
-    if (!confirmReset) return
-    
-    try {
-      setSaving(true)
-      
-      // Reset branch rates using the API
-      await commissionService.resetBranchRates(selectedBranchId)
-      
-      // Reload the commission rates
-      await loadCommissionRates(chain.id, selectedBranchId)
-      setHasChanges(false)
-      
-      const selectedBranch = branches.find(b => b.id === selectedBranchId)
-      toast({
-        title: 'Success',
-        description: language === 'fr' 
-          ? `Taux de la succursale ${selectedBranch?.name} réinitialisés`
-          : `Branch rates reset for ${selectedBranch?.name}`
-      })
-    } catch (error) {
-      console.error('Failed to reset branch rates:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to reset branch rates',
-        variant: 'destructive'
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
 
   const saveBranchRates = async () => {
     if (!selectedBranchId || !hasChanges) return
+    
+    const rollbackState = JSON.parse(JSON.stringify(branchRates)) // Backup current state
     
     try {
       setSaving(true)
       setError(null)
       
-      // Prepare rates for bulk update
-      const ratesToUpdate = branchRates
-        .filter(rate => rate.has_override)
-        .map(rate => ({
-          sourceType: rate.source_type,
-          rate: rate.branch_rate || 0
-        }))
+      // Calculate operations needed
+      const operations: Array<{type: 'add' | 'remove', sourceType: string, rate?: number}> = []
+      
+      branchRates.forEach(current => {
+        const original = originalRates.find(orig => orig.source_type === current.source_type)
+        
+        if (current.has_override && !original?.has_override) {
+          // Adding new override
+          operations.push({type: 'add', sourceType: current.source_type, rate: current.branch_rate || 0})
+        } else if (!current.has_override && original?.has_override) {
+          // Removing existing override
+          operations.push({type: 'remove', sourceType: current.source_type})
+        } else if (current.has_override && original?.has_override && current.branch_rate !== original.branch_rate) {
+          // Updating existing override
+          operations.push({type: 'add', sourceType: current.source_type, rate: current.branch_rate || 0})
+        }
+      })
 
-      if (ratesToUpdate.length > 0) {
-        await commissionService.bulkUpdateBranchRates(selectedBranchId, ratesToUpdate)
+      // Execute operations
+      for (const operation of operations) {
+        if (operation.type === 'add' && operation.rate !== undefined) {
+          await commissionService.setBranchRate(selectedBranchId, operation.sourceType, operation.rate)
+        } else if (operation.type === 'remove') {
+          await commissionService.removeBranchOverride(selectedBranchId, operation.sourceType)
+        }
       }
 
-      // Also handle removing overrides (when has_override is false but rate existed before)
-      const ratesToRemove = branchRates.filter(rate => !rate.has_override && rate.branch_rate !== null)
-      for (const rate of ratesToRemove) {
-        await commissionService.removeBranchOverride(selectedBranchId, rate.source_type)
-      }
-
-      setHasChanges(false)
+      // Reload fresh data to ensure consistency
+      await loadCommissionRates(chain.id, selectedBranchId)
       
       const selectedBranch = branches.find(b => b.id === selectedBranchId)
       toast({
@@ -278,6 +272,10 @@ export const BranchSettingsTab: React.FC<BranchSettingsTabProps> = ({
       })
     } catch (error) {
       console.error('Failed to save branch rates:', error)
+      
+      // Rollback on error
+      setBranchRates(rollbackState)
+      
       setError('Failed to save branch settings')
       toast({
         title: 'Error',
@@ -290,10 +288,8 @@ export const BranchSettingsTab: React.FC<BranchSettingsTabProps> = ({
   }
 
   const clearChanges = () => {
-    if (chain?.id && selectedBranchId) {
-      loadCommissionRates(chain.id, selectedBranchId)
-    }
-    setHasChanges(false)
+    // Rollback to original state
+    setBranchRates(JSON.parse(JSON.stringify(originalRates)))
     setError(null)
   }
 
@@ -331,27 +327,17 @@ export const BranchSettingsTab: React.FC<BranchSettingsTabProps> = ({
             </div>
           ) : (
             <>
-              {/* Header Actions */}
-              <div className="flex items-center justify-between pb-2 border-b border-border">
-                <div>
-                  <h3 className="text-lg font-semibold">
-                    {language === 'fr' ? 'Taux de Commission par Source' : 'Commission Rates by Source'}
-                  </h3>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={resetBranchRates}
-                  disabled={saving}
-                  className="flex items-center gap-2 hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
-                >
-                  {saving ? (
-                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                  ) : (
-                    <RotateCcw className="h-4 w-4" />
-                  )}
-                  {language === 'fr' ? 'Réinitialiser' : 'Reset All'}
-                </Button>
+              {/* Header */}
+              <div className="pb-2 border-b border-border">
+                <h3 className="text-lg font-semibold">
+                  {language === 'fr' ? 'Taux de Commission par Source' : 'Commission Rates by Source'}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {language === 'fr' 
+                    ? 'Configurer les taux personnalisés pour cette succursale'
+                    : 'Configure custom rates for this branch'
+                  }
+                </p>
               </div>
 
               {/* Commission Sources List */}
@@ -473,12 +459,16 @@ export const BranchSettingsTab: React.FC<BranchSettingsTabProps> = ({
               {/* Action Buttons */}
               {hasChanges && (
                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-                  <Button variant="outline" onClick={clearChanges} disabled={saving}>
+                  <Button 
+                    variant="outline" 
+                    onClick={clearChanges} 
+                    disabled={saving || loading}
+                  >
                     {language === 'fr' ? 'Annuler' : 'Cancel'}
                   </Button>
                   <Button 
                     onClick={saveBranchRates} 
-                    disabled={saving}
+                    disabled={saving || loading || !hasChanges}
                     className="flex items-center gap-2"
                   >
                     {saving ? (

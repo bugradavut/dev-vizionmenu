@@ -66,13 +66,10 @@ class ChainsService {
    * Get all chains with filtering
    */
   async getChains(params: GetChainsParams = {}): Promise<GetChainsResponse> {
-    console.log('Making API call to /api/v1/admin/chains with params:', params);
     const response = await apiClient.get('/api/v1/admin/chains', params);
     
-    console.log('Raw API response:', response);
     // Backend returns { data: { chains: [...], total: number } }
     const responseData = response.data as Record<string, unknown>;
-    console.log('Response data:', responseData);
     
     return {
       chains: (responseData.chains as Chain[]) || [],
