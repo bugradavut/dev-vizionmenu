@@ -89,21 +89,38 @@
 
 ---
 
-## 🎯 **NEXT SESSION PRIORITIES**
+## 🎯 **NEXT SESSION PRIORITIES (CRITICAL ORDER)**
 
-### **Immediate (This Session)**
-1. **Order Flow Integration** (2-3 hours)
-   - Update order submission to include commission calculation
-   - Test end-to-end order flow with commission storage
+### **🔴 1. Order Flow Integration (HIGHEST PRIORITY - 2-3 hours)**
+**Why First**: Commission Engine is 95% ready but NOT USED because orders don't calculate commission
+**Critical Issue**: Customer orders saved without commission data = $0 tracking
+**Files to Update**:
+- `apps/web/src/app/order/review/page.tsx` - submitOrder function
+- Add source detection: QR vs Website detection
+- Add commission calculation before order submission
+- Store commission data in orders table
 
-2. **Source Detection Testing** (1 hour)
-   - Manual testing of QR vs Website detection
-   - Verify database records are correct
+### **🟡 2. Order Source Detection Testing (SECOND PRIORITY - 1 hour)**
+**Why Second**: Must verify integration works after implementation
+**Test Scenarios**:
+- QR code order → order_source = 'qr', commission_rate = 1%
+- Website order → order_source = 'website', commission_rate = 3%
+- Commission calculation accuracy test
+- Database records verification
 
-### **Follow-up (Next Session)**
-3. **Commission Reports UI** (4-6 hours)
-   - Build analytics dashboard
-   - Revenue reporting interface
+### **🟢 3. Commission Reports UI (THIRD PRIORITY - 4-6 hours)**
+**Why Third**: Need data from orders before reports make sense
+**Requirements**:
+- New page: `/admin-settings/commission-reports`
+- Revenue analytics by date range
+- Commission breakdown by source type
+- Export functionality (CSV/PDF)
+- Platform admin dashboard integration
+
+### **🔵 4. Stripe Connect Integration (FUTURE - 6-8 hours)**
+**Why Last**: MVP doesn't require automated payouts
+**Status**: Nice to have, not blocking production
+**Components**: Restaurant onboarding, KYC verification, automated commission deduction
 
 ---
 

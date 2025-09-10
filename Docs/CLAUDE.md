@@ -178,13 +178,28 @@ PUT /api/v1/commission/branch-settings/:branchId/:sourceType // Set branch rate
 
 ---
 
-## 🚀 **IMMEDIATE PRIORITIES (This Session)**
+## 🚀 **IMMEDIATE PRIORITIES (Next Session)**
 
-1. **Order Flow Integration**: Add commission calculation to customer order submission
-2. **Source Detection Testing**: Verify QR code vs Website detection works correctly
-3. **Commission Reports**: Build analytics dashboard for platform admin
+### **🔴 CRITICAL: Order Flow Integration (Start Here)**
+**Problem**: Commission Engine 95% ready but NO orders calculate commission = $0 tracking
+**Solution**: Integrate commission calculation into customer order submission flow
+**File**: `apps/web/src/app/order/review/page.tsx` - submitOrder function
+**Tasks**: 
+- Add source detection (QR vs Website)
+- Calculate commission before order submission  
+- Store commission data in orders table
+- Test with real order flow
 
-**Focus**: Complete the commission engine by integrating it with the actual order flow. All infrastructure is ready, just needs final integration.
+### **🟡 PRIORITY 2: Source Detection Testing**
+- Verify QR code orders → order_source = 'qr', 1% commission
+- Verify Website orders → order_source = 'website', 3% commission
+- Check database records for accuracy
+
+### **🟢 PRIORITY 3: Commission Reports UI** 
+- Build `/admin-settings/commission-reports` dashboard
+- Revenue analytics and export functionality
+
+**Focus**: Order Flow Integration is the missing 5% that makes the entire Commission Engine functional.
 
 ---
 
