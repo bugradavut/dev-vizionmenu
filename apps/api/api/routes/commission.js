@@ -9,7 +9,20 @@ const commissionController = require('../controllers/commission.controller');
 const { requireAuth } = require('../middleware/auth.middleware');
 const { requirePlatformAdmin } = require('../middleware/platform-admin.middleware');
 
-// Apply authentication to all commission routes
+// =====================================================
+// PUBLIC COMMISSION CALCULATION (NO AUTH REQUIRED)
+// =====================================================
+
+/**
+ * @route   POST /api/v1/commission/calculate
+ * @desc    Calculate commission for an order (public endpoint for order submission)
+ * @access  Public (no auth required)
+ */
+router.post('/calculate', 
+  commissionController.calculateCommission
+);
+
+// Apply authentication to all other commission routes
 router.use(requireAuth);
 
 // =====================================================

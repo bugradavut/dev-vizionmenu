@@ -227,6 +227,32 @@ class CommissionService {
     }
   }
 
+  /**
+   * Calculate commission for an order
+   */
+  async calculateCommission(orderTotal: number, branchId: string, sourceType: string): Promise<{
+    rate: number;
+    commissionAmount: number;
+    netAmount: number;
+  }> {
+    try {
+      const response = await apiClient.post('/api/v1/commission/calculate', {
+        orderTotal,
+        branchId,
+        sourceType
+      });
+      
+      return response.data as {
+        rate: number;
+        commissionAmount: number;
+        netAmount: number;
+      };
+    } catch (error) {
+      console.error('Error calculating commission:', error);
+      throw new Error(`Failed to calculate commission: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
 }
 
 // Export singleton instance

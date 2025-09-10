@@ -511,6 +511,51 @@ async function resetBranchRates(req, res) {
   }
 }
 
+/**
+ * Calculate commission for an order
+ * POST /api/v1/commission/calculate
+ */
+async function calculateCommission(req, res) {
+  try {
+    const { orderTotal, branchId, sourceType } = req.body;
+    
+    // Validate required fields
+    if (!orderTotal || !branchId || !sourceType) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+        message: 'orderTotal, branchId, and sourceType are required'
+      });
+    }
+    
+    // Validate order total
+    if (orderTotal <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid order total',
+        message: 'Order total must be greater than 0'
+      });
+    }
+    
+    console.log(`📊 Calculating commission for order: ${orderTotal} CAD, branch: ${branchId}, source: ${sourceType}`);
+    
+    const commissionData = await commissionService.calculateCommission(orderTotal, branchId, sourceType);
+    
+    res.json({
+      success: true,
+      data: commissionData
+    });
+    
+  } catch (error) {
+    console.error('❌ Error calculating commission:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to calculate commission',
+      message: error.message
+    });
+  }
+}
+
 module.exports = {
   getDefaultRates,
   updateDefaultRate,
@@ -523,5 +568,6 @@ module.exports = {
   setBranchRate,
   removeBranchOverride,
   bulkUpdateBranchRates,
-  resetBranchRates
+  resetBranchRates,
+  calculateCommission
 };

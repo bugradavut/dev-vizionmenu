@@ -68,6 +68,12 @@ export interface FrontendOrderData {
     type: 'percentage' | 'fixed';
     value: number;
   };
+  commission?: {
+    orderSource: string;
+    commissionRate: number;
+    commissionAmount: number;
+    netAmount: number;
+  };
 }
 
 export interface BackendOrderData {
@@ -121,6 +127,12 @@ export interface BackendOrderData {
     type: 'percentage' | 'fixed';
     value: number;
   };
+  commission?: {
+    orderSource: string;
+    commissionRate: number;
+    commissionAmount: number;
+    netAmount: number;
+  };
 }
 
 /**
@@ -132,7 +144,7 @@ export function mapOrderDataForAPI(
   tableNumber?: number,
   zone?: string
 ): BackendOrderData {
-  const { customerInfo, addressInfo, items, orderType, paymentMethod, subtotal, tax, total, tip, notes, preOrder, pricing, campaign, tipDetails } = frontendData;
+  const { customerInfo, addressInfo, items, orderType, paymentMethod, subtotal, tax, total, tip, notes, preOrder, pricing, campaign, tipDetails, commission } = frontendData;
 
   // Combine order notes (NO delivery address in notes anymore!)
   const combinedNotes = [
@@ -163,7 +175,9 @@ export function mapOrderDataForAPI(
       notes: item.notes || ''
     })),
     orderType,
-    source: tableNumber ? 'qr' : 'web',
+    source: (commission?.orderSource === 'qr' || commission?.orderSource === 'website') 
+      ? (commission.orderSource === 'website' ? 'web' : 'qr')
+      : (tableNumber ? 'qr' : 'web'),
     paymentMethod,
     customerInfo: {
       name: customerInfo.name.trim(),
@@ -212,6 +226,14 @@ export function mapOrderDataForAPI(
       amount: tipDetails.amount,
       type: tipDetails.type,
       value: tipDetails.value
+    } : undefined,
+    
+    // Commission data
+    commission: commission ? {
+      orderSource: commission.orderSource,
+      commissionRate: commission.commissionRate,
+      commissionAmount: commission.commissionAmount,
+      netAmount: commission.netAmount
     } : undefined
   };
 }

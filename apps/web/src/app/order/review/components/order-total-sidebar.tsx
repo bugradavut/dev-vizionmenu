@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useCart } from '../../contexts/cart-context'
 import { translations } from '@/lib/translations'
 import { orderService } from '@/services/order-service'
+import { commissionService } from '@/services/commission.service'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
 
@@ -111,6 +112,14 @@ export function OrderTotalSidebar({
     setIsSubmitting(true)
     
     try {
+      // Calculate commission for this order
+      const sourceType = orderContext.source === 'qr' ? 'qr' : 'website';
+      const commissionData = await commissionService.calculateCommission(
+        orderTotals.finalTotal,
+        orderContext.branchId,
+        sourceType
+      );
+      
       // Prepare order data - ensure we have the latest formData
       const customerInfo = formData?.customerInfo || { name: 'Customer', phone: '0000000000' }
       
@@ -184,7 +193,15 @@ export function OrderTotalSidebar({
           amount: selectedTip.amount,
           type: selectedTip.type,
           value: selectedTip.value
-        } : undefined
+        } : undefined,
+        
+        // Commission data (NEW)
+        commission: {
+          orderSource: sourceType,
+          commissionRate: commissionData.rate,
+          commissionAmount: commissionData.commissionAmount,
+          netAmount: commissionData.netAmount
+        }
       }
       
       // Submit order
