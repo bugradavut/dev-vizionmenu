@@ -472,7 +472,7 @@ async function updateOrderStatus(orderId, updateData, userBranch) {
  * @returns {Object} Created order data
  */
 async function createOrder(orderData, branchId) {
-  const { customer, items, orderType, source, tableNumber, zone, notes, specialInstructions, deliveryAddress, preOrder, pricing, campaign, tip } = orderData;
+  const { customer, items, orderType, source, tableNumber, zone, notes, specialInstructions, deliveryAddress, preOrder, pricing, campaign, tip, commission } = orderData;
   
   // Only allow internal orders for now (third-party will be added in 2 weeks)
   if (!['qr_code', 'web'].includes(source)) {
@@ -625,6 +625,14 @@ async function createOrder(orderData, branchId) {
     scheduled_datetime: scheduledDateTime,
     scheduled_date: scheduledDate,
     scheduled_time: scheduledTime,
+    
+    // Commission fields
+    order_source: commission?.orderSource || null,
+    commission_rate: commission?.commissionRate || 0,
+    commission_amount: commission?.commissionAmount || 0,
+    net_amount: commission?.netAmount || total,
+    commission_status: 'pending',
+    
     created_at: new Date().toISOString()
   };
 

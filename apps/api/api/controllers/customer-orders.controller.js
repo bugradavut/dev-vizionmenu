@@ -60,7 +60,9 @@ const createCustomerOrder = async (req, res) => {
       // NEW: Comprehensive pricing breakdown (Phase 1)
       pricing,
       campaign,
-      tip
+      tip,
+      // Commission data
+      commission
     } = req.body;
     
     // Minimal validation - just ensure basic data exists
@@ -153,6 +155,14 @@ const createCustomerOrder = async (req, res) => {
         amount: tip.amount || 0,
         type: tip.type,
         value: tip.value || 0
+      } : undefined,
+      
+      // Commission data
+      commission: commission ? {
+        orderSource: commission.orderSource,
+        commissionRate: commission.commissionRate,
+        commissionAmount: commission.commissionAmount,
+        netAmount: commission.netAmount
       } : undefined
     };
 
