@@ -152,14 +152,5 @@ router.post('/branch-settings/:branchId/bulk',
   commissionController.bulkUpdateBranchRates
 );
 
-/**
- * @route   DELETE /api/v1/commission/branch-settings/:branchId/reset
- * @desc    Reset all branch-specific rates to chain/default values
- * @access  Platform Admin only
- */
-router.delete('/branch-settings/:branchId/reset', 
-  requirePlatformAdmin, 
-  commissionController.resetBranchRates
-);
 
 module.exports = router;

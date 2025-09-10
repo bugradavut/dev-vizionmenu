@@ -485,33 +485,6 @@ async function bulkUpdateBranchRates(req, res) {
 }
 
 /**
- * Reset branch to chain/default rates
- * DELETE /api/v1/commission/branch-settings/:branchId/reset
- */
-async function resetBranchRates(req, res) {
-  try {
-    const { branchId } = req.params;
-    
-    console.log(`🔄 Resetting all branch rates for: ${branchId}`);
-    
-    await commissionService.resetBranchRates(branchId);
-    
-    res.json({
-      success: true,
-      message: 'All branch-specific rates have been reset to chain/default values'
-    });
-    
-  } catch (error) {
-    console.error('❌ Error resetting branch rates:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to reset branch rates',
-      message: error.message
-    });
-  }
-}
-
-/**
  * Calculate commission for an order
  * POST /api/v1/commission/calculate
  */
@@ -568,6 +541,5 @@ module.exports = {
   setBranchRate,
   removeBranchOverride,
   bulkUpdateBranchRates,
-  resetBranchRates,
   calculateCommission
 };

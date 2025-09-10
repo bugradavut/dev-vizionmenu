@@ -19,7 +19,6 @@ import {
   QrCode,
   Smartphone,
   Save,
-  RotateCcw,
   AlertCircle,
   Percent,
   AlertTriangle,
@@ -82,7 +81,6 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
     hasChanges,
     error,
     updateRate,
-    resetToDefaults: resetRatesHook,
     saveChanges,
     refreshSettings,
     clearChanges
@@ -95,19 +93,6 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
     }
   }, [isOpen, chain, refreshSettings])
 
-  // Enhanced reset with confirmation and modal closure
-  const handleResetToDefaults = async () => {
-    const confirmReset = confirm(
-      language === 'fr' 
-        ? 'Êtes-vous sûr de vouloir réinitialiser tous les taux aux valeurs par défaut?'
-        : 'Are you sure you want to reset all rates to default values?'
-    )
-    if (!confirmReset) return
-    
-    await resetRatesHook()
-    onSave()
-    onClose() // Close modal after reset
-  }
 
   // Enhanced save with callback
   const handleSave = async () => {
@@ -180,7 +165,7 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
               <TabsContent value="chain" className="mt-6">
                 <div className="space-y-6">
                   {/* Header Actions */}
-            <div className="flex items-center justify-between pb-2 border-b border-border">
+            <div className="pb-2 border-b border-border">
               <div>
                 <h3 className="text-lg font-semibold">
                   {language === 'fr' ? 'Taux de Commission par Source' : 'Commission Rates by Source'}
@@ -192,20 +177,6 @@ export const ConfigureCommissionModal: React.FC<ConfigureCommissionModalProps> =
                   }
                 </p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleResetToDefaults}
-                disabled={saving}
-                className="flex items-center gap-2 hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
-              >
-                {saving ? (
-                  <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                ) : (
-                  <RotateCcw className="h-4 w-4" />
-                )}
-                {language === 'fr' ? 'Réinitialiser' : 'Reset All'}
-              </Button>
             </div>
 
             {/* Commission Sources List */}

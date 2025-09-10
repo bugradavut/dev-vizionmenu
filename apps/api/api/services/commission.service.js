@@ -29,7 +29,29 @@ const commissionService = {
         return parseFloat(branchRate.commission_rate);
       }
       
-      // 2. Fallback to default rate
+      // 2. Check chain-level rates (get branch's chain first)
+      const { data: branch, error: branchLookupError } = await supabase
+        .from('branches')
+        .select('chain_id')
+        .eq('id', branchId)
+        .single();
+      
+      if (branch && !branchLookupError) {
+        const { data: chainRate, error: chainError } = await supabase
+          .from('commission_settings')
+          .select('commission_rate')
+          .eq('chain_id', branch.chain_id)
+          .eq('source_type', sourceType)
+          .eq('is_active', true)
+          .is('branch_id', null)
+          .single();
+        
+        if (chainRate && !chainError) {
+          return parseFloat(chainRate.commission_rate);
+        }
+      }
+      
+      // 3. Fallback to default rate
       const { data: defaultRate, error: defaultError } = await supabase
         .from('default_commission_rates')
         .select('default_rate')
@@ -40,7 +62,7 @@ const commissionService = {
         return parseFloat(defaultRate.default_rate);
       }
       
-      // 3. Final fallback based on source type
+      // 4. Final fallback based on source type
       const defaultRates = {
         website: 3.0,     // Standard commission for web orders
         qr: 1.0,          // Reduced commission for in-restaurant QR orders
@@ -445,37 +467,6 @@ const commissionService = {
       
     } catch (error) {
       console.error('Error bulk updating branch rates:', error);
-      throw error;
-    }
-  },
-
-  // Reset branch to chain/default rates
-  async resetBranchRates(branchId) {
-    try {
-      console.log(`🔄 Resetting all branch rates for: ${branchId}`);
-      
-      // First check what exists
-      const { data: existing, error: selectError } = await supabase
-        .from('commission_settings')
-        .select('*')
-        .eq('branch_id', branchId);
-      
-      if (selectError) throw new Error(`Failed to query existing rates: ${selectError.message}`);
-      console.log(`Found ${existing?.length || 0} existing branch rates:`, existing);
-      
-      const { data, error } = await supabase
-        .from('commission_settings')
-        .delete()
-        .eq('branch_id', branchId)
-        .select();
-      
-      if (error) throw new Error(`Failed to reset branch rates: ${error.message}`);
-      
-      console.log('✅ Branch rates reset successfully. Deleted:', data);
-      return data;
-      
-    } catch (error) {
-      console.error('Error resetting branch rates:', error);
       throw error;
     }
   }
