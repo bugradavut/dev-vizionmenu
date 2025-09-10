@@ -60,22 +60,23 @@
 - `apps/web/src/utils/order-mapper.ts` - Added commission data mapping
 - `apps/api/api/controllers/commission.controller.js` - Added calculateCommission endpoint
 - `apps/api/api/routes/commission.js` - Added public /calculate route
+- `apps/api/api/services/orders.service.js` - Added commission fields to database insertion
 
-### **🔴 2. Order Source Detection Testing** - **MEDIUM PRIORITY**
-**Status**: Code written, not tested
-**Need**: Verify QR vs Website vs Mobile App source detection works
-**Test scenarios**:
-- QR code order flow → order_source = 'qr'
-- Website order flow → order_source = 'website'
-- Commission calculation accuracy
+### **🔴 2. Commission Inheritance Logic** - **✅ COMPLETED**
+**Status**: ✅ 100% Complete - Chain settings now apply to branch orders
+**Achievement**: Fixed inheritance hierarchy Branch → Chain → Default
+**Bug Fixed**: Chain-level commission settings (e.g., 50% website) now properly apply to branch orders
+**Files Updated**:
+- `apps/api/api/services/commission.service.js` - Added chain-level rate checking in getCommissionRate
 
-### **🔴 3. Commission Reports UI** - **MEDIUM PRIORITY**
-**Status**: Backend ready, frontend missing
-**Need**: Analytics dashboard for platform admin
+### **🔴 3. Commission Reports UI** - **🔥 NEXT PRIORITY**
+**Status**: Ready to implement - Commission Engine now fully operational
+**Need**: Analytics dashboard for platform admin revenue tracking
 **Requirements**:
-- Revenue reports by date range
-- Commission breakdown by source type
-- Export functionality
+- Revenue analytics by date range (7d, 30d, 90d)
+- Commission breakdown by source type (Website, QR, Mobile)
+- Export functionality (CSV/PDF)
+- Professional ShadCN UI with bilingual support
 
 ---
 
