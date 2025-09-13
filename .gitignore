@@ -47,3 +47,7 @@ next-env.d.ts
 # logs
 logs/
 *.log
+
+# documentation and assets
+Docs/
+photos/
