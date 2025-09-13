@@ -13,8 +13,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, CreditCard, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useLanguage } from '@/contexts/language-context'
 
-// Initialize Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+// Initialize Stripe with locale
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!, {
+  locale: 'en' // Force English for all Stripe UI elements
+})
 
 // Enhanced payment error handling with retry suggestions
 function getPaymentErrorInfo(error: { code?: string; message?: string }, language: string, retryCount: number) {
