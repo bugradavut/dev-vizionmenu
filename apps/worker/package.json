@@ -1,0 +1,25 @@
+{
+  "name": "@vision-menu/worker",
+  "version": "1.0.0",
+  "description": "Background job processing worker for Vision Menu",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "clean": "rmdir /s /q dist 2>nul || echo \"Directory already clean\"",
+    "lint": "echo 'Worker: No linting configured'",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "bullmq": "^5.13.2",
+    "ioredis": "^5.4.1",
+    "dotenv": "^16.4.5",
+    "winston": "^3.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

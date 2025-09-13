@@ -1,0 +1,345 @@
+"use client";
+
+import { useState, useCallback, useEffect } from 'react';
+import { ordersService, type Order, type OrderListParams, type OrderStatusUpdateRequest } from '@/services/orders.service';
+import { ApiClientError } from '@/services/api-client';
+import { supabase } from '@/lib/supabase';
+
+interface UseOrdersState {
+  orders: Order[];
+  loading: boolean;
+  error: string | null;
+  total: number;
+  page: number;
+  limit: number;
+  realtimeConnected: boolean;
+}
+
+interface UseOrdersActions {
+  fetchOrders: (params?: OrderListParams) => Promise<void>;
+  updateOrderStatus: (orderId: string, statusData: OrderStatusUpdateRequest) => Promise<boolean>;
+  refetch: () => Promise<void>;
+  clearError: () => void;
+}
+
+interface UseOrdersReturn extends UseOrdersState, UseOrdersActions {}
+
+/**
+ * Custom hook for order management with state management and API integration
+ */
+export function useOrders(initialParams?: OrderListParams): UseOrdersReturn {
+  const [state, setState] = useState<UseOrdersState>({
+    orders: [],
+    loading: false,
+    error: null,
+    total: 0,
+    page: 1,
+    limit: 20,
+    realtimeConnected: false,
+  });
+
+  const [lastParams, setLastParams] = useState<OrderListParams | undefined>(initialParams);
+
+  // Handle realtime events
+  const handleRealtimeEvent = useCallback((payload: any) => {
+    console.log('🔥 Realtime event received:', payload.eventType, payload);
+    
+    // Check if this is a live order (pending, preparing, ready)
+    const isLiveOrder = (order: any) => {
+      const status = order?.order_status || order?.status;
+      console.log('📊 Order status check:', status, 'from order:', order);
+      return status === 'pending' || status === 'preparing' || status === 'ready';
+    };
+
+    setState(prev => {
+      switch (payload.eventType) {
+        case 'INSERT':
+          console.log('➕ INSERT event processing...');
+          // Only add if it's a live order
+          if (!isLiveOrder(payload.new)) {
+            console.log('🚫 Order not live, ignoring');
+            return prev;
+          }
+          
+          console.log('✅ Order is live, adding to state');
+          const newOrder = ordersService.transformOrder(payload.new);
+          console.log('🔄 Transformed order:', newOrder);
+          return {
+            ...prev,
+            orders: [newOrder, ...prev.orders],
+            total: prev.total + 1,
+          };
+
+        case 'UPDATE':
+          const updatedOrder = ordersService.transformOrder(payload.new);
+          
+          // If order became non-live, remove it
+          if (!isLiveOrder(payload.new)) {
+            return {
+              ...prev,
+              orders: prev.orders.filter(order => order.id !== payload.new.id),
+              total: Math.max(0, prev.total - 1),
+            };
+          }
+          
+          // If order is still live, update it
+          return {
+            ...prev,
+            orders: prev.orders.map(order => 
+              order.id === payload.new.id ? updatedOrder : order
+            ),
+          };
+
+        case 'DELETE':
+          return {
+            ...prev,
+            orders: prev.orders.filter(order => order.id !== payload.old.id),
+            total: Math.max(0, prev.total - 1),
+          };
+
+        default:
+          return prev;
+      }
+    });
+  }, []); // Empty dependency array - callback never changes
+
+  const fetchOrders = useCallback(async (params?: OrderListParams) => {
+    setState(prev => ({ ...prev, loading: true, error: null }));
+    
+    try {
+      const response = await ordersService.getOrders(params);
+      const transformedData = ordersService.transformOrdersResponse(response);
+      
+      setState(prev => ({
+        ...prev,
+        orders: transformedData.orders,
+        total: transformedData.total,
+        page: transformedData.page,
+        limit: transformedData.limit,
+        loading: false,
+      }));
+      
+      setLastParams(params);
+    } catch (error) {
+      console.error('Failed to fetch orders:', error);
+      let errorMessage = 'Failed to load orders';
+      
+      if (error instanceof ApiClientError) {
+        errorMessage = error.error.detail || error.error.title || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: errorMessage,
+      }));
+    }
+  }, []);
+
+  const updateOrderStatus = useCallback(async (
+    orderId: string, 
+    statusData: OrderStatusUpdateRequest
+  ): Promise<boolean> => {
+    try {
+      const response = await ordersService.updateOrderStatus(orderId, statusData);
+      
+      if (response.data.success) {
+        // Update the order in the current state
+        setState(prev => ({
+          ...prev,
+          orders: prev.orders.map(order => 
+            order.id === orderId 
+              ? { ...order, status: statusData.status, updated_at: new Date().toISOString() }
+              : order
+          ),
+        }));
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+      
+      let errorMessage = 'Failed to update order status';
+      if (error instanceof ApiClientError) {
+        errorMessage = error.error.detail || error.error.title || errorMessage;
+      }
+      
+      setState(prev => ({ ...prev, error: errorMessage }));
+      return false;
+    }
+  }, []);
+
+  const refetch = useCallback(async () => {
+    if (lastParams !== undefined) {
+      await fetchOrders(lastParams);
+    }
+  }, [fetchOrders, lastParams]);
+
+  const clearError = useCallback(() => {
+    setState(prev => ({ ...prev, error: null }));
+  }, []);
+
+  // Auto-fetch on mount if initial params provided
+  useEffect(() => {
+    if (initialParams) {
+      fetchOrders(initialParams);
+    }
+  }, []); // Only run on mount
+
+  // Setup Realtime subscription for live orders
+  useEffect(() => {
+    console.log('🚀 Setting up Realtime subscription...');
+    
+    const subscription = supabaseServiceRole
+      .channel('live-orders-channel')
+      .on('postgres_changes', {
+        event: '*', // Listen to INSERT, UPDATE, DELETE
+        schema: 'public',
+        table: 'orders'
+        // Note: Removed filter - will handle filtering client-side
+      }, handleRealtimeEvent)      
+      .subscribe((status, err) => {
+        console.log('📡 Subscription callback:', { status, err });
+        if (err) {
+          console.error('❌ Subscription error:', err);
+          setState(prev => ({ ...prev, realtimeConnected: false }));
+        } else {
+          console.log('✅ Subscription status:', status);
+          setState(prev => ({ ...prev, realtimeConnected: status === 'SUBSCRIBED' }));
+        }
+      });
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []); // Empty deps - runs once on mount
+
+  return {
+    ...state,
+    fetchOrders,
+    updateOrderStatus,
+    refetch,
+    clearError,
+  };
+}
+
+// Hook for single order details
+interface UseOrderDetailState {
+  order: Order | null;
+  loading: boolean;
+  error: string | null;
+}
+
+interface UseOrderDetailActions {
+  fetchOrder: (orderId: string) => Promise<void>;
+  updateStatus: (statusData: OrderStatusUpdateRequest) => Promise<boolean>;
+  refetch: () => Promise<void>;
+  clearError: () => void;
+}
+
+interface UseOrderDetailReturn extends UseOrderDetailState, UseOrderDetailActions {}
+
+export function useOrderDetail(orderId?: string): UseOrderDetailReturn {
+  const [state, setState] = useState<UseOrderDetailState>({
+    order: null,
+    loading: false,
+    error: null,
+  });
+
+  const [currentOrderId, setCurrentOrderId] = useState<string | undefined>(orderId);
+
+  const fetchOrder = useCallback(async (id: string) => {
+    setState(prev => ({ ...prev, loading: true, error: null }));
+    
+    try {
+      const response = await ordersService.getOrderById(id);
+      const transformedOrder = ordersService.transformOrder(response.data);
+      
+      setState(prev => ({
+        ...prev,
+        order: transformedOrder,
+        loading: false,
+      }));
+      
+      setCurrentOrderId(id);
+    } catch (error) {
+      console.error('Failed to fetch order:', error);
+      let errorMessage = 'Failed to load order details';
+      
+      if (error instanceof ApiClientError) {
+        errorMessage = error.error.detail || error.error.title || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: errorMessage,
+      }));
+    }
+  }, []);
+
+  const updateStatus = useCallback(async (statusData: OrderStatusUpdateRequest): Promise<boolean> => {
+    if (!currentOrderId) return false;
+    
+    try {
+      const response = await ordersService.updateOrderStatus(currentOrderId, statusData);
+      
+      if (response.data.success) {
+        setState(prev => ({
+          ...prev,
+          order: prev.order ? {
+            ...prev.order,
+            status: statusData.status,
+            updated_at: new Date().toISOString()
+          } : null,
+        }));
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+      
+      let errorMessage = 'Failed to update order status';
+      if (error instanceof ApiClientError) {
+        errorMessage = error.error.detail || error.error.title || errorMessage;
+      }
+      
+      setState(prev => ({ ...prev, error: errorMessage }));
+      return false;
+    }
+  }, [currentOrderId]);
+
+  const refetch = useCallback(async () => {
+    if (currentOrderId) {
+      await fetchOrder(currentOrderId);
+    }
+  }, [fetchOrder, currentOrderId]);
+
+  const clearError = useCallback(() => {
+    setState(prev => ({ ...prev, error: null }));
+  }, []);
+
+  // Auto-fetch on mount if orderId provided
+  useEffect(() => {
+    if (orderId) {
+      fetchOrder(orderId);
+    }
+  }, []); // Only run on mount
+
+  return {
+    ...state,
+    fetchOrder,
+    updateStatus,
+    refetch,
+    clearError,
+  };
+}

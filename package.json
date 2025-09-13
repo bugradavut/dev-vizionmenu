@@ -1,0 +1,35 @@
+{
+  "name": "vision-menu",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.13.1",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "start": "turbo start",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "type-check": "turbo type-check",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "clean": "turbo clean",
+    "dev:web": "turbo dev --filter=web",
+    "dev:api": "turbo dev --filter=api",
+    "dev:worker": "turbo dev --filter=worker"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^2.1.4",
+    "@types/minimatch": "^6.0.0",
+    "prettier": "^3.6.2",
+    "tailwindcss-animate": "^1.0.7",
+    "turbo": "^2.5.4",
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "minimatch": "^10.0.3"
+  }
+}

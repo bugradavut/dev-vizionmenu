@@ -1,0 +1,19 @@
+{
+  "name": "@vision-menu/types",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "type-check": "tsc --noEmit",
+    "lint": "echo 'Types: No linting configured'"
+  },
+  "files": [
+    "dist/**"
+  ],
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node api/index.js",
+    "build": "copy api\\index.js index.js",
+    "lint": "echo 'API: No linting configured'",
+    "type-check": "echo 'API: No TypeScript checking configured'"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.5",
+    "cross-env": "^10.0.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "stripe": "^18.4.0"
+  }
+}

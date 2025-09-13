@@ -1,0 +1,1 @@
+export { ConfigureCommissionModal } from './configure-commission-modal'
