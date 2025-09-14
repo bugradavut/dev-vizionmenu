@@ -699,7 +699,10 @@ async function handleWebhook(req, res) {
     const userAgent = req.headers['user-agent'] || '';
     const clientIp = req.ip || req.connection.remoteAddress;
 
-    console.log(`🔔 Webhook received from IP: ${clientIp}, User-Agent: ${userAgent.substring(0, 50)}...`);
+    // Reduce log verbosity in production
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`🔔 Webhook received from IP: ${clientIp}, User-Agent: ${userAgent.substring(0, 50)}...`);
+    }
 
     // 1. Environment validation
     if (!endpointSecret) {
@@ -770,7 +773,10 @@ async function handleWebhook(req, res) {
       event = stripe.webhooks.constructEvent(req.body, signature, endpointSecret);
       eventId = event.id;
       
-      console.log(`🔐 Webhook signature verified: ${event.type} (${eventId})`);
+      // Log only critical events in production
+      if (process.env.NODE_ENV !== 'production' || ['account.updated', 'capability.updated'].includes(event.type)) {
+        console.log(`🔐 Webhook signature verified: ${event.type} (${eventId})`);
+      }
       
     } catch (err) {
       console.error('❌ Webhook signature verification failed:', {
@@ -833,7 +839,10 @@ async function handleWebhook(req, res) {
     }
 
     // 8. Process the webhook event
-    console.log(`🔄 Processing webhook event: ${event.type} (${eventId})`);
+    // Reduce processing logs for minor events
+    if (process.env.NODE_ENV !== 'production' || ['account.updated', 'capability.updated', 'payment_intent.succeeded'].includes(event.type)) {
+      console.log(`🔄 Processing webhook event: ${event.type} (${eventId})`);
+    }
     let result;
     try {
       result = await stripeService.handleWebhookEvent(event);
