@@ -663,7 +663,7 @@ class StripeService {
         payouts_enabled: account.payouts_enabled,
         charges_enabled: account.charges_enabled,
         verification_status: newStatus,
-        details_submitted: account.details_submitted,
+        onboarding_status: account.details_submitted ? 'completed' : 'pending',
         updated_at: new Date().toISOString()
       })
       .eq('stripe_account_id', account.id);
