@@ -833,7 +833,17 @@ async function handleWebhook(req, res) {
     }
 
     // 8. Process the webhook event
-    const result = await stripeService.handleWebhookEvent(event);
+    console.log(`🔄 Processing webhook event: ${event.type} (${eventId})`);
+    let result;
+    try {
+      result = await stripeService.handleWebhookEvent(event);
+    } catch (webhookError) {
+      console.error(`❌ Webhook processing failed: ${event.type} (${eventId})`, {
+        error: webhookError.message,
+        stack: webhookError.stack
+      });
+      throw webhookError; // Re-throw to be caught by outer try-catch
+    }
     const processingTime = Date.now() - startTime;
 
     console.log(`✅ Webhook processed successfully: ${event.type} (${eventId}) in ${processingTime}ms`);
