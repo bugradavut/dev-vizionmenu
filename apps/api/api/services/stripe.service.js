@@ -1294,8 +1294,11 @@ class StripeService {
       };
 
       // Determine if charges/payouts should be enabled
-      const chargesEnabled = capabilities.card_payments?.status === 'active';
-      const payoutsEnabled = capabilities.transfers?.status === 'active';
+      // Handle both string and object formats from Stripe
+      const chargesEnabled = (capabilities.card_payments === 'active') ||
+                             (capabilities.card_payments?.status === 'active');
+      const payoutsEnabled = (capabilities.transfers === 'active') ||
+                            (capabilities.transfers?.status === 'active');
 
       // Update database
       const { error } = await supabase
