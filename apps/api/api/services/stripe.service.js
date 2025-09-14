@@ -1320,6 +1320,111 @@ class StripeService {
       throw error;
     }
   }
+
+  // ============================================
+  // MISSING PAYOUT EVENT HANDLERS
+  // ============================================
+
+  /**
+   * Handle payout failed events
+   * @private
+   */
+  async _handlePayoutFailed(event) {
+    console.log('❌ Processing payout.failed event');
+
+    const payout = event.data.object;
+    const stripeAccountId = event.account;
+
+    try {
+      // Log failed payout
+      const { error } = await supabase
+        .from('stripe_payouts')
+        .upsert({
+          stripe_account_id: stripeAccountId,
+          payout_id: payout.id,
+          amount: payout.amount / 100, // Convert from cents
+          currency: payout.currency,
+          status: 'failed',
+          failure_reason: payout.failure_message || 'Unknown error',
+          created_at: new Date(payout.created * 1000).toISOString()
+        });
+
+      if (error) throw error;
+
+      console.log(`✅ Payout failed logged: ${payout.id}`);
+      return { processed: true };
+    } catch (error) {
+      console.error(`❌ Error processing payout failed: ${payout.id}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle payout canceled events
+   * @private
+   */
+  async _handlePayoutCanceled(event) {
+    console.log('🚫 Processing payout.canceled event');
+
+    const payout = event.data.object;
+    const stripeAccountId = event.account;
+
+    try {
+      // Update payout status
+      const { error } = await supabase
+        .from('stripe_payouts')
+        .upsert({
+          stripe_account_id: stripeAccountId,
+          payout_id: payout.id,
+          amount: payout.amount / 100,
+          currency: payout.currency,
+          status: 'canceled',
+          created_at: new Date(payout.created * 1000).toISOString()
+        });
+
+      if (error) throw error;
+
+      console.log(`✅ Payout canceled logged: ${payout.id}`);
+      return { processed: true };
+    } catch (error) {
+      console.error(`❌ Error processing payout canceled: ${payout.id}`, error);
+      throw error;
+    }
+  }
+
+  // ============================================
+  // MISSING REFUND EVENT HANDLERS
+  // ============================================
+
+  /**
+   * Handle refund failed events
+   * @private
+   */
+  async _handleRefundFailed(event) {
+    console.log('❌ Processing refund.failed event');
+
+    const refund = event.data.object;
+    const orderId = refund.metadata?.order_id;
+
+    try {
+      // Update refund status
+      const { error } = await supabase
+        .from('stripe_refunds')
+        .update({
+          status: 'failed',
+          failure_reason: refund.failure_reason || 'Unknown error'
+        })
+        .eq('refund_id', refund.id);
+
+      if (error) throw error;
+
+      console.log(`✅ Refund failed logged: ${refund.id}`);
+      return { processed: true };
+    } catch (error) {
+      console.error(`❌ Error processing refund failed: ${refund.id}`, error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new StripeService();
