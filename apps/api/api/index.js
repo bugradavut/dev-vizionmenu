@@ -70,6 +70,11 @@ const supabase = createClient(
 );
 
 const app = express();
+
+// CRITICAL: Stripe webhooks need raw body, so handle them BEFORE express.json()
+app.use('/api/v1/stripe/webhooks', express.raw({ type: 'application/json' }));
+
+// For all other routes, use JSON parsing
 app.use(express.json());
 
 // CORS for frontend
