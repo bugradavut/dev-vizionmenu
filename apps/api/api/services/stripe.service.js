@@ -663,7 +663,7 @@ class StripeService {
         payouts_enabled: account.payouts_enabled,
         charges_enabled: account.charges_enabled,
         verification_status: newStatus,
-        onboarding_status: account.details_submitted ? 'completed' : 'pending',
+        onboarding_status: account.details_submitted ? 'verified' : 'pending',
         updated_at: new Date().toISOString()
       })
       .eq('stripe_account_id', account.id);
@@ -1214,7 +1214,7 @@ class StripeService {
       const { error } = await supabase
         .from('stripe_accounts')
         .update({
-          onboarding_status: 'authorized',
+          onboarding_status: 'verified',
           updated_at: new Date().toISOString()
         })
         .eq('stripe_account_id', accountId);
@@ -1244,7 +1244,7 @@ class StripeService {
       const { error } = await supabase
         .from('stripe_accounts')
         .update({
-          onboarding_status: 'deauthorized',
+          onboarding_status: 'rejected',
           charges_enabled: false,
           payouts_enabled: false,
           updated_at: new Date().toISOString()
