@@ -1425,6 +1425,45 @@ class StripeService {
       throw error;
     }
   }
+
+  // ============================================
+  // SIMPLE STUBS FOR ALL REMAINING EVENTS
+  // ============================================
+
+  async _handleChargeDispute(event) {
+    console.log('⚖️ Processing charge.dispute.created - stub');
+    return { processed: true };
+  }
+
+  async _handleChargeDisputeUpdated(event) {
+    console.log('⚖️ Processing charge.dispute.updated - stub');
+    return { processed: true };
+  }
+
+  async _handleChargeDisputeClosed(event) {
+    console.log('⚖️ Processing charge.dispute.closed - stub');
+    return { processed: true };
+  }
+
+  async _handleInvoicePaymentSucceeded(event) {
+    console.log('📄 Processing invoice.payment_succeeded - stub');
+    return { processed: true };
+  }
+
+  async _handleInvoicePaymentFailed(event) {
+    console.log('📄 Processing invoice.payment_failed - stub');
+    return { processed: true };
+  }
+
+  async _handleApplicationFeeCreated(event) {
+    console.log('💰 Processing application_fee.created - stub');
+    return { processed: true };
+  }
+
+  async _handleApplicationFeeRefunded(event) {
+    console.log('💰 Processing application_fee.refunded - stub');
+    return { processed: true };
+  }
 }
 
 module.exports = new StripeService();
