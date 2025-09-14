@@ -1194,6 +1194,132 @@ class StripeService {
       // Don't throw - webhook processing should continue
     }
   }
+
+  // ============================================
+  // MISSING WEBHOOK EVENT HANDLERS
+  // ============================================
+
+  /**
+   * Handle account authorization events
+   * @private
+   */
+  async _handleAccountAuthorized(event) {
+    console.log('🔑 Processing account.application.authorized event');
+
+    const account = event.data.object;
+    const accountId = account.id;
+
+    try {
+      // Update account status in database
+      const { error } = await supabase
+        .from('stripe_accounts')
+        .update({
+          onboarding_status: 'authorized',
+          updated_at: new Date().toISOString()
+        })
+        .eq('stripe_account_id', accountId);
+
+      if (error) throw error;
+
+      console.log(`✅ Account authorized: ${accountId}`);
+      return { processed: true };
+    } catch (error) {
+      console.error(`❌ Error processing account authorization: ${accountId}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle account deauthorization events
+   * @private
+   */
+  async _handleAccountDeauthorized(event) {
+    console.log('🚫 Processing account.application.deauthorized event');
+
+    const account = event.data.object;
+    const accountId = account.id;
+
+    try {
+      // Update account status in database
+      const { error } = await supabase
+        .from('stripe_accounts')
+        .update({
+          onboarding_status: 'deauthorized',
+          charges_enabled: false,
+          payouts_enabled: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('stripe_account_id', accountId);
+
+      if (error) throw error;
+
+      console.log(`✅ Account deauthorized: ${accountId}`);
+      return { processed: true };
+    } catch (error) {
+      console.error(`❌ Error processing account deauthorization: ${accountId}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle capability updated events (CRITICAL for account status)
+   * @private
+   */
+  async _handleCapabilityUpdated(event) {
+    console.log('🔧 Processing capability.updated event');
+
+    const capability = event.data.object;
+    const accountId = capability.account;
+    const capabilityType = capability.id; // 'card_payments', 'transfers', etc.
+    const status = capability.status; // 'active', 'inactive', 'pending'
+
+    try {
+      // Get current account capabilities
+      const { data: existingAccount } = await supabase
+        .from('stripe_accounts')
+        .select('capabilities, charges_enabled, payouts_enabled')
+        .eq('stripe_account_id', accountId)
+        .single();
+
+      if (!existingAccount) {
+        console.log(`⚠️ No account found for capability update: ${accountId}`);
+        return { processed: false };
+      }
+
+      // Update capabilities JSON
+      let capabilities = existingAccount.capabilities || {};
+      capabilities[capabilityType] = {
+        status: status,
+        updated_at: new Date().toISOString()
+      };
+
+      // Determine if charges/payouts should be enabled
+      const chargesEnabled = capabilities.card_payments?.status === 'active';
+      const payoutsEnabled = capabilities.transfers?.status === 'active';
+
+      // Update database
+      const { error } = await supabase
+        .from('stripe_accounts')
+        .update({
+          capabilities,
+          charges_enabled: chargesEnabled,
+          payouts_enabled: payoutsEnabled,
+          verification_status: (chargesEnabled && payoutsEnabled) ? 'verified' : 'pending',
+          updated_at: new Date().toISOString()
+        })
+        .eq('stripe_account_id', accountId);
+
+      if (error) throw error;
+
+      console.log(`✅ Capability updated: ${accountId} - ${capabilityType}: ${status}`);
+      console.log(`📊 Account status: charges=${chargesEnabled}, payouts=${payoutsEnabled}`);
+
+      return { processed: true };
+    } catch (error) {
+      console.error(`❌ Error processing capability update: ${accountId}`, error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new StripeService();
