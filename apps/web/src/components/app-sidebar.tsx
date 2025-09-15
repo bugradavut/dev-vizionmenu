@@ -8,6 +8,7 @@ import {
   SquareTerminal,
   Tag,
   Shield,
+  BarChart3,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -91,12 +92,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               title: t.navigation.overview,
               url: "/dashboard",
             },
-            {
-              title: t.navigation.analytics,
-              url: "/dashboard/analytics",
-            },
           ],
         },
+        // Reports - Chain Owner only
+        ...(isChainOwner ? [{
+          title: language === 'fr' ? 'Rapports' : 'Reports',
+          url: "/reports",
+          icon: BarChart3,
+          items: [
+            {
+              title: language === 'fr' ? 'Analytiques' : 'Analytics',
+              url: "/reports/analytics",
+            },
+            {
+              title: language === 'fr' ? 'Journaux d\'Activité' : 'Activity Logs',
+              url: "/reports/activity",
+            },
+          ],
+        }] : []),
         // Menu Management - Hide from Chain Owners (branch-specific)
         ...(!isChainOwner ? [{
           title: t.navigation.menuManagement,
