@@ -13,6 +13,8 @@ import { CalendarIcon, Search } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import type { ActivityLog, ActivityLogFilters, ActivityLogFilterOptions } from "@/services/activity-logs.service"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { buildChangeRows, labelFor, formatValue } from "@/lib/audit-utils"
 
 type DateRange = { from?: Date; to?: Date }
 
@@ -312,7 +314,14 @@ export function ActivityLogsTable({
                 {filteredLogs.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell className="font-medium px-4">
-                      {format(new Date(log.created_at), 'MMM dd, HH:mm')}
+                      {new Date(log.created_at).toLocaleDateString('en-CA', {
+                        timeZone: 'America/Toronto',
+                        month: 'short',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                      })}
                     </TableCell>
                     <TableCell className="px-4">
                       {log.user?.full_name || log.user?.email || log.user_id}
@@ -349,7 +358,7 @@ export function ActivityLogsTable({
                             {t.details}
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
+                        <DialogContent className="max-w-3xl">
                           <DialogHeader>
                             <DialogTitle>{t.changes}</DialogTitle>
                           </DialogHeader>
@@ -361,19 +370,62 @@ export function ActivityLogsTable({
                               <div>
                                 <span className="font-medium">Entity ID:</span> {log.entity_id || '-'}
                               </div>
-                              <div>
-                                <span className="font-medium">Entity Name:</span> {log.entity_name || '-'}
-                              </div>
-                              <div>
-                                <span className="font-medium">IP Address:</span> {log.ip_address || '-'}
+                              <div className="col-span-2">
+                                <span className="font-medium">Entity:</span> {log.entity_type.replace('_',' ')}
                               </div>
                             </div>
-                            <div>
-                              <span className="font-medium">Changes:</span>
-                              <pre className="whitespace-pre-wrap text-xs bg-muted p-3 rounded mt-2 max-h-[60vh] overflow-auto">
+
+                            {/* Change table */}
+                            {(() => {
+                              const rows = buildChangeRows(log.changes)
+                              const showFromTo = Boolean(log.changes && typeof log.changes === 'object' && 'before' in log.changes && 'after' in log.changes)
+                              return (
+                                <div className="border rounded">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead className="px-3">{labelFor('field', language)}</TableHead>
+                                        {showFromTo ? (
+                                          <>
+                                            <TableHead className="px-3">From</TableHead>
+                                            <TableHead className="px-3">To</TableHead>
+                                          </>
+                                        ) : (
+                                          <TableHead className="px-3">Value</TableHead>
+                                        )}
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {rows.map((r, idx) => (
+                                        <TableRow key={idx}>
+                                          <TableCell className="px-3 w-[40%]">{labelFor(r.field, language)}</TableCell>
+                                          {showFromTo ? (
+                                            <>
+                                              <TableCell className="px-3 text-muted-foreground">{formatValue(r.field, r.from, language)}</TableCell>
+                                              <TableCell className="px-3">{formatValue(r.field, r.to, language)}</TableCell>
+                                            </>
+                                          ) : (
+                                            <TableCell className="px-3" colSpan={2}>{formatValue(r.field, r.to, language)}</TableCell>
+                                          )}
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              )
+                            })()}
+
+                            {/* Raw JSON collapsible */}
+                            <Accordion type="single" className="w-full">
+                              <AccordionItem value="raw">
+                                <AccordionTrigger className="text-sm">Raw JSON</AccordionTrigger>
+                                <AccordionContent>
+                                  <pre className="whitespace-pre-wrap text-xs bg-muted p-3 rounded mt-2 max-h-[50vh] overflow-auto">
 {JSON.stringify(log.changes ?? {}, null, 2)}
-                              </pre>
-                            </div>
+                                  </pre>
+                                </AccordionContent>
+                              </AccordionItem>
+                            </Accordion>
                           </div>
                         </DialogContent>
                       </Dialog>

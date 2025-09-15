@@ -68,7 +68,8 @@ class ActivityLogsService {
       }
 
       if (endDate) {
-        query = query.lte('created_at', endDate);
+        // Use half-open interval [start, end) to avoid timezone/end-of-day issues
+        query = query.lt('created_at', endDate);
       }
 
       const { data: logs, error } = await query;
@@ -111,7 +112,7 @@ class ActivityLogsService {
       if (entityType) countQuery = countQuery.eq('entity_type', entityType);
       if (userId) countQuery = countQuery.eq('user_id', userId);
       if (startDate) countQuery = countQuery.gte('created_at', startDate);
-      if (endDate) countQuery = countQuery.lte('created_at', endDate);
+      if (endDate) countQuery = countQuery.lt('created_at', endDate);
 
       const { count, error: countError } = await countQuery;
 
@@ -230,7 +231,7 @@ class ActivityLogsService {
       }
 
       if (endDate) {
-        query = query.lte('created_at', endDate);
+        query = query.lt('created_at', endDate);
       }
 
       const { data: logs, error } = await query;
@@ -384,7 +385,7 @@ ActivityLogsService.prototype.getActivityStats2 = async function (chainId, optio
       .eq('restaurant_chain_id', chainId);
 
     if (startDate) query = query.gte('created_at', startDate);
-    if (endDate) query = query.lte('created_at', endDate);
+    if (endDate) query = query.lt('created_at', endDate);
 
     const { data: logs, error } = await query;
     if (error) {

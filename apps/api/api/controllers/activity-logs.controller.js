@@ -92,6 +92,11 @@ class ActivityLogsController {
         }
       }
 
+      // Build half-open date range [start, end)
+      const endExclusiveIso = parsedEndDate
+        ? new Date(parsedEndDate.getTime() + 24 * 60 * 60 * 1000).toISOString()
+        : undefined;
+
       // Get activity logs
       const result = await activityLogsService.getActivityLogs(chainId, {
         page: pageNum,
@@ -100,7 +105,7 @@ class ActivityLogsController {
         entityType,
         userId,
         startDate: parsedStartDate?.toISOString(),
-        endDate: parsedEndDate?.toISOString()
+        endDate: endExclusiveIso
       });
 
       if (!result.success) {
@@ -256,10 +261,15 @@ class ActivityLogsController {
         }
       }
 
+      // Build half-open date range [start, end)
+      const endExclusiveIso = parsedEndDate
+        ? new Date(parsedEndDate.getTime() + 24 * 60 * 60 * 1000).toISOString()
+        : undefined;
+
       // Get activity statistics (v2 - returns frontend-aligned shape)
       const result = await activityLogsService.getActivityStats2(chainId, {
         startDate: parsedStartDate?.toISOString(),
-        endDate: parsedEndDate?.toISOString()
+        endDate: endExclusiveIso
       });
 
       if (!result.success) {
