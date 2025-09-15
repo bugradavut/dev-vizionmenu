@@ -6,6 +6,7 @@
 const usersService = require('../services/users.service');
 const { ROLE_HIERARCHY } = require('../helpers/permissions');
 const { handleControllerError } = require('../helpers/error-handler');
+const { logActivity } = require('../helpers/audit-logger');
 
 /**
  * POST /api/v1/users
@@ -23,6 +24,18 @@ const createUser = async (req, res) => {
     }
     
     const result = await usersService.createUser(userData, currentUserId);
+
+    // Audit log: create user (branch-scoped if available)
+    await logActivity({
+      req,
+      action: 'create',
+      entity: 'user',
+      entityId: result?.id,
+      entityName: result?.email || result?.full_name,
+      branchId: result?.branch_id || userData?.branch_id || null,
+      changes: { after: result || userData }
+    })
+
     res.json({ data: result });
     
   } catch (error) {
@@ -41,6 +54,16 @@ const updateUser = async (req, res) => {
     const currentUserId = req.currentUserId;
 
     const result = await usersService.updateUser(userId, branchId, updateData, currentUserId);
+
+    await logActivity({
+      req,
+      action: 'update',
+      entity: 'user',
+      entityId: result?.id || userId,
+      entityName: result?.email || result?.full_name,
+      branchId: branchId,
+      changes: { update: updateData }
+    })
     
     res.json({ data: result });
     
@@ -89,6 +112,16 @@ const assignUserRole = async (req, res) => {
 
     const currentUserId = req.currentUserId;
     const result = await usersService.assignUserRole(userId, branchId, role, currentUserId);
+
+    await logActivity({
+      req,
+      action: 'update',
+      entity: 'user_role',
+      entityId: userId,
+      entityName: result?.user?.email || undefined,
+      branchId: branchId,
+      changes: { role }
+    })
     
     res.json({ data: result });
     
@@ -107,6 +140,16 @@ const deleteUser = async (req, res) => {
     const currentUserId = req.currentUserId;
 
     const result = await usersService.deleteUser(userId, branchId, currentUserId);
+
+    await logActivity({
+      req,
+      action: 'delete',
+      entity: 'user',
+      entityId: userId,
+      entityName: result?.email || undefined,
+      branchId: branchId,
+      changes: { deleted: true }
+    })
     res.json({ data: result });
     
   } catch (error) {

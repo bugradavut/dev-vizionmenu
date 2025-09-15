@@ -4,7 +4,7 @@
  */
 
 const activityLogsService = require('../services/activity-logs.service');
-const { validateChainOwnership } = require('../middleware/auth-middleware');
+const { handleControllerError } = require('../helpers/error-handler');
 
 class ActivityLogsController {
   /**
@@ -67,13 +67,29 @@ class ActivityLogsController {
         }
       }
 
-      // Check user authorization for this chain
-      const authResult = await validateChainOwnership(req.user, chainId);
-      if (!authResult.success) {
-        return res.status(authResult.statusCode || 403).json({
-          success: false,
-          error: authResult.error
-        });
+      // Authorization context
+      const isPlatformAdmin = req.userRole === 'platform_admin';
+      const isChainOwner = req.userRole === 'chain_owner';
+      const userBranch = req.userBranch;
+
+      if (!isPlatformAdmin && !isChainOwner) {
+        // For non-admin/owner, branch context is required
+        if (!userBranch || !userBranch.branch_id) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied: missing branch context'
+          });
+        }
+      }
+
+      // Chain owner must only access their own chain
+      if (isChainOwner) {
+        if (!req.userChainId || chainId !== String(req.userChainId)) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied: chain mismatch'
+          });
+        }
       }
 
       // Get activity logs
@@ -150,7 +166,7 @@ class ActivityLogsController {
 
       // Create activity log
       const result = await activityLogsService.createActivityLog({
-        userId: req.user.id,
+        userId: req.currentUserId,
         restaurantChainId,
         branchId,
         actionType,
@@ -193,13 +209,27 @@ class ActivityLogsController {
         });
       }
 
-      // Check user authorization for this chain
-      const authResult = await validateChainOwnership(req.user, chainId);
-      if (!authResult.success) {
-        return res.status(authResult.statusCode || 403).json({
-          success: false,
-          error: authResult.error
-        });
+      // Authorization context
+      const isPlatformAdmin = req.userRole === 'platform_admin';
+      const isChainOwner = req.userRole === 'chain_owner';
+      const userBranch = req.userBranch;
+
+      if (!isPlatformAdmin && !isChainOwner) {
+        if (!userBranch || !userBranch.branch_id) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied: missing branch context'
+          });
+        }
+      }
+
+      if (isChainOwner) {
+        if (!req.userChainId || chainId !== String(req.userChainId)) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied: chain mismatch'
+          });
+        }
       }
 
       // Validate date parameters
@@ -226,8 +256,8 @@ class ActivityLogsController {
         }
       }
 
-      // Get activity statistics
-      const result = await activityLogsService.getActivityStats(chainId, {
+      // Get activity statistics (v2 - returns frontend-aligned shape)
+      const result = await activityLogsService.getActivityStats2(chainId, {
         startDate: parsedStartDate?.toISOString(),
         endDate: parsedEndDate?.toISOString()
       });
@@ -263,13 +293,27 @@ class ActivityLogsController {
         });
       }
 
-      // Check user authorization for this chain
-      const authResult = await validateChainOwnership(req.user, chainId);
-      if (!authResult.success) {
-        return res.status(authResult.statusCode || 403).json({
-          success: false,
-          error: authResult.error
-        });
+      // Authorization context
+      const isPlatformAdmin = req.userRole === 'platform_admin';
+      const isChainOwner = req.userRole === 'chain_owner';
+      const userBranch = req.userBranch;
+
+      if (!isPlatformAdmin && !isChainOwner) {
+        if (!userBranch || !userBranch.branch_id) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied: missing branch context'
+          });
+        }
+      }
+
+      if (isChainOwner) {
+        if (!req.userChainId || chainId !== String(req.userChainId)) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied: chain mismatch'
+          });
+        }
       }
 
       // Get filter options

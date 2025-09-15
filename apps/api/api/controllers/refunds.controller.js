@@ -1,4 +1,5 @@
 const refundsService = require('../services/refunds.service');
+const { logActivity } = require('../helpers/audit-logger');
 
 // Get all refund-eligible orders for the current branch (last 7 days)
 const getEligibleOrders = async (req, res) => {
@@ -64,11 +65,24 @@ const processRefund = async (req, res) => {
       branchId
     );
 
-    res.json({
+    const response = {
       success: true,
       data: refund,
       message: `Refund of $${refund.amount} processed successfully for order ${refund.orderNumber}`
-    });
+    };
+
+    // Audit log: refund processed
+    await logActivity({
+      req,
+      action: 'create',
+      entity: 'refund',
+      entityId: refund?.id || orderId,
+      entityName: refund?.orderNumber || undefined,
+      branchId: branchId,
+      changes: { amount: refund?.amount || amount, reason }
+    })
+
+    res.json(response);
   } catch (error) {
     console.error('Error processing refund:', error);
     res.status(500).json({ 

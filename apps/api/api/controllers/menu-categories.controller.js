@@ -5,6 +5,7 @@
 
 const menuCategoriesService = require('../services/menu-categories.service');
 const { handleControllerError } = require('../helpers/error-handler');
+const { logActivity } = require('../helpers/audit-logger');
 
 /**
  * GET /api/v1/menu/categories
@@ -96,6 +97,17 @@ const createCategory = async (req, res) => {
     const categoryData = { name, description, display_order, icon };
     const result = await menuCategoriesService.createCategory(categoryData, userBranch.branch_id);
 
+    // Audit log: create category
+    await logActivity({
+      req,
+      action: 'create',
+      entity: 'menu_category',
+      entityId: result.id,
+      entityName: result.name,
+      branchId: userBranch.branch_id,
+      changes: { after: result }
+    })
+
     res.status(201).json({ data: result });
     
   } catch (error) {
@@ -136,6 +148,17 @@ const updateCategory = async (req, res) => {
 
     const updateData = { name, description, display_order, is_active, icon };
     const result = await menuCategoriesService.updateCategory(id, updateData, userBranch.branch_id);
+
+    // Audit log: update category
+    await logActivity({
+      req,
+      action: 'update',
+      entity: 'menu_category',
+      entityId: result.id,
+      entityName: result.name,
+      branchId: userBranch.branch_id,
+      changes: { update: updateData }
+    })
 
     res.json({ data: result });
     
@@ -178,6 +201,17 @@ const deleteCategory = async (req, res) => {
     const options = { forceDelete: forceDelete === 'true' };
     const result = await menuCategoriesService.deleteCategory(id, userBranch.branch_id, options);
 
+    // Audit log: delete category
+    await logActivity({
+      req,
+      action: 'delete',
+      entity: 'menu_category',
+      entityId: result.category_id || id,
+      entityName: result.category_name || undefined,
+      branchId: userBranch.branch_id,
+      changes: { deleted: true, force: options.forceDelete }
+    })
+
     res.json({ data: result });
     
   } catch (error) {
@@ -217,6 +251,17 @@ const toggleCategoryAvailability = async (req, res) => {
 
     const result = await menuCategoriesService.toggleCategoryAvailability(id, userBranch.branch_id);
 
+    // Audit log: toggle category
+    await logActivity({
+      req,
+      action: 'update',
+      entity: 'menu_category',
+      entityId: result.id || id,
+      entityName: result.name || undefined,
+      branchId: userBranch.branch_id,
+      changes: { toggled: true, is_active: result.is_active }
+    })
+
     res.json({ data: result });
     
   } catch (error) {
@@ -255,6 +300,17 @@ const reorderCategories = async (req, res) => {
     }
 
     const result = await menuCategoriesService.reorderCategories(reorderData, userBranch.branch_id);
+
+    // Audit log: reorder categories
+    await logActivity({
+      req,
+      action: 'update',
+      entity: 'menu_category',
+      entityId: null,
+      entityName: null,
+      branchId: userBranch.branch_id,
+      changes: { reorder: reorderData }
+    })
 
     res.json({ data: result });
     

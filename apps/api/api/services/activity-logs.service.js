@@ -40,6 +40,10 @@ class ActivityLogsService {
             full_name,
             email,
             role
+          ),
+          branches:branch_id (
+            id,
+            name
           )
         `)
         .eq('restaurant_chain_id', chainId)
@@ -74,6 +78,28 @@ class ActivityLogsService {
         throw new Error('Failed to fetch activity logs');
       }
 
+      // Normalize joined user profile to a unified `user` field for clients
+      const normalizedLogs = (logs || []).map((l) => {
+        const userProfile = l && l.user_profiles ? l.user_profiles : null;
+        const branchInfo = l && l.branches ? l.branches : null;
+        return {
+          ...l,
+          user: userProfile
+            ? {
+                id: l.user_id,
+                full_name: userProfile.full_name || null,
+                email: userProfile.email || null,
+              }
+            : undefined,
+          branch: branchInfo
+            ? {
+                id: l.branch_id || branchInfo.id || null,
+                name: branchInfo.name || null,
+              }
+            : undefined,
+        };
+      });
+
       // Get total count for pagination
       let countQuery = supabase
         .from('activity_logs')
@@ -99,7 +125,7 @@ class ActivityLogsService {
       return {
         success: true,
         data: {
-          logs: logs || [],
+          logs: normalizedLogs,
           pagination: {
             currentPage: page,
             totalPages,
@@ -294,7 +320,8 @@ class ActivityLogsService {
           )
         `)
         .eq('restaurant_chain_id', chainId)
-        .order('user_profiles.full_name');
+        // Order by related table column requires foreignTable option
+        .order('full_name', { ascending: true, foreignTable: 'user_profiles' });
 
       if (userError) {
         console.error('Error fetching users:', userError);
@@ -304,14 +331,14 @@ class ActivityLogsService {
       // Extract unique values
       const uniqueActionTypes = [...new Set(actionTypes.map(item => item.action_type))];
       const uniqueEntityTypes = [...new Set(entityTypes.map(item => item.entity_type))];
-      const uniqueUsers = users
+      const uniqueUsers = (users || [])
         .filter((item, index, self) =>
           item.user_profiles &&
           self.findIndex(u => u.user_id === item.user_id) === index
         )
         .map(item => ({
           id: item.user_id,
-          name: item.user_profiles.full_name || item.user_profiles.email,
+          full_name: (item.user_profiles && item.user_profiles.full_name) || (item.user_profiles && item.user_profiles.email) || null,
           email: item.user_profiles.email
         }));
 
@@ -335,3 +362,92 @@ class ActivityLogsService {
 }
 
 module.exports = new ActivityLogsService();
+
+/**
+ * Add enhanced stats method on the prototype so the existing instance picks it up.
+ * Returns shape aligned with frontend expectations.
+ */
+ActivityLogsService.prototype.getActivityStats2 = async function (chainId, options = {}) {
+  try {
+    const { startDate = null, endDate = null } = options;
+
+    // Fetch logs with minimal fields and joined user profile for mostActiveUser
+    let query = supabase
+      .from('activity_logs')
+      .select(`
+        user_id,
+        action_type,
+        entity_type,
+        created_at,
+        user_profiles:user_id (full_name, email)
+      `)
+      .eq('restaurant_chain_id', chainId);
+
+    if (startDate) query = query.gte('created_at', startDate);
+    if (endDate) query = query.lte('created_at', endDate);
+
+    const { data: logs, error } = await query;
+    if (error) {
+      console.error('Error fetching activity stats (v2):', error);
+      throw new Error('Failed to fetch activity statistics');
+    }
+
+    const totalLogs = Array.isArray(logs) ? logs.length : 0;
+
+    // Logs today (calendar day)
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const logsToday = (logs || []).reduce((acc, l) => {
+      const d = new Date(l.created_at);
+      const day = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+      return acc + (day === todayISO ? 1 : 0);
+    }, 0);
+
+    // Action breakdown
+    const actionTypeBreakdown = { create: 0, update: 0, delete: 0 };
+    const entityTypeBreakdown = {};
+    const userCounts = new Map(); // user_id -> { count, full_name }
+
+    for (const l of logs || []) {
+      if (l.action_type && actionTypeBreakdown.hasOwnProperty(l.action_type)) {
+        actionTypeBreakdown[l.action_type]++;
+      }
+      if (l.entity_type) {
+        entityTypeBreakdown[l.entity_type] = (entityTypeBreakdown[l.entity_type] || 0) + 1;
+      }
+      if (l.user_id) {
+        const current = userCounts.get(l.user_id) || { count: 0, full_name: (l.user_profiles && l.user_profiles.full_name) || (l.user_profiles && l.user_profiles.email) || null };
+        current.count++;
+        if (!current.full_name && l.user_profiles) {
+          current.full_name = l.user_profiles.full_name || l.user_profiles.email || null;
+        }
+        userCounts.set(l.user_id, current);
+      }
+    }
+
+    // Most active user
+    let mostActiveUser = null;
+    for (const [userId, info] of userCounts.entries()) {
+      if (!mostActiveUser || info.count > mostActiveUser.count) {
+        mostActiveUser = { user_id: userId, full_name: info.full_name || userId, count: info.count };
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        totalLogs,
+        logsToday,
+        mostActiveUser,
+        actionTypeBreakdown,
+        entityTypeBreakdown,
+      },
+    };
+
+  } catch (error) {
+    console.error('ActivityLogsService.getActivityStats2 error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch activity statistics',
+    };
+  }
+};

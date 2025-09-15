@@ -5,6 +5,7 @@
 
 const menuPresetsService = require('../services/menu-presets.service');
 const { handleControllerError } = require('../helpers/error-handler');
+const { logActivity } = require('../helpers/audit-logger');
 
 /**
  * GET /api/v1/menu/presets
@@ -152,6 +153,16 @@ const createMenuPreset = async (req, res) => {
       userBranch.user_id
     );
 
+    await logActivity({
+      req,
+      action: 'create',
+      entity: 'menu_preset',
+      entityId: result?.id,
+      entityName: result?.name,
+      branchId: userBranch.branch_id,
+      changes: { after: result }
+    })
+
     res.status(201).json({ data: result });
     
   } catch (error) {
@@ -258,6 +269,16 @@ const deleteMenuPreset = async (req, res) => {
 
     const result = await menuPresetsService.deleteMenuPreset(id, userBranch.branch_id);
 
+    await logActivity({
+      req,
+      action: 'delete',
+      entity: 'menu_preset',
+      entityId: id,
+      entityName: undefined,
+      branchId: userBranch.branch_id,
+      changes: { deleted: true }
+    })
+
     res.json({ data: result });
     
   } catch (error) {
@@ -297,6 +318,16 @@ const activateMenuPreset = async (req, res) => {
 
     const result = await menuPresetsService.activateMenuPreset(id, userBranch.branch_id);
 
+    await logActivity({
+      req,
+      action: 'update',
+      entity: 'menu_preset',
+      entityId: id,
+      entityName: undefined,
+      branchId: userBranch.branch_id,
+      changes: { activated: true }
+    })
+
     res.json({ data: result });
     
   } catch (error) {
@@ -327,6 +358,16 @@ const deactivateCurrentPreset = async (req, res) => {
     }
 
     const result = await menuPresetsService.deactivateCurrentPreset(userBranch.branch_id);
+
+    await logActivity({
+      req,
+      action: 'update',
+      entity: 'menu_preset',
+      entityId: result?.id || null,
+      entityName: result?.name || undefined,
+      branchId: userBranch.branch_id,
+      changes: { deactivated: true }
+    })
 
     res.json({ data: result });
     

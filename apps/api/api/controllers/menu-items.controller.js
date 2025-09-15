@@ -5,6 +5,7 @@
 
 const menuItemsService = require('../services/menu-items.service');
 const { handleControllerError } = require('../helpers/error-handler');
+const { logActivity } = require('../helpers/audit-logger');
 
 /**
  * GET /api/v1/menu/items
@@ -156,7 +157,18 @@ const createMenuItem = async (req, res) => {
       image_url: req.body.image_url || null  // Accept image_url from frontend
     };
 
-    const result = await menuItemsService.createMenuItem(itemData, userBranch.branch_id, photo);
+  const result = await menuItemsService.createMenuItem(itemData, userBranch.branch_id, photo);
+
+    // Activity Log (create)
+    await logActivity({
+      req,
+      branchId: userBranch.branch_id,
+      action: 'create',
+      entity: 'menu_item',
+      entityId: result.id,
+      entityName: result.name,
+      changes: { after: result }
+    })
 
     res.status(201).json({ data: result });
     
@@ -226,7 +238,18 @@ const updateMenuItem = async (req, res) => {
       is_available
     };
 
-    const result = await menuItemsService.updateMenuItem(id, updateData, userBranch.branch_id, photo);
+  const result = await menuItemsService.updateMenuItem(id, updateData, userBranch.branch_id, photo);
+
+    // Activity Log (update)
+    await logActivity({
+      req,
+      branchId: userBranch.branch_id,
+      action: 'update',
+      entity: 'menu_item',
+      entityId: result.id,
+      entityName: result.name,
+      changes: { update: updateData }
+    })
 
     res.json({ data: result });
     
@@ -265,7 +288,18 @@ const deleteMenuItem = async (req, res) => {
       });
     }
 
-    const result = await menuItemsService.deleteMenuItem(id, userBranch.branch_id);
+  const result = await menuItemsService.deleteMenuItem(id, userBranch.branch_id);
+
+    // Activity Log (delete)
+    await logActivity({
+      req,
+      branchId: userBranch.branch_id,
+      action: 'delete',
+      entity: 'menu_item',
+      entityId: result.item_id,
+      entityName: result.item_name,
+      changes: { deleted: true }
+    })
 
     res.json({ data: result });
     

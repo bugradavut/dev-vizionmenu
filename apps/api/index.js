@@ -71,6 +71,11 @@ const supabase = createClient(
 );
 
 const app = express();
+
+// CRITICAL: Stripe webhooks need raw body, so handle them BEFORE express.json()
+app.use('/api/v1/stripe/webhooks', express.raw({ type: 'application/json' }));
+
+// For all other routes, use JSON parsing
 app.use(express.json());
 
 // CORS for frontend
@@ -79,7 +84,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma');
   res.header('Access-Control-Allow-Credentials', 'true');
-  
+
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
@@ -125,7 +130,7 @@ app.use('/api/v1/customer/menu', customerMenuRoutes);
 // Use customer orders routes (public - no auth required)
 app.use('/api/v1/customer/orders', customerOrdersRoutes);
 
-// Use customer chains routes (public - no auth required) 
+// Use customer chains routes (public - no auth required)
 app.use('/api/v1/customer/chains', customerChainsRoutes);
 
 // Use customer branch routes (public - no auth required)
@@ -173,14 +178,14 @@ app.use('*', (req, res) => {
     error: 'Route not found',
     message: 'The requested endpoint does not exist',
     availableRoutes: [
-      '/', 
-      '/health', 
-      '/api/v1/health', 
-      'GET /auth/profile', 
-      'GET /api/v1/users/branch/:branchId', 
-      'POST /api/v1/users', 
-      'PATCH /api/v1/users/:userId/branch/:branchId', 
-      'POST /api/v1/users/:userId/branch/:branchId/assign-role', 
+      '/',
+      '/health',
+      '/api/v1/health',
+      'GET /auth/profile',
+      'GET /api/v1/users/branch/:branchId',
+      'POST /api/v1/users',
+      'PATCH /api/v1/users/:userId/branch/:branchId',
+      'POST /api/v1/users/:userId/branch/:branchId/assign-role',
       'DELETE /api/v1/users/:userId/branch/:branchId',
       'POST /api/v1/orders',
       'GET /api/v1/orders',

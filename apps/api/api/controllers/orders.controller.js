@@ -7,6 +7,7 @@ const ordersService = require('../services/orders.service');
 const commissionService = require('../services/commission.service');
 const orderSourceService = require('../services/order-source.service');
 const { handleControllerError } = require('../helpers/error-handler');
+const { logActivity } = require('../helpers/audit-logger');
 
 /**
  * GET /api/v1/orders
@@ -81,6 +82,17 @@ const updateOrderStatus = async (req, res) => {
     // Use order service to update order status
     const updateData = { status, notes, estimated_ready_time };
     const result = await ordersService.updateOrderStatus(orderId, updateData, userBranch);
+
+    // Audit log: order status update
+    await logActivity({
+      req,
+      action: 'update',
+      entity: 'order_status',
+      entityId: orderId,
+      entityName: undefined,
+      branchId: userBranch?.branch_id,
+      changes: updateData
+    })
 
     // Success response optimized for mobile
     res.json({ data: result });
@@ -377,6 +389,16 @@ const updateOrderTiming = async (req, res) => {
 
     const userBranch = req.userBranch;
     const result = await ordersService.updateOrderTiming(orderId, adjustmentMinutes, userBranch);
+
+    await logActivity({
+      req,
+      action: 'update',
+      entity: 'order_timing',
+      entityId: orderId,
+      entityName: undefined,
+      branchId: userBranch?.branch_id,
+      changes: { adjustmentMinutes }
+    })
 
     res.json({ data: result });
     

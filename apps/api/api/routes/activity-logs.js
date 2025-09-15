@@ -6,13 +6,10 @@
 const express = require('express');
 const router = express.Router();
 const activityLogsController = require('../controllers/activity-logs.controller');
-const { authenticateUser, requireRole } = require('../middleware/auth-middleware');
+const { requireAuthChainOrBranch } = require('../middleware/auth.middleware');
 
-// Apply authentication middleware to all routes
-router.use(authenticateUser);
-
-// Chain Owner and Platform Admin can access activity logs
-router.use(requireRole(['chain_owner', 'platform_admin']));
+// Apply authentication middleware to all routes - includes branch context
+router.use(requireAuthChainOrBranch);
 
 /**
  * @route GET /api/v1/reports/activity-logs

@@ -38,6 +38,8 @@ export const translations = {
       restaurantChains: "Restaurant Chains",
       branchManagement: "Branch Management",
       platformAdmins: "Platform Administrators",
+      reports: "Reports",
+      activityLogs: "Activity Logs",
       
       // Sub-navigation items
       overview: "Overview",
@@ -1103,6 +1105,113 @@ export const translations = {
       accountIdCopiedDescription: "The account ID has been copied to your clipboard.",
       copyFailed: "Copy Failed",
       copyFailedDescription: "Failed to copy account ID to clipboard."
+    },
+
+    // Activity Logs
+    activityLogs: {
+      // Page Header
+      pageTitle: "Activity Logs",
+      pageSubtitle: "Track user changes and system activities across your restaurant chain",
+
+      // Loading States
+      loading: "Loading activity logs...",
+      loadingStats: "Loading statistics...",
+      loadingFilters: "Loading filters...",
+
+      // Error States
+      failedToLoad: "Failed to load activity logs",
+      failedToLoadStats: "Failed to load statistics",
+      failedToLoadFilters: "Failed to load filter options",
+      retry: "Retry",
+      dismiss: "Dismiss",
+
+      // Search and Filters
+      searchPlaceholder: "Search logs by user, action, or entity...",
+      filterByAction: "Filter by Action",
+      filterByEntity: "Filter by Entity",
+      filterByUser: "Filter by User",
+      filterByDate: "Filter by Date",
+      clearFilters: "Clear Filters",
+      allActions: "All Actions",
+      allEntities: "All Entities",
+      allUsers: "All Users",
+
+      // Action Types
+      actionCreate: "Create",
+      actionUpdate: "Update",
+      actionDelete: "Delete",
+
+      // Entity Types
+      entityMenuCategory: "Menu Category",
+      entityMenuItem: "Menu Item",
+      entityUser: "User",
+      entityOrder: "Order",
+      entityCampaign: "Campaign",
+      entityBranchSettings: "Branch Settings",
+
+      // Table Headers
+      tableHeaderUser: "User",
+      tableHeaderAction: "Action",
+      tableHeaderEntity: "Entity",
+      tableHeaderChanges: "Changes",
+      tableHeaderDate: "Date",
+      tableHeaderTime: "Time",
+
+      // Table Content
+      noLogsFound: "No activity logs found",
+      noLogsFoundDesc: "No logs match your current filters or there are no activities yet",
+
+      // Stats Cards
+      totalLogs: "Total Logs",
+      logsToday: "Logs Today",
+      mostActiveUser: "Most Active User",
+      topAction: "Top Action",
+
+      // Pagination
+      page: "Page",
+      of: "of",
+      showing: "Showing",
+      to: "to",
+      entries: "entries",
+      previous: "Previous",
+      next: "Next",
+
+      // Export
+      export: "Export",
+      exportCSV: "Export CSV",
+      exportPDF: "Export PDF",
+      exporting: "Exporting...",
+      exportSuccess: "Export completed successfully",
+      exportFailed: "Export failed",
+
+      // Changes Detail
+      viewChanges: "View Changes",
+      changes: "Changes",
+      before: "Before",
+      after: "After",
+      noChanges: "No changes recorded",
+
+      // User Info
+      unknownUser: "Unknown User",
+      systemUser: "System",
+
+      // Date/Time
+      justNow: "Just now",
+      minuteAgo: "1 minute ago",
+      minutesAgo: "{minutes} minutes ago",
+      hourAgo: "1 hour ago",
+      hoursAgo: "{hours} hours ago",
+      dayAgo: "1 day ago",
+      daysAgo: "{days} days ago",
+
+      // Empty States
+      noActivity: "No Activity",
+      noActivityDesc: "No activities have been logged for this chain yet. User actions will appear here as they occur.",
+      startActivity: "Activity will appear here as users interact with the system",
+
+      // Filter Summary
+      filterSummary: "Showing {count} logs",
+      filterSummaryFiltered: "Showing {count} of {total} logs (filtered)"
     }
   },
   
@@ -1142,6 +1251,8 @@ export const translations = {
       restaurantChains: "Chaînes de restaurants",
       branchManagement: "Gestion des succursales",
       platformAdmins: "Administrateurs Plateforme",
+      reports: "Rapports",
+      activityLogs: "Journaux d'activité",
       
       // Sub-navigation items
       overview: "Aperçu",
@@ -2207,6 +2318,113 @@ export const translations = {
       accountIdCopiedDescription: "L'ID du compte a été copié dans votre presse-papiers.",
       copyFailed: "Échec de la copie",
       copyFailedDescription: "Échec de la copie de l'ID du compte dans le presse-papiers."
+    },
+
+    // Activity Logs - Canadian French
+    activityLogs: {
+      // Page Header
+      pageTitle: "Journaux d'activité",
+      pageSubtitle: "Suivez les modifications des utilisateurs et les activités système de votre chaîne de restaurants",
+
+      // Loading States
+      loading: "Chargement des journaux d'activité...",
+      loadingStats: "Chargement des statistiques...",
+      loadingFilters: "Chargement des filtres...",
+
+      // Error States
+      failedToLoad: "Échec du chargement des journaux d'activité",
+      failedToLoadStats: "Échec du chargement des statistiques",
+      failedToLoadFilters: "Échec du chargement des options de filtre",
+      retry: "Réessayer",
+      dismiss: "Fermer",
+
+      // Search and Filters
+      searchPlaceholder: "Rechercher les journaux par utilisateur, action ou entité...",
+      filterByAction: "Filtrer par action",
+      filterByEntity: "Filtrer par entité",
+      filterByUser: "Filtrer par utilisateur",
+      filterByDate: "Filtrer par date",
+      clearFilters: "Effacer les filtres",
+      allActions: "Toutes les actions",
+      allEntities: "Toutes les entités",
+      allUsers: "Tous les utilisateurs",
+
+      // Action Types
+      actionCreate: "Créer",
+      actionUpdate: "Mettre à jour",
+      actionDelete: "Supprimer",
+
+      // Entity Types
+      entityMenuCategory: "Catégorie de menu",
+      entityMenuItem: "Article de menu",
+      entityUser: "Utilisateur",
+      entityOrder: "Commande",
+      entityCampaign: "Campagne",
+      entityBranchSettings: "Paramètres de succursale",
+
+      // Table Headers
+      tableHeaderUser: "Utilisateur",
+      tableHeaderAction: "Action",
+      tableHeaderEntity: "Entité",
+      tableHeaderChanges: "Modifications",
+      tableHeaderDate: "Date",
+      tableHeaderTime: "Heure",
+
+      // Table Content
+      noLogsFound: "Aucun journal d'activité trouvé",
+      noLogsFoundDesc: "Aucun journal ne correspond à vos filtres actuels ou il n'y a pas encore d'activités",
+
+      // Stats Cards
+      totalLogs: "Total des journaux",
+      logsToday: "Journaux aujourd'hui",
+      mostActiveUser: "Utilisateur le plus actif",
+      topAction: "Action principale",
+
+      // Pagination
+      page: "Page",
+      of: "de",
+      showing: "Affichage",
+      to: "à",
+      entries: "entrées",
+      previous: "Précédent",
+      next: "Suivant",
+
+      // Export
+      export: "Exporter",
+      exportCSV: "Exporter CSV",
+      exportPDF: "Exporter PDF",
+      exporting: "Exportation...",
+      exportSuccess: "Exportation terminée avec succès",
+      exportFailed: "Échec de l'exportation",
+
+      // Changes Detail
+      viewChanges: "Voir les modifications",
+      changes: "Modifications",
+      before: "Avant",
+      after: "Après",
+      noChanges: "Aucune modification enregistrée",
+
+      // User Info
+      unknownUser: "Utilisateur inconnu",
+      systemUser: "Système",
+
+      // Date/Time
+      justNow: "À l'instant",
+      minuteAgo: "Il y a 1 minute",
+      minutesAgo: "Il y a {minutes} minutes",
+      hourAgo: "Il y a 1 heure",
+      hoursAgo: "Il y a {hours} heures",
+      dayAgo: "Il y a 1 jour",
+      daysAgo: "Il y a {days} jours",
+
+      // Empty States
+      noActivity: "Aucune activité",
+      noActivityDesc: "Aucune activité n'a été enregistrée pour cette chaîne. Les actions des utilisateurs apparaîtront ici au fur et à mesure.",
+      startActivity: "L'activité apparaîtra ici lorsque les utilisateurs interagiront avec le système",
+
+      // Filter Summary
+      filterSummary: "Affichage de {count} journaux",
+      filterSummaryFiltered: "Affichage de {count} sur {total} journaux (filtrés)"
     }
   }
 } as const
