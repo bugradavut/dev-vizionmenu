@@ -38,7 +38,7 @@ export interface ActivityLogFilters {
 
 export interface ActivityLogStats {
   totalLogs: number;
-  logsToday: number;
+  recentActivity: number;
   mostActiveUser?: {
     user_id: string;
     full_name: string;
@@ -93,7 +93,7 @@ class ActivityLogsService {
     }>(`/api/v1/reports/activity-logs?${params.toString()}`);
   }
 
-  async getActivityStats(
+  async getStats(
     chainId: string,
     startDate?: string,
     endDate?: string
@@ -104,6 +104,14 @@ class ActivityLogsService {
     if (endDate) params.append('endDate', endDate);
 
     return apiClient.get<ActivityLogStats>(`/api/v1/reports/activity-logs/stats?${params.toString()}`);
+  }
+
+  async getActivityStats(
+    chainId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<ApiResponse<ActivityLogStats>> {
+    return this.getStats(chainId, startDate, endDate);
   }
 
   async getFilterOptions(chainId: string): Promise<ApiResponse<ActivityLogFilterOptions>> {

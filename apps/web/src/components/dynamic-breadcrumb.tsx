@@ -74,6 +74,20 @@ const breadcrumbConfig = {
     title: 'navigation.platformAdmins',
     href: '/admin-settings/platform-admins',
     parent: '/admin-settings'
+  },
+  '/reports': {
+    title: 'navigation.reports',
+    href: '/reports'
+  },
+  '/reports/activity': {
+    title: 'navigation.activityLogs',
+    href: '/reports/activity',
+    parent: '/reports'
+  },
+  '/reports/analytics': {
+    title: 'navigation.analytics',
+    href: '/reports/analytics',
+    parent: '/reports'
   }
 } as const
 

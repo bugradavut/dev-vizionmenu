@@ -394,12 +394,14 @@ ActivityLogsService.prototype.getActivityStats2 = async function (chainId, optio
 
     const totalLogs = Array.isArray(logs) ? logs.length : 0;
 
-    // Logs today (calendar day)
-    const todayISO = new Date().toISOString().slice(0, 10);
-    const logsToday = (logs || []).reduce((acc, l) => {
-      const d = new Date(l.created_at);
-      const day = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-      return acc + (day === todayISO ? 1 : 0);
+    // Recent activity (last 24h from 00:00 to 23:59 today)
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+    const recentActivity = (logs || []).reduce((acc, l) => {
+      const logDate = new Date(l.created_at);
+      return acc + (logDate >= startOfToday && logDate <= endOfToday ? 1 : 0);
     }, 0);
 
     // Action breakdown
@@ -436,7 +438,7 @@ ActivityLogsService.prototype.getActivityStats2 = async function (chainId, optio
       success: true,
       data: {
         totalLogs,
-        logsToday,
+        recentActivity,
         mostActiveUser,
         actionTypeBreakdown,
         entityTypeBreakdown,

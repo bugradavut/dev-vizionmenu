@@ -36,7 +36,7 @@ class ActivityLogsController {
       const pageNum = parseInt(page);
       const limitNum = parseInt(limit);
 
-      if (pageNum < 1 || limitNum < 1 || limitNum > 100) {
+      if (pageNum < 1 || limitNum < 1 || limitNum > 1000) {
         return res.status(400).json({
           success: false,
           error: 'Invalid pagination parameters'
