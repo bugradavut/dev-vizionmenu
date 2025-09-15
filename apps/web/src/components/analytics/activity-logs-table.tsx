@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon, Search } from "lucide-react"
+import { CalendarIcon, Search, GitCommit, Plus, Trash2, Eye } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import type { ActivityLog, ActivityLogFilters, ActivityLogFilterOptions } from "@/services/activity-logs.service"
@@ -58,13 +58,19 @@ export function ActivityLogsTable({
     reset: language === 'fr' ? 'Réinitialiser' : 'Reset',
     details: language === 'fr' ? 'Détails' : 'Details',
     changes: language === 'fr' ? 'Changements' : 'Changes',
+    actions: {
+      viewChanges: language === 'fr' ? 'Voir Diff' : 'View Diff',
+      viewCreated: language === 'fr' ? 'Voir Créé' : 'View Created',
+      viewDeleted: language === 'fr' ? 'Voir Supprimé' : 'View Deleted',
+      viewDetails: language === 'fr' ? 'Voir Détails' : 'View Details'
+    },
     table: {
       date: language === 'fr' ? 'Date' : 'Date',
       user: language === 'fr' ? 'Utilisateur' : 'User',
       action: language === 'fr' ? 'Action' : 'Action',
       entity: language === 'fr' ? 'Entité' : 'Entity',
       branch: language === 'fr' ? 'Succursale' : 'Branch',
-      view: language === 'fr' ? 'Voir' : 'View',
+      actions: language === 'fr' ? 'Actions' : 'Actions',
       noData: language === 'fr' ? 'Aucune donnée' : 'No data',
     }
   }
@@ -307,7 +313,7 @@ export function ActivityLogsTable({
                   <TableHead className="px-4">{t.table.action}</TableHead>
                   <TableHead className="px-4">{t.table.entity}</TableHead>
                   <TableHead className="px-4">{t.table.branch}</TableHead>
-                  <TableHead className="px-4 text-right">{t.details}</TableHead>
+                  <TableHead className="px-4 text-right">{t.table.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -354,9 +360,27 @@ export function ActivityLogsTable({
                     <TableCell className="text-right px-4">
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            {t.details}
-                          </Button>
+                          {log.action_type === 'update' ? (
+                            <Button variant="outline" size="sm">
+                              <GitCommit className="h-4 w-4 mr-1" />
+                              {t.actions.viewChanges}
+                            </Button>
+                          ) : log.action_type === 'create' ? (
+                            <Button variant="outline" size="sm">
+                              <Plus className="h-4 w-4 mr-1" />
+                              {t.actions.viewCreated}
+                            </Button>
+                          ) : log.action_type === 'delete' ? (
+                            <Button variant="outline" size="sm">
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              {t.actions.viewDeleted}
+                            </Button>
+                          ) : (
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4 mr-1" />
+                              {t.actions.viewDetails}
+                            </Button>
+                          )}
                         </DialogTrigger>
                         <DialogContent className="max-w-3xl">
                           <DialogHeader>
