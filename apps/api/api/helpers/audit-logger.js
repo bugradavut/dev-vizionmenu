@@ -72,5 +72,94 @@ async function logActivity(params = {}) {
   }
 }
 
-module.exports = { logActivity }
+/**
+ * Enhanced activity logging with before/after diff support.
+ * Automatically fetches 'before' state for UPDATE actions.
+ * params: {
+ *   req, action, entity, entityId, entityName,
+ *   branchId, chainId, beforeData, afterData,
+ *   tableName, primaryKey
+ * }
+ */
+async function logActivityWithDiff(params = {}) {
+  const {
+    req, action, entity, entityId, entityName,
+    beforeData, afterData, tableName, primaryKey = 'id'
+  } = params
+  let { branchId, chainId } = params
+
+  try {
+    // Resolve missing chainId if possible
+    if (!chainId) {
+      chainId = await resolveChainId({ branchId, req })
+    }
+    if (!chainId) {
+      console.warn('[audit-logger] Skip - chainId unresolved')
+      return
+    }
+
+    let changes = null
+
+    // Handle different action types
+    switch (action) {
+      case 'create':
+        changes = {
+          after: afterData || null
+        }
+        break
+
+      case 'update':
+        let before = beforeData
+
+        // Auto-fetch before data if not provided and we have table info
+        if (!before && tableName && entityId) {
+          try {
+            const { data } = await supabase
+              .from(tableName)
+              .select('*')
+              .eq(primaryKey, entityId)
+              .single()
+            before = data
+          } catch (fetchError) {
+            console.warn('[audit-logger] Could not fetch before data:', fetchError.message)
+          }
+        }
+
+        changes = {
+          before: before || null,
+          after: afterData || null
+        }
+        break
+
+      case 'delete':
+        changes = {
+          before: beforeData || null,
+          deleted: true
+        }
+        break
+
+      default:
+        // Fallback to legacy format
+        changes = afterData || beforeData || null
+    }
+
+    await activityLogsService.createActivityLog({
+      userId: req?.currentUserId || null,
+      restaurantChainId: chainId,
+      branchId: branchId || null,
+      actionType: action,
+      entityType: entity,
+      entityId: entityId || null,
+      entityName: entityName || null,
+      changes: changes,
+      ipAddress: req?.ip || req?.connection?.remoteAddress || null,
+      userAgent: req?.get?.('User-Agent') || null,
+    })
+  } catch (e) {
+    // Never break main flow
+    console.warn('[audit-logger] Non-blocking enhanced log failure:', e?.message || e)
+  }
+}
+
+module.exports = { logActivity, logActivityWithDiff }
 

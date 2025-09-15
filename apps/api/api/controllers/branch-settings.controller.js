@@ -1,6 +1,6 @@
 const { handleControllerError } = require('../helpers/error-handler');
 const branchSettingsService = require('../services/branch-settings.service');
-const { logActivity } = require('../helpers/audit-logger');
+const { logActivity, logActivityWithDiff } = require('../helpers/audit-logger');
 
 /**
  * Get branch settings
@@ -98,15 +98,17 @@ const updateBranchSettings = async (req, res) => {
 
     const result = await branchSettingsService.updateBranchSettings(branchId, settingsData);
 
-    // Audit log: update branch settings (branch manager and above)
-    await logActivity({
+    // Audit log: update branch settings (branch manager and above) - Enhanced
+    await logActivityWithDiff({
       req,
       action: 'update',
       entity: 'branch_settings',
       entityId: branchId,
       entityName: undefined,
       branchId: branchId,
-      changes: settingsData
+      afterData: result,
+      tableName: 'branches',
+      primaryKey: 'id'
     })
 
     res.json({ data: result });

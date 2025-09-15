@@ -5,7 +5,7 @@
 
 const menuItemsService = require('../services/menu-items.service');
 const { handleControllerError } = require('../helpers/error-handler');
-const { logActivity } = require('../helpers/audit-logger');
+const { logActivity, logActivityWithDiff } = require('../helpers/audit-logger');
 
 /**
  * GET /api/v1/menu/items
@@ -159,15 +159,16 @@ const createMenuItem = async (req, res) => {
 
   const result = await menuItemsService.createMenuItem(itemData, userBranch.branch_id, photo);
 
-    // Activity Log (create)
-    await logActivity({
+    // Activity Log (create) - Enhanced with after data
+    await logActivityWithDiff({
       req,
       branchId: userBranch.branch_id,
       action: 'create',
       entity: 'menu_item',
       entityId: result.id,
       entityName: result.name,
-      changes: { after: result }
+      afterData: result,
+      tableName: 'menu_items'
     })
 
     res.status(201).json({ data: result });
@@ -240,15 +241,16 @@ const updateMenuItem = async (req, res) => {
 
   const result = await menuItemsService.updateMenuItem(id, updateData, userBranch.branch_id, photo);
 
-    // Activity Log (update)
-    await logActivity({
+    // Activity Log (update) - Enhanced with before/after diff
+    await logActivityWithDiff({
       req,
       branchId: userBranch.branch_id,
       action: 'update',
       entity: 'menu_item',
       entityId: result.id,
       entityName: result.name,
-      changes: { update: updateData }
+      afterData: result,
+      tableName: 'menu_items'
     })
 
     res.json({ data: result });
@@ -290,15 +292,16 @@ const deleteMenuItem = async (req, res) => {
 
   const result = await menuItemsService.deleteMenuItem(id, userBranch.branch_id);
 
-    // Activity Log (delete)
-    await logActivity({
+    // Activity Log (delete) - Enhanced with before data
+    await logActivityWithDiff({
       req,
       branchId: userBranch.branch_id,
       action: 'delete',
       entity: 'menu_item',
       entityId: result.item_id,
       entityName: result.item_name,
-      changes: { deleted: true }
+      beforeData: result.deleted_item,
+      tableName: 'menu_items'
     })
 
     res.json({ data: result });

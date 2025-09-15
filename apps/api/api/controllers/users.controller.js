@@ -6,7 +6,7 @@
 const usersService = require('../services/users.service');
 const { ROLE_HIERARCHY } = require('../helpers/permissions');
 const { handleControllerError } = require('../helpers/error-handler');
-const { logActivity } = require('../helpers/audit-logger');
+const { logActivity, logActivityWithDiff } = require('../helpers/audit-logger');
 
 /**
  * POST /api/v1/users
@@ -25,15 +25,16 @@ const createUser = async (req, res) => {
     
     const result = await usersService.createUser(userData, currentUserId);
 
-    // Audit log: create user (branch-scoped if available)
-    await logActivity({
+    // Audit log: create user (branch-scoped if available) - Enhanced
+    await logActivityWithDiff({
       req,
       action: 'create',
       entity: 'user',
       entityId: result?.id,
       entityName: result?.email || result?.full_name,
       branchId: result?.branch_id || userData?.branch_id || null,
-      changes: { after: result || userData }
+      afterData: result || userData,
+      tableName: 'user_profiles'
     })
 
     res.json({ data: result });
@@ -55,14 +56,15 @@ const updateUser = async (req, res) => {
 
     const result = await usersService.updateUser(userId, branchId, updateData, currentUserId);
 
-    await logActivity({
+    await logActivityWithDiff({
       req,
       action: 'update',
       entity: 'user',
       entityId: result?.id || userId,
       entityName: result?.email || result?.full_name,
       branchId: branchId,
-      changes: { update: updateData }
+      afterData: result,
+      tableName: 'user_profiles'
     })
     
     res.json({ data: result });
@@ -113,14 +115,15 @@ const assignUserRole = async (req, res) => {
     const currentUserId = req.currentUserId;
     const result = await usersService.assignUserRole(userId, branchId, role, currentUserId);
 
-    await logActivity({
+    await logActivityWithDiff({
       req,
       action: 'update',
       entity: 'user_role',
       entityId: userId,
       entityName: result?.user?.email || undefined,
       branchId: branchId,
-      changes: { role }
+      afterData: { role: role, user: result?.user },
+      tableName: 'user_profiles'
     })
     
     res.json({ data: result });
@@ -141,14 +144,15 @@ const deleteUser = async (req, res) => {
 
     const result = await usersService.deleteUser(userId, branchId, currentUserId);
 
-    await logActivity({
+    await logActivityWithDiff({
       req,
       action: 'delete',
       entity: 'user',
       entityId: userId,
       entityName: result?.email || undefined,
       branchId: branchId,
-      changes: { deleted: true }
+      beforeData: result,
+      tableName: 'user_profiles'
     })
     res.json({ data: result });
     
