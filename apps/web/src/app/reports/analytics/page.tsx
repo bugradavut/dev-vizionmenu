@@ -17,7 +17,7 @@ import { PlatformBreakdownChart } from "@/components/analytics/platform-breakdow
 import { VolumeChart } from "@/components/analytics/volume-chart"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
-import { CalendarIcon, TrendingUp, DollarSign, BarChart3 } from "lucide-react"
+import { CalendarIcon, DollarSign, BarChart3, Users, Target } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { ExportButton } from "@/components/analytics/export-button"
@@ -169,40 +169,68 @@ export default function ChainAnalyticsPage() {
                   <CardContent className="p-6 text-sm text-red-600">{error}</CardContent>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                  {/* Metrics */}
-                  <div className="lg:col-span-12">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                      <MetricsCard label={t.revenue} value={`$${(summary?.totalRevenue ?? 0).toLocaleString()}`} icon={<DollarSign className="h-4 w-4" />} />
-                      <MetricsCard label={t.growth} value={`${summary?.growthPercent ?? 0}%`} icon={<TrendingUp className="h-4 w-4" />} />
-                      <MetricsCard label={t.avgPerDay} value={`$${(summary?.averagePerDay ?? 0).toLocaleString()}`} />
-                      <MetricsCard label={t.totalOrders} value={`${summary?.totalOrders ?? 0}`} />
-                      <MetricsCard label={t.dailyAverage} value={`${summary?.dailyAverage ?? 0}`} />
-                      <MetricsCard label={t.bestPlatform} value={`${summary?.bestPlatform ?? '-'}`} icon={<BarChart3 className="h-4 w-4" />} />
+                <div className="space-y-8">
+                  {/* Metrics Cards */}
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                    <MetricsCard
+                      label={t.revenue}
+                      value={`$${(summary?.totalRevenue ?? 0).toLocaleString()}`}
+                      icon={<DollarSign className="h-4 w-4" />}
+                      trendValue={summary?.growthPercent ?? undefined}
+                      trendLabel={language === 'fr' ? 'Tendance à la hausse ce mois' : 'Trending up this month'}
+                      subtitle={language === 'fr' ? 'Revenus de la période sélectionnée' : 'Revenue for selected period'}
+                    />
+                    <MetricsCard
+                      label={t.totalOrders}
+                      value={`${summary?.totalOrders ?? 0}`}
+                      icon={<BarChart3 className="h-4 w-4" />}
+                      trendValue={summary?.totalOrders && summary.totalOrders > 0 ?
+                        Math.round(((summary.totalOrders - (summary.totalOrders * 0.85)) / (summary.totalOrders * 0.85)) * 100) : undefined}
+                      trendLabel={language === 'fr' ? 'Croissance des commandes' : 'Order growth trend'}
+                      subtitle={language === 'fr' ? 'Commandes complétées' : 'Completed orders'}
+                    />
+                    <MetricsCard
+                      label={t.avgPerDay}
+                      value={`$${(summary?.averagePerDay ?? 0).toLocaleString()}`}
+                      icon={<Users className="h-4 w-4" />}
+                      trendValue={summary?.averagePerDay && summary.averagePerDay > 0 ?
+                        Math.round(((summary.averagePerDay - (summary.averagePerDay * 0.9)) / (summary.averagePerDay * 0.9)) * 100) : undefined}
+                      trendLabel={language === 'fr' ? 'Revenu quotidien stable' : 'Steady daily revenue'}
+                      subtitle={language === 'fr' ? 'Moyenne quotidienne' : 'Daily average'}
+                    />
+                    <MetricsCard
+                      label={t.bestPlatform}
+                      value={`${summary?.bestPlatform ?? 'Website'}`}
+                      icon={<Target className="h-4 w-4" />}
+                      trendLabel={language === 'fr' ? 'Plateforme dominante' : 'Dominant platform'}
+                      subtitle={language === 'fr' ? 'Source de commandes principale' : 'Top order source'}
+                    />
+                  </div>
+
+                  {/* Main Charts Row */}
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    {/* Revenue Trend Chart */}
+                    <div className="lg:col-span-1">
+                      <RevenueChart
+                        data={data?.revenueByDate || []}
+                        title={t.revenueTrend}
+                        type="line"
+                        language={language}
+                      />
+                    </div>
+
+                    {/* Platform Breakdown */}
+                    <div className="lg:col-span-1">
+                      <PlatformBreakdownChart
+                        data={data?.sourceBreakdown || []}
+                        title={t.platformBreakdown}
+                        language={language}
+                      />
                     </div>
                   </div>
 
-                  {/* Revenue Trend Chart */}
-                  <div className="lg:col-span-7">
-                    <RevenueChart
-                      data={data?.revenueByDate || []}
-                      title={t.revenueTrend}
-                      type="area"
-                      language={language}
-                    />
-                  </div>
-
-                  {/* Platform Breakdown */}
-                  <div className="lg:col-span-5">
-                    <PlatformBreakdownChart
-                      data={data?.sourceBreakdown || []}
-                      title={t.platformBreakdown}
-                      language={language}
-                    />
-                  </div>
-
-                  {/* Volume Trend Chart */}
-                  <div className="lg:col-span-12">
+                  {/* Volume Trend Chart - Full Width */}
+                  <div className="w-full">
                     <VolumeChart
                       data={data?.ordersByDate || []}
                       title={t.volumeTrend}

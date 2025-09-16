@@ -1,9 +1,11 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartContainer, ChartTooltip, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
-import { BarChart3 } from "lucide-react"
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, RadialBarChart, RadialBar, Legend } from "recharts"
+import { BarChart3, PieChart as PieChartIcon, Target } from "lucide-react"
+import { useState } from "react"
 
 export interface PlatformBreakdownDataPoint {
   source: string
@@ -15,49 +17,52 @@ interface PlatformBreakdownChartProps {
   data: PlatformBreakdownDataPoint[]
   title: string
   language?: "en" | "fr"
+  type?: "pie" | "bar" | "radial"
 }
 
-// Chart color configuration
+// Chart color configuration - VizionMenu brand colors
 const chartConfig = {
   website: {
     label: "Website",
-    color: "hsl(var(--chart-1))",
+    color: "#ea580c", // Orange primary
   },
   qr: {
     label: "QR Code",
-    color: "hsl(var(--chart-2))",
+    color: "#dc2626", // Red
   },
   mobile_app: {
     label: "Mobile App",
-    color: "hsl(var(--chart-3))",
+    color: "#2563eb", // Blue
   },
   uber_eats: {
     label: "Uber Eats",
-    color: "hsl(var(--chart-4))",
+    color: "#16a34a", // Green
   },
   doordash: {
     label: "DoorDash",
-    color: "hsl(var(--chart-5))",
+    color: "#ca8a04", // Yellow
   },
   skipthedishes: {
     label: "Skip The Dishes",
-    color: "hsl(var(--chart-1))",
+    color: "#7c3aed", // Purple
   },
   takeaway: {
     label: "Takeaway",
-    color: "hsl(var(--chart-2))",
+    color: "#db2777", // Pink
   },
   delivery: {
     label: "Delivery",
-    color: "hsl(var(--chart-3))",
+    color: "#0891b2", // Cyan
   },
 }
 
 export function PlatformBreakdownChart({
   data,
   title,
-  language = "en"
+  language = "en",
+  type: initialType = "pie"
 }: PlatformBreakdownChartProps) {
+  const [chartType, setChartType] = useState<"pie" | "bar" | "radial">(initialType)
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat(language === 'fr' ? 'fr-CA' : 'en-US', {
       style: 'currency',
@@ -97,7 +102,7 @@ export function PlatformBreakdownChart({
 
   // Custom tooltip formatter
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const customTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: any }>; label?: string }) => {
+  const customTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
@@ -149,14 +154,116 @@ export function PlatformBreakdownChart({
     item.revenue > max.revenue ? item : max
   ) : null
 
+  const renderChart = () => {
+    if (chartType === "bar") {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="displayName"
+              tick={{ fontSize: 12 }}
+              angle={-45}
+              textAnchor="end"
+              height={80}
+            />
+            <YAxis tickFormatter={(value) => `$${value.toLocaleString()}`} />
+            <ChartTooltip content={customTooltip} />
+            <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
+              {chartData.map((entry) => (
+                <Cell key={`cell-${entry.source}`} fill={entry.fill} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )
+    }
+
+    if (chartType === "radial") {
+      const radialData = chartData.map((item) => ({
+        ...item,
+        fill: item.fill,
+        angle: item.percentage * 3.6, // Convert percentage to degrees
+      }))
+
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <RadialBarChart cx="50%" cy="50%" innerRadius="20%" outerRadius="80%" data={radialData}>
+            <RadialBar
+              dataKey="percentage"
+              cornerRadius={4}
+              fill="#ea580c"
+            />
+            <ChartTooltip content={customTooltip} />
+            <Legend
+              iconSize={12}
+              layout="horizontal"
+              verticalAlign="bottom"
+              align="center"
+              wrapperStyle={{ paddingTop: '20px' }}
+            />
+          </RadialBarChart>
+        </ResponsiveContainer>
+      )
+    }
+
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={chartData}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={100}
+            paddingAngle={2}
+            dataKey="revenue"
+          >
+            {chartData.map((entry) => (
+              <Cell key={`cell-${entry.source}`} fill={entry.fill} />
+            ))}
+          </Pie>
+          <ChartTooltip content={customTooltip} />
+        </PieChart>
+      </ResponsiveContainer>
+    )
+  }
+
   return (
     <Card className="border">
       <CardHeader className="flex flex-col items-stretch space-y-0 border-b p-0">
         <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <BarChart3 className="h-4 w-4" />
-            {title}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <BarChart3 className="h-4 w-4" />
+              {title}
+            </CardTitle>
+            <Select value={chartType} onValueChange={(value: "pie" | "bar" | "radial") => setChartType(value)}>
+              <SelectTrigger className="w-[120px] h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pie">
+                  <div className="flex items-center gap-2">
+                    <PieChartIcon className="h-4 w-4" />
+                    <span>{language === 'fr' ? 'Secteur' : 'Pie'}</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="bar">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    <span>{language === 'fr' ? 'Barre' : 'Bar'}</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="radial">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    <span>{language === 'fr' ? 'Radial' : 'Radial'}</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           {topPlatform && (
             <div className="flex gap-4 text-sm text-muted-foreground">
               <span>
@@ -173,36 +280,9 @@ export function PlatformBreakdownChart({
         {chartData.length > 0 ? (
           <ChartContainer
             config={chartConfig}
-            className="aspect-square max-h-[300px] w-full"
+            className={chartType === "bar" ? "aspect-auto h-[320px] w-full" : "aspect-auto h-[320px] w-full"}
           >
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={2}
-                  dataKey="revenue"
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <ChartTooltip content={customTooltip as any} />
-                <ChartLegend
-                  content={
-                    <ChartLegendContent
-                      nameKey="displayName"
-                      className="flex flex-wrap gap-2 justify-center mt-4"
-                    />
-                  }
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+            {renderChart()}</ChartContainer>
         ) : (
           <div className="flex h-[300px] items-center justify-center">
             <p className="text-sm text-muted-foreground">
