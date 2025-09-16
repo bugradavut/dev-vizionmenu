@@ -20,13 +20,13 @@ function formatErrorResponse(error, operation = 'operation') {
   };
 
   // Handle specific error types
-  if (error.message.includes('Failed to create auth user')) {
+  if (error.message && error.message.includes('Failed to create auth user')) {
     response.error.code = 'AUTH_ERROR';
     response.error.message = 'User authentication setup failed';
-  } else if (error.message.includes('Failed to add user to branch')) {
+  } else if (error.message && error.message.includes('Failed to add user to branch')) {
     response.error.code = 'DATABASE_ERROR';
     response.error.message = 'User profile creation failed';
-  } else if (error.message.includes('Insufficient permissions')) {
+  } else if (error.message && error.message.includes('Insufficient permissions')) {
     response.error.code = 'FORBIDDEN';
     response.error.message = 'Insufficient permissions for this operation';
   } else if (error.message.includes('User not found')) {

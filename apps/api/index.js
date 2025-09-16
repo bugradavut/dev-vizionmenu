@@ -61,7 +61,8 @@ const stripeRoutes = require('./routes/stripe');
 const refundsRoutes = require('./routes/refunds');
 const notificationsRoutes = require('./routes/notifications');
 const webhookTestRoutes = require('./routes/webhook-test');
-const activityLogsRoutes = require('./routes/activity-logs');
+const activityLogsRoutes = require('./api/routes/activity-logs');
+const analyticsRoutes = require('./api/routes/analytics');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -171,6 +172,9 @@ app.use('/api/v1/webhook-test', webhookTestRoutes);
 
 // Use activity logs routes (protected - chain owner and platform admin)
 app.use('/api/v1/reports/activity-logs', activityLogsRoutes);
+
+// Use analytics routes (protected - chain owner and platform admin)
+app.use('/api/v1/reports/analytics', analyticsRoutes);
 
 // Catch all other routes
 app.use('*', (req, res) => {

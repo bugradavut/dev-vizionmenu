@@ -10,8 +10,11 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { useLanguage } from "@/contexts/language-context"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { analyticsService, ChainAnalyticsResponse, PeriodPreset } from "@/services/analytics.service"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { MetricsCard } from "@/components/analytics/metrics-card"
+import { RevenueChart } from "@/components/analytics/revenue-chart"
+import { PlatformBreakdownChart } from "@/components/analytics/platform-breakdown-chart"
+import { VolumeChart } from "@/components/analytics/volume-chart"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { CalendarIcon, TrendingUp, DollarSign, BarChart3 } from "lucide-react"
@@ -179,80 +182,32 @@ export default function ChainAnalyticsPage() {
                     </div>
                   </div>
 
-                  {/* Revenue Trend (simple list with bars for now) */}
+                  {/* Revenue Trend Chart */}
                   <div className="lg:col-span-7">
-                    <Card className="border">
-                      <CardHeader>
-                        <CardTitle className="text-base">{t.revenueTrend}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {data?.revenueByDate?.length ? (
-                          <div className="space-y-3">
-                            {data.revenueByDate.map((p) => {
-                              const max = Math.max(...data.revenueByDate.map((x) => x.revenue), 1)
-                              const pct = Math.round((p.revenue / max) * 100)
-                              return (
-                                <div key={p.date} className="grid grid-cols-12 items-center gap-2">
-                                  <div className="col-span-3 text-xs text-muted-foreground">{p.date}</div>
-                                  <div className="col-span-7 bg-muted rounded h-2">
-                                    <div className="bg-primary h-2 rounded" style={{ width: `${pct}%` }}></div>
-                                  </div>
-                                  <div className="col-span-2 text-right text-xs font-medium">${p.revenue.toLocaleString()}</div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">{t.noData}</p>
-                        )}
-                      </CardContent>
-                    </Card>
+                    <RevenueChart
+                      data={data?.revenueByDate || []}
+                      title={t.revenueTrend}
+                      type="area"
+                      language={language}
+                    />
                   </div>
 
                   {/* Platform Breakdown */}
                   <div className="lg:col-span-5">
-                    <Card className="border">
-                      <CardHeader>
-                        <CardTitle className="text-base">{t.platformBreakdown}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {data?.sourceBreakdown?.length ? (
-                          <div className="space-y-2">
-                            {data.sourceBreakdown.map((s) => (
-                              <div key={s.source} className="flex items-center justify-between">
-                                <div className="text-sm capitalize">{s.source}</div>
-                                <div className="text-sm text-muted-foreground">{s.order_count} • ${s.revenue.toLocaleString()}</div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">{t.noData}</p>
-                        )}
-                      </CardContent>
-                    </Card>
+                    <PlatformBreakdownChart
+                      data={data?.sourceBreakdown || []}
+                      title={t.platformBreakdown}
+                      language={language}
+                    />
                   </div>
 
-                  {/* Volume Trend (orders per day) */}
+                  {/* Volume Trend Chart */}
                   <div className="lg:col-span-12">
-                    <Card className="border">
-                      <CardHeader>
-                        <CardTitle className="text-base">{t.volumeTrend}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {data?.ordersByDate?.length ? (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                            {data.ordersByDate.map((p) => (
-                              <div key={p.date} className="rounded border p-3">
-                                <div className="text-xs text-muted-foreground">{p.date}</div>
-                                <div className="text-lg font-semibold">{p.order_count}</div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">{t.noData}</p>
-                        )}
-                      </CardContent>
-                    </Card>
+                    <VolumeChart
+                      data={data?.ordersByDate || []}
+                      title={t.volumeTrend}
+                      language={language}
+                    />
                   </div>
                 </div>
               )}
