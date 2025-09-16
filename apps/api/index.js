@@ -61,8 +61,8 @@ const stripeRoutes = require('./routes/stripe');
 const refundsRoutes = require('./routes/refunds');
 const notificationsRoutes = require('./routes/notifications');
 const webhookTestRoutes = require('./routes/webhook-test');
-const activityLogsRoutes = require('./api/routes/activity-logs');
-const analyticsRoutes = require('./api/routes/analytics');
+const activityLogsRoutes = require('./routes/activity-logs');
+const analyticsRoutes = require('./routes/analytics');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');

@@ -5,6 +5,11 @@
 
 const analyticsService = require('../services/analytics.service');
 const { handleControllerError } = require('../helpers/error-handler');
+const { logger } = require('../utils/logger');
+const {
+  ValidationError,
+  AuthorizationError
+} = require('../errors/custom-errors');
 
 class AnalyticsController {
   /**
@@ -20,30 +25,40 @@ class AnalyticsController {
         endDate
       } = req.query;
 
+      // Log request start
+      logger.info('Analytics request received', {
+        req,
+        meta: {
+          chainId,
+          period,
+          startDate,
+          endDate,
+          userRole: req.userRole,
+          userChainId: req.userChainId
+        }
+      });
+
       // Validate required parameters
       if (!chainId) {
-        return res.status(400).json({
-          success: false,
-          error: 'Chain ID is required'
-        });
+        throw new ValidationError('Chain ID is required');
       }
 
       // Validate period parameter
       const validPeriods = ['7d', '30d', '90d', 'custom'];
       if (!validPeriods.includes(period)) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid period. Must be one of: 7d, 30d, 90d, custom'
-        });
+        throw new ValidationError(
+          'Invalid period. Must be one of: 7d, 30d, 90d, custom',
+          { validPeriods, providedPeriod: period }
+        );
       }
 
       // Validate custom date range
       if (period === 'custom') {
         if (!startDate || !endDate) {
-          return res.status(400).json({
-            success: false,
-            error: 'Start date and end date are required for custom period'
-          });
+          throw new ValidationError(
+            'Start date and end date are required for custom period',
+            { period, startDate, endDate }
+          );
         }
 
         // Basic date format validation
@@ -51,17 +66,17 @@ class AnalyticsController {
         const endDateObj = new Date(endDate);
 
         if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
-          return res.status(400).json({
-            success: false,
-            error: 'Invalid date format. Use YYYY-MM-DD'
-          });
+          throw new ValidationError(
+            'Invalid date format. Use YYYY-MM-DD',
+            { startDate, endDate }
+          );
         }
 
         if (startDateObj >= endDateObj) {
-          return res.status(400).json({
-            success: false,
-            error: 'Start date must be before end date'
-          });
+          throw new ValidationError(
+            'Start date must be before end date',
+            { startDate, endDate }
+          );
         }
       }
 
@@ -73,20 +88,20 @@ class AnalyticsController {
       if (!isPlatformAdmin && !isChainOwner) {
         // For non-admin/owner, branch context is required
         if (!userBranch || !userBranch.branch_id) {
-          return res.status(403).json({
-            success: false,
-            error: 'Access denied: missing branch context'
-          });
+          throw new AuthorizationError(
+            'Access denied: missing branch context',
+            { userRole: req.userRole, hasBranch: !!userBranch }
+          );
         }
       }
 
       // Chain owner must only access their own chain
       if (isChainOwner) {
         if (!req.userChainId || chainId !== String(req.userChainId)) {
-          return res.status(403).json({
-            success: false,
-            error: 'Access denied: chain mismatch'
-          });
+          throw new AuthorizationError(
+            'Access denied: chain mismatch',
+            { userChainId: req.userChainId, requestedChainId: chainId }
+          );
         }
       }
 
@@ -98,14 +113,23 @@ class AnalyticsController {
         endDate
       });
 
+      // Log successful response
+      logger.info('Analytics data retrieved successfully', {
+        req,
+        meta: {
+          chainId,
+          period,
+          dataKeys: Object.keys(analyticsData)
+        }
+      });
+
       return res.status(200).json({
         success: true,
         data: analyticsData
       });
 
     } catch (error) {
-      console.error('Error in getChainAnalytics:', error);
-      return handleControllerError(res, error);
+      return handleControllerError(error, 'getChainAnalytics', res, req);
     }
   }
 }

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, AreaChart, Area, BarChart, Bar, CartesianGrid } from "recharts"
-import { BarChart3, LineChart as LineChartIcon, AreaChart as AreaChartIcon, CalendarIcon } from "lucide-react"
+import { TrendingUp, LineChart as LineChartIcon, AreaChart as AreaChartIcon, BarChart3, CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
@@ -15,39 +15,38 @@ import { format } from "date-fns"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CHART_COLORS } from "@/utils/chart-colors"
 
-export interface VolumeDataPoint {
+export interface AOVDataPoint {
   date: string
+  aov: number
   order_count: number
+  total_revenue: number
 }
 
-interface VolumeChartProps {
+interface AOVChartProps {
   title: string
   language?: "en" | "fr"
   type?: "line" | "area" | "bar"
 }
 
 const chartConfig = {
-  orders: {
-    label: "Orders",
-    color: CHART_COLORS.volume, // Blue color for volume
+  aov: {
+    label: "AOV",
+    color: CHART_COLORS.aov, // Green color for AOV
   },
 }
 
-export function VolumeChart({
+export function AOVChart({
   title,
   language = "en",
-  type: initialType = "bar"
-}: VolumeChartProps) {
+  type: initialType = "line"
+}: AOVChartProps) {
   const { chainId } = useEnhancedAuth()
   const [chartType, setChartType] = useState<"line" | "area" | "bar">(initialType)
   const [period, setPeriod] = useState<PeriodPreset>("7d")
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({})
   const [openRange, setOpenRange] = useState(false)
-  const [data, setData] = useState<VolumeDataPoint[]>([])
+  const [data, setData] = useState<AOVDataPoint[]>([])
   const [loading, setLoading] = useState(true)
-
-  // Use consistent blue color for volume charts
-  const volumeColor = CHART_COLORS.volume
 
   const fetchData = useCallback(async () => {
     if (!chainId) return
@@ -59,9 +58,9 @@ export function VolumeChart({
         startDate: period === 'custom' && dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
         endDate: period === 'custom' && dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined,
       })
-      setData(response.data.ordersByDate)
+      setData(response.data.aovByDate)
     } catch (error) {
-      console.error('Failed to fetch volume data:', error)
+      console.error('Failed to fetch AOV data:', error)
       setData([])
     } finally {
       setLoading(false)
@@ -77,7 +76,19 @@ export function VolumeChart({
     if (newPeriod !== 'custom') {
       setDateRange({})
     }
-    setOpenRange(false) // Always close on quick select
+    setOpenRange(false)
+  }
+
+  // Use consistent green color for AOV charts
+  const aovColor = CHART_COLORS.aov
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat(language === 'fr' ? 'fr-CA' : 'en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value)
   }
 
   const formatDate = (dateStr: string) => {
@@ -93,11 +104,9 @@ export function VolumeChart({
   }
 
   // Calculate summary stats
-  const totalOrders = data.reduce((sum, item) => sum + item.order_count, 0)
-  const avgPerDay = data.length > 0 ? Math.round(totalOrders / data.length) : 0
-  const maxDay = data.length > 0 ? data.reduce((max, item) =>
-    item.order_count > max.order_count ? item : max
-  ) : null
+  const avgAOV = data.length > 0 ? data.reduce((sum, item) => sum + item.aov, 0) / data.length : 0
+  const maxAOV = data.length > 0 ? Math.max(...data.map(item => item.aov)) : 0
+  const minAOV = data.length > 0 ? Math.min(...data.map(item => item.aov)) : 0
 
   const renderChart = () => {
     const chartData = data.map(item => ({
@@ -111,9 +120,9 @@ export function VolumeChart({
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
               <defs>
-                <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={volumeColor} stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor={volumeColor} stopOpacity={0.1}/>
+                <linearGradient id="colorAOV" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={aovColor} stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor={aovColor} stopOpacity={0.1}/>
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.5} />
@@ -129,32 +138,44 @@ export function VolumeChart({
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                allowDecimals={false}
+                tickFormatter={(value) => `$${value.toFixed(0)}`}
               />
               <Area
                 type="monotone"
-                dataKey="order_count"
-                stroke={volumeColor}
+                dataKey="aov"
+                stroke={aovColor}
                 strokeWidth={2}
-                fill="url(#colorOrders)"
+                fill="url(#colorAOV)"
               />
               <ChartTooltip
+                cursor={false}
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
+                    const data = payload[0].payload as AOVDataPoint
                     return (
                       <div className="rounded-lg border bg-white/95 backdrop-blur-sm p-3 shadow-lg">
                         <div className="grid gap-2">
                           <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: volumeColor }}></div>
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: aovColor }}></div>
                             <span className="text-sm font-semibold">{formatDate(label || '')}</span>
                           </div>
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="text-sm text-muted-foreground">
-                              {language === 'fr' ? 'Commandes:' : 'Orders:'}
-                            </span>
-                            <span className="text-sm font-bold">
-                              {payload[0].value}
-                            </span>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-sm text-muted-foreground">
+                                {language === 'fr' ? 'Valeur Moyenne:' : 'Average Value:'}
+                              </span>
+                              <span className="text-sm font-bold">
+                                {formatCurrency(data.aov)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-xs text-muted-foreground">
+                                {language === 'fr' ? 'Commandes:' : 'Orders:'}
+                              </span>
+                              <span className="text-xs">
+                                {data.order_count}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -170,10 +191,7 @@ export function VolumeChart({
       case "bar":
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-            >
+            <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.3} />
               <XAxis
                 dataKey="displayDate"
@@ -187,11 +205,11 @@ export function VolumeChart({
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                allowDecimals={false}
+                tickFormatter={(value) => `$${value.toFixed(0)}`}
               />
               <Bar
-                dataKey="order_count"
-                fill={volumeColor}
+                dataKey="aov"
+                fill={aovColor}
                 radius={[4, 4, 0, 0]}
                 maxBarSize={60}
               />
@@ -199,20 +217,31 @@ export function VolumeChart({
                 cursor={false}
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
+                    const data = payload[0].payload as AOVDataPoint
                     return (
                       <div className="rounded-lg border bg-white/95 backdrop-blur-sm p-3 shadow-lg">
                         <div className="grid gap-2">
                           <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: volumeColor }}></div>
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: aovColor }}></div>
                             <span className="text-sm font-semibold">{formatDate(label || '')}</span>
                           </div>
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="text-sm text-muted-foreground">
-                              {language === 'fr' ? 'Commandes:' : 'Orders:'}
-                            </span>
-                            <span className="text-sm font-bold">
-                              {payload[0].value}
-                            </span>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-sm text-muted-foreground">
+                                {language === 'fr' ? 'Valeur Moyenne:' : 'Average Value:'}
+                              </span>
+                              <span className="text-sm font-bold">
+                                {formatCurrency(data.aov)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-xs text-muted-foreground">
+                                {language === 'fr' ? 'Commandes:' : 'Orders:'}
+                              </span>
+                              <span className="text-xs">
+                                {data.order_count}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -243,43 +272,55 @@ export function VolumeChart({
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                allowDecimals={false}
+                tickFormatter={(value) => `$${value.toFixed(0)}`}
               />
               <Line
                 type="monotone"
-                dataKey="order_count"
-                stroke={volumeColor}
+                dataKey="aov"
+                stroke={aovColor}
                 strokeWidth={3}
                 dot={{
-                  fill: volumeColor,
+                  fill: aovColor,
                   strokeWidth: 2,
                   stroke: "white",
-                  r: 4,
+                  r: 5,
                 }}
                 activeDot={{
-                  r: 6,
-                  fill: volumeColor,
+                  r: 7,
+                  fill: aovColor,
                   stroke: "white",
                   strokeWidth: 2,
                 }}
               />
               <ChartTooltip
+                cursor={false}
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
+                    const data = payload[0].payload as AOVDataPoint
                     return (
                       <div className="rounded-lg border bg-white/95 backdrop-blur-sm p-3 shadow-lg">
                         <div className="grid gap-2">
                           <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: volumeColor }}></div>
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: aovColor }}></div>
                             <span className="text-sm font-semibold">{formatDate(label || '')}</span>
                           </div>
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="text-sm text-muted-foreground">
-                              {language === 'fr' ? 'Commandes:' : 'Orders:'}
-                            </span>
-                            <span className="text-sm font-bold">
-                              {payload[0].value}
-                            </span>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-sm text-muted-foreground">
+                                {language === 'fr' ? 'Valeur Moyenne:' : 'Average Value:'}
+                              </span>
+                              <span className="text-sm font-bold">
+                                {formatCurrency(data.aov)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-xs text-muted-foreground">
+                                {language === 'fr' ? 'Commandes:' : 'Orders:'}
+                              </span>
+                              <span className="text-xs">
+                                {data.order_count}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -300,7 +341,7 @@ export function VolumeChart({
         <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
-              <BarChart3 className="h-4 w-4" />
+              <TrendingUp className="h-4 w-4" />
               {title}
             </CardTitle>
             <div className="flex items-center gap-2">
@@ -309,8 +350,8 @@ export function VolumeChart({
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="h-8">
                     <CalendarIcon className="h-4 w-4 mr-2" />
-                    {dateRange.from && dateRange.to
-                      ? `${format(dateRange.from, 'MMM dd')} - ${format(dateRange.to, 'MMM dd')}`
+                    {period === 'custom' && dateRange.from && dateRange.to
+                      ? `${format(dateRange.from, 'MMM d')} - ${format(dateRange.to, 'MMM d')}`
                       : period === '7d' ? (language === 'fr' ? '7 jours' : '7 days')
                       : period === '30d' ? (language === 'fr' ? '30 jours' : '30 days')
                       : (language === 'fr' ? '90 jours' : '90 days')
@@ -359,32 +400,18 @@ export function VolumeChart({
                       </div>
                     </div>
                     <div className="border-t pt-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-sm font-medium">
-                          {language === 'fr' ? 'Plage personnalisée' : 'Custom Range'}
-                        </div>
-                        {(dateRange.from || dateRange.to) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-xs"
-                            onClick={() => {
-                              setDateRange({})
-                              setPeriod('7d') // Reset to default period
-                            }}
-                          >
-                            {language === 'fr' ? 'Effacer' : 'Clear'}
-                          </Button>
-                        )}
+                      <div className="text-sm font-medium mb-2">
+                        {language === 'fr' ? 'Plage personnalisée' : 'Custom Range'}
                       </div>
                       <Calendar
                         mode="range"
                         selected={{ from: dateRange.from, to: dateRange.to }}
                         onSelect={(range) => {
                           setDateRange({ from: range?.from, to: range?.to })
-                          // Auto-set to custom period when date range is selected
+                          // Only set to custom when both dates are selected
                           if (range?.from && range?.to) {
                             setPeriod('custom')
+                            setOpenRange(false) // Close the popover automatically
                           }
                         }}
                         numberOfMonths={2}
@@ -400,12 +427,6 @@ export function VolumeChart({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bar">
-                    <div className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4" />
-                      <span>{language === 'fr' ? 'Barre' : 'Bar'}</span>
-                    </div>
-                  </SelectItem>
                   <SelectItem value="line">
                     <div className="flex items-center gap-2">
                       <LineChartIcon className="h-4 w-4" />
@@ -418,23 +439,26 @@ export function VolumeChart({
                       <span>{language === 'fr' ? 'Zone' : 'Area'}</span>
                     </div>
                   </SelectItem>
+                  <SelectItem value="bar">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4" />
+                      <span>{language === 'fr' ? 'Barre' : 'Bar'}</span>
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="flex gap-4 text-sm text-muted-foreground">
             <span>
-              {language === 'fr' ? 'Total:' : 'Total:'} {totalOrders}
+              {language === 'fr' ? 'Moyenne:' : 'Average:'} {formatCurrency(avgAOV)}
             </span>
             <span>
-              {language === 'fr' ? 'Moyenne:' : 'Average:'} {avgPerDay}/
-              {language === 'fr' ? 'jour' : 'day'}
+              {language === 'fr' ? 'Max:' : 'Max:'} {formatCurrency(maxAOV)}
             </span>
-            {maxDay && (
-              <span>
-                {language === 'fr' ? 'Pic:' : 'Peak:'} {maxDay.order_count} ({formatDate(maxDay.date)})
-              </span>
-            )}
+            <span>
+              {language === 'fr' ? 'Min:' : 'Min:'} {formatCurrency(minAOV)}
+            </span>
           </div>
         </div>
       </CardHeader>

@@ -15,15 +15,10 @@ import { MetricsCard } from "@/components/analytics/metrics-card"
 import { RevenueChart } from "@/components/analytics/revenue-chart"
 import { PlatformBreakdownChart } from "@/components/analytics/platform-breakdown-chart"
 import { VolumeChart } from "@/components/analytics/volume-chart"
+import { AOVChart } from "@/components/analytics/aov-chart"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Button } from "@/components/ui/button"
-import { CalendarIcon, DollarSign, BarChart3, Users, Target } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
+import { DollarSign, BarChart3, Users, Target } from "lucide-react"
 import { ExportButton } from "@/components/analytics/export-button"
-import { format } from "date-fns"
-
-type DateRange = { from?: Date; to?: Date }
 
 export default function ChainAnalyticsPage() {
   const { language } = useLanguage()
@@ -33,9 +28,7 @@ export default function ChainAnalyticsPage() {
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<ChainAnalyticsResponse | null>(null)
 
-  const [period, setPeriod] = useState<PeriodPreset>("7d")
-  const [dateRange, setDateRange] = useState<DateRange>({})
-  const [openRange, setOpenRange] = useState(false)
+  const [period] = useState<PeriodPreset>("30d") // Default period for initial load
 
   const t = {
     title: language === 'fr' ? 'Analytiques' : 'Analytics',
@@ -49,12 +42,7 @@ export default function ChainAnalyticsPage() {
     revenueTrend: language === 'fr' ? 'Tendance des Revenus' : 'Revenue Trend',
     platformBreakdown: language === 'fr' ? 'Répartition par Plateforme' : 'Platform Breakdown',
     volumeTrend: language === 'fr' ? 'Tendance du Volume' : 'Volume Trend',
-    period7: language === 'fr' ? '7j' : '7d',
-    period30: language === 'fr' ? '30j' : '30d',
-    period90: language === 'fr' ? '90j' : '90d',
-    custom: language === 'fr' ? 'Personnalisé' : 'Custom',
-    dateRange: language === 'fr' ? 'Plage de dates' : 'Date range',
-    noData: language === 'fr' ? 'Aucune donnée' : 'No data',
+    aovTrend: language === 'fr' ? 'Valeur Moyenne Commande' : 'Average Order Value',
   }
 
   const fetchAnalytics = async () => {
@@ -64,9 +52,7 @@ export default function ChainAnalyticsPage() {
     try {
       const resp = await analyticsService.getChainAnalytics({
         chainId,
-        period: period !== 'custom' ? period : undefined,
-        startDate: period === 'custom' && dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
-        endDate: period === 'custom' && dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined,
+        period,
       })
       setData(resp.data)
     } catch (e: unknown) {
@@ -80,7 +66,7 @@ export default function ChainAnalyticsPage() {
   useEffect(() => {
     fetchAnalytics()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chainId, period, dateRange.from?.toString(), dateRange.to?.toString()])
+  }, [chainId, period])
 
   const summary = data?.summary
 
@@ -113,32 +99,7 @@ export default function ChainAnalyticsPage() {
                   <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
                   <p className="text-muted-foreground mt-2 text-lg">{t.subtitle}</p>
                 </div>
-                <div className="lg:col-span-4 flex items-center justify-end gap-2">
-                  {/* Period presets */}
-                  <div className="flex items-center gap-1">
-                    <Button variant={period === '7d' ? 'default' : 'outline'} size="sm" onClick={() => setPeriod('7d')}>{t.period7}</Button>
-                    <Button variant={period === '30d' ? 'default' : 'outline'} size="sm" onClick={() => setPeriod('30d')}>{t.period30}</Button>
-                    <Button variant={period === '90d' ? 'default' : 'outline'} size="sm" onClick={() => setPeriod('90d')}>{t.period90}</Button>
-                  </div>
-                  {/* Custom range */}
-                  <Popover open={openRange} onOpenChange={setOpenRange}>
-                    <PopoverTrigger asChild>
-                      <Button variant={period === 'custom' ? 'default' : 'outline'} size="sm" onClick={() => setPeriod('custom')}>
-                        <CalendarIcon className="h-4 w-4 mr-2" />
-                        {t.custom}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                      <div className="p-2">
-                        <Calendar
-                          mode="range"
-                          selected={{ from: dateRange.from, to: dateRange.to }}
-                          onSelect={(range) => setDateRange({ from: range?.from, to: range?.to })}
-                          numberOfMonths={2}
-                        />
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                <div className="lg:col-span-4 flex items-center justify-end">
                   {/* Export - allow CSV for breakdown; revenue timeline CSV too */}
                   <ExportButton
                     language={language}
@@ -207,14 +168,13 @@ export default function ChainAnalyticsPage() {
                     />
                   </div>
 
-                  {/* Main Charts Row */}
+                  {/* Main Charts Grid - 2x2 Layout */}
                   <div className="grid gap-6 lg:grid-cols-2">
                     {/* Revenue Trend Chart */}
                     <div className="lg:col-span-1">
                       <RevenueChart
-                        data={data?.revenueByDate || []}
                         title={t.revenueTrend}
-                        type="line"
+                        type="area"
                         language={language}
                       />
                     </div>
@@ -222,20 +182,28 @@ export default function ChainAnalyticsPage() {
                     {/* Platform Breakdown */}
                     <div className="lg:col-span-1">
                       <PlatformBreakdownChart
-                        data={data?.sourceBreakdown || []}
                         title={t.platformBreakdown}
                         language={language}
                       />
                     </div>
-                  </div>
 
-                  {/* Volume Trend Chart - Full Width */}
-                  <div className="w-full">
-                    <VolumeChart
-                      data={data?.ordersByDate || []}
-                      title={t.volumeTrend}
-                      language={language}
-                    />
+                    {/* Volume Trend Chart */}
+                    <div className="lg:col-span-1">
+                      <VolumeChart
+                        title={t.volumeTrend}
+                        type="bar"
+                        language={language}
+                      />
+                    </div>
+
+                    {/* AOV Trend Chart */}
+                    <div className="lg:col-span-1">
+                      <AOVChart
+                        title={t.aovTrend}
+                        type="line"
+                        language={language}
+                      />
+                    </div>
                   </div>
                 </div>
               )}

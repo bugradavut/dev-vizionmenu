@@ -4,6 +4,7 @@
 // =====================================================
 
 const { createClient } = require('@supabase/supabase-js');
+const { logger } = require('../utils/logger');
 
 // Create Supabase client for user data fetching
 const supabase = createClient(
@@ -45,7 +46,7 @@ const requireAuth = (req, res, next) => {
     next();
     
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    logger.error('Auth middleware error', { error, req });
     return res.status(500).json({
       error: 'Internal Server Error',
       message: 'Authentication processing failed'
@@ -100,7 +101,7 @@ const requireAuthWithBranch = async (req, res, next) => {
     next();
     
   } catch (error) {
-    console.error('Auth with branch middleware error:', error);
+    logger.error('Auth with branch middleware error', { error, req });
     return res.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'Authentication processing failed' }
     });
@@ -158,7 +159,7 @@ const optionalAuth = async (req, res, next) => {
     next();
     
   } catch (error) {
-    console.error('Optional auth middleware error:', error);
+    logger.error('Optional auth middleware error', { error, req });
     return res.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'Authentication processing failed' }
     });
@@ -259,7 +260,7 @@ module.exports = {
       return next();
 
     } catch (error) {
-      console.error('Auth chain-or-branch middleware error:', error);
+      logger.error('Auth chain-or-branch middleware error', { error, req });
       return res.status(500).json({
         error: { code: 'INTERNAL_ERROR', message: 'Authentication processing failed' }
       });

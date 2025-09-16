@@ -4,8 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, RadialBarChart, RadialBar, Legend } from "recharts"
-import { BarChart3, PieChart as PieChartIcon, Target } from "lucide-react"
-import { useState } from "react"
+import { BarChart3, PieChart as PieChartIcon, Target, CalendarIcon } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { useState, useEffect, useCallback } from "react"
+import { analyticsService, PeriodPreset } from "@/services/analytics.service"
+import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
+import { format } from "date-fns"
+import { Skeleton } from "@/components/ui/skeleton"
+import { getPlatformColor } from "@/utils/chart-colors"
 
 export interface PlatformBreakdownDataPoint {
   source: string
@@ -14,55 +22,62 @@ export interface PlatformBreakdownDataPoint {
 }
 
 interface PlatformBreakdownChartProps {
-  data: PlatformBreakdownDataPoint[]
   title: string
   language?: "en" | "fr"
   type?: "pie" | "bar" | "radial"
 }
 
-// Chart color configuration - VizionMenu brand colors
+// Dynamic chart configuration
 const chartConfig = {
-  website: {
-    label: "Website",
-    color: "#ea580c", // Orange primary
-  },
-  qr: {
-    label: "QR Code",
-    color: "#dc2626", // Red
-  },
-  mobile_app: {
-    label: "Mobile App",
-    color: "#2563eb", // Blue
-  },
-  uber_eats: {
-    label: "Uber Eats",
-    color: "#16a34a", // Green
-  },
-  doordash: {
-    label: "DoorDash",
-    color: "#ca8a04", // Yellow
-  },
-  skipthedishes: {
-    label: "Skip The Dishes",
-    color: "#7c3aed", // Purple
-  },
-  takeaway: {
-    label: "Takeaway",
-    color: "#db2777", // Pink
-  },
-  delivery: {
-    label: "Delivery",
-    color: "#0891b2", // Cyan
+  platforms: {
+    label: "Platforms",
+    color: "dynamic", // Uses getPlatformColor function
   },
 }
 
 export function PlatformBreakdownChart({
-  data,
   title,
   language = "en",
   type: initialType = "pie"
 }: PlatformBreakdownChartProps) {
+  const { chainId } = useEnhancedAuth()
   const [chartType, setChartType] = useState<"pie" | "bar" | "radial">(initialType)
+  const [period, setPeriod] = useState<PeriodPreset>("7d")
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({})
+  const [openRange, setOpenRange] = useState(false)
+  const [data, setData] = useState<PlatformBreakdownDataPoint[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchData = useCallback(async () => {
+    if (!chainId) return
+    setLoading(true)
+    try {
+      const response = await analyticsService.getChainAnalytics({
+        chainId,
+        period: period,
+        startDate: period === 'custom' && dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
+        endDate: period === 'custom' && dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined,
+      })
+      setData(response.data.sourceBreakdown)
+    } catch (error) {
+      console.error('Failed to fetch platform breakdown data:', error)
+      setData([])
+    } finally {
+      setLoading(false)
+    }
+  }, [chainId, period, dateRange.from, dateRange.to])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  const handlePeriodChange = (newPeriod: PeriodPreset) => {
+    setPeriod(newPeriod)
+    if (newPeriod !== 'custom') {
+      setDateRange({})
+    }
+    setOpenRange(false)
+  }
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat(language === 'fr' ? 'fr-CA' : 'en-US', {
       style: 'currency',
@@ -90,7 +105,7 @@ export function PlatformBreakdownChart({
   const chartData = data.map((item, index) => ({
     ...item,
     displayName: getSourceLabel(item.source),
-    fill: chartConfig[item.source as keyof typeof chartConfig]?.color || `hsl(var(--chart-${(index % 5) + 1}))`,
+    fill: getPlatformColor(item.source, index),
     percentage: 0 // Will be calculated
   }))
 
@@ -238,31 +253,110 @@ export function PlatformBreakdownChart({
               <BarChart3 className="h-4 w-4" />
               {title}
             </CardTitle>
-            <Select value={chartType} onValueChange={(value: "pie" | "bar" | "radial") => setChartType(value)}>
-              <SelectTrigger className="w-[120px] h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pie">
-                  <div className="flex items-center gap-2">
-                    <PieChartIcon className="h-4 w-4" />
-                    <span>{language === 'fr' ? 'Secteur' : 'Pie'}</span>
+            <div className="flex items-center gap-2">
+              {/* Date Range Selector */}
+              <Popover open={openRange} onOpenChange={setOpenRange}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8">
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    {period === 'custom' && dateRange.from && dateRange.to
+                      ? `${format(dateRange.from, 'MMM d')} - ${format(dateRange.to, 'MMM d')}`
+                      : period === '7d' ? (language === 'fr' ? '7 jours' : '7 days')
+                      : period === '30d' ? (language === 'fr' ? '30 jours' : '30 days')
+                      : (language === 'fr' ? '90 jours' : '90 days')
+                    }
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <div className="p-3 space-y-3">
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium">
+                        {language === 'fr' ? 'Raccourcis' : 'Quick Select'}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant={period === '7d' ? 'default' : 'outline'}
+                          size="sm"
+                          className="justify-start h-8"
+                          onClick={() => handlePeriodChange('7d')}
+                        >
+                          {language === 'fr' ? '7 jours' : '7 days'}
+                        </Button>
+                        <Button
+                          variant={period === '30d' ? 'default' : 'outline'}
+                          size="sm"
+                          className="justify-start h-8"
+                          onClick={() => handlePeriodChange('30d')}
+                        >
+                          {language === 'fr' ? '30 jours' : '30 days'}
+                        </Button>
+                        <Button
+                          variant={period === '90d' ? 'default' : 'outline'}
+                          size="sm"
+                          className="justify-start h-8"
+                          onClick={() => handlePeriodChange('90d')}
+                        >
+                          {language === 'fr' ? '90 jours' : '90 days'}
+                        </Button>
+                        <Button
+                          variant={period === 'custom' ? 'default' : 'outline'}
+                          size="sm"
+                          className="justify-start h-8"
+                          onClick={() => setPeriod('custom')}
+                        >
+                          {language === 'fr' ? 'Personnalisé' : 'Custom'}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="border-t pt-3">
+                      <div className="text-sm font-medium mb-2">
+                        {language === 'fr' ? 'Plage personnalisée' : 'Custom Range'}
+                      </div>
+                      <Calendar
+                        mode="range"
+                        selected={{ from: dateRange.from, to: dateRange.to }}
+                        onSelect={(range) => {
+                          setDateRange({ from: range?.from, to: range?.to })
+                          // Only set to custom when both dates are selected
+                          if (range?.from && range?.to) {
+                            setPeriod('custom')
+                            setOpenRange(false) // Close the popover automatically
+                          }
+                        }}
+                        numberOfMonths={2}
+                      />
+                    </div>
                   </div>
-                </SelectItem>
-                <SelectItem value="bar">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4" />
-                    <span>{language === 'fr' ? 'Barre' : 'Bar'}</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="radial">
-                  <div className="flex items-center gap-2">
-                    <Target className="h-4 w-4" />
-                    <span>{language === 'fr' ? 'Radial' : 'Radial'}</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                </PopoverContent>
+              </Popover>
+
+              {/* Chart Type Selector */}
+              <Select value={chartType} onValueChange={(value: "pie" | "bar" | "radial") => setChartType(value)}>
+                <SelectTrigger className="w-[100px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pie">
+                    <div className="flex items-center gap-2">
+                      <PieChartIcon className="h-4 w-4" />
+                      <span>{language === 'fr' ? 'Secteur' : 'Pie'}</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="bar">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4" />
+                      <span>{language === 'fr' ? 'Barre' : 'Bar'}</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="radial">
+                    <div className="flex items-center gap-2">
+                      <Target className="h-4 w-4" />
+                      <span>{language === 'fr' ? 'Radial' : 'Radial'}</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           {topPlatform && (
             <div className="flex gap-4 text-sm text-muted-foreground">
@@ -277,17 +371,30 @@ export function PlatformBreakdownChart({
         </div>
       </CardHeader>
       <CardContent className="px-2 sm:p-6">
-        {chartData.length > 0 ? (
+        {loading ? (
+          <Skeleton className="h-[320px] w-full" />
+        ) : chartData.length > 0 ? (
           <ChartContainer
             config={chartConfig}
-            className={chartType === "bar" ? "aspect-auto h-[320px] w-full" : "aspect-auto h-[320px] w-full"}
+            className="aspect-auto h-[320px] w-full"
           >
-            {renderChart()}</ChartContainer>
+            {renderChart()}
+          </ChartContainer>
         ) : (
-          <div className="flex h-[300px] items-center justify-center">
-            <p className="text-sm text-muted-foreground">
-              {language === 'fr' ? 'Aucune donnée disponible' : 'No data available'}
-            </p>
+          <div className="flex h-[320px] items-center justify-center">
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground mb-1">
+                {language === 'fr' ? 'Aucune donnée disponible' : 'No data available'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {period === 'custom' && dateRange.from && dateRange.to
+                  ? `${format(dateRange.from, 'MMM d')} - ${format(dateRange.to, 'MMM d, yyyy')}`
+                  : period === '7d' ? (language === 'fr' ? 'pour les 7 derniers jours' : 'for the last 7 days')
+                  : period === '30d' ? (language === 'fr' ? 'pour les 30 derniers jours' : 'for the last 30 days')
+                  : (language === 'fr' ? 'pour les 90 derniers jours' : 'for the last 90 days')
+                }
+              </p>
+            </div>
           </div>
         )}
       </CardContent>

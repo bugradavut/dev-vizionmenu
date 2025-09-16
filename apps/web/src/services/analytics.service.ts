@@ -14,6 +14,13 @@ export interface OrdersPoint {
   order_count: number;
 }
 
+export interface AOVPoint {
+  date: string; // ISO date (YYYY-MM-DD)
+  aov: number; // Average Order Value
+  order_count: number;
+  total_revenue: number;
+}
+
 export interface SourceBreakdownItem {
   source: string; // e.g., website, qr, mobile, takeaway
   revenue: number;
@@ -35,6 +42,7 @@ export interface ChainAnalyticsResponse {
   revenueByDate: RevenuePoint[];
   ordersByDate: OrdersPoint[];
   sourceBreakdown: SourceBreakdownItem[];
+  aovByDate: AOVPoint[];
 }
 
 class AnalyticsService {
