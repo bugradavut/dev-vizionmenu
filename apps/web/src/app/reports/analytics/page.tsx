@@ -16,8 +16,9 @@ import { RevenueChart } from "@/components/analytics/revenue-chart"
 import { PlatformBreakdownChart } from "@/components/analytics/platform-breakdown-chart"
 import { VolumeChart } from "@/components/analytics/volume-chart"
 import { AOVChart } from "@/components/analytics/aov-chart"
-import { Skeleton } from "@/components/ui/skeleton"
-import { DollarSign, BarChart3, Users, Target } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DollarSign, BarChart3, Users, Target, MapPin } from "lucide-react"
+import { apiClient } from "@/services/api-client"
 
 export default function ChainAnalyticsPage() {
   const { language } = useLanguage()
@@ -26,8 +27,11 @@ export default function ChainAnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<ChainAnalyticsResponse | null>(null)
+  const [branches, setBranches] = useState<Array<{id: string, name: string}>>([])
+  const [selectedBranch, setSelectedBranch] = useState<string>('all')
+  const [branchesLoading, setBranchesLoading] = useState(true)
+  const [branchSwitching, setBranchSwitching] = useState(false)
 
-  const [period] = useState<PeriodPreset>("30d") // Default period for initial load
 
   const t = {
     title: language === 'fr' ? 'Analytiques' : 'Analytics',
@@ -42,6 +46,24 @@ export default function ChainAnalyticsPage() {
     platformBreakdown: language === 'fr' ? 'Répartition par Plateforme' : 'Platform Breakdown',
     volumeTrend: language === 'fr' ? 'Tendance du Volume' : 'Volume Trend',
     aovTrend: language === 'fr' ? 'Valeur Moyenne Commande' : 'Average Order Value',
+    allBranches: language === 'fr' ? 'Toutes les Succursales' : 'All Branches',
+    selectBranch: language === 'fr' ? 'Sélectionner une succursale' : 'Select a branch',
+  }
+
+  const fetchBranches = async () => {
+    if (!chainId) return
+    setBranchesLoading(true)
+    try {
+      const response = await apiClient.get(`/api/v1/branches/by-chain/${chainId}`)
+      // API returns { chain: {...}, branches: [...] }
+      const branchesData = (response.data as { branches: Array<{id: string, name: string}> }).branches || []
+      setBranches(branchesData)
+    } catch (e: unknown) {
+      console.error('Failed to load branches', e)
+      setBranches([])
+    } finally {
+      setBranchesLoading(false)
+    }
   }
 
   const fetchAnalytics = async () => {
@@ -49,10 +71,21 @@ export default function ChainAnalyticsPage() {
     setLoading(true)
     setError(null)
     try {
-      const resp = await analyticsService.getChainAnalytics({
+      const params: {
+        chainId: string;
+        period: PeriodPreset;
+        branchId?: string;
+      } = {
         chainId,
-        period,
-      })
+        period: "30d", // Default for summary
+      }
+
+      // Add branchId if specific branch is selected
+      if (selectedBranch !== 'all') {
+        params.branchId = selectedBranch
+      }
+
+      const resp = await analyticsService.getChainAnalytics(params)
       setData(resp.data)
     } catch (e: unknown) {
       console.error('Failed to load analytics', e)
@@ -63,9 +96,30 @@ export default function ChainAnalyticsPage() {
   }
 
   useEffect(() => {
+    fetchBranches()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chainId])
+
+  useEffect(() => {
     fetchAnalytics()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chainId, period])
+  }, [chainId, selectedBranch])
+
+  // Clear branch switching state when main loading completes
+  useEffect(() => {
+    if (!loading && branchSwitching) {
+      setBranchSwitching(false)
+    }
+  }, [loading, branchSwitching])
+
+  const handleBranchChange = async (newBranch: string) => {
+    setBranchSwitching(true)
+    setLoading(true) // Immediate loading state
+    setSelectedBranch(newBranch)
+
+    // Keep spinner visible until all data is loaded
+    // The spinner will be hidden when fetchAnalytics completes via the loading state
+  }
 
   const summary = data?.summary
 
@@ -90,26 +144,52 @@ export default function ChainAnalyticsPage() {
           <div className="flex flex-1 flex-col px-2 sm:px-4 lg:px-6 max-w-full overflow-hidden">
             {/* Header */}
             <div className="px-2 py-6 sm:px-4 lg:px-6 bg-background">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
-                <p className="text-muted-foreground mt-2 text-lg">{t.subtitle}</p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
+                  <p className="text-muted-foreground mt-2 text-lg">{t.subtitle}</p>
+                </div>
+
+                {/* Branch Selector */}
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <Select
+                    value={selectedBranch}
+                    onValueChange={handleBranchChange}
+                    disabled={branchesLoading || branchSwitching || loading}
+                  >
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder={t.selectBranch} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t.allBranches}</SelectItem>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
             {/* Content */}
             <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6 max-w-full overflow-hidden">
-              {loading ? (
-                <div className="grid grid-cols-1 gap-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    <Skeleton className="h-24" />
-                    <Skeleton className="h-24" />
-                    <Skeleton className="h-24" />
-                    <Skeleton className="h-24" />
-                    <Skeleton className="h-24" />
-                    <Skeleton className="h-24" />
+              {(loading || branchSwitching) ? (
+                <div className="flex flex-col items-center justify-center py-32 space-y-4">
+                  <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  <div className="text-center space-y-2">
+                    <p className="text-lg font-medium text-foreground">
+                      {branchSwitching
+                        ? (language === 'fr' ? 'Changement de succursale...' : 'Switching branch...')
+                        : (language === 'fr' ? 'Chargement des analyses...' : 'Loading analytics...')
+                      }
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {language === 'fr' ? 'Veuillez patienter pendant que nous récupérons vos données' : 'Please wait while we fetch your data'}
+                    </p>
                   </div>
-                  <Skeleton className="h-80" />
-                  <Skeleton className="h-80" />
                 </div>
               ) : error ? (
                 <Card>
@@ -162,6 +242,7 @@ export default function ChainAnalyticsPage() {
                         title={t.revenueTrend}
                         type="area"
                         language={language}
+                        branchId={selectedBranch !== 'all' ? selectedBranch : undefined}
                       />
                     </div>
 
@@ -170,6 +251,7 @@ export default function ChainAnalyticsPage() {
                       <PlatformBreakdownChart
                         title={t.platformBreakdown}
                         language={language}
+                        branchId={selectedBranch !== 'all' ? selectedBranch : undefined}
                       />
                     </div>
 
@@ -179,6 +261,7 @@ export default function ChainAnalyticsPage() {
                         title={t.volumeTrend}
                         type="bar"
                         language={language}
+                        branchId={selectedBranch !== 'all' ? selectedBranch : undefined}
                       />
                     </div>
 
@@ -188,6 +271,7 @@ export default function ChainAnalyticsPage() {
                         title={t.aovTrend}
                         type="line"
                         language={language}
+                        branchId={selectedBranch !== 'all' ? selectedBranch : undefined}
                       />
                     </div>
                   </div>

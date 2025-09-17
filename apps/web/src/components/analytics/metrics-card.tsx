@@ -1,6 +1,7 @@
 "use client"
 
 import { Card, CardContent } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { ReactNode } from "react"
 import { TrendingUp, TrendingDown, Minus } from "lucide-react"
@@ -13,6 +14,7 @@ type MetricsCardProps = {
   trendLabel?: string
   subtitle?: string
   icon?: ReactNode
+  loading?: boolean
 }
 
 export function MetricsCard({
@@ -22,7 +24,8 @@ export function MetricsCard({
   trendValue,
   trendLabel,
   subtitle,
-  icon
+  icon,
+  loading = false
 }: MetricsCardProps) {
   const getTrendIcon = () => {
     if (trendValue === undefined) return null
@@ -36,6 +39,34 @@ export function MetricsCard({
     if (trendValue > 0) return "text-emerald-600"
     if (trendValue < 0) return "text-red-600"
     return "text-muted-foreground"
+  }
+
+  if (loading) {
+    return (
+      <Card className={cn("", className)}>
+        <CardContent className="p-6">
+          <div className="space-y-2">
+            {/* Header skeleton */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4 rounded" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+              <Skeleton className="h-5 w-12 rounded-full" />
+            </div>
+
+            {/* Main value skeleton */}
+            <Skeleton className="h-8 w-24" />
+
+            {/* Footer skeleton */}
+            <div className="space-y-1">
+              <Skeleton className="h-3 w-32" />
+              <Skeleton className="h-3 w-28" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
