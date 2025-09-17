@@ -24,6 +24,10 @@ interface VolumeChartProps {
   title: string
   language?: "en" | "fr"
   type?: "line" | "area" | "bar"
+  data?: VolumeDataPoint[]
+  loading?: boolean
+  hideControls?: boolean
+  branchId?: string
 }
 
 const chartConfig = {
@@ -36,7 +40,10 @@ const chartConfig = {
 export function VolumeChart({
   title,
   language = "en",
-  type: initialType = "bar"
+  type: initialType = "bar",
+  data: propData,
+  loading: propLoading,
+  branchId
 }: VolumeChartProps) {
   const { chainId } = useEnhancedAuth()
   const [chartType, setChartType] = useState<"line" | "area" | "bar">(initialType)
@@ -45,6 +52,10 @@ export function VolumeChart({
   const [openRange, setOpenRange] = useState(false)
   const [data, setData] = useState<VolumeDataPoint[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Use prop data if provided, otherwise use internal state
+  const displayData = propData || data
+  const isLoading = propLoading !== undefined ? propLoading : loading
 
   // Use consistent blue color for volume charts
   const volumeColor = CHART_COLORS.volume
@@ -58,6 +69,7 @@ export function VolumeChart({
         period: period,
         startDate: period === 'custom' && dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
         endDate: period === 'custom' && dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined,
+        branchId
       })
       setData(response.data.ordersByDate)
     } catch (error) {
@@ -66,11 +78,14 @@ export function VolumeChart({
     } finally {
       setLoading(false)
     }
-  }, [chainId, period, dateRange.from, dateRange.to])
+  }, [chainId, period, dateRange.from, dateRange.to, branchId])
 
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    // Only fetch if prop data is not provided
+    if (!propData) {
+      fetchData()
+    }
+  }, [fetchData, propData])
 
   const handlePeriodChange = (newPeriod: PeriodPreset) => {
     setPeriod(newPeriod)
@@ -93,14 +108,14 @@ export function VolumeChart({
   }
 
   // Calculate summary stats
-  const totalOrders = data.reduce((sum, item) => sum + item.order_count, 0)
-  const avgPerDay = data.length > 0 ? Math.round(totalOrders / data.length) : 0
-  const maxDay = data.length > 0 ? data.reduce((max, item) =>
+  const totalOrders = displayData.reduce((sum, item) => sum + item.order_count, 0)
+  const avgPerDay = displayData.length > 0 ? Math.round(totalOrders / displayData.length) : 0
+  const maxDay = displayData.length > 0 ? displayData.reduce((max, item) =>
     item.order_count > max.order_count ? item : max
   ) : null
 
   const renderChart = () => {
-    const chartData = data.map(item => ({
+    const chartData = displayData.map(item => ({
       ...item,
       displayDate: formatDate(item.date)
     }))
@@ -295,7 +310,7 @@ export function VolumeChart({
   }
 
   return (
-    <Card className="border">
+    <Card className="border flex flex-col flex-1">
       <CardHeader className="flex flex-col items-stretch space-y-0 border-b p-0">
         <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -438,18 +453,18 @@ export function VolumeChart({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="px-2 sm:p-6">
-        {loading ? (
+      <CardContent className="px-2 sm:p-6 flex-1 flex flex-col">
+        {isLoading ? (
           <Skeleton className="h-[320px] w-full" />
-        ) : data.length > 0 ? (
+        ) : displayData.length > 0 ? (
           <ChartContainer
             config={chartConfig}
-            className="aspect-auto h-[320px] w-full"
+            className="aspect-auto flex-1 w-full min-h-[320px]"
           >
             {renderChart()}
           </ChartContainer>
         ) : (
-          <div className="flex h-[320px] items-center justify-center">
+          <div className="flex flex-1 items-center justify-center min-h-[320px]">
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-1">
                 {language === 'fr' ? 'Aucune donnée disponible' : 'No data available'}

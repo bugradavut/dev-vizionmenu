@@ -23,6 +23,10 @@ interface RevenueChartProps {
   title: string
   type?: "line" | "bar" | "area"
   language?: "en" | "fr"
+  data?: RevenueDataPoint[]
+  loading?: boolean
+  hideControls?: boolean
+  branchId?: string
 }
 
 const chartConfig = {
@@ -35,7 +39,11 @@ const chartConfig = {
 export function RevenueChart({
   title,
   type: initialType = "area",
-  language = "en"
+  language = "en",
+  data: propData,
+  loading: propLoading,
+  hideControls = false,
+  branchId
 }: RevenueChartProps) {
   const { chainId } = useEnhancedAuth()
   const [chartType, setChartType] = useState<"line" | "bar" | "area">(initialType)
@@ -44,6 +52,10 @@ export function RevenueChart({
   const [openRange, setOpenRange] = useState(false)
   const [data, setData] = useState<RevenueDataPoint[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Use prop data if provided, otherwise use internal state
+  const displayData = propData || data
+  const isLoading = propLoading !== undefined ? propLoading : loading
 
   const fetchData = useCallback(async () => {
     if (!chainId) return
@@ -54,6 +66,7 @@ export function RevenueChart({
         period: period,
         startDate: period === 'custom' && dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
         endDate: period === 'custom' && dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined,
+        branchId
       }
 
       const response = await analyticsService.getChainAnalytics(params)
@@ -64,11 +77,14 @@ export function RevenueChart({
     } finally {
       setLoading(false)
     }
-  }, [chainId, period, dateRange.from, dateRange.to])
+  }, [chainId, period, dateRange.from, dateRange.to, branchId])
 
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    // Only fetch if prop data is not provided
+    if (!propData) {
+      fetchData()
+    }
+  }, [fetchData, propData])
 
   const handlePeriodChange = (newPeriod: PeriodPreset) => {
     setPeriod(newPeriod)
@@ -96,7 +112,7 @@ export function RevenueChart({
   }
 
   const renderChart = () => {
-    const chartData = data.map(item => ({
+    const chartData = displayData.map(item => ({
       ...item,
       displayDate: formatDate(item.date)
     }))
@@ -267,11 +283,11 @@ export function RevenueChart({
     }
   }
 
-  const totalRevenue = data.reduce((sum, item) => sum + item.revenue, 0)
-  const avgRevenue = data.length > 0 ? totalRevenue / data.length : 0
+  const totalRevenue = displayData.reduce((sum, item) => sum + item.revenue, 0)
+  const avgRevenue = displayData.length > 0 ? totalRevenue / displayData.length : 0
 
   return (
-    <Card className="border">
+    <Card className="border flex flex-col flex-1">
       <CardHeader className="flex flex-col items-stretch space-y-0 border-b p-0">
         <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -279,8 +295,9 @@ export function RevenueChart({
               <TrendingUp className="h-4 w-4" />
               {title}
             </CardTitle>
-            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-              {/* Date Range Selector */}
+            {!hideControls && (
+              <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                {/* Date Range Selector */}
               <Popover open={openRange} onOpenChange={setOpenRange}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="h-8 flex-1 sm:flex-none">
@@ -396,7 +413,8 @@ export function RevenueChart({
                   </SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+              </div>
+            )}
           </div>
           <div className="flex gap-4 text-sm text-muted-foreground">
             <span>
@@ -408,18 +426,18 @@ export function RevenueChart({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="px-2 sm:p-6">
-        {loading ? (
+      <CardContent className="px-2 sm:p-6 flex-1 flex flex-col">
+        {isLoading ? (
           <Skeleton className="h-[320px] w-full" />
-        ) : data.length > 0 ? (
+        ) : displayData.length > 0 ? (
           <ChartContainer
             config={chartConfig}
-            className="aspect-auto h-[320px] w-full"
+            className="aspect-auto flex-1 w-full min-h-[320px]"
           >
             {renderChart()}
           </ChartContainer>
         ) : (
-          <div className="flex h-[320px] items-center justify-center">
+          <div className="flex flex-1 items-center justify-center min-h-[320px]">
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-1">
                 {language === 'fr' ? 'Aucune donnée disponible' : 'No data available'}

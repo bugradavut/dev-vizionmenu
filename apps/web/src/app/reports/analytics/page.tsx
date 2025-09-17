@@ -237,7 +237,7 @@ export default function ChainAnalyticsPage() {
                   {/* Main Charts Grid - Fully Responsive Layout */}
                   <div className="grid gap-6 grid-cols-1 xl:grid-cols-2">
                     {/* Revenue Trend Chart */}
-                    <div className="w-full">
+                    <div className="w-full min-h-[460px] flex flex-col">
                       <RevenueChart
                         title={t.revenueTrend}
                         type="area"
@@ -247,7 +247,7 @@ export default function ChainAnalyticsPage() {
                     </div>
 
                     {/* Platform Breakdown */}
-                    <div className="w-full">
+                    <div className="w-full min-h-[460px] flex flex-col">
                       <PlatformBreakdownChart
                         title={t.platformBreakdown}
                         language={language}
@@ -256,7 +256,7 @@ export default function ChainAnalyticsPage() {
                     </div>
 
                     {/* Volume Trend Chart */}
-                    <div className="w-full">
+                    <div className="w-full min-h-[460px] flex flex-col">
                       <VolumeChart
                         title={t.volumeTrend}
                         type="bar"
@@ -266,7 +266,7 @@ export default function ChainAnalyticsPage() {
                     </div>
 
                     {/* AOV Trend Chart */}
-                    <div className="w-full">
+                    <div className="w-full min-h-[460px] flex flex-col">
                       <AOVChart
                         title={t.aovTrend}
                         type="line"
