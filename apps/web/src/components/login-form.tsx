@@ -245,8 +245,9 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
             <Image
               src="/login-img.webp"
               alt="VizionMenu Login"
-              fill
-              className="object-cover"
+              width={400}
+              height={600}
+              className="object-cover h-full w-full opacity-70"
             />
           </div>
         </CardContent>
