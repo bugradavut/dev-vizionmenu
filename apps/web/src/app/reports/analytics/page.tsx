@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -18,7 +18,6 @@ import { VolumeChart } from "@/components/analytics/volume-chart"
 import { AOVChart } from "@/components/analytics/aov-chart"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DollarSign, BarChart3, Users, Target } from "lucide-react"
-import { ExportButton } from "@/components/analytics/export-button"
 
 export default function ChainAnalyticsPage() {
   const { language } = useLanguage()
@@ -74,9 +73,6 @@ export default function ChainAnalyticsPage() {
   //   return (data?.revenueByDate || []).map((p) => ({ date: p.date, revenue: p.revenue }))
   // }, [data])
 
-  const breakdownCsvRows = useMemo(() => {
-    return (data?.sourceBreakdown || []).map((s) => ({ source: s.source, revenue: s.revenue, orders: s.order_count }))
-  }, [data])
 
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
@@ -91,27 +87,17 @@ export default function ChainAnalyticsPage() {
             </div>
           </header>
 
-          <div className="flex flex-1 flex-col px-2 sm:px-4 lg:px-6">
+          <div className="flex flex-1 flex-col px-2 sm:px-4 lg:px-6 max-w-full overflow-hidden">
             {/* Header */}
             <div className="px-2 py-6 sm:px-4 lg:px-6 bg-background">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-8">
-                  <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
-                  <p className="text-muted-foreground mt-2 text-lg">{t.subtitle}</p>
-                </div>
-                <div className="lg:col-span-4 flex items-center justify-end">
-                  {/* Export - allow CSV for breakdown; revenue timeline CSV too */}
-                  <ExportButton
-                    language={language}
-                    data={breakdownCsvRows}
-                    filename="platform-breakdown.csv"
-                  />
-                </div>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
+                <p className="text-muted-foreground mt-2 text-lg">{t.subtitle}</p>
               </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6">
+            <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6 max-w-full overflow-hidden">
               {loading ? (
                 <div className="grid grid-cols-1 gap-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -168,10 +154,10 @@ export default function ChainAnalyticsPage() {
                     />
                   </div>
 
-                  {/* Main Charts Grid - 2x2 Layout */}
-                  <div className="grid gap-6 lg:grid-cols-2">
+                  {/* Main Charts Grid - Fully Responsive Layout */}
+                  <div className="grid gap-6 grid-cols-1 xl:grid-cols-2">
                     {/* Revenue Trend Chart */}
-                    <div className="lg:col-span-1">
+                    <div className="w-full">
                       <RevenueChart
                         title={t.revenueTrend}
                         type="area"
@@ -180,7 +166,7 @@ export default function ChainAnalyticsPage() {
                     </div>
 
                     {/* Platform Breakdown */}
-                    <div className="lg:col-span-1">
+                    <div className="w-full">
                       <PlatformBreakdownChart
                         title={t.platformBreakdown}
                         language={language}
@@ -188,7 +174,7 @@ export default function ChainAnalyticsPage() {
                     </div>
 
                     {/* Volume Trend Chart */}
-                    <div className="lg:col-span-1">
+                    <div className="w-full">
                       <VolumeChart
                         title={t.volumeTrend}
                         type="bar"
@@ -197,7 +183,7 @@ export default function ChainAnalyticsPage() {
                     </div>
 
                     {/* AOV Trend Chart */}
-                    <div className="lg:col-span-1">
+                    <div className="w-full">
                       <AOVChart
                         title={t.aovTrend}
                         type="line"

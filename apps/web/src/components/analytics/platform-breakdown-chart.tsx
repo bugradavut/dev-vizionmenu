@@ -248,16 +248,16 @@ export function PlatformBreakdownChart({
     <Card className="border">
       <CardHeader className="flex flex-col items-stretch space-y-0 border-b p-0">
         <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <BarChart3 className="h-4 w-4" />
               {title}
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
               {/* Date Range Selector */}
               <Popover open={openRange} onOpenChange={setOpenRange}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8">
+                  <Button variant="outline" size="sm" className="h-8 flex-1 sm:flex-none">
                     <CalendarIcon className="h-4 w-4 mr-2" />
                     {period === 'custom' && dateRange.from && dateRange.to
                       ? `${format(dateRange.from, 'MMM d')} - ${format(dateRange.to, 'MMM d')}`
@@ -317,10 +317,9 @@ export function PlatformBreakdownChart({
                         selected={{ from: dateRange.from, to: dateRange.to }}
                         onSelect={(range) => {
                           setDateRange({ from: range?.from, to: range?.to })
-                          // Only set to custom when both dates are selected
+                          // Auto-set to custom period when date range is selected
                           if (range?.from && range?.to) {
                             setPeriod('custom')
-                            setOpenRange(false) // Close the popover automatically
                           }
                         }}
                         numberOfMonths={2}
@@ -332,7 +331,7 @@ export function PlatformBreakdownChart({
 
               {/* Chart Type Selector */}
               <Select value={chartType} onValueChange={(value: "pie" | "bar" | "radial") => setChartType(value)}>
-                <SelectTrigger className="w-[100px] h-8">
+                <SelectTrigger className="h-8 flex-1 sm:flex-none sm:w-[100px] min-w-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
