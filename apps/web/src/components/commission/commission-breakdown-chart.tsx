@@ -130,6 +130,7 @@ export function CommissionBreakdownChart({
   ) : null
 
   // Custom tooltip formatter
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const customTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload

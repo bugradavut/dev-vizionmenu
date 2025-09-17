@@ -51,12 +51,14 @@ class AnalyticsService {
     period?: PeriodPreset;
     startDate?: string; // ISO date
     endDate?: string;   // ISO date
+    branchId?: string;  // Optional branch filter
   }): Promise<ApiResponse<ChainAnalyticsResponse>> {
     const search = new URLSearchParams();
     search.append("chainId", params.chainId);
     if (params.period) search.append("period", params.period);
     if (params.startDate) search.append("startDate", params.startDate);
     if (params.endDate) search.append("endDate", params.endDate);
+    if (params.branchId) search.append("branchId", params.branchId);
 
     return apiClient.get<ChainAnalyticsResponse>(
       `/api/v1/reports/analytics?${search.toString()}`

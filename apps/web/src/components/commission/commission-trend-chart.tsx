@@ -102,6 +102,7 @@ export function CommissionTrendChart({
     })
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const customTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload

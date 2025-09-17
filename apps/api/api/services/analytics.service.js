@@ -27,9 +27,10 @@ class AnalyticsService {
    * @param {string} params.period - Time period (7d, 30d, 90d, custom)
    * @param {string} params.startDate - Custom start date (YYYY-MM-DD)
    * @param {string} params.endDate - Custom end date (YYYY-MM-DD)
+   * @param {string} params.branchId - Optional branch ID for filtering
    * @returns {Object} Analytics data
    */
-  async getChainAnalytics({ chainId, period = '7d', startDate, endDate }) {
+  async getChainAnalytics({ chainId, period = '7d', startDate, endDate, branchId }) {
     const startTime = Date.now();
 
     try {
@@ -45,6 +46,7 @@ class AnalyticsService {
       logger.info('Starting chain analytics retrieval', {
         meta: {
           chainId,
+          branchId,
           period,
           dateRange: {
             start: dateRange.startDate,
@@ -55,10 +57,10 @@ class AnalyticsService {
 
       // Execute all analytics queries in parallel for better performance
       const [revenueByDate, ordersByDate, sourceBreakdown, aovByDate] = await Promise.all([
-        this.getRevenueByDate(chainId, dateRange),
-        this.getOrdersByDate(chainId, dateRange),
-        this.getSourceBreakdown(chainId, dateRange),
-        this.getAOVByDate(chainId, dateRange)
+        this.getRevenueByDate(chainId, dateRange, branchId),
+        this.getOrdersByDate(chainId, dateRange, branchId),
+        this.getSourceBreakdown(chainId, dateRange, branchId),
+        this.getAOVByDate(chainId, dateRange, branchId)
       ]);
 
       // Fill missing dates for consistent chart display
@@ -119,22 +121,28 @@ class AnalyticsService {
   /**
    * Get revenue data grouped by date
    */
-  async getRevenueByDate(chainId, dateRange) {
+  async getRevenueByDate(chainId, dateRange, branchId = null) {
     const startTime = Date.now();
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select(`
           created_at,
           total_amount,
-          branches!inner(chain_id)
+          branches!inner(chain_id, id)
         `)
         .eq('branches.chain_id', chainId)
         .gte('created_at', dateRange.start)
         .lte('created_at', dateRange.end)
-        .in('order_status', ['completed', 'preparing', 'scheduled', 'ready', 'delivered'])
-        .order('created_at');
+        .in('order_status', ['completed', 'preparing', 'scheduled', 'ready', 'delivered']);
+
+      // Add branch filter if specified
+      if (branchId) {
+        query = query.eq('branch_id', branchId);
+      }
+
+      const { data, error } = await query.order('created_at');
 
       if (error) {
         throw new DatabaseError('Failed to fetch revenue data', 'getRevenueByDate', {
@@ -183,21 +191,27 @@ class AnalyticsService {
   /**
    * Get order count data grouped by date
    */
-  async getOrdersByDate(chainId, dateRange) {
+  async getOrdersByDate(chainId, dateRange, branchId = null) {
     const startTime = Date.now();
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select(`
           created_at,
-          branches!inner(chain_id)
+          branches!inner(chain_id, id)
         `)
         .eq('branches.chain_id', chainId)
         .gte('created_at', dateRange.start)
         .lte('created_at', dateRange.end)
-        .in('order_status', ['completed', 'preparing', 'scheduled', 'ready', 'delivered'])
-        .order('created_at');
+        .in('order_status', ['completed', 'preparing', 'scheduled', 'ready', 'delivered']);
+
+      // Add branch filter if specified
+      if (branchId) {
+        query = query.eq('branch_id', branchId);
+      }
+
+      const { data, error } = await query.order('created_at');
 
       if (error) {
         throw new DatabaseError('Failed to fetch orders data', 'getOrdersByDate', {
@@ -246,22 +260,28 @@ class AnalyticsService {
   /**
    * Get revenue and order breakdown by source
    */
-  async getSourceBreakdown(chainId, dateRange) {
+  async getSourceBreakdown(chainId, dateRange, branchId = null) {
     const startTime = Date.now();
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select(`
           order_source,
           total_amount,
-          branches!inner(chain_id)
+          branches!inner(chain_id, id)
         `)
         .eq('branches.chain_id', chainId)
         .gte('created_at', dateRange.start)
         .lte('created_at', dateRange.end)
-        .in('order_status', ['completed', 'preparing', 'scheduled', 'ready', 'delivered'])
-        .order('order_source');
+        .in('order_status', ['completed', 'preparing', 'scheduled', 'ready', 'delivered']);
+
+      // Add branch filter if specified
+      if (branchId) {
+        query = query.eq('branch_id', branchId);
+      }
+
+      const { data, error } = await query.order('order_source');
 
       if (error) {
         throw new DatabaseError('Failed to fetch source breakdown data', 'getSourceBreakdown', {
@@ -315,22 +335,28 @@ class AnalyticsService {
   /**
    * Get Average Order Value (AOV) by date
    */
-  async getAOVByDate(chainId, dateRange) {
+  async getAOVByDate(chainId, dateRange, branchId = null) {
     const startTime = Date.now();
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select(`
           created_at,
           total_amount,
-          branches!inner(chain_id)
+          branches!inner(chain_id, id)
         `)
         .eq('branches.chain_id', chainId)
         .gte('created_at', dateRange.start)
         .lte('created_at', dateRange.end)
-        .in('order_status', ['completed', 'preparing', 'scheduled', 'ready', 'delivered'])
-        .order('created_at');
+        .in('order_status', ['completed', 'preparing', 'scheduled', 'ready', 'delivered']);
+
+      // Add branch filter if specified
+      if (branchId) {
+        query = query.eq('branch_id', branchId);
+      }
+
+      const { data, error } = await query.order('created_at');
 
       if (error) {
         throw new DatabaseError('Failed to fetch AOV data', 'getAOVByDate', {

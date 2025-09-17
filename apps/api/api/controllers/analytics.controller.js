@@ -22,7 +22,8 @@ class AnalyticsController {
         chainId,
         period = '7d',
         startDate,
-        endDate
+        endDate,
+        branchId
       } = req.query;
 
       // Log request start
@@ -33,6 +34,7 @@ class AnalyticsController {
           period,
           startDate,
           endDate,
+          branchId,
           userRole: req.userRole,
           userChainId: req.userChainId
         }
@@ -110,7 +112,8 @@ class AnalyticsController {
         chainId,
         period,
         startDate,
-        endDate
+        endDate,
+        branchId
       });
 
       // Log successful response
