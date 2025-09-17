@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 import { TrendingUp, AreaChart as AreaChartIcon, BarChart3, LineChart as LineChartIcon, CalendarIcon } from "lucide-react"
@@ -119,11 +119,32 @@ export function RevenueChart({
               tickFormatter={(value) => `$${value.toLocaleString()}`}
             />
             <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  formatter={(value) => [formatCurrency(Number(value)), "Revenue"]}
-                />
-              }
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload
+                  return (
+                    <div className="rounded-lg border bg-white/95 backdrop-blur-sm p-3 shadow-lg">
+                      <div className="grid gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ea580c' }}></div>
+                          <span className="text-sm font-semibold">{formatDate(label || '')}</span>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-sm text-muted-foreground">
+                              {language === 'fr' ? 'Revenu:' : 'Revenue:'}
+                            </span>
+                            <span className="text-sm font-bold">
+                              {formatCurrency(data.revenue)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+                return null
+              }}
             />
             <Line
               type="monotone"
@@ -153,11 +174,32 @@ export function RevenueChart({
               tickFormatter={(value) => `$${value.toLocaleString()}`}
             />
             <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  formatter={(value) => [formatCurrency(Number(value)), "Revenue"]}
-                />
-              }
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload
+                  return (
+                    <div className="rounded-lg border bg-white/95 backdrop-blur-sm p-3 shadow-lg">
+                      <div className="grid gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ea580c' }}></div>
+                          <span className="text-sm font-semibold">{formatDate(label || '')}</span>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-sm text-muted-foreground">
+                              {language === 'fr' ? 'Revenu:' : 'Revenue:'}
+                            </span>
+                            <span className="text-sm font-bold">
+                              {formatCurrency(data.revenue)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+                return null
+              }}
             />
             <Bar
               dataKey="revenue"
@@ -185,11 +227,32 @@ export function RevenueChart({
               tickFormatter={(value) => `$${value.toLocaleString()}`}
             />
             <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  formatter={(value) => [formatCurrency(Number(value)), "Revenue"]}
-                />
-              }
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload
+                  return (
+                    <div className="rounded-lg border bg-white/95 backdrop-blur-sm p-3 shadow-lg">
+                      <div className="grid gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ea580c' }}></div>
+                          <span className="text-sm font-semibold">{formatDate(label || '')}</span>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-sm text-muted-foreground">
+                              {language === 'fr' ? 'Revenu:' : 'Revenue:'}
+                            </span>
+                            <span className="text-sm font-bold">
+                              {formatCurrency(data.revenue)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+                return null
+              }}
             />
             <Area
               type="monotone"
