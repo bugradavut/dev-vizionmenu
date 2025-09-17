@@ -243,8 +243,8 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
           </div>
           <div className="relative hidden md:block">
             <Image
-              src="https://ui.shadcn.com/placeholder.svg"
-              alt="Image"
+              src="/login-img.webp"
+              alt="VizionMenu Login"
               fill
               className="object-cover"
             />
