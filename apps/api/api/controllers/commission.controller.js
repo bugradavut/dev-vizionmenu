@@ -485,6 +485,55 @@ async function bulkUpdateBranchRates(req, res) {
 }
 
 /**
+ * Get commission reports data for admin dashboard
+ * GET /api/v1/commission/reports
+ * Supports query params: period, dateRange, startDate, endDate
+ */
+async function getCommissionReports(req, res) {
+  try {
+    const {
+      dateRange,
+      period,
+      startDate,
+      endDate
+    } = req.query;
+
+    // Build params object (analytics-style)
+    const params = {};
+
+    if (startDate && endDate) {
+      params.startDate = startDate;
+      params.endDate = endDate;
+      console.log(`📊 Getting commission reports for custom range: ${startDate} to ${endDate}`);
+    } else if (period) {
+      params.period = period;
+      console.log(`📊 Getting commission reports for period: ${period}`);
+    } else if (dateRange) {
+      params.period = dateRange; // Backward compatibility
+      console.log(`📊 Getting commission reports for dateRange: ${dateRange}`);
+    } else {
+      params.period = '30d'; // Default
+      console.log(`📊 Getting commission reports for default period: 30d`);
+    }
+
+    const reports = await commissionService.getCommissionReports(params);
+
+    res.json({
+      success: true,
+      data: reports
+    });
+
+  } catch (error) {
+    console.error('❌ Error getting commission reports:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch commission reports',
+      message: error.message
+    });
+  }
+}
+
+/**
  * Calculate commission for an order
  * POST /api/v1/commission/calculate
  */
@@ -536,6 +585,7 @@ module.exports = {
   setChainRate,
   removeChainOverride,
   getCommissionSummary,
+  getCommissionReports,
   bulkUpdateChainRates,
   getBranchSettings,
   setBranchRate,

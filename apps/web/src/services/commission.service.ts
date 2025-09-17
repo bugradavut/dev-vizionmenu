@@ -48,6 +48,42 @@ export interface CommissionSummaryItem {
   [key: string]: unknown;
 }
 
+// New interfaces for analytics-style reporting
+export type PeriodPreset = "7d" | "30d" | "90d" | "custom";
+
+export interface CommissionTrendPoint {
+  date: string; // ISO date (YYYY-MM-DD)
+  commission: number;
+  orders: number;
+}
+
+export interface CommissionBreakdownItem {
+  source: string; // website, qr, mobile_app
+  orders: number;
+  commission: number;
+  rate: number;
+}
+
+export interface CommissionBreakdown {
+  website: CommissionBreakdownItem;
+  qr: CommissionBreakdownItem;
+  mobile_app: CommissionBreakdownItem;
+}
+
+export interface CommissionAnalyticsSummary {
+  totalCommission: number;
+  totalOrders: number;
+  averageCommissionRate: number;
+  topSource?: string | null;
+  averagePerOrder?: number | null;
+}
+
+export interface CommissionAnalyticsResponse {
+  summary: CommissionAnalyticsSummary;
+  breakdown: CommissionBreakdown;
+  trends: CommissionTrendPoint[];
+}
+
 export interface BulkUpdateResponse {
   updated: number;
   total: number;
@@ -250,6 +286,33 @@ class CommissionService {
     } catch (error) {
       console.error('Error calculating commission:', error);
       throw new Error(`Failed to calculate commission: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get commission analytics reports with date range support
+   */
+  async getCommissionReports(params: {
+    period?: PeriodPreset;
+    startDate?: string; // ISO date
+    endDate?: string;   // ISO date
+  } = {}): Promise<CommissionAnalyticsResponse> {
+    try {
+      const search = new URLSearchParams();
+      if (params.period) search.append("dateRange", params.period);
+      if (params.startDate) search.append("startDate", params.startDate);
+      if (params.endDate) search.append("endDate", params.endDate);
+
+      const queryString = search.toString();
+      const url = queryString
+        ? `/api/v1/commission/reports?${queryString}`
+        : `/api/v1/commission/reports`;
+
+      const response = await apiClient.get(url);
+      return response.data as CommissionAnalyticsResponse;
+    } catch (error) {
+      console.error('Error fetching commission reports:', error);
+      throw new Error('Failed to fetch commission analytics reports');
     }
   }
 

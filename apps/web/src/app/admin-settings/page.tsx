@@ -16,12 +16,13 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { 
-  Shield, 
+import {
+  Shield,
   Building2,
-  MapPin, 
-  Settings, 
-  ChevronRight
+  MapPin,
+  Settings,
+  ChevronRight,
+  DollarSign
 } from "lucide-react"
 import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard-layout"
@@ -31,11 +32,20 @@ import { translations } from "@/lib/translations"
 const adminCategories = [
   {
     title: "Restaurant Chains",
-    titleFr: "Chaînes de Restaurants", 
+    titleFr: "Chaînes de Restaurants",
     description: "Create and manage restaurant chains with their settings and configurations.",
     descriptionFr: "Créer et gérer les chaînes de restaurants avec leurs paramètres et configurations.",
     icon: Building2,
     href: "/admin-settings/chains",
+    available: true
+  },
+  {
+    title: "Commission Reports",
+    titleFr: "Rapports de Commission",
+    description: "Track platform commission revenue by source and time period.",
+    descriptionFr: "Suivre les revenus de commission de la plateforme par source et période.",
+    icon: DollarSign,
+    href: "/admin-settings/commission-reports",
     available: true
   },
   {
@@ -44,7 +54,7 @@ const adminCategories = [
     description: "Manage restaurant branches, locations, and operational settings.",
     descriptionFr: "Gérer les succursales, emplacements et paramètres opérationnels.",
     icon: MapPin,
-    href: "/admin-settings/branches", 
+    href: "/admin-settings/branches",
     available: false
   },
   {

@@ -440,13 +440,13 @@ const commissionService = {
   async bulkUpdateBranchRates(branchId, rates) {
     try {
       console.log(`📊 Bulk updating rates for branch: ${branchId}`, rates);
-      
+
       const results = [];
       for (const rateConfig of rates) {
         try {
           const result = await this.setBranchRate(
-            branchId, 
-            rateConfig.sourceType, 
+            branchId,
+            rateConfig.sourceType,
             rateConfig.rate
           );
           results.push({
@@ -462,11 +462,117 @@ const commissionService = {
           });
         }
       }
-      
+
       return results;
-      
+
     } catch (error) {
       console.error('Error bulk updating branch rates:', error);
+      throw error;
+    }
+  },
+
+  // Get commission reports data for admin dashboard
+  async getCommissionReports(params = {}) {
+    try {
+      let startDate, endDate;
+      const now = new Date();
+
+      // Handle custom date range or period-based range
+      if (params.startDate && params.endDate) {
+        startDate = new Date(params.startDate);
+        endDate = new Date(params.endDate);
+      } else {
+        const dateRange = params.period || params.dateRange || '30d';
+        switch (dateRange) {
+          case '7d':
+            startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+          case '30d':
+            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            break;
+          case '90d':
+            startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+            break;
+          default:
+            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        }
+        endDate = now;
+      }
+
+      // Ensure we have full day coverage
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+
+      const dateFilter = startDate.toISOString();
+
+      // Get commission data grouped by source and date
+      const { data: commissionData, error: commissionError } = await supabase
+        .from('orders')
+        .select('order_source, commission_amount, commission_rate, total_amount, created_at')
+        .not('commission_amount', 'is', null)
+        .gt('commission_amount', 0)
+        .gte('created_at', dateFilter)
+        .lte('created_at', endDate.toISOString())
+        .order('created_at', { ascending: true });
+
+      if (commissionError) throw new Error(`Failed to fetch commission data: ${commissionError.message}`);
+
+      // Calculate summary statistics
+      const totalCommission = commissionData.reduce((sum, order) => sum + parseFloat(order.commission_amount), 0);
+      const totalOrders = commissionData.length;
+      const totalRevenue = commissionData.reduce((sum, order) => sum + parseFloat(order.total_amount), 0);
+      const averageCommissionRate = totalRevenue > 0 ? (totalCommission / totalRevenue) * 100 : 0;
+
+      // Group by source
+      const breakdown = {
+        website: { orders: 0, commission: 0, rate: 3 },
+        qr: { orders: 0, commission: 0, rate: 1 },
+        mobile_app: { orders: 0, commission: 0, rate: 2 }
+      };
+
+      commissionData.forEach(order => {
+        if (breakdown[order.order_source]) {
+          breakdown[order.order_source].orders += 1;
+          breakdown[order.order_source].commission += parseFloat(order.commission_amount);
+        }
+      });
+
+      // Generate complete date range (analytics-style behavior)
+      const trends = [];
+      const currentDate = new Date(startDate);
+
+      while (currentDate <= endDate) {
+        const dateStr = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+        // Find commission data for this date
+        const dayCommissionData = commissionData.filter(order =>
+          order.created_at.split('T')[0] === dateStr
+        );
+
+        const dayCommission = dayCommissionData.reduce((sum, order) =>
+          sum + parseFloat(order.commission_amount), 0
+        );
+
+        trends.push({
+          date: dateStr,
+          commission: parseFloat(dayCommission.toFixed(2)),
+          orders: dayCommissionData.length
+        });
+
+        // Move to next day
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      return {
+        totalCommission: parseFloat(totalCommission.toFixed(2)),
+        totalOrders,
+        averageCommissionRate: parseFloat(averageCommissionRate.toFixed(2)),
+        breakdown,
+        trends
+      };
+
+    } catch (error) {
+      console.error('Error getting commission reports:', error);
       throw error;
     }
   }

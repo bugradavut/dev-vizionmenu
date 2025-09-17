@@ -103,9 +103,20 @@ router.post('/settings/:chainId/bulk',
  * @access  Platform Admin only
  * @query   dateRange - Time period (7d, 30d, 90d)
  */
-router.get('/summary', 
-  requirePlatformAdmin, 
+router.get('/summary',
+  requirePlatformAdmin,
   commissionController.getCommissionSummary
+);
+
+/**
+ * @route   GET /api/v1/commission/reports
+ * @desc    Get commission reports data for admin dashboard
+ * @access  Platform Admin only
+ * @query   dateRange - Time period (7d, 30d, 90d)
+ */
+router.get('/reports',
+  requirePlatformAdmin,
+  commissionController.getCommissionReports
 );
 
 // =====================================================
