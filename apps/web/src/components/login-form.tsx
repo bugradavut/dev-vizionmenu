@@ -194,7 +194,11 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
                         </a>
                       </div>
                       <FormControl>
-                        <Input type="password" {...field} />
+                        <Input
+                          type="password"
+                          placeholder="••••••••"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
