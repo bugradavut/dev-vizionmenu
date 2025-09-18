@@ -253,35 +253,37 @@ function CheckoutForm({
 
       {/* Error Display with Retry Option */}
       {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="space-y-2">
-            <div>{error}</div>
-            {retryCount > 0 && retryCount < 3 && (
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-xs">
-                  {language === 'fr' 
-                    ? `Tentative ${retryCount}/3` 
-                    : `Attempt ${retryCount}/3`}
-                </span>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleRetry}
-                  className="h-6 px-2 text-xs"
-                >
-                  {language === 'fr' ? 'Réessayer' : 'Try Again'}
-                </Button>
-              </div>
-            )}
-            {retryCount >= 3 && (
-              <div className="pt-2 text-xs text-muted-foreground">
-                {language === 'fr' 
-                  ? 'Limite de tentatives atteinte. Contactez votre banque ou utilisez une autre carte.'
-                  : 'Maximum attempts reached. Please contact your bank or use a different card.'}
-              </div>
-            )}
-          </AlertDescription>
+        <Alert variant="destructive" className="bg-red-50 border-red-200">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-red-600" />
+            <AlertDescription className="space-y-2 flex-1">
+              <div className="text-red-800">{error}</div>
+              {retryCount > 0 && retryCount < 3 && (
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-xs text-red-600">
+                    {language === 'fr'
+                      ? `Tentative ${retryCount}/3`
+                      : `Attempt ${retryCount}/3`}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRetry}
+                    className="h-6 px-2 text-xs border-red-300 text-red-700 hover:bg-red-100"
+                  >
+                    {language === 'fr' ? 'Réessayer' : 'Try Again'}
+                  </Button>
+                </div>
+              )}
+              {retryCount >= 3 && (
+                <div className="pt-2 text-xs text-red-600">
+                  {language === 'fr'
+                    ? 'Limite de tentatives atteinte. Contactez votre banque ou utilisez une autre carte.'
+                    : 'Maximum attempts reached. Please contact your bank or use a different card.'}
+                </div>
+              )}
+            </AlertDescription>
+          </div>
         </Alert>
       )}
 
