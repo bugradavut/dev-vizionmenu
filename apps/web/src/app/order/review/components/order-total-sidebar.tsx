@@ -8,7 +8,8 @@ import { orderService } from '@/services/order-service'
 import { commissionService } from '@/services/commission.service'
 import { stripePaymentService } from '@/services/stripe.service'
 import { Button } from '@/components/ui/button'
-import { Loader2 } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Loader2, AlertCircle } from 'lucide-react'
 import { StripePaymentForm } from '@/components/stripe/payment-form'
 import { OrderFormData } from '@/contexts/order-form-context'
 
@@ -539,26 +540,6 @@ export function OrderTotalSidebar({
         )}
       </Button>
 
-      {/* Payment Error Message */}
-      {paymentStatus === 'error' && paymentError && (
-        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-800 font-medium">
-            {language === 'fr' ? 'Erreur de paiement' : 'Payment Error'}
-          </p>
-          <p className="text-xs text-red-600 mt-1">{paymentError}</p>
-          <Button
-            onClick={() => {
-              setPaymentStatus('idle')
-              setPaymentError(null)
-            }}
-            variant="outline"
-            size="sm"
-            className="mt-2 text-xs"
-          >
-            {language === 'fr' ? 'Réessayer' : 'Try Again'}
-          </Button>
-        </div>
-      )}
 
       
       <Button 
@@ -569,6 +550,63 @@ export function OrderTotalSidebar({
       >
         {t.orderPage.checkout.backToCart || "Back to Cart"}
       </Button>
+
+      {/* Payment Error Dialog */}
+      <Dialog open={paymentStatus === 'error' && !!paymentError} onOpenChange={() => {
+        setPaymentStatus('idle')
+        setPaymentError(null)
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-red-900">
+                  {language === 'fr' ? 'Erreur de paiement' : 'Payment Error'}
+                </DialogTitle>
+                <DialogDescription className="text-red-700">
+                  {language === 'fr'
+                    ? 'Le paiement n\'a pas pu être traité'
+                    : 'Your payment could not be processed'
+                  }
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="py-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800">{paymentError}</p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPaymentStatus('idle')
+                setPaymentError(null)
+              }}
+              className="w-full sm:w-auto"
+            >
+              {language === 'fr' ? 'Fermer' : 'Close'}
+            </Button>
+            <Button
+              onClick={() => {
+                setPaymentStatus('idle')
+                setPaymentError(null)
+                // Trigger the payment flow again
+                handleConfirmOrder()
+              }}
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
+            >
+              {language === 'fr' ? 'Réessayer' : 'Try Again'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Stripe Payment Form Modal */}
       {showPaymentForm && clientSecret && (
