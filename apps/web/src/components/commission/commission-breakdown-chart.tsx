@@ -17,6 +17,8 @@ interface CommissionBreakdownChartProps {
   language: string
   title: string
   type?: "pie" | "bar" | "radial"
+  chainId?: string
+  branchId?: string
 }
 
 
@@ -38,7 +40,9 @@ const chartConfig = {
 export function CommissionBreakdownChart({
   language,
   title,
-  type: initialType = "pie"
+  type: initialType = "pie",
+  chainId,
+  branchId
 }: CommissionBreakdownChartProps) {
   const [chartType, setChartType] = useState<"pie" | "bar" | "radial">(initialType)
   const [period, setPeriod] = useState<PeriodPreset>('7d')
@@ -64,6 +68,14 @@ export function CommissionBreakdownChart({
         params.period = period
       }
 
+      // Add chain/branch filtering
+      if (chainId) {
+        params.chainId = chainId
+      }
+      if (branchId) {
+        params.branchId = branchId
+      }
+
       const response = await commissionService.getCommissionReports(params)
 
       // Convert breakdown object to array
@@ -79,7 +91,7 @@ export function CommissionBreakdownChart({
     } finally {
       setLoading(false)
     }
-  }, [period, dateRange.from, dateRange.to])
+  }, [period, dateRange.from, dateRange.to, chainId, branchId])
 
   useEffect(() => {
     fetchData()

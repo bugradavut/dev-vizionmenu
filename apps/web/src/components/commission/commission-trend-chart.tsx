@@ -18,6 +18,8 @@ interface CommissionTrendChartProps {
   formatCurrency: (amount: number) => string
   title: string
   type?: "line" | "area" | "bar"
+  chainId?: string
+  branchId?: string
 }
 
 // Dynamic chart configuration
@@ -32,7 +34,9 @@ export function CommissionTrendChart({
   language,
   formatCurrency,
   title,
-  type: initialType = "line"
+  type: initialType = "line",
+  chainId,
+  branchId
 }: CommissionTrendChartProps) {
   const [chartType, setChartType] = useState<"line" | "area" | "bar">(initialType)
   const [period, setPeriod] = useState<PeriodPreset>('7d')
@@ -58,6 +62,14 @@ export function CommissionTrendChart({
         params.period = period
       }
 
+      // Add chain/branch filtering
+      if (chainId) {
+        params.chainId = chainId
+      }
+      if (branchId) {
+        params.branchId = branchId
+      }
+
       const response = await commissionService.getCommissionReports(params)
       setData(response.trends)
     } catch (error) {
@@ -66,7 +78,7 @@ export function CommissionTrendChart({
     } finally {
       setLoading(false)
     }
-  }, [period, dateRange.from, dateRange.to])
+  }, [period, dateRange.from, dateRange.to, chainId, branchId])
 
   useEffect(() => {
     fetchData()

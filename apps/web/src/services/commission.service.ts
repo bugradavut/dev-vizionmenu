@@ -296,12 +296,16 @@ class CommissionService {
     period?: PeriodPreset;
     startDate?: string; // ISO date
     endDate?: string;   // ISO date
+    chainId?: string;
+    branchId?: string;
   } = {}): Promise<CommissionAnalyticsResponse> {
     try {
       const search = new URLSearchParams();
       if (params.period) search.append("dateRange", params.period);
       if (params.startDate) search.append("startDate", params.startDate);
       if (params.endDate) search.append("endDate", params.endDate);
+      if (params.chainId) search.append("chainId", params.chainId);
+      if (params.branchId) search.append("branchId", params.branchId);
 
       const queryString = search.toString();
       const url = queryString

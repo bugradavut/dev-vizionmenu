@@ -495,7 +495,9 @@ async function getCommissionReports(req, res) {
       dateRange,
       period,
       startDate,
-      endDate
+      endDate,
+      chainId,
+      branchId
     } = req.query;
 
     // Build params object (analytics-style)
@@ -514,6 +516,17 @@ async function getCommissionReports(req, res) {
     } else {
       params.period = '30d'; // Default
       console.log(`📊 Getting commission reports for default period: 30d`);
+    }
+
+    // Add filtering parameters
+    if (chainId) {
+      params.chainId = chainId;
+      console.log(`📊 Filtering by chainId: ${chainId}`);
+    }
+
+    if (branchId) {
+      params.branchId = branchId;
+      console.log(`📊 Filtering by branchId: ${branchId}`);
     }
 
     const reports = await commissionService.getCommissionReports(params);

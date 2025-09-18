@@ -505,15 +505,58 @@ const commissionService = {
 
       const dateFilter = startDate.toISOString();
 
-      // Get commission data grouped by source and date
-      const { data: commissionData, error: commissionError } = await supabase
-        .from('orders')
-        .select('order_source, commission_amount, commission_rate, total_amount, created_at')
-        .not('commission_amount', 'is', null)
-        .gt('commission_amount', 0)
-        .gte('created_at', dateFilter)
-        .lte('created_at', endDate.toISOString())
-        .order('created_at', { ascending: true });
+      let commissionData = [];
+      let commissionError = null;
+
+      // Handle chain filtering by first getting branch IDs
+      if (params.chainId && !params.branchId) {
+        // Get all branch IDs for this chain
+        const { data: branches, error: branchError } = await supabase
+          .from('branches')
+          .select('id')
+          .eq('chain_id', params.chainId);
+
+        if (branchError) {
+          throw new Error(`Failed to fetch branches for chain: ${branchError.message}`);
+        }
+
+        if (branches && branches.length > 0) {
+          const branchIds = branches.map(branch => branch.id);
+
+          // Get commission data for these branches
+          const { data: data, error: error } = await supabase
+            .from('orders')
+            .select('order_source, commission_amount, commission_rate, total_amount, created_at, branch_id')
+            .not('commission_amount', 'is', null)
+            .gt('commission_amount', 0)
+            .gte('created_at', dateFilter)
+            .lte('created_at', endDate.toISOString())
+            .in('branch_id', branchIds)
+            .order('created_at', { ascending: true });
+
+          commissionData = data;
+          commissionError = error;
+        }
+      } else {
+        // Direct branch filtering or no filtering
+        let query = supabase
+          .from('orders')
+          .select('order_source, commission_amount, commission_rate, total_amount, created_at, branch_id')
+          .not('commission_amount', 'is', null)
+          .gt('commission_amount', 0)
+          .gte('created_at', dateFilter)
+          .lte('created_at', endDate.toISOString());
+
+        // Add branch filtering if provided
+        if (params.branchId) {
+          query = query.eq('branch_id', params.branchId);
+        }
+
+        // Get commission data
+        const { data: data, error: error } = await query.order('created_at', { ascending: true });
+        commissionData = data;
+        commissionError = error;
+      }
 
       if (commissionError) throw new Error(`Failed to fetch commission data: ${commissionError.message}`);
 
