@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon, Search, GitCommit, Plus, Trash2, Eye } from "lucide-react"
+import { CalendarIcon, Search, Eye, Trash2 } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import type { ActivityLog, ActivityLogFilters, ActivityLogFilterOptions } from "@/services/activity-logs.service"
@@ -67,11 +67,25 @@ export function ActivityLogsTable({
     table: {
       date: language === 'fr' ? 'Date' : 'Date',
       user: language === 'fr' ? 'Utilisateur' : 'User',
+      email: language === 'fr' ? 'Courriel' : 'Email',
       action: language === 'fr' ? 'Action' : 'Action',
       entity: language === 'fr' ? 'Entité' : 'Entity',
       branch: language === 'fr' ? 'Succursale' : 'Branch',
       actions: language === 'fr' ? 'Actions' : 'Actions',
       noData: language === 'fr' ? 'Aucune donnée' : 'No data',
+      field: language === 'fr' ? 'Champ' : 'Field',
+      from: language === 'fr' ? 'Avant' : 'From',
+      to: language === 'fr' ? 'Après' : 'To',
+      value: language === 'fr' ? 'Valeur' : 'Value'
+    },
+    modal: {
+      applyFilters: language === 'fr' ? 'Appliquer les Filtres' : 'Apply Filters',
+      filterDesc: language === 'fr' ? "Filtrer les journaux d'activité par action, entité ou utilisateur" : 'Filter activity logs by action, entity, or user',
+      allActions: language === 'fr' ? 'Toutes Actions' : 'All Actions',
+      allEntities: language === 'fr' ? 'Toutes Entités' : 'All Entities',
+      allUsers: language === 'fr' ? 'Tous Utilisateurs' : 'All Users',
+      loading: language === 'fr' ? 'Chargement...' : 'Loading...',
+      noMatch: language === 'fr' ? 'Aucun journal ne correspond aux critères de recherche' : 'No logs match your search criteria'
     }
   }
 
@@ -155,7 +169,7 @@ export function ActivityLogsTable({
                 <SheetHeader>
                   <SheetTitle>{t.filters}</SheetTitle>
                   <SheetDescription>
-                    Filter activity logs by action, entity, or user
+                    {t.modal.filterDesc}
                   </SheetDescription>
                 </SheetHeader>
 
@@ -175,7 +189,7 @@ export function ActivityLogsTable({
                             : ''
                             }`}
                         >
-                          All Actions
+                          {t.modal.allActions}
                         </Button>
                         {(filterOptions?.actionTypes || []).map((action) => (
                           <Button
@@ -207,7 +221,7 @@ export function ActivityLogsTable({
                             : ''
                             }`}
                         >
-                          All Entities
+                          {t.modal.allEntities}
                         </Button>
                         {(filterOptions?.entityTypes || []).map((entity) => (
                           <Button
@@ -239,7 +253,7 @@ export function ActivityLogsTable({
                             : ''
                             }`}
                         >
-                          All Users
+                          {t.modal.allUsers}
                         </Button>
                         {(filterOptions?.users || []).map((user) => (
                           <Button
@@ -275,7 +289,7 @@ export function ActivityLogsTable({
                     onClick={() => setIsFilterSheetOpen(false)}
                     className="flex-1"
                   >
-                    Apply Filters
+                    {t.modal.applyFilters}
                   </Button>
                 </div>
               </SheetContent>
@@ -297,19 +311,20 @@ export function ActivityLogsTable({
             <div className="flex items-center justify-center py-12">
               <div className="flex items-center space-x-2">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                <span className="text-sm text-muted-foreground">Loading...</span>
+                <span className="text-sm text-muted-foreground">{t.modal.loading}</span>
               </div>
             </div>
           ) : filteredLogs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {searchQuery ? 'No logs match your search criteria' : t.table.noData}
+              {searchQuery ? t.modal.noMatch : t.table.noData}
             </div>
           ) : (
-            <Table className="min-w-[700px]">
+            <Table className="min-w-[900px]">
               <TableHeader className="bg-muted">
                 <TableRow className="hover:bg-muted">
                   <TableHead className="px-4 w-[140px]">{t.table.date}</TableHead>
                   <TableHead className="px-4">{t.table.user}</TableHead>
+                  <TableHead className="px-4">{t.table.email}</TableHead>
                   <TableHead className="px-4">{t.table.action}</TableHead>
                   <TableHead className="px-4">{t.table.entity}</TableHead>
                   <TableHead className="px-4">{t.table.branch}</TableHead>
@@ -331,6 +346,9 @@ export function ActivityLogsTable({
                     </TableCell>
                     <TableCell className="px-4">
                       {log.user?.full_name || log.user?.email || log.user_id}
+                    </TableCell>
+                    <TableCell className="px-4 text-sm text-muted-foreground">
+                      {log.user?.email || '-'}
                     </TableCell>
                     <TableCell className="capitalize px-4">
                       <span className={cn(
@@ -362,12 +380,12 @@ export function ActivityLogsTable({
                         <DialogTrigger asChild>
                           {log.action_type === 'update' ? (
                             <Button variant="outline" size="sm">
-                              <GitCommit className="h-4 w-4 mr-1" />
+                              <Eye className="h-4 w-4 mr-1" />
                               {t.actions.viewChanges}
                             </Button>
                           ) : log.action_type === 'create' ? (
                             <Button variant="outline" size="sm">
-                              <Plus className="h-4 w-4 mr-1" />
+                              <Eye className="h-4 w-4 mr-1" />
                               {t.actions.viewCreated}
                             </Button>
                           ) : log.action_type === 'delete' ? (
@@ -382,71 +400,89 @@ export function ActivityLogsTable({
                             </Button>
                           )}
                         </DialogTrigger>
-                        <DialogContent className="max-w-3xl">
+                        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle>{t.changes}</DialogTitle>
                           </DialogHeader>
                           <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="font-medium">ID:</span> {log.id}
-                              </div>
-                              <div>
-                                <span className="font-medium">Entity ID:</span> {log.entity_id || '-'}
-                              </div>
-                              <div className="col-span-2">
-                                <span className="font-medium">Entity:</span> {log.entity_type.replace('_',' ')}
-                              </div>
-                            </div>
 
                             {/* Change table */}
                             {(() => {
                               const rows = buildChangeRows(log.changes)
-                              const showFromTo = Boolean(log.changes && typeof log.changes === 'object' && 'before' in log.changes && 'after' in log.changes)
+                              const hasBeforeAfter = Boolean(log.changes && typeof log.changes === 'object' && 'before' in log.changes && 'after' in log.changes)
+                              const showFromTo = hasBeforeAfter
                               return (
-                                <div className="border rounded">
-                                  <Table>
+                                <div className="border rounded max-h-96 overflow-y-auto overflow-x-hidden">
+                                  <Table className="table-fixed w-full">
                                     <TableHeader>
                                       <TableRow>
-                                        <TableHead className="px-3">{labelFor('field', language)}</TableHead>
+                                        <TableHead className="px-3 w-1/3">{t.table.field}</TableHead>
                                         {showFromTo ? (
                                           <>
-                                            <TableHead className="px-3">From</TableHead>
-                                            <TableHead className="px-3">To</TableHead>
+                                            <TableHead className="px-3 w-1/3">{t.table.from}</TableHead>
+                                            <TableHead className="px-3 w-1/3">{t.table.to}</TableHead>
                                           </>
                                         ) : (
-                                          <TableHead className="px-3">Value</TableHead>
+                                          <TableHead className="px-3 w-2/3">{t.table.value}</TableHead>
                                         )}
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {rows.map((r, idx) => (
-                                        <TableRow key={idx}>
-                                          <TableCell className="px-3 w-[40%]">{labelFor(r.field, language)}</TableCell>
-                                          {showFromTo ? (
-                                            <>
-                                              <TableCell className="px-3 text-muted-foreground">{formatValue(r.field, r.from, language)}</TableCell>
-                                              <TableCell className="px-3">{formatValue(r.field, r.to, language)}</TableCell>
-                                            </>
-                                          ) : (
-                                            <TableCell className="px-3" colSpan={2}>{formatValue(r.field, r.to, language)}</TableCell>
-                                          )}
-                                        </TableRow>
-                                      ))}
+                                      {rows.map((r, idx) => {
+                                        const hasChange = showFromTo && r.from !== undefined && r.from !== r.to
+                                        return (
+                                          <TableRow key={idx}>
+                                            <TableCell className="px-3 w-1/3 break-words">{labelFor(r.field, language)}</TableCell>
+                                            {showFromTo ? (
+                                              <>
+                                                <TableCell className={`px-3 w-1/3 break-words ${hasChange ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300' : 'text-muted-foreground'}`}>
+                                                  {r.from !== undefined ? formatValue(r.field, r.from, language) : '-'}
+                                                </TableCell>
+                                                <TableCell className={`px-3 w-1/3 break-words ${hasChange ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300' : ''}`}>
+                                                  {formatValue(r.field, r.to, language)}
+                                                </TableCell>
+                                              </>
+                                            ) : (
+                                              <TableCell className="px-3 w-2/3 break-words" colSpan={2}>{formatValue(r.field, r.to, language)}</TableCell>
+                                            )}
+                                          </TableRow>
+                                        )
+                                      })}
                                     </TableBody>
                                   </Table>
                                 </div>
                               )
                             })()}
 
-                            {/* Raw JSON collapsible */}
+                            {/* Developer Info */}
                             <Accordion type="single" className="w-full">
-                              <AccordionItem value="raw">
-                                <AccordionTrigger className="text-sm">Raw JSON</AccordionTrigger>
+                              <AccordionItem value="dev-info">
+                                <AccordionTrigger className="text-sm text-muted-foreground">
+                                  {language === 'fr' ? 'Pour Développeurs' : 'For Developers'}
+                                </AccordionTrigger>
                                 <AccordionContent>
-                                  <pre className="whitespace-pre-wrap text-xs bg-muted p-3 rounded mt-2 max-h-[50vh] overflow-auto">
+                                  <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                      <div>
+                                        <span className="font-medium text-muted-foreground">Log ID:</span>
+                                        <span className="ml-2 font-mono text-xs">{log.id}</span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-muted-foreground">Entity ID:</span>
+                                        <span className="ml-2 font-mono text-xs">{log.entity_id || '-'}</span>
+                                      </div>
+                                      <div className="col-span-2">
+                                        <span className="font-medium text-muted-foreground">Entity Type:</span>
+                                        <span className="ml-2 font-mono text-xs">{log.entity_type}</span>
+                                      </div>
+                                    </div>
+                                    <details className="text-xs">
+                                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Raw JSON</summary>
+                                      <pre className="whitespace-pre-wrap bg-muted p-3 rounded mt-2 max-h-[30vh] overflow-auto font-mono">
 {JSON.stringify(log.changes ?? {}, null, 2)}
-                                  </pre>
+                                      </pre>
+                                    </details>
+                                  </div>
                                 </AccordionContent>
                               </AccordionItem>
                             </Accordion>

@@ -111,8 +111,10 @@ async function logActivityWithDiff(params = {}) {
       case 'update':
         let before = beforeData
 
-        // Auto-fetch before data if not provided and we have table info
+        // Auto-fetch before data ONLY if not provided and we have table info
+        // Note: Controllers should fetch beforeData BEFORE update for accurate diff
         if (!before && tableName && entityId) {
+          console.warn('[audit-logger] beforeData not provided - this may result in inaccurate diff. Consider fetching beforeData in controller before update.')
           try {
             const { data } = await supabase
               .from(tableName)

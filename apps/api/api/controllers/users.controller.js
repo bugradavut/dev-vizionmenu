@@ -54,6 +54,54 @@ const updateUser = async (req, res) => {
     const updateData = req.body;
     const currentUserId = req.currentUserId;
 
+    // Fetch 'before' data BEFORE update operation for audit log (separate queries to avoid relationship issues)
+    let beforeData = null;
+    try {
+      const { createClient } = require('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+      );
+
+      // Get branch user data
+      const { data: branchUserData, error: branchUserError } = await supabase
+        .from('branch_users')
+        .select('user_id, branch_id, role, is_active, created_at, updated_at')
+        .eq('user_id', userId)
+        .eq('branch_id', branchId)
+        .single();
+
+      if (branchUserError || !branchUserData) {
+        console.warn('[updateUser] Could not fetch branch user before data for audit log:', branchUserError?.message);
+      } else {
+        // Get user profile data
+        const { data: profileData, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('full_name, email, phone')
+          .eq('user_id', userId)
+          .single();
+
+        if (profileError) {
+          console.warn('[updateUser] Could not fetch user profile before data for audit log:', profileError?.message);
+        }
+
+        // Combine data for consistency
+        beforeData = {
+          id: branchUserData.user_id,
+          branch_id: branchUserData.branch_id,
+          role: branchUserData.role,
+          is_active: branchUserData.is_active,
+          full_name: profileData?.full_name || null,
+          email: profileData?.email || null,
+          phone: profileData?.phone || null,
+          created_at: branchUserData.created_at,
+          updated_at: branchUserData.updated_at
+        };
+      }
+    } catch (fetchError) {
+      console.warn('[updateUser] Could not fetch before data for audit log:', fetchError.message);
+    }
+
     const result = await usersService.updateUser(userId, branchId, updateData, currentUserId);
 
     await logActivityWithDiff({
@@ -63,6 +111,7 @@ const updateUser = async (req, res) => {
       entityId: result?.id || userId,
       entityName: result?.email || result?.full_name,
       branchId: branchId,
+      beforeData: beforeData,
       afterData: result,
       tableName: 'user_profiles'
     })

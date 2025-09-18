@@ -239,6 +239,14 @@ const updateMenuItem = async (req, res) => {
       is_available
     };
 
+    // Fetch 'before' data BEFORE update operation for audit log
+    let beforeData = null;
+    try {
+      beforeData = await menuItemsService.getMenuItemById(id, userBranch.branch_id);
+    } catch (fetchError) {
+      console.warn('[updateMenuItem] Could not fetch before data for audit log:', fetchError.message);
+    }
+
   const result = await menuItemsService.updateMenuItem(id, updateData, userBranch.branch_id, photo);
 
     // Activity Log (update) - Enhanced with before/after diff
@@ -249,6 +257,7 @@ const updateMenuItem = async (req, res) => {
       entity: 'menu_item',
       entityId: result.id,
       entityName: result.name,
+      beforeData: beforeData,
       afterData: result,
       tableName: 'menu_items'
     })

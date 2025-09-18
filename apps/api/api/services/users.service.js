@@ -287,20 +287,41 @@ async function updateUser(userId, branchId, updateData, currentUserId) {
     throw new Error('User not found in this branch');
   }
 
-  // Get current user's role
-  const { data: currentUser, error: currentUserError } = await supabase
-    .from('branch_users')
-    .select('role')
+  // Get current user's role (check both chain owners and branch users)
+  let currentUserRole = null;
+
+  // First check if user is chain owner or platform admin
+  const { data: currentUserProfile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('role, is_platform_admin, chain_id')
     .eq('user_id', currentUserId)
-    .eq('branch_id', branchId)
     .single();
 
-  if (currentUserError || !currentUser) {
-    throw new Error('You do not have permission to perform this action');
+  if (profileError || !currentUserProfile) {
+    throw new Error('Current user profile not found');
+  }
+
+  if (currentUserProfile.is_platform_admin) {
+    currentUserRole = 'platform_admin';
+  } else if (currentUserProfile.role === 'chain_owner') {
+    currentUserRole = 'chain_owner';
+  } else {
+    // Check branch users table
+    const { data: currentBranchUser, error: branchUserError } = await supabase
+      .from('branch_users')
+      .select('role')
+      .eq('user_id', currentUserId)
+      .eq('branch_id', branchId)
+      .single();
+
+    if (branchUserError || !currentBranchUser) {
+      throw new Error('You do not have permission to perform this action');
+    }
+    currentUserRole = currentBranchUser.role;
   }
 
   // Check role hierarchy - current user must have equal or higher role level than target user
-  if (!canEditUser(currentUser.role, existingUser.role)) {
+  if (!canEditUser(currentUserRole, existingUser.role)) {
     throw new Error(`Cannot edit user with role '${existingUser.role}'. Insufficient permissions.`);
   }
 
@@ -361,8 +382,49 @@ async function updateUser(userId, branchId, updateData, currentUserId) {
       throw new Error(`Failed to update user status: ${branchUserError.message}`);
     }
   }
-  
-  return { success: true };
+
+  // Fetch and return updated user data for audit log (separate queries to avoid relationship issues)
+  try {
+    // Get branch user data
+    const { data: branchUserData, error: branchUserError } = await supabase
+      .from('branch_users')
+      .select('user_id, branch_id, role, is_active, created_at, updated_at')
+      .eq('user_id', userId)
+      .eq('branch_id', branchId)
+      .single();
+
+    if (branchUserError || !branchUserData) {
+      console.warn('Could not fetch branch user for audit log:', branchUserError?.message);
+      return { success: true };
+    }
+
+    // Get user profile data
+    const { data: profileData, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('full_name, email, phone')
+      .eq('user_id', userId)
+      .single();
+
+    if (profileError) {
+      console.warn('Could not fetch user profile for audit log:', profileError?.message);
+    }
+
+    // Combine data for audit log consistency
+    return {
+      id: branchUserData.user_id,
+      branch_id: branchUserData.branch_id,
+      role: branchUserData.role,
+      is_active: branchUserData.is_active,
+      full_name: profileData?.full_name || null,
+      email: profileData?.email || null,
+      phone: profileData?.phone || null,
+      created_at: branchUserData.created_at,
+      updated_at: branchUserData.updated_at
+    };
+  } catch (error) {
+    console.warn('Error fetching updated user for audit log:', error?.message);
+    return { success: true };
+  }
 }
 
 /**

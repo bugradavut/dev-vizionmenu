@@ -65,11 +65,31 @@ export function formatValue(path: string, value: unknown, language: Language): s
 
 export type FlatEntry = { path: string; value: unknown }
 
+// Normalize menu item data structure for consistent comparison
+function normalizeMenuItemData(obj: unknown): unknown {
+  if (obj === null || obj === undefined || typeof obj !== 'object') return obj
+
+  const normalized = { ...obj as Record<string, unknown> }
+
+  // Convert nested category object to flat category_id
+  if (normalized.category && typeof normalized.category === 'object') {
+    const category = normalized.category as Record<string, unknown>
+    normalized.category_id = category.id
+    delete normalized.category
+  }
+
+  return normalized
+}
+
 export function flattenObject(obj: unknown, prefix = ''): FlatEntry[] {
   if (obj === null || obj === undefined) return []
   if (typeof obj !== 'object') return [{ path: prefix || '', value: obj }]
+
+  // Normalize data structure first
+  const normalized = normalizeMenuItemData(obj)
+
   const out: FlatEntry[] = []
-  for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+  for (const [k, v] of Object.entries(normalized as Record<string, unknown>)) {
     const nextPrefix = prefix ? `${prefix}.${k}` : k
     if (v && typeof v === 'object' && !Array.isArray(v)) {
       out.push(...flattenObject(v, nextPrefix))
@@ -89,11 +109,20 @@ export function buildChangeRows(changes: unknown): ChangeRow[] {
   const changesObj = changes as Record<string, unknown>
 
   // 1) before/after
-  if (changesObj.before && changesObj.after) {
-    const beforeFlat = new Map(flattenObject(changesObj.before).map(e => [e.path, e.value]))
+  if (changesObj.before !== undefined && changesObj.after) {
+    const beforeFlat = new Map(flattenObject(changesObj.before || {}).map(e => [e.path, e.value]))
     const afterFlat = new Map(flattenObject(changesObj.after).map(e => [e.path, e.value]))
     const paths = new Set([...beforeFlat.keys(), ...afterFlat.keys()])
-    return Array.from(paths).map(path => ({ field: path, from: beforeFlat.get(path), to: afterFlat.get(path) }))
+
+    // Show all fields (excluding auto-updated fields)
+    const autoUpdatedFields = ['updated_at', 'created_at']
+
+    return Array.from(paths)
+      .filter(path => {
+        // Skip auto-updated fields only
+        return !autoUpdatedFields.some(field => path.includes(field))
+      })
+      .map(path => ({ field: path, from: beforeFlat.get(path), to: afterFlat.get(path) }))
   }
 
   // 2) update only
