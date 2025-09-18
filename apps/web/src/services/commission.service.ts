@@ -61,7 +61,6 @@ export interface CommissionBreakdownItem {
   source: string; // website, qr, mobile_app
   orders: number;
   commission: number;
-  rate: number;
 }
 
 export interface CommissionBreakdown {

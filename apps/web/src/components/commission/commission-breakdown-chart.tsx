@@ -118,8 +118,8 @@ export function CommissionBreakdownChart({
     return new Intl.NumberFormat(language === 'fr' ? 'fr-CA' : 'en-CA', {
       style: 'currency',
       currency: 'CAD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(value)
   }
   // Prepare chart data with colors and labels
@@ -137,15 +137,15 @@ export function CommissionBreakdownChart({
     item.percentage = totalCommission > 0 ? Math.round((item.commission / totalCommission) * 100) : 0
   })
 
-  const topSource = chartData.length > 0 ? chartData.reduce((max, item) =>
-    item.commission > max.commission ? item : max
-  ) : null
 
   // Custom tooltip formatter
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const customTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
+      // Calculate exact percentage for tooltip
+      const exactPercentage = totalCommission > 0 ? ((data.commission / totalCommission) * 100).toFixed(2) : '0.00'
+
       return (
         <div className="rounded-lg border bg-background p-2 shadow-sm">
           <div className="grid gap-1.5">
@@ -177,18 +177,10 @@ export function CommissionBreakdownChart({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">
-                  {language === 'fr' ? 'Taux:' : 'Rate:'}
-                </span>
-                <span className="font-mono font-medium">
-                  {data.rate}%
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
                   {language === 'fr' ? 'Pourcentage:' : 'Percentage:'}
                 </span>
                 <span className="font-mono font-medium">
-                  {data.percentage}%
+                  {exactPercentage}%
                 </span>
               </div>
             </div>
@@ -381,16 +373,14 @@ export function CommissionBreakdownChart({
               </Select>
             </div>
           </div>
-          {topSource && (
-            <div className="flex gap-4 text-sm text-muted-foreground">
-              <span>
-                {language === 'fr' ? 'Meilleur:' : 'Top:'} {topSource.displayName}
-              </span>
-              <span>
-                {formatCurrency(topSource.commission)} ({topSource.percentage}%)
-              </span>
-            </div>
-          )}
+          <div className="flex gap-4 text-sm text-muted-foreground">
+            <span>
+              {language === 'fr' ? 'Total:' : 'Total:'} {formatCurrency(totalCommission)}
+            </span>
+            <span>
+              {language === 'fr' ? 'Sources:' : 'Sources:'} {chartData.length}
+            </span>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="px-2 sm:p-6">

@@ -294,7 +294,7 @@ export default function CommissionReportsPage() {
                             {formatCurrency(summaryData?.breakdown.website.commission || 0)}
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            {summaryData?.breakdown.website.orders || 0} {language === 'fr' ? 'commandes' : 'orders'} • 3%
+                            {summaryData?.breakdown.website.orders || 0} {language === 'fr' ? 'commandes' : 'orders'}
                           </p>
                         </CardContent>
                       </Card>
@@ -311,7 +311,7 @@ export default function CommissionReportsPage() {
                             {formatCurrency(summaryData?.breakdown.qr.commission || 0)}
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            {summaryData?.breakdown.qr.orders || 0} {language === 'fr' ? 'commandes' : 'orders'} • 1%
+                            {summaryData?.breakdown.qr.orders || 0} {language === 'fr' ? 'commandes' : 'orders'}
                           </p>
                         </CardContent>
                       </Card>
@@ -328,7 +328,7 @@ export default function CommissionReportsPage() {
                             {formatCurrency(summaryData?.breakdown.mobile_app.commission || 0)}
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            {summaryData?.breakdown.mobile_app.orders || 0} {language === 'fr' ? 'commandes' : 'orders'} • 2%
+                            {summaryData?.breakdown.mobile_app.orders || 0} {language === 'fr' ? 'commandes' : 'orders'}
                           </p>
                         </CardContent>
                       </Card>
@@ -337,22 +337,22 @@ export default function CommissionReportsPage() {
 
                   {/* Main Charts Grid */}
                   <div className="grid gap-6 grid-cols-1 xl:grid-cols-2">
-                    {/* Commission Breakdown by Source */}
-                    <div className="w-full min-h-[460px] flex flex-col">
-                      <CommissionBreakdownChart
-                        language={language}
-                        title={t.breakdownBySource}
-                        chainId={selectedChain !== 'all' ? selectedChain : undefined}
-                        branchId={selectedBranch !== 'all' ? selectedBranch : undefined}
-                      />
-                    </div>
-
                     {/* Commission Trend */}
                     <div className="w-full min-h-[460px] flex flex-col">
                       <CommissionTrendChart
                         language={language}
                         formatCurrency={formatCurrency}
                         title={t.trendOverTime}
+                        chainId={selectedChain !== 'all' ? selectedChain : undefined}
+                        branchId={selectedBranch !== 'all' ? selectedBranch : undefined}
+                      />
+                    </div>
+
+                    {/* Commission Breakdown by Source */}
+                    <div className="w-full min-h-[460px] flex flex-col">
+                      <CommissionBreakdownChart
+                        language={language}
+                        title={t.breakdownBySource}
                         chainId={selectedChain !== 'all' ? selectedChain : undefined}
                         branchId={selectedBranch !== 'all' ? selectedBranch : undefined}
                       />

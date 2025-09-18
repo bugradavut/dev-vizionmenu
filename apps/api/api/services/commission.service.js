@@ -568,9 +568,9 @@ const commissionService = {
 
       // Group by source
       const breakdown = {
-        website: { orders: 0, commission: 0, rate: 3 },
-        qr: { orders: 0, commission: 0, rate: 1 },
-        mobile_app: { orders: 0, commission: 0, rate: 2 }
+        website: { orders: 0, commission: 0 },
+        qr: { orders: 0, commission: 0 },
+        mobile_app: { orders: 0, commission: 0 }
       };
 
       commissionData.forEach(order => {
