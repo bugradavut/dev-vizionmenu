@@ -49,7 +49,7 @@ export function BranchSelectionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-2xl w-[95vw] sm:w-full mx-auto max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="sm:max-w-2xl w-[95vw] sm:w-full mx-auto h-[80vh] sm:h-auto sm:max-h-[85vh] flex flex-col p-0 gap-0">
         {/* Header with gradient background */}
         <div className="bg-gradient-to-r from-primary/5 to-primary/10 border-b px-6 py-5">
           <DialogHeader className="space-y-2">
@@ -66,7 +66,7 @@ export function BranchSelectionModal({
         </div>
 
         {/* Branch List */}
-        <ScrollArea className="flex-1 px-6 py-4">
+        <ScrollArea className="flex-1 px-6 py-4 min-h-0">
           <RadioGroup 
             value={selectedBranchId || ''} 
             onValueChange={() => {}} 
