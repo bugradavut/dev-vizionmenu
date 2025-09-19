@@ -70,7 +70,10 @@ async function getBranchSettings(branchId) {
         openTime: '09:00',
         closeTime: '22:00'
       }
-    }
+    },
+    minimumOrderAmount: 0,
+    deliveryFee: 0,
+    freeDeliveryThreshold: 0
   };
 
   // Merge existing settings with defaults, preserving user values
@@ -87,7 +90,10 @@ async function getBranchSettings(branchId) {
     restaurantHours: mergeWithDefaults(
       branchData.settings?.restaurantHours,
       defaultSettings.restaurantHours
-    )
+    ),
+    minimumOrderAmount: branchData.settings?.minimumOrderAmount ?? defaultSettings.minimumOrderAmount,
+    deliveryFee: branchData.settings?.deliveryFee ?? defaultSettings.deliveryFee,
+    freeDeliveryThreshold: branchData.settings?.freeDeliveryThreshold ?? defaultSettings.freeDeliveryThreshold
   };
 
 
@@ -106,7 +112,7 @@ async function getBranchSettings(branchId) {
  * @returns {Object} Updated branch data
  */
 async function updateBranchSettings(branchId, settingsData, userId) {
-  const { orderFlow, timingSettings, paymentSettings, restaurantHours } = settingsData;
+  const { orderFlow, timingSettings, paymentSettings, restaurantHours, minimumOrderAmount, deliveryFee, freeDeliveryThreshold } = settingsData;
   
   // Validate orderFlow
   if (!orderFlow || !['standard', 'simplified'].includes(orderFlow)) {
@@ -191,6 +197,27 @@ async function updateBranchSettings(branchId, settingsData, userId) {
         // Only warn, don't throw error for flexibility
         console.warn(`Warning: closeTime (${closeTime}) is not after openTime (${openTime}). This may indicate a midnight-spanning schedule.`);
       }
+    }
+  }
+
+  // Validate minimumOrderAmount if provided
+  if (minimumOrderAmount !== undefined && minimumOrderAmount !== null) {
+    if (typeof minimumOrderAmount !== 'number' || minimumOrderAmount < 0 || minimumOrderAmount > 10000) {
+      throw new Error('minimumOrderAmount must be a number between 0 and 10000');
+    }
+  }
+
+  // Validate deliveryFee if provided
+  if (deliveryFee !== undefined && deliveryFee !== null) {
+    if (typeof deliveryFee !== 'number' || deliveryFee < 0 || deliveryFee > 1000) {
+      throw new Error('deliveryFee must be a number between 0 and 1000');
+    }
+  }
+
+  // Validate freeDeliveryThreshold if provided
+  if (freeDeliveryThreshold !== undefined && freeDeliveryThreshold !== null) {
+    if (typeof freeDeliveryThreshold !== 'number' || freeDeliveryThreshold < 0 || freeDeliveryThreshold > 50000) {
+      throw new Error('freeDeliveryThreshold must be a number between 0 and 50000');
     }
   }
 
@@ -290,6 +317,19 @@ async function updateBranchSettings(branchId, settingsData, userId) {
       defaultRestaurantHours
     )
   };
+
+  // Add numeric fields if provided
+  if (minimumOrderAmount !== undefined && minimumOrderAmount !== null) {
+    newSettings.minimumOrderAmount = minimumOrderAmount;
+  }
+
+  if (deliveryFee !== undefined && deliveryFee !== null) {
+    newSettings.deliveryFee = deliveryFee;
+  }
+
+  if (freeDeliveryThreshold !== undefined && freeDeliveryThreshold !== null) {
+    newSettings.freeDeliveryThreshold = freeDeliveryThreshold;
+  }
 
   // Update branch settings in database
   const { data: updatedBranch, error: updateError } = await supabase

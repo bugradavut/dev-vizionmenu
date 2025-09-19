@@ -64,7 +64,7 @@ const updateBranchSettings = async (req, res) => {
     console.log(`PUT /api/v1/branch/${req.params.branchId}/settings - Update branch settings`);
 
     const { branchId } = req.params;
-    const { orderFlow, timingSettings, paymentSettings, restaurantHours } = req.body;
+    const { orderFlow, timingSettings, paymentSettings, restaurantHours, minimumOrderAmount, deliveryFee, freeDeliveryThreshold } = req.body;
     
     // Validate request
     if (!branchId) {
@@ -114,7 +114,15 @@ const updateBranchSettings = async (req, res) => {
     const currentUserId = req.currentUserId;
 
     // Use branch service to update settings
-    const settingsData = { orderFlow, timingSettings, paymentSettings, restaurantHours };
+    const settingsData = {
+      orderFlow,
+      timingSettings,
+      paymentSettings,
+      restaurantHours,
+      minimumOrderAmount,
+      deliveryFee,
+      freeDeliveryThreshold
+    };
     const result = await branchesService.updateBranchSettings(branchId, settingsData, currentUserId);
 
     // Success response
