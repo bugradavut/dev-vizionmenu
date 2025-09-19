@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useOrderContext } from '../contexts/order-context'
 import { useCart } from '../contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
-import { useMinimumOrder } from '@/hooks/use-minimum-order'
+import { useCustomerBranchSettings } from '@/hooks/use-customer-branch-settings'
 import { translations } from '@/lib/translations'
 import { MapPin, Store, Search, X, Globe, Clock } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -35,11 +35,14 @@ export function OrderHeader({ branchName, branchId, onSearch, onPreOrderConfirm,
   const [isPreOrderModalOpen, setIsPreOrderModalOpen] = useState(false)
   const t = translations[language] || translations.en
   
-  // Fetch minimum order amount (only for web users)
-  const { minimumOrderAmount, isLoading: isMinimumOrderLoading } = useMinimumOrder({
+  // Fetch branch settings (only for web users)
+  const { settings, loading: isSettingsLoading } = useCustomerBranchSettings({
     branchId,
-    enabled: source === 'web' // Only fetch for web users, not QR users
+    autoLoad: source === 'web' // Only fetch for web users, not QR users
   })
+
+  const minimumOrderAmount = settings.minimumOrderAmount
+  const isMinimumOrderLoading = isSettingsLoading
   
   // DEBUG: Console log for debugging (remove in production)
   // console.log('OrderHeader Debug:', { source, branchId, minimumOrderAmount, isMinimumOrderLoading })

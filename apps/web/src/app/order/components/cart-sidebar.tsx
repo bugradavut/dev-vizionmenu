@@ -13,8 +13,8 @@ import { useOrderContext } from '../contexts/order-context'
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 import { useResponsiveClasses } from '@/hooks/use-responsive'
-import { getCustomerBranchSettings, type TimingSettings } from '@/services/customer-branch-settings.service'
-import { useDeliveryFee } from '@/hooks/use-delivery-fee'
+import { useCustomerBranchSettings } from '@/hooks/use-customer-branch-settings'
+import type { TimingSettings } from '@/services/customer-branch-settings.service'
 
 
 export function CartSidebar() {
@@ -43,27 +43,21 @@ export function CartSidebar() {
   )
   const [timingSettings, setTimingSettings] = useState<TimingSettings | null>(null)
   
-  // Fetch delivery fee and free delivery threshold for free delivery promotion
-  const { deliveryFee, freeDeliveryThreshold } = useDeliveryFee({
+  // Fetch branch settings for delivery fee and other settings
+  const { settings, loading: settingsLoading } = useCustomerBranchSettings({
     branchId: branchId || undefined,
-    enabled: !!branchId
+    autoLoad: !!branchId
   })
 
-  // Load branch timing settings
+  const deliveryFee = settings.deliveryFee
+  const freeDeliveryThreshold = settings.freeDeliveryThreshold
+
+  // Use timing settings from branch settings
   useEffect(() => {
-    const loadTimingSettings = async () => {
-      if (branchId) {
-        try {
-          const branchSettings = await getCustomerBranchSettings(branchId)
-          setTimingSettings(branchSettings.settings.timingSettings)
-        } catch (error) {
-          console.warn('Failed to load branch timing settings:', error)
-        }
-      }
+    if (!settingsLoading) {
+      setTimingSettings(settings.timingSettings)
     }
-    
-    loadTimingSettings()
-  }, [branchId])
+  }, [settings.timingSettings, settingsLoading])
 
   // Calculate order ready time
   const calculateOrderReadyTime = (orderType: 'dine_in' | 'takeaway' | 'delivery') => {

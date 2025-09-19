@@ -18,10 +18,23 @@ export interface PaymentSettings {
   defaultPaymentMethod: 'online' | 'counter';
 }
 
+export interface RestaurantHours {
+  isOpen: boolean;
+  workingDays: string[];
+  defaultHours: {
+    openTime: string;
+    closeTime: string;
+  };
+}
+
 export interface BranchSettings {
   orderFlow: 'standard' | 'simplified';
   timingSettings: TimingSettings;
   paymentSettings: PaymentSettings;
+  restaurantHours: RestaurantHours;
+  minimumOrderAmount: number;
+  deliveryFee: number;
+  freeDeliveryThreshold: number;
 }
 
 export interface BranchSettingsResponse {
@@ -88,4 +101,15 @@ export const getDefaultSettings = (): BranchSettings => ({
     allowCounterPayment: false,
     defaultPaymentMethod: 'online',
   },
+  restaurantHours: {
+    isOpen: true,
+    workingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+    defaultHours: {
+      openTime: '09:00',
+      closeTime: '22:00',
+    },
+  },
+  minimumOrderAmount: 0,
+  deliveryFee: 0,
+  freeDeliveryThreshold: 0,
 });

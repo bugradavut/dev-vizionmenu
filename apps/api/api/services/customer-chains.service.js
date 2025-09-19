@@ -88,6 +88,101 @@ async function getChainBranches(chainId) {
 }
 
 /**
+ * Get branch settings for customer ordering
+ * @param {string} branchId - Branch ID
+ * @returns {Object} Branch settings data
+ */
+async function getBranchSettings(branchId) {
+  if (!branchId) {
+    throw new Error('Branch ID is required');
+  }
+
+  const { data: branchData, error } = await supabase
+    .from('branches')
+    .select('id, name, settings')
+    .eq('id', branchId)
+    .eq('is_active', true)
+    .single();
+
+  if (error || !branchData) {
+    console.error('Branch settings fetch error:', error);
+    throw new Error('Branch not found');
+  }
+
+  // Default settings structure
+  const defaultSettings = {
+    orderFlow: 'standard',
+    timingSettings: {
+      baseDelay: 20,
+      temporaryBaseDelay: 0,
+      deliveryDelay: 15,
+      temporaryDeliveryDelay: 0,
+      autoReady: false
+    },
+    paymentSettings: {
+      allowOnlinePayment: true,
+      allowCounterPayment: false,
+      defaultPaymentMethod: 'online'
+    },
+    restaurantHours: {
+      isOpen: true,
+      workingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+      defaultHours: {
+        openTime: '09:00',
+        closeTime: '22:00'
+      }
+    },
+    minimumOrderAmount: 0,
+    deliveryFee: 0,
+    freeDeliveryThreshold: 0
+  };
+
+  // Helper function to deep merge settings with defaults
+  const mergeWithDefaults = (existing, defaults) => {
+    if (!existing || typeof existing !== 'object') {
+      return defaults;
+    }
+
+    const merged = { ...defaults };
+
+    // Apply existing values, preserving user customizations
+    Object.keys(existing).forEach(key => {
+      if (existing[key] !== null && existing[key] !== undefined) {
+        merged[key] = existing[key];
+      }
+    });
+
+    return merged;
+  };
+
+  // Merge existing settings with defaults, preserving user values
+  const settings = {
+    orderFlow: branchData.settings?.orderFlow || defaultSettings.orderFlow,
+    timingSettings: mergeWithDefaults(
+      branchData.settings?.timingSettings,
+      defaultSettings.timingSettings
+    ),
+    paymentSettings: mergeWithDefaults(
+      branchData.settings?.paymentSettings,
+      defaultSettings.paymentSettings
+    ),
+    restaurantHours: mergeWithDefaults(
+      branchData.settings?.restaurantHours,
+      defaultSettings.restaurantHours
+    ),
+    minimumOrderAmount: branchData.settings?.minimumOrderAmount ?? defaultSettings.minimumOrderAmount,
+    deliveryFee: branchData.settings?.deliveryFee ?? defaultSettings.deliveryFee,
+    freeDeliveryThreshold: branchData.settings?.freeDeliveryThreshold ?? defaultSettings.freeDeliveryThreshold
+  };
+
+  return {
+    branchId: branchData.id,
+    branchName: branchData.name,
+    settings: settings
+  };
+}
+
+/**
  * Validate branch belongs to chain
  * @param {string} branchId - Branch ID
  * @param {string} chainId - Chain ID  

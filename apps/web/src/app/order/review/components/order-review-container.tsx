@@ -5,8 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useCart } from '../../contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
 import { OrderFormData } from '@/contexts/order-form-context'
-import { useMinimumOrder } from '@/hooks/use-minimum-order'
-import { useDeliveryFee } from '@/hooks/use-delivery-fee'
+import { useCustomerBranchSettings } from '@/hooks/use-customer-branch-settings'
 import { translations } from '@/lib/translations'
 import { OrderSummary } from './order-summary'
 import { CustomerInformationSection } from './customer-information-section'
@@ -61,16 +60,16 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   const customerInfoRef = useRef<{ triggerValidation: () => boolean } | null>(null)
   
   // Fetch minimum order amount for delivery validation
-  const { minimumOrderAmount, isLoading: isMinimumOrderLoading } = useMinimumOrder({
+  // Fetch branch settings
+  const { settings, loading: isSettingsLoading } = useCustomerBranchSettings({
     branchId: orderContext.branchId,
-    enabled: orderContext.source === 'web' // Only for web users
+    autoLoad: true
   })
-  
-  // Fetch delivery fee and free delivery threshold for the branch
-  const { deliveryFee, freeDeliveryThreshold } = useDeliveryFee({
-    branchId: orderContext.branchId,
-    enabled: true // Always enabled for all users
-  })
+
+  const minimumOrderAmount = settings.minimumOrderAmount
+  const deliveryFee = settings.deliveryFee
+  const freeDeliveryThreshold = settings.freeDeliveryThreshold
+  const isMinimumOrderLoading = isSettingsLoading
   
   const handleValidationChange = (isValid: boolean, data: unknown) => {
     setIsFormValid(isValid)

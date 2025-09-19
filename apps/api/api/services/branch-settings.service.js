@@ -17,16 +17,13 @@ async function getBranchSettings(branchId) {
   }
 
   try {
-    // Get branch data with settings, minimum_order_amount, delivery_fee, and free_delivery_threshold
+    // Get branch data with settings
     const { data: branchData, error: branchError } = await supabase
       .from('branches')
       .select(`
         id,
         name,
-        settings,
-        minimum_order_amount,
-        delivery_fee,
-        free_delivery_threshold
+        settings
       `)
       .eq('id', branchId)
       .single();
@@ -39,9 +36,9 @@ async function getBranchSettings(branchId) {
       throw new Error('Branch not found');
     }
 
-    // Parse settings JSON and merge with minimum_order_amount and delivery_fee
+    // Parse settings JSON
     const settings = branchData.settings || {};
-    
+
     // Build the complete settings object
     const branchSettings = {
       orderFlow: settings.orderFlow || 'standard',
@@ -57,9 +54,17 @@ async function getBranchSettings(branchId) {
         allowCounterPayment: settings.paymentSettings?.allowCounterPayment ?? false,
         defaultPaymentMethod: settings.paymentSettings?.defaultPaymentMethod || 'online',
       },
-      minimumOrderAmount: branchData.minimum_order_amount || 0,
-      deliveryFee: branchData.delivery_fee || 0,
-      freeDeliveryThreshold: branchData.free_delivery_threshold || 0,
+      restaurantHours: {
+        isOpen: settings.restaurantHours?.isOpen ?? true,
+        workingDays: settings.restaurantHours?.workingDays || ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+        defaultHours: {
+          openTime: settings.restaurantHours?.defaultHours?.openTime || '09:00',
+          closeTime: settings.restaurantHours?.defaultHours?.closeTime || '22:00'
+        }
+      },
+      minimumOrderAmount: settings.minimumOrderAmount || 0,
+      deliveryFee: settings.deliveryFee || 0,
+      freeDeliveryThreshold: settings.freeDeliveryThreshold || 0,
     };
 
     return {
@@ -192,7 +197,7 @@ async function getBranchMinimumOrder(branchId) {
   try {
     const { data, error } = await supabase
       .from('branches')
-      .select('minimum_order_amount')
+      .select('settings')
       .eq('id', branchId)
       .single();
 
@@ -200,7 +205,8 @@ async function getBranchMinimumOrder(branchId) {
       throw new Error(`Database error: ${error.message}`);
     }
 
-    return data?.minimum_order_amount || 0;
+    // Get minimum order amount from settings JSONB field
+    return data?.settings?.minimumOrderAmount || 0;
   } catch (error) {
     console.error('Error getting branch minimum order:', error);
     throw error;
@@ -220,7 +226,7 @@ async function getBranchDeliveryFee(branchId) {
   try {
     const { data, error } = await supabase
       .from('branches')
-      .select('delivery_fee')
+      .select('settings')
       .eq('id', branchId)
       .single();
 
@@ -228,7 +234,8 @@ async function getBranchDeliveryFee(branchId) {
       throw new Error(`Database error: ${error.message}`);
     }
 
-    return data?.delivery_fee || 0;
+    // Get delivery fee from settings JSONB field
+    return data?.settings?.deliveryFee || 0;
   } catch (error) {
     console.error('Error getting branch delivery fee:', error);
     throw error;
@@ -248,7 +255,7 @@ async function getBranchDeliveryInfo(branchId) {
   try {
     const { data, error } = await supabase
       .from('branches')
-      .select('delivery_fee, free_delivery_threshold')
+      .select('settings')
       .eq('id', branchId)
       .single();
 
@@ -260,9 +267,10 @@ async function getBranchDeliveryInfo(branchId) {
       throw new Error('Branch not found');
     }
 
+    // Get delivery info from settings JSONB field
     return {
-      deliveryFee: data.delivery_fee || 0,
-      freeDeliveryThreshold: data.free_delivery_threshold || 0,
+      deliveryFee: data.settings?.deliveryFee || 0,
+      freeDeliveryThreshold: data.settings?.freeDeliveryThreshold || 0,
     };
   } catch (error) {
     console.error('Error getting branch delivery info:', error);
