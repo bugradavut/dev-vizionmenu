@@ -5,6 +5,9 @@ import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
 import { Separator } from "@/components/ui/separator"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   SidebarInset,
   SidebarTrigger,
@@ -14,12 +17,170 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, CreditCard, DollarSign, Bike } from "lucide-react"
+import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, CreditCard, DollarSign, Bike, CalendarDays, Check as CheckIcon } from "lucide-react"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
 import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/translations"
+import { cn } from "@/lib/utils"
 import { DashboardLayout } from "@/components/dashboard-layout"
+
+type RestaurantHoursDay = keyof typeof translations.en.settingsBranch.restaurantHours.dayLabels
+type RestaurantHoursCopy = typeof translations.en.settingsBranch.restaurantHours
+// Custom Time Picker Component with ScrollArea
+interface CustomTimePickerProps {
+  id: string
+  value: string
+  onChange: (value: string) => void
+  disabled?: boolean
+  placeholder?: string
+}
+
+const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
+  id,
+  value,
+  onChange,
+  disabled,
+  placeholder
+}) => {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const hours = value ? value.split(':')[0] : '00'
+  const minutes = value ? value.split(':')[1] : '00'
+
+  const handleTimeSelect = (selectedTime: string) => {
+    onChange(selectedTime)
+    setIsOpen(false)
+  }
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          id={id}
+          variant="outline"
+          disabled={disabled}
+          className={cn(
+            "w-full justify-start pl-9 text-left font-normal",
+            !value && "text-muted-foreground"
+          )}
+        >
+          {value || placeholder}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0" align="start">
+        <div className="p-3">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Hours */}
+            <div>
+              <div className="text-xs font-medium text-muted-foreground mb-2">Hours</div>
+              <ScrollArea className="h-32 w-full rounded border">
+                <div className="grid grid-cols-3 gap-1 p-2">
+                  {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map((hour) => (
+                    <Button
+                      key={hour}
+                      variant={hours === hour ? "default" : "ghost"}
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => handleTimeSelect(`${hour}:${minutes}`)}
+                    >
+                      {hour}
+                    </Button>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+
+            {/* Minutes */}
+            <div>
+              <div className="text-xs font-medium text-muted-foreground mb-2">Minutes</div>
+              <ScrollArea className="h-32 w-full rounded border">
+                <div className="grid grid-cols-2 gap-1 p-2">
+                  {['00', '15', '30', '45'].map((minute) => (
+                    <Button
+                      key={minute}
+                      variant={minutes === minute ? "default" : "ghost"}
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => handleTimeSelect(`${hours}:${minute}`)}
+                    >
+                      {minute}
+                    </Button>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+const RESTAURANT_HOURS_FALLBACK: Record<keyof typeof translations, RestaurantHoursCopy> = {
+  en: {
+    title: "Restaurant Hours",
+    subtitle: "Configure when customers can order",
+    statusClosed: "Closed",
+    statusOpen: "Open",
+    closedToggleAria: "Toggle restaurant availability",
+    closedNotice: "The branch is marked as closed. Customers will not be able to place orders.",
+    workingDaysLabel: "Working Days",
+    defaultHoursLabel: "Default Hours",
+    openLabel: "Open",
+    closeLabel: "Close",
+    helperText: "Use this placeholder to plan hours. Detailed per-day schedules will come with the API integration.",
+    dayLabels: {
+      mon: "Monday",
+      tue: "Tuesday",
+      wed: "Wednesday",
+      thu: "Thursday",
+      fri: "Friday",
+      sat: "Saturday",
+      sun: "Sunday"
+    },
+    dayInitials: {
+      mon: "M",
+      tue: "T",
+      wed: "W",
+      thu: "T",
+      fri: "F",
+      sat: "S",
+      sun: "S"
+    }
+  },
+  "fr-CA": {
+    title: "Heures du restaurant",
+    subtitle: "Configurez quand les clients peuvent commander",
+    statusClosed: "Ferm\u00E9",
+    statusOpen: "Ouvert",
+    closedToggleAria: "Basculer la disponibilit\u00E9 du restaurant",
+    closedNotice: "La succursale est indiqu\u00E9e comme ferm\u00E9e. Les clients ne pourront pas passer de commandes.",
+    workingDaysLabel: "Jours actifs",
+    defaultHoursLabel: "Heures par d\u00E9faut",
+    openLabel: "Ouverture",
+    closeLabel: "Fermeture",
+    helperText: "Utilisez cette maquette pour planifier les heures. Les horaires d\u00E9taill\u00E9s par jour arriveront avec l'int\u00E9gration API.",
+    dayLabels: {
+      mon: "Lundi",
+      tue: "Mardi",
+      wed: "Mercredi",
+      thu: "Jeudi",
+      fri: "Vendredi",
+      sat: "Samedi",
+      sun: "Dimanche"
+    },
+    dayInitials: {
+      mon: "L",
+      tue: "M",
+      wed: "M",
+      thu: "J",
+      fri: "V",
+      sat: "S",
+      sun: "D"
+    }
+  }
+}
 
 export default function BranchSettingsPage() {
   const { branchId } = useEnhancedAuth()
@@ -38,6 +199,7 @@ export default function BranchSettingsPage() {
 
   const { language } = useLanguage()
   const t = translations[language] || translations.en
+  const restaurantHoursCopy = (t.settingsBranch.restaurantHours ?? RESTAURANT_HOURS_FALLBACK[language] ?? RESTAURANT_HOURS_FALLBACK.en) as RestaurantHoursCopy
   const [saved, setSaved] = useState(false)
   
   // Local state for input values to allow empty strings
@@ -46,6 +208,12 @@ export default function BranchSettingsPage() {
   const [minimumOrderInput, setMinimumOrderInput] = useState("")
   const [deliveryFeeInput, setDeliveryFeeInput] = useState("")
   const [freeDeliveryThresholdInput, setFreeDeliveryThresholdInput] = useState("")
+  const [restaurantClosed, setRestaurantClosed] = useState(false)
+  const [selectedWorkingDays, setSelectedWorkingDays] = useState<RestaurantHoursDay[]>(["mon", "tue", "wed", "thu", "fri", "sat", "sun"])
+  const [openTime, setOpenTime] = useState("09:00")
+  const [closeTime, setCloseTime] = useState("22:00")
+  const workingDayOrder: RestaurantHoursDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+
   
   // Update local inputs when settings change from API
   React.useEffect(() => {
@@ -143,6 +311,19 @@ export default function BranchSettingsPage() {
         freeDeliveryThreshold: numValue
       })
     }
+  }
+
+  // Mock restaurant hours interactions
+  const handleRestaurantClosedToggle = (value: boolean) => {
+    setRestaurantClosed(value)
+  }
+
+  const handleWorkingDayToggle = (day: RestaurantHoursDay) => {
+    setSelectedWorkingDays((previousDays) =>
+      previousDays.includes(day)
+        ? previousDays.filter((existingDay) => existingDay !== day)
+        : [...previousDays, day]
+    )
   }
 
   // Handle plus/minus button changes - best practice approach
@@ -656,8 +837,123 @@ export default function BranchSettingsPage() {
                     </Card>
                   </div>
                   
-                  {/* Right Column - Empty */}
-                  <div></div>
+                  {/* Right Column - Restaurant Hours Mock */}
+                  <div className="h-full">
+                    <Card className="h-full border border-purple-100 shadow-sm">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-3">
+                            <div className="rounded-lg bg-purple-50 p-2 text-purple-600">
+                              <CalendarDays className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <CardTitle className="text-sm">{restaurantHoursCopy.title}</CardTitle>
+                              <p className="text-xs text-muted-foreground">
+                                {restaurantHoursCopy.subtitle}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "flex items-center gap-2 text-xs font-semibold border px-3 py-1.5",
+                              !restaurantClosed
+                                ? "bg-emerald-50 text-emerald-600 border-emerald-400"
+                                : "bg-rose-50 text-rose-600 border-rose-200"
+                            )}
+                          >
+                            {!restaurantClosed ? restaurantHoursCopy.statusOpen : restaurantHoursCopy.statusClosed}
+                            <Switch
+                              aria-label={restaurantHoursCopy.closedToggleAria}
+                              checked={!restaurantClosed}
+                              onCheckedChange={(checked) => handleRestaurantClosedToggle(!checked)}
+                              className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-rose-500 scale-75"
+                            />
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-5">
+                        <div className="flex flex-col gap-6 lg:flex-row">
+                          <div className="flex-1 space-y-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              {restaurantHoursCopy.workingDaysLabel}
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {workingDayOrder.map((day) => {
+                                const isSelected = selectedWorkingDays.includes(day)
+                                return (
+                                  <button
+                                    key={day}
+                                    type="button"
+                                    onClick={() => handleWorkingDayToggle(day)}
+                                    disabled={restaurantClosed}
+                                    className={cn(
+                                      "flex items-center gap-2 rounded-full border px-2.5 py-1 text-sm transition-colors",
+                                      restaurantClosed && "cursor-not-allowed opacity-50",
+                                      isSelected
+                                        ? "border-orange-200 bg-orange-50 text-orange-600 shadow-sm"
+                                        : "border-muted-foreground/20 text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                                    )}
+                                  >
+                                    <span
+                                      className={cn(
+                                        "inline-flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-semibold",
+                                        isSelected
+                                          ? "border-orange-200 bg-orange-500 text-white shadow-sm"
+                                          : "border-muted-foreground/20 text-muted-foreground"
+                                      )}
+                                    >
+                                      {isSelected ? <CheckIcon className="h-3 w-3" /> : restaurantHoursCopy.dayInitials[day]}
+                                    </span>
+                                    <span>{restaurantHoursCopy.dayLabels[day]}</span>
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                          <div className="hidden lg:block w-px bg-border self-stretch mx-6"></div>
+                          <Separator orientation="horizontal" className="block lg:hidden" />
+                          <div className="flex-1 space-y-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              {restaurantHoursCopy.defaultHoursLabel}
+                            </p>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <div className="space-y-1.5">
+                                <Label htmlFor="restaurant-hours-open" className="text-xs font-medium">
+                                  {restaurantHoursCopy.openLabel}
+                                </Label>
+                                <div className="relative">
+                                  <Clock className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                                  <CustomTimePicker
+                                    id="restaurant-hours-open"
+                                    value={openTime}
+                                    onChange={setOpenTime}
+                                    disabled={restaurantClosed}
+                                    placeholder="Select time"
+                                  />
+                                </div>
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label htmlFor="restaurant-hours-close" className="text-xs font-medium">
+                                  {restaurantHoursCopy.closeLabel}
+                                </Label>
+                                <div className="relative">
+                                  <Clock className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                                  <CustomTimePicker
+                                    id="restaurant-hours-close"
+                                    value={closeTime}
+                                    onChange={setCloseTime}
+                                    disabled={restaurantClosed}
+                                    placeholder="Select time"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
 
               </div>
@@ -692,3 +988,7 @@ export default function BranchSettingsPage() {
     </AuthGuard>
   )
 }
+
+
+
+
