@@ -19,14 +19,16 @@ import type { TimingSettings } from '@/services/customer-branch-settings.service
 
 export function CartSidebar() {
   const router = useRouter()
-  const { 
-    items, 
-    updateQuantity, 
-    removeItem, 
-    subtotal, 
-    tax, 
+  const {
+    items,
+    updateQuantity,
+    removeItem,
+    subtotal,
+    tax,
     total,
-    preOrder 
+    preOrder,
+    canAddToCart,
+    isRestaurantOpen
   } = useCart()
   
   const { isQROrder, tableNumber, zone, source, branchId, chainSlug } = useOrderContext()
@@ -166,9 +168,34 @@ export function CartSidebar() {
     <div className="flex flex-col h-full">
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
-        {/* Order Ready Time Header - Always visible */}
-        <div className={`${responsiveClasses.padding.section} pb-0 pt-4`}>
-          {(() => {
+        {/* Restaurant Closed Notice - Always visible when closed */}
+        {!isRestaurantOpen && (
+          <div className={`${responsiveClasses.padding.section} pb-0 pt-4`}>
+            <Card className="bg-red-50 border-red-200 p-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-5 h-5 text-red-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-red-600 font-medium">
+                    {language === 'fr' ? 'RESTAURANT FERMÉ' : 'RESTAURANT CLOSED'}
+                  </div>
+                  <div className="text-sm text-red-700">
+                    {language === 'fr'
+                      ? 'Les commandes ne sont pas disponibles'
+                      : 'Ordering is currently unavailable'
+                    }
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Order Ready Time Header - Only visible when restaurant is open */}
+        {isRestaurantOpen && (
+          <div className={`${responsiveClasses.padding.section} pb-0 pt-4`}>
+            {(() => {
             // If pre-order is scheduled, show scheduled time instead of estimated time
             if (preOrder.isPreOrder && preOrder.scheduledDate && preOrder.scheduledTime) {
               // Format the scheduled date
@@ -228,7 +255,8 @@ export function CartSidebar() {
               </Card>
             )
           })()}
-        </div>
+          </div>
+        )}
 
         {/* Cart Items or Empty State */}
       <div className="flex-1 overflow-y-auto pb-[100px]">
@@ -314,6 +342,7 @@ export function CartSidebar() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                            disabled={!canAddToCart}
                             className="w-8 h-8 p-0"
                           >
                             <Minus className="w-3 h-3" />
@@ -325,6 +354,7 @@ export function CartSidebar() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                            disabled={!canAddToCart}
                             className="w-8 h-8 p-0"
                           >
                             <Plus className="w-3 h-3" />
@@ -449,18 +479,20 @@ export function CartSidebar() {
       <div className="border-t border-border bg-card p-4 flex-shrink-0 absolute bottom-0 w-full">
         <Button
           onClick={handleCheckoutClick}
-          disabled={isNavigating || items.length === 0}
+          disabled={isNavigating || items.length === 0 || !canAddToCart}
           className="w-full h-12 text-base font-semibold"
           size="lg"
         >
-          {items.length === 0 
-            ? t.orderPage.checkout.checkout
-            : isNavigating
-              ? <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Loading...
-                </>
-              : (language === 'fr' ? `${t.orderPage.checkout.checkout} - ${total.toFixed(2)} $` : `${t.orderPage.checkout.checkout} - $${total.toFixed(2)}`)
+          {!isRestaurantOpen
+            ? (language === 'fr' ? 'Restaurant fermé' : 'Restaurant Closed')
+            : items.length === 0
+              ? t.orderPage.checkout.checkout
+              : isNavigating
+                ? <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Loading...
+                  </>
+                : (language === 'fr' ? `${t.orderPage.checkout.checkout} - ${total.toFixed(2)} $` : `${t.orderPage.checkout.checkout} - $${total.toFixed(2)}`)
           }
         </Button>
       </div>

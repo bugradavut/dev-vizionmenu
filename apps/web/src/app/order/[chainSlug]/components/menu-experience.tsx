@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { MapPin, ChevronDown, Store } from 'lucide-react'
 import { OrderHeader } from '@/app/order/components/order-header'
 import { CategorySidebar } from '@/app/order/components/category-sidebar' 
@@ -29,6 +29,9 @@ import { useResponsive } from '@/hooks/use-responsive'
 import { OrderContextProvider } from '@/app/order/contexts/order-context'
 import { useCart } from '@/app/order/contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
+import { useCustomerBranchSettings } from '@/hooks/use-customer-branch-settings'
+import { shouldBlockOrders } from '@/utils/restaurant-hours'
+import { RestaurantClosedModal } from '@/components/modals/restaurant-closed-modal'
 import type { Chain, Branch } from '@/services/customer-chains.service'
 import type { CustomerMenu } from '@/services/customer-menu.service'
 
@@ -61,10 +64,66 @@ export function MenuExperience({
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [showCartClearDialog, setShowCartClearDialog] = useState(false)
   const [pendingBranchChange, setPendingBranchChange] = useState<Branch | null>(null)
-  
+  const [showRestaurantClosedModal, setShowRestaurantClosedModal] = useState(false)
+  const [hasUserDismissedModal, setHasUserDismissedModal] = useState(false)
+
   const { isMobile, isTablet, isDesktop } = useResponsive()
-  const { clearCart, itemCount } = useCart()
+  const { clearCart, itemCount, setRestaurantStatus } = useCart()
   const { language } = useLanguage()
+
+  // Get branch settings for restaurant hours
+  const { settings, loading: settingsLoading } = useCustomerBranchSettings({
+    branchId: branch.id,
+    autoLoad: true
+  })
+
+  // Restaurant status checking
+  const checkRestaurantStatus = useCallback(() => {
+    if (settingsLoading || !settings.restaurantHours) {
+      // Default to open when loading or no hours configured
+      setRestaurantStatus(true)
+      setShowRestaurantClosedModal(false)
+      return
+    }
+
+    const isCurrentlyBlocked = shouldBlockOrders(settings.restaurantHours)
+    setRestaurantStatus(!isCurrentlyBlocked)
+
+    // Show modal if restaurant is closed and user hasn't dismissed it in this session
+    if (isCurrentlyBlocked && !hasUserDismissedModal) {
+      setShowRestaurantClosedModal(true)
+    } else if (!isCurrentlyBlocked) {
+      // Hide modal and reset dismissal state if restaurant is open
+      setShowRestaurantClosedModal(false)
+      setHasUserDismissedModal(false)
+    }
+  }, [settings.restaurantHours, settingsLoading, setRestaurantStatus, hasUserDismissedModal])
+
+  // Check restaurant status on mount and when settings change
+  useEffect(() => {
+    checkRestaurantStatus()
+  }, [checkRestaurantStatus])
+
+  // Check restaurant status when page gains focus
+  useEffect(() => {
+    const handleFocus = () => {
+      checkRestaurantStatus()
+    }
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        checkRestaurantStatus()
+      }
+    }
+
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [checkRestaurantStatus])
 
   // Branch change handlers
   const handleBranchChange = (branch: Branch) => {
@@ -484,6 +543,17 @@ export function MenuExperience({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Restaurant Closed Modal */}
+      <RestaurantClosedModal
+        isOpen={showRestaurantClosedModal}
+        onClose={() => {
+          // Mark that user has dismissed the modal for this session
+          setHasUserDismissedModal(true)
+          setShowRestaurantClosedModal(false)
+        }}
+        restaurantHours={settings.restaurantHours}
+      />
     </OrderContextProvider>
   )
 }

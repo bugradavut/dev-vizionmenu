@@ -43,6 +43,11 @@ export interface CartContextType {
   preOrder: PreOrderData
   setPreOrder: (preOrderData: PreOrderData) => void
   clearPreOrder: () => void
+  // Restaurant status functions
+  isRestaurantOpen: boolean
+  canAddToCart: boolean
+  setRestaurantStatus: (isOpen: boolean) => void
+  clearCartIfClosed: () => void
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -113,6 +118,7 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
   const [items, setItems] = useState<CartItem[]>([])
   const [preOrder, setPreOrderState] = useState<PreOrderData>({ isPreOrder: false })
   const [isLoaded, setIsLoaded] = useState(false)
+  const [isRestaurantOpen, setIsRestaurantOpen] = useState(true) // Default to open for safety
 
   // Load cart and pre-order from localStorage on mount
   useEffect(() => {
@@ -211,15 +217,47 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
     return item?.quantity || 0
   }, [items])
 
+  // Restaurant status functions
+  const setRestaurantStatus = useCallback((isOpen: boolean) => {
+    setIsRestaurantOpen(isOpen)
+  }, [])
+
+  const clearCartIfClosed = useCallback(() => {
+    if (!isRestaurantOpen && items.length > 0) {
+      setItems([])
+      // Clear localStorage as well
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(CART_STORAGE_KEY)
+      }
+    }
+  }, [isRestaurantOpen, items.length])
+
+  // Auto-clear cart when restaurant becomes closed
+  useEffect(() => {
+    clearCartIfClosed()
+  }, [clearCartIfClosed])
+
+  // Block adding items when restaurant is closed
+  const canAddToCart = isRestaurantOpen
+
   // Calculate totals
   const subtotal = items.reduce((total, item) => total + (item.price * item.quantity), 0)
   const tax = subtotal * TAX_RATE
   const total = subtotal + tax
   const itemCount = items.reduce((count, item) => count + item.quantity, 0)
 
+  // Override addItem to check restaurant status
+  const safeAddItem = useCallback((item: Omit<CartItem, 'quantity'>, quantity = 1) => {
+    if (!canAddToCart) {
+      console.warn('Cannot add items to cart: Restaurant is closed')
+      return
+    }
+    addItem(item, quantity)
+  }, [canAddToCart, addItem])
+
   const value: CartContextType = {
     items,
-    addItem,
+    addItem: safeAddItem,
     removeItem,
     updateQuantity,
     updateNotes,
@@ -232,7 +270,12 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
     // Pre-order functions
     preOrder,
     setPreOrder,
-    clearPreOrder
+    clearPreOrder,
+    // Restaurant status functions
+    isRestaurantOpen,
+    canAddToCart,
+    setRestaurantStatus,
+    clearCartIfClosed
   }
 
   return (

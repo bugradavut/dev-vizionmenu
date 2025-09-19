@@ -152,6 +152,90 @@ function formatTime(timeString: string): string {
 }
 
 /**
+ * Check if restaurant should show as closed (for UI blocking)
+ * More restrictive than isRestaurantCurrentlyOpen for better UX
+ */
+export function shouldBlockOrders(restaurantHours?: RestaurantHours): boolean {
+  return !isRestaurantCurrentlyOpen(restaurantHours);
+}
+
+/**
+ * Get user-friendly status message for restaurant
+ */
+export function getRestaurantStatusMessage(restaurantHours?: RestaurantHours, language: 'en' | 'fr' = 'en') {
+  const status = getRestaurantStatus(restaurantHours);
+
+  const messages = {
+    en: {
+      open: `Open until ${formatTime(restaurantHours?.defaultHours?.closeTime || '22:00')}`,
+      closed_manually: 'Currently closed',
+      closed_today: 'Closed today',
+      opens_later: `Opens at ${formatTime(restaurantHours?.defaultHours?.openTime || '09:00')}`,
+      closed_for_day: 'Closed for today',
+      unknown: 'Hours not available'
+    },
+    fr: {
+      open: `Ouvert jusqu'à ${formatTime(restaurantHours?.defaultHours?.closeTime || '22:00')}`,
+      closed_manually: 'Actuellement fermé',
+      closed_today: 'Fermé aujourd\'hui',
+      opens_later: `Ouvre à ${formatTime(restaurantHours?.defaultHours?.openTime || '09:00')}`,
+      closed_for_day: 'Fermé pour aujourd\'hui',
+      unknown: 'Horaires non disponibles'
+    }
+  };
+
+  return {
+    isOpen: status.isOpen,
+    message: messages[language][status.status as keyof typeof messages.en] || messages[language].unknown,
+    status: status.status
+  };
+}
+
+/**
+ * Get next opening time for closed restaurants
+ */
+export function getNextOpeningTime(restaurantHours?: RestaurantHours): Date | null {
+  if (!restaurantHours || isRestaurantCurrentlyOpen(restaurantHours)) {
+    return null;
+  }
+
+  const now = new Date();
+  const currentDay = getDayOfWeek(now);
+  const { workingDays, defaultHours } = restaurantHours;
+
+  // Check if opens later today
+  if (workingDays.includes(currentDay)) {
+    const openTime = defaultHours.openTime;
+    const [hours, minutes] = openTime.split(':').map(Number);
+    const todayOpening = new Date(now);
+    todayOpening.setHours(hours, minutes, 0, 0);
+
+    if (todayOpening > now) {
+      return todayOpening;
+    }
+  }
+
+  // Find next working day
+  const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  const currentDayIndex = dayNames.indexOf(currentDay);
+
+  for (let i = 1; i <= 7; i++) {
+    const nextDayIndex = (currentDayIndex + i) % 7;
+    const nextDay = dayNames[nextDayIndex];
+
+    if (workingDays.includes(nextDay)) {
+      const nextDate = new Date(now);
+      nextDate.setDate(now.getDate() + i);
+      const [hours, minutes] = defaultHours.openTime.split(':').map(Number);
+      nextDate.setHours(hours, minutes, 0, 0);
+      return nextDate;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Get working days display text
  */
 export function getWorkingDaysText(workingDays: string[], language: 'en' | 'fr' = 'en'): string {

@@ -37,7 +37,7 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
   const [groupedItems, setGroupedItems] = useState<{[categoryId: string]: MenuItemUI[]}>({})
   const [selectedItem, setSelectedItem] = useState<MenuItemUI | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const { getItemQuantity } = useCart()
+  const { getItemQuantity, canAddToCart } = useCart()
   const { language } = useLanguage()
   const t = translations[language] || translations.en
   
@@ -220,10 +220,14 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                     const itemQuantity = getItemQuantity(item.id)
                     
                     return (
-                      <Card 
-                        key={item.id} 
-                        className="rounded-xl border border-border hover:border-border/80 transition-colors cursor-pointer group bg-card"
-                        onClick={() => handleItemClick(item)}
+                      <Card
+                        key={item.id}
+                        className={`rounded-xl border border-border transition-colors group bg-card ${
+                          !canAddToCart || !item.is_available
+                            ? 'opacity-60 cursor-not-allowed'
+                            : 'hover:border-border/80 cursor-pointer'
+                        }`}
+                        onClick={() => canAddToCart && item.is_available && handleItemClick(item)}
                       >
                         <div className="relative p-2">
                           {/* Item Image - Smaller */}
@@ -257,8 +261,17 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
 
                           {/* Availability Status */}
                           {!item.is_available && (
-                            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-xl">
                               <span className="text-white font-medium">{t.orderPage.menu.unavailable}</span>
+                            </div>
+                          )}
+
+                          {/* Restaurant Closed Overlay */}
+                          {!canAddToCart && item.is_available && (
+                            <div className="absolute inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center rounded-xl">
+                              <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                                {language === 'fr' ? 'Fermé' : 'Closed'}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -292,10 +305,14 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
             const itemQuantity = getItemQuantity(item.id)
             
             return (
-              <Card 
-                key={item.id} 
-                className="rounded-xl border border-border hover:border-border/80 transition-colors cursor-pointer group bg-card"
-                onClick={() => handleItemClick(item)}
+              <Card
+                key={item.id}
+                className={`rounded-xl border border-border transition-colors group bg-card ${
+                  !canAddToCart || !item.is_available
+                    ? 'opacity-60 cursor-not-allowed'
+                    : 'hover:border-border/80 cursor-pointer'
+                }`}
+                onClick={() => canAddToCart && item.is_available && handleItemClick(item)}
               >
                 <div className="relative p-2">
                   {/* Item Image - Smaller */}
@@ -329,8 +346,17 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
 
                   {/* Availability Status */}
                   {!item.is_available && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-xl">
                       <span className="text-white font-medium">{t.orderPage.menu.unavailable}</span>
+                    </div>
+                  )}
+
+                  {/* Restaurant Closed Overlay */}
+                  {!canAddToCart && item.is_available && (
+                    <div className="absolute inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center rounded-xl">
+                      <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                        {language === 'fr' ? 'Fermé' : 'Closed'}
+                      </div>
                     </div>
                   )}
                 </div>
