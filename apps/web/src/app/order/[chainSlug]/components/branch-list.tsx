@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { MapPin, Phone, Clock } from 'lucide-react'
 import { Branch } from '../types/order-flow.types'
 import { useLanguage } from '@/contexts/language-context'
+import { getRestaurantStatus } from '@/utils/restaurant-hours'
 
 interface BranchListProps {
   branches: Branch[]
@@ -106,12 +107,22 @@ export function BranchList({
                       <span>{branch.phone}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    <span>
-                      {language === 'fr' ? 'Ouvert maintenant' : 'Open now'}
-                    </span>
-                  </div>
+                  {(() => {
+                    const status = getRestaurantStatus(branch.restaurantHours);
+                    const isOpen = status.isOpen;
+                    const statusText = language === 'fr'
+                      ? (isOpen ? 'Ouvert maintenant' : 'Fermé')
+                      : (isOpen ? 'Open now' : 'Closed');
+
+                    return (
+                      <div className="flex items-center gap-1">
+                        <Clock className={isOpen ? "w-3 h-3 text-green-600" : "w-3 h-3 text-red-600"} />
+                        <span className={isOpen ? "text-green-600" : "text-red-600"}>
+                          {statusText}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

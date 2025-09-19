@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Branch } from '@/services/customer-chains.service'
 import { useLanguage } from '@/contexts/language-context'
+import { getRestaurantStatus } from '@/utils/restaurant-hours'
 
 interface BranchSelectionModalProps {
   isOpen: boolean
@@ -130,13 +131,33 @@ export function BranchSelectionModal({
                     
                     {/* Branch Details */}
                     <div className="flex items-center gap-6">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                        <Clock className="w-3 h-3 text-green-600" />
-                        <span className="text-xs font-medium text-green-600">
-                          {language === 'fr' ? 'Ouvert maintenant' : 'Open now'}
-                        </span>
-                      </div>
+                      {(() => {
+                        const status = getRestaurantStatus(branch.restaurantHours);
+                        const isOpen = status.isOpen;
+                        const statusText = language === 'fr'
+                          ? (isOpen ? 'Ouvert maintenant' : 'Fermé')
+                          : (isOpen ? 'Open now' : 'Closed');
+
+                        return (
+                          <div className="flex items-center gap-1.5">
+                            <div className={isOpen
+                              ? "w-2 h-2 rounded-full bg-green-500"
+                              : "w-2 h-2 rounded-full bg-red-500"
+                            }></div>
+                            <Clock className={isOpen
+                              ? "w-3 h-3 text-green-600"
+                              : "w-3 h-3 text-red-600"
+                            } />
+                            <span className={isOpen
+                              ? "text-xs font-medium text-green-600"
+                              : "text-xs font-medium text-red-600"
+                            }>
+                              {statusText}
+                            </span>
+                          </div>
+                        );
+                      })()}
+
                       {branch.phone && (
                         <div className="flex items-center gap-1">
                           <Phone className="w-3 h-3 text-muted-foreground" />

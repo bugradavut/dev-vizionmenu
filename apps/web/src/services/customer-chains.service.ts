@@ -25,6 +25,14 @@ export interface Branch {
   };
   phone?: string;
   email?: string;
+  restaurantHours?: {
+    isOpen: boolean;
+    workingDays: string[];
+    defaultHours: {
+      openTime: string;
+      closeTime: string;
+    };
+  };
 }
 
 export interface ChainWithBranches {

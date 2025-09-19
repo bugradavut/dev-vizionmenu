@@ -43,11 +43,12 @@ async function getChainBranches(chainId) {
     .select(`
       id,
       name,
-      slug, 
+      slug,
       address,
       location,
       phone,
-      email
+      email,
+      settings
     `)
     .eq('chain_id', chainId)
     .eq('is_active', true)
@@ -57,7 +58,33 @@ async function getChainBranches(chainId) {
     throw new Error(`Failed to fetch branches: ${error.message}`);
   }
 
-  return branches || [];
+  // Transform branches to include restaurant hours from settings
+  const transformedBranches = (branches || []).map(branch => {
+    const defaultHours = {
+      isOpen: true,
+      workingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+      defaultHours: {
+        openTime: '09:00',
+        closeTime: '22:00'
+      }
+    };
+
+    // Extract restaurant hours from branch settings
+    const restaurantHours = branch.settings?.restaurantHours || defaultHours;
+
+    return {
+      id: branch.id,
+      name: branch.name,
+      slug: branch.slug,
+      address: branch.address,
+      location: branch.location,
+      phone: branch.phone,
+      email: branch.email,
+      restaurantHours: restaurantHours
+    };
+  });
+
+  return transformedBranches;
 }
 
 /**
