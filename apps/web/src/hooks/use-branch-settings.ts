@@ -66,8 +66,16 @@ export const useBranchSettings = (options: UseBranchSettingsOptions = {}): UseBr
 
     try {
       const response = await getBranchSettings(branchId);
-      setSettings(response.settings);
-      setOriginalSettings(response.settings);
+
+      // Ensure restaurant hours are initialized with defaults if missing
+      const settingsWithDefaults = {
+        ...getDefaultSettings(),
+        ...response.settings,
+        restaurantHours: response.settings.restaurantHours || getDefaultSettings().restaurantHours
+      };
+
+      setSettings(settingsWithDefaults);
+      setOriginalSettings(settingsWithDefaults);
       setBranchName(response.branchName);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load branch settings';
@@ -118,9 +126,17 @@ export const useBranchSettings = (options: UseBranchSettingsOptions = {}): UseBr
         ? { ...current.timingSettings, ...updates.timingSettings }
         : current.timingSettings,
       // Ensure paymentSettings are properly merged
-      paymentSettings: updates.paymentSettings 
+      paymentSettings: updates.paymentSettings
         ? { ...current.paymentSettings, ...updates.paymentSettings }
-        : current.paymentSettings
+        : current.paymentSettings,
+      // Ensure restaurantHours are properly merged
+      restaurantHours: updates.restaurantHours
+        ? {
+            ...getDefaultSettings().restaurantHours,
+            ...current.restaurantHours,
+            ...updates.restaurantHours
+          }
+        : current.restaurantHours || getDefaultSettings().restaurantHours
     }));
   }, []);
 

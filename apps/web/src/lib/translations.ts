@@ -497,7 +497,40 @@ export const translations = {
       // Customer-facing free delivery messages
       freeDeliveryPromo: "Add {amount} more for FREE delivery!",
       freeDeliveryApplied: "You saved {amount} on delivery!",
-      freeDeliveryBadge: "FREE!"
+      freeDeliveryBadge: "FREE!",
+
+      // Restaurant Hours
+      restaurantHours: {
+        title: "Restaurant Hours",
+        subtitle: "Configure when customers can order",
+        statusClosed: "Closed",
+        statusOpen: "Open",
+        closedToggleAria: "Toggle restaurant availability",
+        closedNotice: "The branch is marked as closed. Customers will not be able to place orders.",
+        workingDaysLabel: "Working Days",
+        defaultHoursLabel: "Default Hours",
+        openLabel: "Open",
+        closeLabel: "Close",
+        helperText: "Use this placeholder to plan hours. Detailed per-day schedules will come with the API integration.",
+        dayLabels: {
+          mon: "Monday",
+          tue: "Tuesday",
+          wed: "Wednesday",
+          thu: "Thursday",
+          fri: "Friday",
+          sat: "Saturday",
+          sun: "Sunday"
+        },
+        dayInitials: {
+          mon: "M",
+          tue: "T",
+          wed: "W",
+          thu: "T",
+          fri: "F",
+          sat: "S",
+          sun: "S"
+        }
+      }
     },
     
     // Order Notifications
@@ -1710,7 +1743,40 @@ export const translations = {
       // Customer-facing free delivery messages - Canadian French
       freeDeliveryPromo: "Ajoutez {amount} de plus pour la livraison GRATUITE !",
       freeDeliveryApplied: "Vous économisez {amount} sur la livraison !",
-      freeDeliveryBadge: "GRATUIT !"
+      freeDeliveryBadge: "GRATUIT !",
+
+      // Restaurant Hours - Canadian French
+      restaurantHours: {
+        title: "Heures du restaurant",
+        subtitle: "Configurez quand les clients peuvent commander",
+        statusClosed: "Fermé",
+        statusOpen: "Ouvert",
+        closedToggleAria: "Basculer la disponibilité du restaurant",
+        closedNotice: "La succursale est indiquée comme fermée. Les clients ne pourront pas passer de commandes.",
+        workingDaysLabel: "Jours actifs",
+        defaultHoursLabel: "Heures par défaut",
+        openLabel: "Ouverture",
+        closeLabel: "Fermeture",
+        helperText: "Utilisez cette maquette pour planifier les heures. Les horaires détaillés par jour arriveront avec l'intégration API.",
+        dayLabels: {
+          mon: "Lundi",
+          tue: "Mardi",
+          wed: "Mercredi",
+          thu: "Jeudi",
+          fri: "Vendredi",
+          sat: "Samedi",
+          sun: "Dimanche"
+        },
+        dayInitials: {
+          mon: "L",
+          tue: "M",
+          wed: "M",
+          thu: "J",
+          fri: "V",
+          sat: "S",
+          sun: "D"
+        }
+      }
     },
     
     // Order Notifications - Canadian French

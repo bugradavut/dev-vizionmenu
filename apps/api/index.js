@@ -50,7 +50,8 @@ const customerOrdersRoutes = require('./routes/customer-orders.routes');
 const campaignsRoutes = require('./routes/campaigns.routes');
 const platformSyncRoutes = require('./routes/platform-sync.routes');
 const adminChainRoutes = require('./routes/admin-chain.routes');
-const branchSettingsRoutes = require('./routes/branch-settings.routes');
+// Branch settings moved to branches.routes.js
+// const branchSettingsRoutes = require('./routes/branch-settings.routes');
 const customerBranchRoutes = require('./routes/customer-branch.routes');
 const adminBranchRoutes = require('./routes/admin-branch.routes');
 const chainUsersRoutes = require('./routes/chain-users.routes');
@@ -110,10 +111,7 @@ app.use('/api/v1/orders', ordersRoutes);
 // Use branches routes (both plural and singular for compatibility)
 app.use('/api/v1/branches', branchesRoutes);
 
-// Use branch settings routes (protected - auth required) - BEFORE general branch routes
-app.use('/api/v1/branch', branchSettingsRoutes);
-
-// Use general branch routes (after specific settings routes)
+// Use branch routes (includes settings - protected auth required)
 app.use('/api/v1/branch', branchesRoutes);
 
 // Use menu categories routes

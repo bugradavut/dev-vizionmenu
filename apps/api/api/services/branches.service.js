@@ -62,6 +62,14 @@ async function getBranchSettings(branchId) {
       allowOnlinePayment: true,
       allowCounterPayment: false,
       defaultPaymentMethod: 'online'
+    },
+    restaurantHours: {
+      isOpen: true,
+      workingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+      defaultHours: {
+        openTime: '09:00',
+        closeTime: '22:00'
+      }
     }
   };
 
@@ -75,6 +83,10 @@ async function getBranchSettings(branchId) {
     paymentSettings: mergeWithDefaults(
       branchData.settings?.paymentSettings,
       defaultSettings.paymentSettings
+    ),
+    restaurantHours: mergeWithDefaults(
+      branchData.settings?.restaurantHours,
+      defaultSettings.restaurantHours
     )
   };
 
@@ -94,7 +106,7 @@ async function getBranchSettings(branchId) {
  * @returns {Object} Updated branch data
  */
 async function updateBranchSettings(branchId, settingsData, userId) {
-  const { orderFlow, timingSettings, paymentSettings } = settingsData;
+  const { orderFlow, timingSettings, paymentSettings, restaurantHours } = settingsData;
   
   // Validate orderFlow
   if (!orderFlow || !['standard', 'simplified'].includes(orderFlow)) {
@@ -129,17 +141,56 @@ async function updateBranchSettings(branchId, settingsData, userId) {
   // Validate paymentSettings if provided
   if (paymentSettings && typeof paymentSettings === 'object') {
     const { allowOnlinePayment, allowCounterPayment, defaultPaymentMethod } = paymentSettings;
-    
+
     if (typeof allowOnlinePayment !== 'boolean') {
       throw new Error('allowOnlinePayment must be a boolean');
     }
-    
+
     if (typeof allowCounterPayment !== 'boolean') {
       throw new Error('allowCounterPayment must be a boolean');
     }
-    
+
     if (defaultPaymentMethod && !['online', 'counter'].includes(defaultPaymentMethod)) {
       throw new Error('defaultPaymentMethod must be "online" or "counter"');
+    }
+  }
+
+  // Validate restaurantHours if provided
+  if (restaurantHours && typeof restaurantHours === 'object') {
+    const { isOpen, workingDays, defaultHours } = restaurantHours;
+
+    if (typeof isOpen !== 'boolean') {
+      throw new Error('restaurantHours.isOpen must be a boolean');
+    }
+
+    if (workingDays && Array.isArray(workingDays)) {
+      const validDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+      const invalidDays = workingDays.filter(day => !validDays.includes(day));
+      if (invalidDays.length > 0) {
+        throw new Error(`Invalid working days: ${invalidDays.join(', ')}. Valid days are: ${validDays.join(', ')}`);
+      }
+    }
+
+    if (defaultHours && typeof defaultHours === 'object') {
+      const { openTime, closeTime } = defaultHours;
+
+      // Validate time format (HH:MM)
+      const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+
+      if (openTime && !timeRegex.test(openTime)) {
+        throw new Error('defaultHours.openTime must be in HH:MM format (e.g., "09:00")');
+      }
+
+      if (closeTime && !timeRegex.test(closeTime)) {
+        throw new Error('defaultHours.closeTime must be in HH:MM format (e.g., "22:00")');
+      }
+
+      // Validate logical time order (optional - could span midnight)
+      if (openTime && closeTime && openTime >= closeTime) {
+        // Allow same time (24/7) or close time before open time (spans midnight)
+        // Only warn, don't throw error for flexibility
+        console.warn(`Warning: closeTime (${closeTime}) is not after openTime (${openTime}). This may indicate a midnight-spanning schedule.`);
+      }
     }
   }
 
@@ -210,6 +261,15 @@ async function updateBranchSettings(branchId, settingsData, userId) {
     defaultPaymentMethod: 'online'
   };
 
+  const defaultRestaurantHours = {
+    isOpen: true,
+    workingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+    defaultHours: {
+      openTime: '09:00',
+      closeTime: '22:00'
+    }
+  };
+
   // Prepare new settings with proper deep merge
   const newSettings = {
     ...branchData.settings,
@@ -223,6 +283,11 @@ async function updateBranchSettings(branchId, settingsData, userId) {
       branchData.settings?.paymentSettings,
       paymentSettings,
       defaultPaymentSettings
+    ),
+    restaurantHours: mergeUpdateWithDefaults(
+      branchData.settings?.restaurantHours,
+      restaurantHours,
+      defaultRestaurantHours
     )
   };
 

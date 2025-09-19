@@ -18,10 +18,20 @@ export interface PaymentSettings {
   defaultPaymentMethod: 'online' | 'counter';
 }
 
+export interface RestaurantHours {
+  isOpen: boolean;
+  workingDays: string[];
+  defaultHours: {
+    openTime: string;
+    closeTime: string;
+  };
+}
+
 export interface BranchSettings {
   orderFlow: 'standard' | 'simplified';
   timingSettings: TimingSettings;
   paymentSettings: PaymentSettings;
+  restaurantHours: RestaurantHours;
   minimumOrderAmount?: number;
   deliveryFee?: number;
   freeDeliveryThreshold?: number;
@@ -96,22 +106,26 @@ export const updateBranchSettings = async (
     }
     const token = session.access_token;
 
+    const requestData = {
+      orderFlow: settings.orderFlow,
+      timingSettings: settings.timingSettings,
+      paymentSettings: settings.paymentSettings,
+      restaurantHours: settings.restaurantHours,
+      minimumOrderAmount: settings.minimumOrderAmount,
+      deliveryFee: settings.deliveryFee,
+      freeDeliveryThreshold: settings.freeDeliveryThreshold,
+    };
+
     // Use Express.js API URL
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
     const response = await fetch(`${apiUrl}/api/v1/branch/${branchId}/settings`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        orderFlow: settings.orderFlow,
-        timingSettings: settings.timingSettings,
-        paymentSettings: settings.paymentSettings,
-        minimumOrderAmount: settings.minimumOrderAmount,
-        deliveryFee: settings.deliveryFee,
-        freeDeliveryThreshold: settings.freeDeliveryThreshold,
-      }),
+      body: JSON.stringify(requestData),
     });
 
     if (!response.ok) {
@@ -143,6 +157,14 @@ export const getDefaultSettings = (): BranchSettings => ({
     allowOnlinePayment: true,
     allowCounterPayment: false, // Default: counter payment disabled
     defaultPaymentMethod: 'online',
+  },
+  restaurantHours: {
+    isOpen: true,
+    workingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+    defaultHours: {
+      openTime: '09:00',
+      closeTime: '22:00',
+    },
   },
   minimumOrderAmount: 0, // Default: no minimum order amount
   deliveryFee: 0, // Default: no delivery fee

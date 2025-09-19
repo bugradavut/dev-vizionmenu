@@ -26,7 +26,22 @@ import { cn } from "@/lib/utils"
 import { DashboardLayout } from "@/components/dashboard-layout"
 
 type RestaurantHoursDay = keyof typeof translations.en.settingsBranch.restaurantHours.dayLabels
-type RestaurantHoursCopy = typeof translations.en.settingsBranch.restaurantHours
+
+interface RestaurantHoursCopy {
+  title: string
+  subtitle: string
+  statusClosed: string
+  statusOpen: string
+  closedToggleAria: string
+  closedNotice: string
+  workingDaysLabel: string
+  defaultHoursLabel: string
+  openLabel: string
+  closeLabel: string
+  helperText: string
+  dayLabels: Record<RestaurantHoursDay, string>
+  dayInitials: Record<RestaurantHoursDay, string>
+}
 // Custom Time Picker Component with ScrollArea
 interface CustomTimePickerProps {
   id: string
@@ -149,7 +164,7 @@ const RESTAURANT_HOURS_FALLBACK: Record<keyof typeof translations, RestaurantHou
       sun: "S"
     }
   },
-  "fr-CA": {
+  fr: {
     title: "Heures du restaurant",
     subtitle: "Configurez quand les clients peuvent commander",
     statusClosed: "Ferm\u00E9",
@@ -208,10 +223,11 @@ export default function BranchSettingsPage() {
   const [minimumOrderInput, setMinimumOrderInput] = useState("")
   const [deliveryFeeInput, setDeliveryFeeInput] = useState("")
   const [freeDeliveryThresholdInput, setFreeDeliveryThresholdInput] = useState("")
-  const [restaurantClosed, setRestaurantClosed] = useState(false)
-  const [selectedWorkingDays, setSelectedWorkingDays] = useState<RestaurantHoursDay[]>(["mon", "tue", "wed", "thu", "fri", "sat", "sun"])
-  const [openTime, setOpenTime] = useState("09:00")
-  const [closeTime, setCloseTime] = useState("22:00")
+  // Initialize from settings instead of local state
+  const restaurantClosed = !settings.restaurantHours?.isOpen
+  const selectedWorkingDays = settings.restaurantHours?.workingDays || ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+  const openTime = settings.restaurantHours?.defaultHours?.openTime || "09:00"
+  const closeTime = settings.restaurantHours?.defaultHours?.closeTime || "22:00"
   const workingDayOrder: RestaurantHoursDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
   
@@ -313,17 +329,54 @@ export default function BranchSettingsPage() {
     }
   }
 
-  // Mock restaurant hours interactions
+  // Restaurant hours handlers - now connected to real API
   const handleRestaurantClosedToggle = (value: boolean) => {
-    setRestaurantClosed(value)
+    updateSettings({
+      restaurantHours: {
+        ...settings.restaurantHours,
+        isOpen: !value
+      }
+    })
   }
 
   const handleWorkingDayToggle = (day: RestaurantHoursDay) => {
-    setSelectedWorkingDays((previousDays) =>
-      previousDays.includes(day)
-        ? previousDays.filter((existingDay) => existingDay !== day)
-        : [...previousDays, day]
-    )
+    const currentWorkingDays = settings.restaurantHours?.workingDays || []
+    const newWorkingDays = currentWorkingDays.includes(day)
+      ? currentWorkingDays.filter((existingDay) => existingDay !== day)
+      : [...currentWorkingDays, day]
+
+    updateSettings({
+      restaurantHours: {
+        ...settings.restaurantHours,
+        workingDays: newWorkingDays
+      }
+    })
+  }
+
+  const handleOpenTimeChange = (newOpenTime: string) => {
+    updateSettings({
+      restaurantHours: {
+        ...settings.restaurantHours,
+        defaultHours: {
+          ...settings.restaurantHours?.defaultHours,
+          openTime: newOpenTime,
+          closeTime: settings.restaurantHours?.defaultHours?.closeTime || "22:00"
+        }
+      }
+    })
+  }
+
+  const handleCloseTimeChange = (newCloseTime: string) => {
+    updateSettings({
+      restaurantHours: {
+        ...settings.restaurantHours,
+        defaultHours: {
+          ...settings.restaurantHours?.defaultHours,
+          openTime: settings.restaurantHours?.defaultHours?.openTime || "09:00",
+          closeTime: newCloseTime
+        }
+      }
+    })
   }
 
   // Handle plus/minus button changes - best practice approach
@@ -927,7 +980,7 @@ export default function BranchSettingsPage() {
                                   <CustomTimePicker
                                     id="restaurant-hours-open"
                                     value={openTime}
-                                    onChange={setOpenTime}
+                                    onChange={handleOpenTimeChange}
                                     disabled={restaurantClosed}
                                     placeholder="Select time"
                                   />
@@ -942,7 +995,7 @@ export default function BranchSettingsPage() {
                                   <CustomTimePicker
                                     id="restaurant-hours-close"
                                     value={closeTime}
-                                    onChange={setCloseTime}
+                                    onChange={handleCloseTimeChange}
                                     disabled={restaurantClosed}
                                     placeholder="Select time"
                                   />
