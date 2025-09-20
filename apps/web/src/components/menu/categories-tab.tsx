@@ -182,7 +182,7 @@ export function CategoriesTab() {
   return (
     <div className="space-y-6">
       {/* Header with search and actions */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold tracking-tight">
             {t.navigation.categories}
@@ -232,7 +232,7 @@ export function CategoriesTab() {
         <>
           {/* Categories grid */}
           {filteredCategories.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
               {filteredCategories.map((category) => (
                 <MenuCategoryCard 
                   key={category.id} 
