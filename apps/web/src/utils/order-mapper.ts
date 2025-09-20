@@ -25,7 +25,7 @@ export interface FrontendOrderData {
   customerInfo: FrontendCustomerInfo;
   addressInfo?: FrontendAddressInfo;
   orderType: 'dine_in' | 'takeaway' | 'delivery';
-  paymentMethod: 'cash' | 'online';
+  paymentMethod: 'counter' | 'online';
   items: Array<{
     id: string;
     name: string;
@@ -88,7 +88,7 @@ export interface BackendOrderData {
   }>;
   orderType: 'dine_in' | 'takeaway' | 'delivery';
   source: 'qr' | 'web';
-  paymentMethod: 'cash' | 'online';
+  paymentMethod: 'counter' | 'online';
   customerInfo: {
     name: string;
     phone: string;

@@ -42,7 +42,7 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   const [isFormValid, setIsFormValid] = useState(false)
   const [formData, setFormData] = useState<CustomerFormData | null>(null)
   const [orderNotes, setOrderNotes] = useState<string>('')
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'cash' | 'online'>('online')
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'counter' | 'online'>('online')
   const [selectedOrderType, setSelectedOrderType] = useState<'takeaway' | 'delivery' | null>(initialOrderType)
   const [appliedDiscount, setAppliedDiscount] = useState<{
     id: string
@@ -154,7 +154,7 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   }
 
   // Handle payment method changes
-  const handlePaymentMethodChange = (method: 'cash' | 'online') => {
+  const handlePaymentMethodChange = (method: 'counter' | 'online') => {
     setSelectedPaymentMethod(method)
     console.log('Payment method changed to:', method)
   }

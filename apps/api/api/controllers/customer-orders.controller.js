@@ -74,8 +74,8 @@ const createCustomerOrder = async (req, res) => {
       });
     }
 
-    if (!['cash', 'online'].includes(paymentMethod)) {
-      paymentMethod = 'cash';
+    if (!['counter', 'online'].includes(paymentMethod)) {
+      paymentMethod = 'counter';
     }
 
     const sanitizedCustomerInfo = {
@@ -143,6 +143,7 @@ const createCustomerOrder = async (req, res) => {
         notes: item.notes || ''
       })),
       orderType,
+      paymentMethod,
       source: source === 'qr' ? 'qr_code' : 'web',
       tableNumber: source === 'qr' ? tableNumber : undefined,
       zone: source === 'qr' ? zone : undefined,

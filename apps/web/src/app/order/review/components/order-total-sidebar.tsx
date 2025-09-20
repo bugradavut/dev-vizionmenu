@@ -45,7 +45,7 @@ interface OrderTotalSidebarProps {
   language: string
   isFormValid: boolean
   formData: CustomerFormData | null
-  paymentMethod: 'cash' | 'online'
+  paymentMethod: 'counter' | 'online'
   orderNotes?: string
   orderContext: {
     chainSlug?: string
@@ -121,7 +121,7 @@ export function OrderTotalSidebar({
   const submitOrderAfterPayment = async (
     paymentIntentId: string,
     latestFormData: CustomerFormData,
-    resolvedPaymentMethod: 'cash' | 'online'
+    resolvedPaymentMethod: 'counter' | 'online'
   ) => {
     const customerInfo = latestFormData.customerInfo
     const addressInfo = latestFormData.addressInfo

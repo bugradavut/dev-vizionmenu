@@ -472,7 +472,7 @@ async function updateOrderStatus(orderId, updateData, userBranch) {
  * @returns {Object} Created order data
  */
 async function createOrder(orderData, branchId) {
-  const { customer, items, orderType, source, tableNumber, zone, notes, specialInstructions, deliveryAddress, preOrder, pricing, campaign, tip, commission } = orderData;
+  const { customer, items, orderType, paymentMethod, source, tableNumber, zone, notes, specialInstructions, deliveryAddress, preOrder, pricing, campaign, tip, commission } = orderData;
   
   // Only allow internal orders for now (third-party will be added in 2 weeks)
   if (!['qr_code', 'web'].includes(source)) {
@@ -599,6 +599,7 @@ async function createOrder(orderData, branchId) {
     delivery_address: deliveryAddress || null,
     order_status: initialStatus, // Dynamic status based on pre-order
     payment_status: 'pending',
+    payment_method: paymentMethod || 'counter',
     
     // Legacy pricing fields (maintained for backward compatibility)
     subtotal: subtotal,
