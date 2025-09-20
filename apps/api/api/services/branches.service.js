@@ -71,6 +71,11 @@ async function getBranchSettings(branchId) {
         closeTime: '22:00'
       }
     },
+    preOrderSettings: {
+      allowWhenClosed: false,
+      minimumLeadTimeMinutes: 30,
+      maximumDaysAhead: 7
+    },
     minimumOrderAmount: 0,
     deliveryFee: 0,
     freeDeliveryThreshold: 0
@@ -112,7 +117,7 @@ async function getBranchSettings(branchId) {
  * @returns {Object} Updated branch data
  */
 async function updateBranchSettings(branchId, settingsData, userId) {
-  const { orderFlow, timingSettings, paymentSettings, restaurantHours, minimumOrderAmount, deliveryFee, freeDeliveryThreshold } = settingsData;
+  const { orderFlow, timingSettings, paymentSettings, restaurantHours, preOrderSettings, minimumOrderAmount, deliveryFee, freeDeliveryThreshold } = settingsData;
   
   // Validate orderFlow
   if (!orderFlow || !['standard', 'simplified'].includes(orderFlow)) {
@@ -200,6 +205,22 @@ async function updateBranchSettings(branchId, settingsData, userId) {
     }
   }
 
+  // Validate preOrderSettings if provided
+  if (preOrderSettings && typeof preOrderSettings === 'object') {
+    const { allowWhenClosed, minimumLeadTimeMinutes, maximumDaysAhead } = preOrderSettings;
+
+    if (typeof allowWhenClosed !== 'boolean') {
+      throw new Error('preOrderSettings.allowWhenClosed must be a boolean');
+    }
+
+    if (typeof minimumLeadTimeMinutes !== 'number' || minimumLeadTimeMinutes < 0 || minimumLeadTimeMinutes > 1440) {
+      throw new Error('preOrderSettings.minimumLeadTimeMinutes must be between 0 and 1440');
+    }
+
+    if (typeof maximumDaysAhead !== 'number' || maximumDaysAhead < 0 || maximumDaysAhead > 30) {
+      throw new Error('preOrderSettings.maximumDaysAhead must be between 0 and 30');
+    }
+  }
   // Validate minimumOrderAmount if provided
   if (minimumOrderAmount !== undefined && minimumOrderAmount !== null) {
     if (typeof minimumOrderAmount !== 'number' || minimumOrderAmount < 0 || minimumOrderAmount > 10000) {
@@ -446,3 +467,13 @@ module.exports = {
   getBranchById,
   getBranchesByChain
 };
+
+
+
+
+
+
+
+
+
+

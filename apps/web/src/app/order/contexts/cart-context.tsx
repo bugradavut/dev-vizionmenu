@@ -1,6 +1,8 @@
 "use client"
 
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react'
+import { shouldBlockOrders } from '@/utils/restaurant-hours'
+import type { RestaurantHours } from '@/utils/restaurant-hours'
 
 export interface CartItem {
   id: string
@@ -46,7 +48,7 @@ export interface CartContextType {
   // Restaurant status functions
   isRestaurantOpen: boolean
   canAddToCart: boolean
-  setRestaurantStatus: (isOpen: boolean) => void
+  setRestaurantHours: (hours: RestaurantHours | null) => void
   clearCartIfClosed: () => void
 }
 
@@ -93,7 +95,15 @@ const loadPreOrderFromStorage = (): PreOrderData => {
       const parsed = JSON.parse(stored)
       // Convert scheduledDateTime back to Date object if it exists
       if (parsed.scheduledDateTime) {
-        parsed.scheduledDateTime = new Date(parsed.scheduledDateTime)
+        const dateObj = new Date(parsed.scheduledDateTime)
+        // Check if the date is valid
+        if (isNaN(dateObj.getTime())) {
+          console.warn('Invalid scheduledDateTime found in localStorage, removing pre-order data')
+          // Clear invalid pre-order data
+          localStorage.removeItem(PRE_ORDER_STORAGE_KEY)
+          return { isPreOrder: false }
+        }
+        parsed.scheduledDateTime = dateObj
       }
       return parsed
     }
@@ -119,6 +129,7 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
   const [preOrder, setPreOrderState] = useState<PreOrderData>({ isPreOrder: false })
   const [isLoaded, setIsLoaded] = useState(false)
   const [isRestaurantOpen, setIsRestaurantOpen] = useState(true) // Default to open for safety
+  const [restaurantHours, setRestaurantHours] = useState<RestaurantHours | null>(null)
 
   // Load cart and pre-order from localStorage on mount
   useEffect(() => {
@@ -143,10 +154,46 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
     }
   }, [preOrder, isLoaded])
 
+  // Check restaurant status whenever hours change
+  useEffect(() => {
+    if (!restaurantHours) {
+      setIsRestaurantOpen(true) // Default to open when no hours configured
+      return
+    }
+
+    const isCurrentlyBlocked = shouldBlockOrders(restaurantHours)
+    setIsRestaurantOpen(!isCurrentlyBlocked)
+  }, [restaurantHours])
+
+  // Auto-check restaurant status on focus/visibility change
+  useEffect(() => {
+    const handleFocus = () => {
+      if (restaurantHours) {
+        const isCurrentlyBlocked = shouldBlockOrders(restaurantHours)
+        setIsRestaurantOpen(!isCurrentlyBlocked)
+      }
+    }
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden && restaurantHours) {
+        const isCurrentlyBlocked = shouldBlockOrders(restaurantHours)
+        setIsRestaurantOpen(!isCurrentlyBlocked)
+      }
+    }
+
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [restaurantHours])
+
   const addItem = useCallback((item: Omit<CartItem, 'quantity'>, quantity = 1) => {
     setItems(prev => {
       const existingIndex = prev.findIndex(cartItem => cartItem.id === item.id)
-      
+
       if (existingIndex >= 0) {
         // Update existing item quantity
         const updated = [...prev]
@@ -157,7 +204,8 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
         return updated
       } else {
         // Add new item
-        return [...prev, { ...item, quantity }]
+        const newItem = { ...item, quantity }
+        return [...prev, newItem]
       }
     })
   }, [])
@@ -218,19 +266,20 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
   }, [items])
 
   // Restaurant status functions
-  const setRestaurantStatus = useCallback((isOpen: boolean) => {
-    setIsRestaurantOpen(isOpen)
+  const setRestaurantHoursCallback = useCallback((hours: RestaurantHours | null) => {
+    setRestaurantHours(hours)
   }, [])
 
   const clearCartIfClosed = useCallback(() => {
-    if (!isRestaurantOpen && items.length > 0) {
+    // Only clear cart if restaurant is closed AND no pre-order is active
+    if (!isRestaurantOpen && !preOrder.isPreOrder && items.length > 0) {
       setItems([])
       // Clear localStorage as well
       if (typeof window !== 'undefined') {
         localStorage.removeItem(CART_STORAGE_KEY)
       }
     }
-  }, [isRestaurantOpen, items.length])
+  }, [isRestaurantOpen, preOrder.isPreOrder, items.length])
 
   // Auto-clear cart when restaurant becomes closed
   useEffect(() => {
@@ -238,7 +287,7 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
   }, [clearCartIfClosed])
 
   // Block adding items when restaurant is closed
-  const canAddToCart = isRestaurantOpen
+  const canAddToCart = isRestaurantOpen || preOrder.isPreOrder
 
   // Calculate totals
   const subtotal = items.reduce((total, item) => total + (item.price * item.quantity), 0)
@@ -274,7 +323,7 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
     // Restaurant status functions
     isRestaurantOpen,
     canAddToCart,
-    setRestaurantStatus,
+    setRestaurantHours: setRestaurantHoursCallback,
     clearCartIfClosed
   }
 
@@ -292,3 +341,4 @@ export function useCart(): CartContextType {
   }
   return context
 }
+

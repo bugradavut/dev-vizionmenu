@@ -153,7 +153,9 @@ export function OrderTotalSidebar({
         isPreOrder: preOrder.isPreOrder,
         scheduledDate: preOrder.scheduledDate,
         scheduledTime: preOrder.scheduledTime,
-        scheduledDateTime: preOrder.scheduledDateTime
+        scheduledDateTime: preOrder.scheduledDateTime && !isNaN(preOrder.scheduledDateTime.getTime())
+          ? preOrder.scheduledDateTime
+          : undefined
       } : undefined,
       pricing: {
         itemsTotal: orderTotals.itemsTotal,
@@ -282,7 +284,9 @@ export function OrderTotalSidebar({
           isPreOrder: preOrder.isPreOrder,
           scheduledDate: preOrder.scheduledDate,
           scheduledTime: preOrder.scheduledTime,
-          scheduledDateTime: preOrder.scheduledDateTime
+          scheduledDateTime: preOrder.scheduledDateTime && !isNaN(preOrder.scheduledDateTime.getTime())
+            ? preOrder.scheduledDateTime
+            : undefined
         } : undefined,
         pricing: {
           itemsTotal: orderTotals.itemsTotal,

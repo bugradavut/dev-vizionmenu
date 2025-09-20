@@ -113,3 +113,4 @@ export const getDefaultSettings = (): BranchSettings => ({
   deliveryFee: 0,
   freeDeliveryThreshold: 0,
 });
+

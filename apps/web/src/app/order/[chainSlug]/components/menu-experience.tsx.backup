@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { MapPin, ChevronDown, Store } from 'lucide-react'
 import { OrderHeader } from '@/app/order/components/order-header'
 import { CategorySidebar } from '@/app/order/components/category-sidebar' 
@@ -30,6 +30,7 @@ import { OrderContextProvider } from '@/app/order/contexts/order-context'
 import { useCart } from '@/app/order/contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
 import { useCustomerBranchSettings } from '@/hooks/use-customer-branch-settings'
+import { shouldBlockOrders, DEFAULT_WORKING_DAYS } from '@/utils/restaurant-hours'
 import { RestaurantClosedModal } from '@/components/modals/restaurant-closed-modal'
 import { PreOrderModal } from '@/app/order/components/pre-order-modal'
 import type { Chain, Branch } from '@/services/customer-chains.service'
@@ -69,7 +70,7 @@ export function MenuExperience({
   const [hasUserDismissedModal, setHasUserDismissedModal] = useState(false)
 
   const { isMobile, isTablet, isDesktop } = useResponsive()
-  const { clearCart, itemCount, isRestaurantOpen, setRestaurantHours, preOrder, setPreOrder } = useCart()
+  const { clearCart, itemCount, setRestaurantStatus, preOrder, setPreOrder, clearPreOrder } = useCart()
   const { language } = useLanguage()
 
   // Get branch settings for restaurant hours
@@ -78,27 +79,75 @@ export function MenuExperience({
     autoLoad: true
   })
 
-  const allowSchedulingWhenClosed = true // Enable scheduling when restaurant is closed
+  const allowSchedulingWhenClosed = settings.preOrderSettings?.allowWhenClosed ?? false
 
-  // Update cart context with restaurant hours
-  useEffect(() => {
-    if (!settingsLoading) {
-      setRestaurantHours(settings.restaurantHours || null)
+  // Restaurant status checking
+  const checkRestaurantStatus = useCallback(() => {
+    if (settingsLoading || !settings.restaurantHours) {
+      setRestaurantStatus(true)
+      setShowRestaurantClosedModal(false)
+      return
     }
-  }, [settings.restaurantHours, settingsLoading, setRestaurantHours])
 
-  // Show/hide restaurant closed modal based on restaurant status
+    const isClosedNow = shouldBlockOrders(settings.restaurantHours)
+    const hasActivePreOrder = preOrder.isPreOrder
+
+    if (isClosedNow) {
+      if (allowSchedulingWhenClosed) {
+        setRestaurantStatus(hasActivePreOrder)
+
+        if (hasActivePreOrder) {
+          setShowRestaurantClosedModal(false)
+        } else if (!hasUserDismissedModal) {
+          setShowRestaurantClosedModal(true)
+        }
+      } else {
+        setRestaurantStatus(false)
+        if (!hasUserDismissedModal) {
+          setShowRestaurantClosedModal(true)
+        }
+      }
+    } else {
+      setRestaurantStatus(true)
+      setShowRestaurantClosedModal(false)
+      setHasUserDismissedModal(false)
+    }
+  }, [settings.restaurantHours, settingsLoading, allowSchedulingWhenClosed, preOrder.isPreOrder, hasUserDismissedModal, setRestaurantStatus])
+
+  // Re-evaluate availability whenever dependencies change
   useEffect(() => {
-    if (!settingsLoading) {
-      if (!isRestaurantOpen && !preOrder.isPreOrder && !hasUserDismissedModal) {
-        setShowRestaurantClosedModal(true)
-      } else if (isRestaurantOpen) {
-        setShowRestaurantClosedModal(false)
-        setHasUserDismissedModal(false) // Reset dismissal when restaurant opens
+    checkRestaurantStatus()
+  }, [checkRestaurantStatus])
+
+  // Refresh status when the page regains focus
+  useEffect(() => {
+    const handleFocus = () => {
+      checkRestaurantStatus()
+    }
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        checkRestaurantStatus()
       }
     }
-  }, [isRestaurantOpen, preOrder.isPreOrder, hasUserDismissedModal, settingsLoading])
 
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [checkRestaurantStatus])
+
+  // When a pre-order is activated, allow ordering and hide the modal
+  useEffect(() => {
+    if (preOrder.isPreOrder) {
+      setHasUserDismissedModal(true)
+      setShowRestaurantClosedModal(false)
+      setRestaurantStatus(true)
+    }
+  }, [preOrder.isPreOrder, setRestaurantStatus])
   // Branch change handlers
   const handleBranchChange = (branch: Branch) => {
     // If cart has items, show confirmation dialog
@@ -148,7 +197,6 @@ export function MenuExperience({
       scheduledDateTime
     })
     setShowPreOrderModal(false)
-    setShowRestaurantClosedModal(false) // Close restaurant modal
     setHasUserDismissedModal(true)
   }
 
@@ -350,7 +398,7 @@ export function MenuExperience({
                       branchId={branch.id}
                       onSearch={() => {}}
                       hideTitle={true}
-                      showMinimumOrderOnly={true}
+                      showMinimumOrderOnly={true}\n                          schedulingEnabled={allowSchedulingWhenClosed}\n                          scheduleConfig={scheduleConfig}
                     />
                   )}
                 </div>
@@ -566,3 +614,16 @@ export function MenuExperience({
     </OrderContextProvider>
   )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+

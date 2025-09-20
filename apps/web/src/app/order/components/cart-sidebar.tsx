@@ -169,7 +169,7 @@ export function CartSidebar() {
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
         {/* Restaurant Closed Notice - Always visible when closed */}
-        {!isRestaurantOpen && (
+        {!isRestaurantOpen && !preOrder.isPreOrder && (
           <div className={`${responsiveClasses.padding.section} pb-0 pt-4`}>
             <Card className="bg-red-50 border-red-200 p-4 mb-4">
               <div className="flex items-center gap-3">
@@ -192,8 +192,8 @@ export function CartSidebar() {
           </div>
         )}
 
-        {/* Order Ready Time Header - Only visible when restaurant is open */}
-        {isRestaurantOpen && (
+        {/* Order Ready Time Header - Only visible when restaurant is open OR when pre-order is scheduled */}
+        {(isRestaurantOpen || preOrder.isPreOrder) && (
           <div className={`${responsiveClasses.padding.section} pb-0 pt-4`}>
             {(() => {
             // If pre-order is scheduled, show scheduled time instead of estimated time
@@ -483,16 +483,14 @@ export function CartSidebar() {
           className="w-full h-12 text-base font-semibold"
           size="lg"
         >
-          {!isRestaurantOpen
-            ? (language === 'fr' ? 'Restaurant fermé' : 'Restaurant Closed')
-            : items.length === 0
-              ? t.orderPage.checkout.checkout
-              : isNavigating
-                ? <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Loading...
-                  </>
-                : (language === 'fr' ? `${t.orderPage.checkout.checkout} - ${total.toFixed(2)} $` : `${t.orderPage.checkout.checkout} - $${total.toFixed(2)}`)
+          {items.length === 0
+            ? t.orderPage.checkout.checkout
+            : isNavigating
+              ? <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Loading...
+                </>
+              : (language === 'fr' ? `${t.orderPage.checkout.checkout} - ${total.toFixed(2)} $` : `${t.orderPage.checkout.checkout} - $${total.toFixed(2)}`)
           }
         </Button>
       </div>

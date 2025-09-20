@@ -47,6 +47,8 @@ export function OrderHeader({ branchName, branchId, onSearch, onPreOrderConfirm,
   // DEBUG: Console log for debugging (remove in production)
   // console.log('OrderHeader Debug:', { source, branchId, minimumOrderAmount, isMinimumOrderLoading })
 
+  // Remove this useEffect block - forcePreOrderOpen is not defined
+
   const handleSearch = (value: string) => {
     setSearchQuery(value)
     onSearch?.(value)
@@ -370,3 +372,7 @@ export function OrderHeader({ branchName, branchId, onSearch, onPreOrderConfirm,
     </div>
   )
 }
+
+
+
+

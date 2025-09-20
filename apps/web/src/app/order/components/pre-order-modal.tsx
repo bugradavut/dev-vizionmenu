@@ -18,6 +18,7 @@ interface PreOrderModalProps {
     date: string
     time: string
   }
+  scheduleConfig?: unknown
 }
 
 type ModalStep = 'date' | 'time'
@@ -442,3 +443,9 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
     </Dialog>
   )
 }
+
+
+
+
+
+

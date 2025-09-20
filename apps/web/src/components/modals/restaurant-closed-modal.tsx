@@ -14,12 +14,14 @@ import { Button } from '@/components/ui/button'
 interface RestaurantClosedModalProps {
   isOpen: boolean
   onClose: () => void
+  onScheduleOrder?: () => void
   restaurantHours?: RestaurantHours
 }
 
 export function RestaurantClosedModal({
   isOpen,
   onClose,
+  onScheduleOrder,
   restaurantHours
 }: RestaurantClosedModalProps) {
   const { language } = useLanguage()
@@ -62,13 +64,26 @@ export function RestaurantClosedModal({
             </div>
           )}
 
-          <Button
-            onClick={onClose}
-            className="w-full h-11"
-            size="lg"
-          >
-            {language === 'fr' ? 'Parcourir le menu' : 'Browse Menu'}
-          </Button>
+          <div className="space-y-3">
+            {onScheduleOrder && (
+              <Button
+                onClick={onScheduleOrder}
+                className="w-full h-11 bg-orange-500 text-white hover:bg-orange-600"
+                size="lg"
+              >
+                {language === 'fr' ? 'Programmer une commande' : 'Schedule Order'}
+              </Button>
+            )}
+
+            <Button
+              onClick={onClose}
+              variant="outline"
+              className="w-full h-11 border-gray-300 text-gray-700 hover:bg-gray-50"
+              size="lg"
+            >
+              {language === 'fr' ? 'Parcourir le menu' : 'Browse Menu'}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
