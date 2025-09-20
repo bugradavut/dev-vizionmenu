@@ -77,10 +77,31 @@ interface DeliveryAddress {
   deliveryInstructions: string
 }
 
-interface ValidationData {
-  customerInfo: CustomerInfo;
-  address: DeliveryAddress;
-  orderType: OrderType;
+interface DeliveryAddressInfo {
+  addressType: AddressType
+  streetAddress: string
+  city: string
+  province: string
+  postalCode: string
+  unitNumber?: string
+  buzzerCode?: string
+  deliveryInstructions?: string
+}
+
+export interface CustomerFormData {
+  customerInfo: CustomerInfo
+  addressInfo?: DeliveryAddressInfo
+  orderType: OrderType
+}
+
+export interface CustomerValidationResult {
+  isValid: boolean
+  formData: CustomerFormData
+  errors: Record<string, boolean>
+}
+
+export interface CustomerInformationSectionHandle {
+  triggerValidation: () => CustomerValidationResult
 }
 
 interface CustomerInformationSectionProps {
@@ -93,11 +114,11 @@ interface CustomerInformationSectionProps {
     isQROrder: boolean
     selectedOrderType?: 'dine_in' | 'takeaway' | 'delivery' | null
   }
-  onValidationChange?: (isValid: boolean, formData: ValidationData) => void
+  onValidationChange?: (result: CustomerValidationResult) => void
   onOrderTypeChange?: (orderType: 'takeaway' | 'delivery' | null) => void
 }
 
-const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () => boolean }, CustomerInformationSectionProps>(({ language = 'en', orderContext, onValidationChange, onOrderTypeChange }, ref) => {
+const CustomerInformationSectionComponent = forwardRef<CustomerInformationSectionHandle, CustomerInformationSectionProps>(({ language = 'en', orderContext, onValidationChange, onOrderTypeChange }, ref) => {
   const { language: contextLanguage } = useLanguage()
   const t = translations[contextLanguage] || translations.en
   const currentLanguage = language || contextLanguage
@@ -159,99 +180,132 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
     }
   }
 
+  const buildNormalizedAddressInfo = (): DeliveryAddressInfo | undefined => {
+    if (customerInfo.orderType !== 'delivery' || orderContext?.isQROrder) {
+      return undefined
+    }
+
+    const streetNumber = address.streetNumber.trim()
+    const streetName = address.streetName.trim()
+    const streetAddress = [streetNumber, streetName].filter(Boolean).join(' ').trim()
+
+    return {
+      addressType: address.type,
+      streetAddress,
+      city: address.city.trim(),
+      province: address.province.trim(),
+      postalCode: address.postalCode.trim(),
+      unitNumber: address.unitNumber?.trim() || undefined,
+      buzzerCode: address.buzzerCode?.trim() || undefined,
+      deliveryInstructions: address.deliveryInstructions?.trim() || undefined
+    }
+  }
+
   // Required field validation 
-  const validateForm = (showErrors: boolean = false) => {
-    const errors: {[key: string]: boolean} = {}
-    
-    // Check required customer info fields: name, phone, email
-    if (!customerInfo.name.trim()) {
+  const validateForm = (showErrors: boolean = false): CustomerValidationResult => {
+    const errors: Record<string, boolean> = {}
+
+    const sanitizedCustomerInfo: CustomerInfo = {
+      ...customerInfo,
+      name: customerInfo.name.trim(),
+      phone: customerInfo.phone.trim(),
+      email: customerInfo.email.trim()
+    }
+
+    if (!sanitizedCustomerInfo.name) {
       errors.name = true
     }
-    if (!customerInfo.phone.trim()) {
+
+    if (!sanitizedCustomerInfo.phone) {
       errors.phone = true
-    } else if (!isValidCanadianPhone(customerInfo.phone)) {
+    } else if (!isValidCanadianPhone(sanitizedCustomerInfo.phone)) {
       errors.phone_format = true
     }
-    if (!customerInfo.email.trim()) {
+
+    if (!sanitizedCustomerInfo.email) {
       errors.email = true
-    } else if (!isValidEmail(customerInfo.email)) {
+    } else if (!isValidEmail(sanitizedCustomerInfo.email)) {
       errors.email_format = true
     }
-    
-    // Check delivery address fields if order type is delivery
-    if (customerInfo.orderType === 'delivery' && !orderContext?.isQROrder) {
+
+    const normalizedAddress = buildNormalizedAddressInfo()
+
+    if (sanitizedCustomerInfo.orderType === 'delivery' && !orderContext?.isQROrder) {
       const requiredAddressFields = getRequiredAddressFields(address.type)
-      
+
       requiredAddressFields.forEach(field => {
         const value = address[field]
         if (!value || (typeof value === 'string' && !value.trim())) {
           errors[`address_${field}`] = true
         }
       })
-      
-      // Special validation for postal code format
-      if (address.postalCode.trim() && !isValidCanadianPostalCode(address.postalCode)) {
+
+      if (normalizedAddress?.postalCode && !isValidCanadianPostalCode(normalizedAddress.postalCode)) {
         errors.address_postalCode = true
       }
     }
-    
+
     const isValid = Object.keys(errors).length === 0
-    
+
     if (showErrors) {
       setValidationErrors(errors)
-      setShowValidationErrors(true)
+      setShowValidationErrors(!isValid ? true : false)
+    } else if (showValidationErrors) {
+      setValidationErrors(errors)
+      if (isValid) {
+        setShowValidationErrors(false)
+      }
     }
-    
-    const formData = {
-      customerInfo,
-      address,
-      orderType: customerInfo.orderType
+
+    const formData: CustomerFormData = {
+      customerInfo: sanitizedCustomerInfo,
+      addressInfo: normalizedAddress,
+      orderType: sanitizedCustomerInfo.orderType
     }
-    
-    onValidationChange?.(isValid, formData)
-    return { isValid, errors }
+
+    const validationResult: CustomerValidationResult = {
+      isValid,
+      formData,
+      errors
+    }
+
+    onValidationChange?.(validationResult)
+
+    return validationResult
   }
-  
+
   // Public method to trigger validation from parent
-  const triggerValidation = useCallback(() => {
-    const validation = validateForm(true) // Show errors when called from confirm button
-    
+  const triggerValidation = useCallback((): CustomerValidationResult => {
+    const validation = validateForm(true)
+
     if (!validation.isValid) {
-      // Determine the most appropriate error message
-      let toastMessage: string = t.orderPage.review.validationError // Default message
-      
-      // Check for specific format errors first
+      let toastMessage: string = t.orderPage.review.validationError
+
       if (validation.errors.email_format) {
-        toastMessage = currentLanguage === 'fr' 
+        toastMessage = currentLanguage === 'fr'
           ? 'Veuillez entrer une adresse courriel valide'
           : 'Please enter a valid email address'
       } else if (validation.errors.phone_format) {
-        toastMessage = currentLanguage === 'fr' 
+        toastMessage = currentLanguage === 'fr'
           ? 'Veuillez entrer un numéro de téléphone canadien valide'
           : 'Please enter a valid Canadian phone number'
-      } else if (Object.keys(validation.errors).some(key => key.includes('address_'))) {
-        // Address-related errors
-        toastMessage = currentLanguage === 'fr' 
+      } else if (Object.keys(validation.errors).some(key => key.startsWith('address_'))) {
+        toastMessage = currentLanguage === 'fr'
           ? 'Veuillez remplir tous les champs d\'adresse requis'
           : 'Please fill in all required address fields'
       }
-      
-      // Show toast notification
+
       toast({
-        variant: "destructive",
-        description: toastMessage,
+        variant: 'destructive',
+        description: toastMessage
       })
-      
-      // Scroll to first empty field
-      const firstEmptyField = Object.keys(validation.errors)[0]
-      if (firstEmptyField) {
-        let element = null
-        
-        if (firstEmptyField.startsWith('address_')) {
-          // Handle address field errors
-          const fieldName = firstEmptyField.replace('address_', '')
-          
-          // Special handling for different field IDs
+
+      const firstInvalidField = Object.keys(validation.errors)[0]
+      if (firstInvalidField) {
+        let element: HTMLElement | null = null
+
+        if (firstInvalidField.startsWith('address_')) {
+          const fieldName = firstInvalidField.replace('address_', '')
           switch (fieldName) {
             case 'streetNumber':
               element = document.getElementById('street-number')
@@ -269,27 +323,23 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
               element = document.getElementById(fieldName)
           }
         } else {
-          // Handle customer info field errors (including format errors)
-          const fieldName = firstEmptyField.replace('_format', '') // Remove format suffix if exists
+          const fieldName = firstInvalidField.replace('_format', '')
           element = document.getElementById(`customer-${fieldName}`)
         }
-        
+
         if (element) {
-          element.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
+          element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
           })
           element.focus()
         }
       }
-      
-      return false
     }
-    
-    return true
-  }, [validateForm, currentLanguage, toast, t.orderPage.review.validationError])
 
-  const addressTypes = [
+    return validation
+  }, [validateForm, currentLanguage, toast, t.orderPage.review.validationError])
+const addressTypes = [
     { value: 'home', label: 'Home/House', icon: Home },
     { value: 'apartment', label: 'Apartment/Condo', icon: Building },
     { value: 'office', label: 'Office/Commercial', icon: Building2 },
@@ -313,114 +363,34 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
   ]
 
   const handleCustomerChange = (field: keyof CustomerInfo, value: string | OrderType) => {
-    const newCustomerInfo = { ...customerInfo, [field]: value }
-    setCustomerInfo(newCustomerInfo)
-    
-    // If orderType changed, notify parent (for minimum order logic)
+    const nextCustomerInfo = { ...customerInfo, [field]: value } as CustomerInfo
+    setCustomerInfo(nextCustomerInfo)
+
     if (field === 'orderType' && onOrderTypeChange) {
-      // Convert OrderType to the expected format for minimum order logic
       if (value === 'takeaway' || value === 'delivery') {
         onOrderTypeChange(value)
       } else {
-        onOrderTypeChange(null) // dine_in doesn't need minimum order validation
+        onOrderTypeChange(null)
       }
     }
-    
-    // Clear validation error for this field when user types (only if errors are being shown)
-    if (showValidationErrors && (validationErrors[field] || validationErrors[`${field}_format`])) {
-      setValidationErrors(prev => ({ 
-        ...prev, 
+
+    if (showValidationErrors && (field === 'name' || field === 'phone' || field === 'email')) {
+      setValidationErrors(prev => ({
+        ...prev,
         [field]: false,
         [`${field}_format`]: false
       }))
     }
-    
-    // Always update parent with current form data
-    const formData = {
-      customerInfo: newCustomerInfo,
-      address,
-      orderType: newCustomerInfo.orderType
-    }
-    
-    // Check if form is valid (but don't show errors yet)
-    const errors: {[key: string]: boolean} = {}
-    if (!newCustomerInfo.name.trim()) errors.name = true
-    if (!newCustomerInfo.phone.trim()) {
-      errors.phone = true
-    } else if (!isValidCanadianPhone(newCustomerInfo.phone)) {
-      errors.phone_format = true
-    }
-    if (!newCustomerInfo.email.trim()) {
-      errors.email = true
-    } else if (!isValidEmail(newCustomerInfo.email)) {
-      errors.email_format = true
-    }
-    const isValid = Object.keys(errors).length === 0
-    
-    onValidationChange?.(isValid, formData)
+
+    setTimeout(() => validateForm(false), 0)
   }
-  
+
   const handleInputFocus = (fieldName: string) => {
-    // Clear red border when user focuses on input (only if errors are being shown)
-    if (showValidationErrors && (validationErrors[fieldName] || validationErrors[`${fieldName}_format`])) {
-      setValidationErrors(prev => ({ 
-        ...prev, 
-        [fieldName]: false,
-        [`${fieldName}_format`]: false
-      }))
+    // Clear validation error when user focuses on input
+    if (showValidationErrors && validationErrors[fieldName]) {
+      setValidationErrors(prev => ({ ...prev, [fieldName]: false, [`${fieldName}_format`]: false }))
     }
   }
-
-
-  // Initial validation on mount and when dependencies change (but don't show errors)
-  React.useEffect(() => {
-    validateForm(false) // Don't show errors on initial load
-  }, [customerInfo, address, orderContext?.isQROrder, currentLanguage])
-  
-  // Expose triggerValidation method to parent
-  useImperativeHandle(ref, () => ({
-    triggerValidation
-  }), [triggerValidation])
-
-  // Additional effect to catch autofill changes
-  React.useEffect(() => {
-    const handleAutofill = () => {
-      setTimeout(() => validateForm(false), 100) // Don't show errors for autofill
-    }
-
-    // Listen for various autofill events
-    const nameInput = document.getElementById('customer-name')
-    const phoneInput = document.getElementById('customer-phone') 
-    const emailInput = document.getElementById('customer-email')
-
-    if (nameInput) {
-      nameInput.addEventListener('input', handleAutofill)
-      nameInput.addEventListener('change', handleAutofill)
-    }
-    if (phoneInput) {
-      phoneInput.addEventListener('input', handleAutofill)
-      phoneInput.addEventListener('change', handleAutofill)
-    }
-    if (emailInput) {
-      emailInput.addEventListener('input', handleAutofill)
-      emailInput.addEventListener('change', handleAutofill)
-    }
-
-    return () => {
-      if (nameInput) {
-        nameInput.removeEventListener('input', handleAutofill)
-        nameInput.removeEventListener('change', handleAutofill)
-      }
-      if (phoneInput) {
-        phoneInput.removeEventListener('input', handleAutofill)
-        phoneInput.removeEventListener('change', handleAutofill)
-      }
-      if (emailInput) {
-        emailInput.removeEventListener('input', handleAutofill)
-        emailInput.removeEventListener('change', handleAutofill)
-      }
-    }
-  }, [])
 
   const handleAddressChange = (field: keyof DeliveryAddress, value: string) => {
     setAddress(prev => ({ ...prev, [field]: value }))
@@ -443,6 +413,39 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
     }
   }
 
+  React.useEffect(() => {
+    validateForm(false)
+  }, [customerInfo, address, orderContext?.isQROrder, currentLanguage])
+
+  useImperativeHandle(ref, () => ({
+    triggerValidation
+  }), [triggerValidation])
+
+  React.useEffect(() => {
+    const handleAutofill = () => {
+      setTimeout(() => validateForm(false), 100)
+    }
+
+    const nameInput = document.getElementById('customer-name')
+    const phoneInput = document.getElementById('customer-phone')
+    const emailInput = document.getElementById('customer-email')
+
+    nameInput?.addEventListener('input', handleAutofill)
+    nameInput?.addEventListener('change', handleAutofill)
+    phoneInput?.addEventListener('input', handleAutofill)
+    phoneInput?.addEventListener('change', handleAutofill)
+    emailInput?.addEventListener('input', handleAutofill)
+    emailInput?.addEventListener('change', handleAutofill)
+
+    return () => {
+      nameInput?.removeEventListener('input', handleAutofill)
+      nameInput?.removeEventListener('change', handleAutofill)
+      phoneInput?.removeEventListener('input', handleAutofill)
+      phoneInput?.removeEventListener('change', handleAutofill)
+      emailInput?.removeEventListener('input', handleAutofill)
+      emailInput?.removeEventListener('change', handleAutofill)
+    }
+  }, [])
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
       <h2 className="text-lg font-semibold text-gray-900 mb-5">
@@ -840,3 +843,6 @@ const CustomerInformationSectionComponent = forwardRef<{ triggerValidation: () =
 
 CustomerInformationSectionComponent.displayName = 'CustomerInformationSection'
 export const CustomerInformationSection = CustomerInformationSectionComponent
+
+
+

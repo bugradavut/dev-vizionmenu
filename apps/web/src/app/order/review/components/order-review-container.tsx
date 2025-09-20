@@ -4,11 +4,10 @@ import { useState, useRef, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCart } from '../../contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
-import { OrderFormData } from '@/contexts/order-form-context'
 import { useCustomerBranchSettings } from '@/hooks/use-customer-branch-settings'
 import { translations } from '@/lib/translations'
 import { OrderSummary } from './order-summary'
-import { CustomerInformationSection } from './customer-information-section'
+import { CustomerInformationSection, type CustomerFormData, type CustomerInformationSectionHandle, type CustomerValidationResult } from './customer-information-section'
 import { PaymentMethodSection } from './payment-method-section'
 import { TipSection } from './tip-section'
 import { OrderNotesSection } from './order-notes-section'
@@ -41,7 +40,7 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   
   // Form validation state
   const [isFormValid, setIsFormValid] = useState(false)
-  const [formData, setFormData] = useState<unknown>(null)
+  const [formData, setFormData] = useState<CustomerFormData | null>(null)
   const [orderNotes, setOrderNotes] = useState<string>('')
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'cash' | 'online'>('online')
   const [selectedOrderType, setSelectedOrderType] = useState<'takeaway' | 'delivery' | null>(initialOrderType)
@@ -57,7 +56,7 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
     type: 'percentage' | 'fixed'
     value: number
   } | null>(null)
-  const customerInfoRef = useRef<{ triggerValidation: () => boolean } | null>(null)
+  const customerInfoRef = useRef<CustomerInformationSectionHandle | null>(null)
   
   // Fetch minimum order amount for delivery validation
   // Fetch branch settings
@@ -71,9 +70,9 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   const freeDeliveryThreshold = settings.freeDeliveryThreshold
   const isMinimumOrderLoading = isSettingsLoading
   
-  const handleValidationChange = (isValid: boolean, data: unknown) => {
-    setIsFormValid(isValid)
-    setFormData(data)
+  const handleValidationChange = (result: { isValid: boolean; formData: CustomerFormData }) => {
+    setIsFormValid(result.isValid)
+    setFormData(result.formData)
   }
   
   // Handle order type change from customer information section
@@ -161,11 +160,11 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   }
 
   // Function to trigger validation from child components
-  const triggerFormValidation = () => {
+  const triggerFormValidation = (): CustomerValidationResult | null => {
     if (customerInfoRef.current && customerInfoRef.current.triggerValidation) {
       return customerInfoRef.current.triggerValidation()
     }
-    return false
+    return null
   }
 
   return (
@@ -239,10 +238,8 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
             <OrderTotalSidebar 
               language={language}
               isFormValid={isFormValid}
-              formData={{
-                ...(formData as Record<string, unknown> || {}),
-                paymentMethod: selectedPaymentMethod
-              } as OrderFormData}
+              formData={formData}
+              paymentMethod={selectedPaymentMethod}
               orderNotes={orderNotes}
               orderContext={orderContext}
               onTriggerValidation={triggerFormValidation}
@@ -251,8 +248,6 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
               appliedDiscount={appliedDiscount}
               selectedTip={selectedTip}
               deliveryFee={orderTotals.applicableDeliveryFee}
-              baseDeliveryFee={deliveryFee}
-              freeDeliveryThreshold={freeDeliveryThreshold}
               orderTotals={orderTotals}
             />
           </div>
@@ -262,3 +257,8 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
     </div>
   )
 }
+
+
+
+
+

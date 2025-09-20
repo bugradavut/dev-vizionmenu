@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { StripePaymentForm } from '@/components/stripe/payment-form'
-import { OrderFormData } from '@/contexts/order-form-context'
+import type { CustomerFormData, CustomerValidationResult } from './customer-information-section'
 
 interface OrderTotals {
   itemsTotal: number
@@ -44,10 +44,11 @@ interface SelectedTip {
 interface OrderTotalSidebarProps {
   language: string
   isFormValid: boolean
-  formData: OrderFormData
+  formData: CustomerFormData | null
+  paymentMethod: 'cash' | 'online'
   orderNotes?: string
   orderContext: {
-    chainSlug?: string // NEW: Add chainSlug support
+    chainSlug?: string
     source: 'qr' | 'web'
     branchId: string
     tableNumber?: number
@@ -55,30 +56,27 @@ interface OrderTotalSidebarProps {
     isQROrder: boolean
     selectedOrderType?: 'dine_in' | 'takeaway' | 'delivery' | null
   }
-  onTriggerValidation: () => boolean
+  onTriggerValidation: () => CustomerValidationResult | null
   isMinimumOrderMet?: boolean
   selectedOrderType?: 'takeaway' | 'delivery' | null
   appliedDiscount?: CampaignDiscount | null
   selectedTip?: SelectedTip | null
   deliveryFee?: number
-  baseDeliveryFee?: number
-  freeDeliveryThreshold?: number
   orderTotals: OrderTotals
 }
 
-export function OrderTotalSidebar({ 
-  language, 
-  formData, 
-  orderNotes = '', 
-  orderContext, 
+export function OrderTotalSidebar({
+  language,
+  formData,
+  paymentMethod,
+  orderNotes = '',
+  orderContext,
   onTriggerValidation,
   isMinimumOrderMet = true,
   selectedOrderType,
   appliedDiscount,
   selectedTip,
   deliveryFee = 0,
-  baseDeliveryFee = 0,
-  freeDeliveryThreshold = 0,
   orderTotals
 }: OrderTotalSidebarProps) {
   const router = useRouter()
@@ -89,17 +87,20 @@ export function OrderTotalSidebar({
   const [paymentError, setPaymentError] = useState<string | null>(null)
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [lastValidatedFormData, setLastValidatedFormData] = useState<CustomerFormData | null>(null)
   
   // Handle successful Stripe payment
   const handlePaymentSuccess = async (paymentIntentId: string) => {
     try {
-      // Don't show success status, directly submit order and redirect
+      if (!lastValidatedFormData) {
+        throw new Error('Missing order data for payment submission')
+      }
+
       setShowPaymentForm(false)
       setIsSubmitting(true)
-      
-      // Continue with order submission after successful payment
-      await submitOrderAfterPayment(paymentIntentId)
-      
+
+      await submitOrderAfterPayment(paymentIntentId, lastValidatedFormData, paymentMethod)
+
     } catch (error) {
       console.error('Error after payment success:', error)
       setPaymentStatus('error')
@@ -113,29 +114,30 @@ export function OrderTotalSidebar({
     setPaymentStatus('error')
     setPaymentError(error)
     setShowPaymentForm(false)
+    setIsSubmitting(false)
   }
 
   // Submit order after successful payment
-  const submitOrderAfterPayment = async (paymentIntentId: string) => {
-    // Reconstruct order data (similar to original flow)
-    const typedFormData = formData as OrderFormData
-    const customerInfo = typedFormData?.customerInfo
-    const addressInfo = typedFormData?.addressInfo
-    const paymentMethod = typedFormData?.paymentMethod || 'cash'
+  const submitOrderAfterPayment = async (
+    paymentIntentId: string,
+    latestFormData: CustomerFormData,
+    resolvedPaymentMethod: 'cash' | 'online'
+  ) => {
+    const customerInfo = latestFormData.customerInfo
+    const addressInfo = latestFormData.addressInfo
 
-    // Calculate commission
-    const sourceType = orderContext.source === 'qr' ? 'qr' : 'website';
+    const sourceType = orderContext.source === 'qr' ? 'qr' : 'website'
     const commissionData = await commissionService.calculateCommission(
       orderTotals.finalTotal,
       orderContext.branchId,
       sourceType
-    );
+    )
 
     const orderData = {
       customerInfo,
       addressInfo,
-      orderType: (formData.orderType as 'dine_in' | 'takeaway' | 'delivery') || 'takeaway',
-      paymentMethod: paymentMethod as 'cash' | 'online',
+      orderType: latestFormData.orderType || 'takeaway',
+      paymentMethod: resolvedPaymentMethod,
       items: items.map(item => ({
         id: item.id,
         name: item.name,
@@ -147,27 +149,21 @@ export function OrderTotalSidebar({
       tax,
       total,
       notes: orderNotes.trim() || undefined,
-      
-      // Pre-order data from cart context
       preOrder: preOrder.isPreOrder ? {
         isPreOrder: preOrder.isPreOrder,
         scheduledDate: preOrder.scheduledDate,
         scheduledTime: preOrder.scheduledTime,
         scheduledDateTime: preOrder.scheduledDateTime
       } : undefined,
-      
-      // Pricing breakdown
       pricing: {
         itemsTotal: orderTotals.itemsTotal,
         discountAmount: appliedDiscount?.discountAmount || 0,
-        deliveryFee: selectedOrderType === 'delivery' ? deliveryFee : 0,
+        deliveryFee: latestFormData.orderType === 'delivery' ? deliveryFee : 0,
         gst: orderTotals.gst,
         qst: orderTotals.qst,
         tipAmount: orderTotals.tipAmount,
         finalTotal: orderTotals.finalTotal
       },
-      
-      // Campaign discount
       campaign: appliedDiscount ? {
         id: appliedDiscount.id,
         code: appliedDiscount.code,
@@ -175,51 +171,40 @@ export function OrderTotalSidebar({
         campaignType: appliedDiscount.campaignType,
         campaignValue: appliedDiscount.campaignValue
       } : undefined,
-      
-      // Tip details
       tipDetails: selectedTip ? {
         amount: selectedTip.amount,
         type: selectedTip.type,
         value: selectedTip.value
       } : undefined,
-      
-      // Commission data
       commission: {
         orderSource: sourceType,
         commissionRate: commissionData.rate,
         commissionAmount: commissionData.commissionAmount,
         netAmount: commissionData.netAmount
       },
-      
-      paymentIntentId // Add payment intent ID
+      paymentIntentId
     }
 
-    // Submit order
     const result = await orderService.submitOrder(
       orderData,
       orderContext.branchId,
       orderContext.tableNumber,
       orderContext.zone
     )
-    
+
     if (result.success) {
-      // Store confirmation data and redirect
       const confirmationData = {
         orderId: result.data.orderId,
         orderNumber: result.data.orderNumber || result.data.orderId.substring(0, 8).toUpperCase(),
-        customerName: customerInfo?.name || 'Customer',
-        customerPhone: customerInfo?.phone || 'N/A', 
-        customerEmail: customerInfo?.email || '',
-        orderType: formData?.orderType || orderContext.selectedOrderType || 'takeaway',
+        customerName: customerInfo.name,
+        customerPhone: customerInfo.phone,
+        customerEmail: customerInfo.email,
+        orderType: latestFormData.orderType || orderContext.selectedOrderType || 'takeaway',
         source: orderContext.source || 'web',
         branchId: orderContext.branchId,
-        
-        // Payment information
-        paymentMethod: paymentMethod,
-        paymentIntentId: paymentIntentId,
+        paymentMethod: resolvedPaymentMethod,
+        paymentIntentId,
         paymentStatus: 'completed',
-        
-        // Pricing and other data...
         pricing: {
           itemsTotal: orderTotals.itemsTotal,
           subtotal: orderTotals.subtotalAfterDiscount,
@@ -232,21 +217,17 @@ export function OrderTotalSidebar({
           taxAmount: orderTotals.gst + orderTotals.qst,
           totalAmount: orderTotals.finalTotal
         },
-        
         items: items,
         campaignDiscount: appliedDiscount,
         tipDetails: selectedTip,
-        deliveryFee: selectedOrderType === 'delivery' ? deliveryFee : 0,
-        orderNotes: orderNotes.trim(),
-        deliveryAddress: selectedOrderType === 'delivery' ? addressInfo : undefined,
+        deliveryFee: latestFormData.orderType === 'delivery' ? deliveryFee : 0,
+        deliveryAddress: latestFormData.orderType === 'delivery' ? addressInfo : undefined,
         tableNumber: orderContext.tableNumber,
         zone: orderContext.zone
       }
 
-      // Store in session storage
       sessionStorage.setItem('vizion-order-confirmation', JSON.stringify(confirmationData))
-      
-      // Navigate to confirmation using chainSlug
+
       const chainSlug = orderContext.chainSlug || 'default'
       const confirmationUrl = `/order/${chainSlug}/confirmation?orderId=${result.data.orderId}`
       router.push(confirmationUrl)
@@ -257,56 +238,35 @@ export function OrderTotalSidebar({
 
   const handleConfirmOrder = async () => {
     if (isSubmitting) return
-    
-    // Check minimum order requirement first (for delivery orders)
-    if (selectedOrderType === 'delivery' && !isMinimumOrderMet) {
-      // Don't proceed if minimum order is not met
-      // The warning is already shown in PriceDetailsSection
+
+    const validation = onTriggerValidation()
+    if (!validation || !validation.isValid) {
       return
     }
-    
-    // Trigger validation and check if it passes
-    const isValid = onTriggerValidation()
-    
-    if (!isValid) {
-      return // Don't proceed if validation fails
+
+    const currentFormData = validation.formData
+    const effectiveOrderType = currentFormData.orderType || selectedOrderType || 'takeaway'
+
+    if (effectiveOrderType === 'delivery' && !isMinimumOrderMet) {
+      return
     }
-    
+
+    setLastValidatedFormData(currentFormData)
     setIsSubmitting(true)
-    
+
     try {
-      // Calculate commission for this order
-      const sourceType = orderContext.source === 'qr' ? 'qr' : 'website';
+      const sourceType = orderContext.source === 'qr' ? 'qr' : 'website'
       const commissionData = await commissionService.calculateCommission(
         orderTotals.finalTotal,
         orderContext.branchId,
         sourceType
-      );
-      
-      // Prepare order data - ensure we have the latest formData
-      const typedFormData = formData as OrderFormData
-      const customerInfo = typedFormData?.customerInfo || { name: 'Customer', phone: '0000000000' }
-      
-      // Map delivery address from frontend format to backend format
-      const addressInfoForOrder = typedFormData.orderType === 'delivery' && typedFormData.addressInfo ? {
-        addressType: typedFormData.addressInfo.addressType || 'home',
-        streetAddress: typedFormData.addressInfo.streetAddress || '',
-        city: typedFormData.addressInfo.city || '',
-        province: typedFormData.addressInfo.province || '',
-        postalCode: typedFormData.addressInfo.postalCode || '',
-        unitNumber: typedFormData.addressInfo.unitNumber || undefined,
-        buzzerCode: typedFormData.addressInfo.buzzerCode || undefined,
-        deliveryInstructions: typedFormData.addressInfo.deliveryInstructions || undefined
-      } : undefined
+      )
 
-      // Determine payment method based on form data
-      const paymentMethod = typedFormData.paymentMethod || 'cash'
-      
       const orderData = {
-        customerInfo,
-        addressInfo: addressInfoForOrder,
-        orderType: typedFormData.orderType || 'takeaway',
-        paymentMethod: paymentMethod as 'cash' | 'online',
+        customerInfo: currentFormData.customerInfo,
+        addressInfo: currentFormData.addressInfo,
+        orderType: effectiveOrderType,
+        paymentMethod,
         items: items.map(item => ({
           id: item.id,
           name: item.name,
@@ -318,27 +278,21 @@ export function OrderTotalSidebar({
         tax,
         total,
         notes: orderNotes.trim() || undefined,
-        
-        // Pre-order data from cart context
         preOrder: preOrder.isPreOrder ? {
           isPreOrder: preOrder.isPreOrder,
           scheduledDate: preOrder.scheduledDate,
           scheduledTime: preOrder.scheduledTime,
           scheduledDateTime: preOrder.scheduledDateTime
         } : undefined,
-        
-        // NEW: Comprehensive pricing breakdown (Phase 1)
         pricing: {
           itemsTotal: orderTotals.itemsTotal,
           discountAmount: appliedDiscount?.discountAmount || 0,
-          deliveryFee: selectedOrderType === 'delivery' ? deliveryFee : 0,
+          deliveryFee: effectiveOrderType === 'delivery' ? deliveryFee : 0,
           gst: orderTotals.gst,
           qst: orderTotals.qst,
           tipAmount: orderTotals.tipAmount,
           finalTotal: orderTotals.finalTotal
         },
-        
-        // Campaign/discount details
         campaign: appliedDiscount ? {
           id: appliedDiscount.id,
           code: appliedDiscount.code,
@@ -346,15 +300,11 @@ export function OrderTotalSidebar({
           campaignType: appliedDiscount.campaignType,
           campaignValue: appliedDiscount.campaignValue
         } : undefined,
-        
-        // Tip details
         tipDetails: selectedTip ? {
           amount: selectedTip.amount,
           type: selectedTip.type,
           value: selectedTip.value
         } : undefined,
-        
-        // Commission data (NEW)
         commission: {
           orderSource: sourceType,
           commissionRate: commissionData.rate,
@@ -362,35 +312,26 @@ export function OrderTotalSidebar({
           netAmount: commissionData.netAmount
         }
       }
-      
-      // Handle Stripe payment processing if payment method is 'online'
-      let paymentIntentId: string | undefined
+
       if (paymentMethod === 'online') {
         try {
           setPaymentStatus('processing')
           setPaymentError(null)
-          
-          // Create Payment Intent with commission split
+
           const paymentIntent = await stripePaymentService.createPaymentIntent({
             amount: orderTotals.finalTotal,
             commissionAmount: commissionData.commissionAmount,
-            orderId: `temp_${Date.now()}`, // Temporary ID, will be updated after order creation
+            orderId: `temp_${Date.now()}`,
             branchId: orderContext.branchId,
-            customerEmail: customerInfo.email,
+            customerEmail: currentFormData.customerInfo.email,
             orderSource: sourceType
           })
-          
-          paymentIntentId = paymentIntent.paymentIntentId
+
           setClientSecret(paymentIntent.clientSecret)
-          
-          // Show Stripe payment form for real card processing
-          setShowPaymentForm(true)
           setPaymentStatus('idle')
           setIsSubmitting(false)
-          
-          // Exit early - payment will continue in form handlers
+          setShowPaymentForm(true)
           return
-          
         } catch (error) {
           console.error('Stripe payment error:', error)
           setPaymentStatus('error')
@@ -399,36 +340,27 @@ export function OrderTotalSidebar({
           return
         }
       }
-      
-      // Submit order (after successful payment if online)
+
       const result = await orderService.submitOrder(
-        {
-          ...orderData,
-          paymentIntentId // Add payment intent ID to order data
-        },
+        orderData,
         orderContext.branchId,
         orderContext.tableNumber,
         orderContext.zone
       )
-      
+
       if (result.success) {
-        // Store order confirmation data in sessionStorage (temporary) with comprehensive pricing details
         const confirmationData = {
           orderId: result.data.orderId,
           orderNumber: result.data.orderNumber || result.data.orderId.substring(0, 8).toUpperCase(),
-          customerName: customerInfo?.name || 'Customer',
-          customerPhone: customerInfo?.phone || 'N/A', 
-          customerEmail: customerInfo?.email || '',
-          orderType: formData?.orderType || orderContext.selectedOrderType || 'takeaway',
+          customerName: currentFormData.customerInfo.name,
+          customerPhone: currentFormData.customerInfo.phone,
+          customerEmail: currentFormData.customerInfo.email,
+          orderType: effectiveOrderType,
           source: orderContext.source || 'web',
-          branchId: orderContext.branchId, // Add branch ID for new order navigation
-          
-          // Payment information
-          paymentMethod: paymentMethod,
-          paymentIntentId: paymentIntentId,
-          paymentStatus: paymentStatus === 'success' ? 'completed' : 'pending',
-          
-          // Comprehensive pricing breakdown
+          branchId: orderContext.branchId,
+          paymentMethod,
+          paymentIntentId: undefined,
+          paymentStatus: 'completed',
           pricing: {
             itemsTotal: orderTotals.itemsTotal,
             subtotal: orderTotals.subtotalAfterDiscount,
@@ -437,77 +369,30 @@ export function OrderTotalSidebar({
             qst: orderTotals.qst,
             tipAmount: orderTotals.tipAmount,
             total: orderTotals.finalTotal,
-            // Legacy fields for backward compatibility
             subtotalAmount: orderTotals.subtotalAfterDiscount,
             taxAmount: orderTotals.gst + orderTotals.qst,
             totalAmount: orderTotals.finalTotal
           },
-          
-          // Discount details
-          campaignDiscount: appliedDiscount ? {
-            code: appliedDiscount.code,
-            discountAmount: appliedDiscount.discountAmount,
-            campaignType: appliedDiscount.campaignType,
-            campaignValue: appliedDiscount.campaignValue
-          } : null,
-          
-          // Delivery fee information  
-          deliveryFee: selectedOrderType === 'delivery' ? orderTotals.applicableDeliveryFee || 0 : 0,
-          deliveryInfo: selectedOrderType === 'delivery' ? {
-            appliedFee: orderTotals.applicableDeliveryFee || 0,
-            baseFee: baseDeliveryFee,
-            isFree: orderTotals.isFreeDelivery || false,
-            threshold: freeDeliveryThreshold,
-            savings: orderTotals.deliverySavings || 0
-          } : null,
-          
-          // Tip details
-          tipDetails: selectedTip ? {
-            amount: selectedTip.amount,
-            type: selectedTip.type,
-            value: selectedTip.value
-          } : null,
-          
-          items: items.map(item => ({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            image_url: item.image_url,
-            description: item.description
-          })),
+          items: items,
+          campaignDiscount: appliedDiscount,
+          tipDetails: selectedTip,
+          deliveryFee: effectiveOrderType === 'delivery' ? deliveryFee : 0,
+          deliveryAddress: effectiveOrderType === 'delivery' ? currentFormData.addressInfo : undefined,
           tableNumber: orderContext.tableNumber,
-          zone: orderContext.zone,
-          orderNotes: orderNotes.trim() || '',  // Add order notes to sessionStorage
-          deliveryAddress: addressInfoForOrder ? {
-            addressType: addressInfoForOrder.addressType,
-            streetAddress: addressInfoForOrder.streetAddress,
-            city: addressInfoForOrder.city,
-            province: addressInfoForOrder.province,
-            postalCode: addressInfoForOrder.postalCode,
-            unitNumber: addressInfoForOrder.unitNumber,
-            buzzerCode: addressInfoForOrder.buzzerCode,
-            deliveryInstructions: addressInfoForOrder.deliveryInstructions
-          } : undefined,
-          timestamp: Date.now() // For cleanup
-        };
-        
-        // Store in sessionStorage (cleared when browser closed)
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('vizion-order-confirmation', JSON.stringify(confirmationData));
+          zone: orderContext.zone
         }
-        
-        // Navigate to confirmation page with chainSlug (required)
+
+        sessionStorage.setItem('vizion-order-confirmation', JSON.stringify(confirmationData))
+
         const chainSlug = orderContext.chainSlug || 'default'
         const confirmationUrl = `/order/${chainSlug}/confirmation?orderId=${result.data.orderId}`
-        
         router.push(confirmationUrl)
       } else {
-        // Handle error
-        alert(result.error.message) // Replace with proper error handling later
+        alert(result.error.message || 'Order submission failed')
       }
-    } catch {
-      alert('Failed to submit order. Please try again.') // Replace with proper error handling later
+    } catch (error) {
+      console.error('Failed to submit order:', error)
+      alert('Failed to submit order. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -647,3 +532,14 @@ export function OrderTotalSidebar({
     </div>
   )
 }
+
+
+
+
+
+
+
+
+
+
+

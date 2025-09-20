@@ -38,12 +38,12 @@ function calculateEstimatedTime(orderType, timingSettings, individualAdjustment 
  */
 const createCustomerOrder = async (req, res) => {
   try {
-    const { 
+    let {
       branchId,
-      items, 
-      orderType,
-      source,
-      paymentMethod,
+      items,
+      orderType = "takeaway",
+      source = "web",
+      paymentMethod = "cash",
       customerInfo,
       tableNumber,
       zone,
@@ -52,40 +52,77 @@ const createCustomerOrder = async (req, res) => {
       total,
       notes,
       deliveryAddress,
-      // Pre-order fields
       isPreOrder,
       scheduledDate,
       scheduledTime,
       scheduledDateTime,
-      // NEW: Comprehensive pricing breakdown (Phase 1)
       pricing,
       campaign,
       tip,
-      // Commission data
       commission
     } = req.body;
-    
-    // Minimal validation - just ensure basic data exists
-    if (!branchId) branchId = '550e8400-e29b-41d4-a716-446655440002' // Default branch
-    if (!items || !Array.isArray(items)) items = []
-    if (!orderType) orderType = 'takeaway'
-    if (!source) source = 'web'
-    if (!paymentMethod) paymentMethod = 'cash'
 
-    // Prepare customer object with defaults
+    if (!branchId) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "branchId is required" }
+      });
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "Order items are required" }
+      });
+    }
+
+    if (!['cash', 'online'].includes(paymentMethod)) {
+      paymentMethod = 'cash';
+    }
+
+    const sanitizedCustomerInfo = {
+      name: customerInfo?.name?.toString().trim(),
+      phone: customerInfo?.phone?.toString().trim(),
+      email: customerInfo?.email?.toString().trim()
+    };
+
     let customer;
     if (source === 'qr') {
-      // For QR orders, use real customer info if provided, otherwise use table as fallback
       customer = {
-        name: customerInfo?.name?.trim() || `Table ${tableNumber || 1}${zone ? ` - ${zone}` : ''}`,
-        phone: customerInfo?.phone?.trim() || `table-${tableNumber || 1}`,
-        email: customerInfo?.email?.trim() || `table${tableNumber || 1}@dinein.local`
+        name: sanitizedCustomerInfo.name || `Table ${tableNumber || 1}${zone ? ` - ${zone}` : ''}`,
+        phone: sanitizedCustomerInfo.phone || `table-${tableNumber || 1}`,
+        email: sanitizedCustomerInfo.email || `table${tableNumber || 1}@dinein.local`
       };
     } else {
-      customer = {
-        name: customerInfo?.name?.trim() || 'Customer',
-        phone: customerInfo?.phone?.trim() || '0000000000',
-        email: customerInfo?.email?.trim() || 'customer@example.com'
+      if (!sanitizedCustomerInfo.name || !sanitizedCustomerInfo.phone || !sanitizedCustomerInfo.email) {
+        return res.status(400).json({
+          error: { code: 'VALIDATION_ERROR', message: 'Customer name, phone, and email are required' }
+        });
+      }
+
+      customer = sanitizedCustomerInfo;
+    }
+
+    let normalizedDeliveryAddress = null;
+    if (orderType === 'delivery') {
+      const streetAddress = deliveryAddress?.streetAddress?.toString().trim();
+      const city = deliveryAddress?.city?.toString().trim();
+      const province = deliveryAddress?.province?.toString().trim();
+      const postalCode = deliveryAddress?.postalCode?.toString().trim();
+
+      if (!streetAddress || !city || !province || !postalCode) {
+        return res.status(400).json({
+          error: { code: 'VALIDATION_ERROR', message: 'Delivery address is required for delivery orders' }
+        });
+      }
+
+      normalizedDeliveryAddress = {
+        street: streetAddress,
+        city,
+        province,
+        postalCode,
+        unitNumber: deliveryAddress?.unitNumber?.toString().trim() || '',
+        buzzerCode: deliveryAddress?.buzzerCode?.toString().trim() || '',
+        deliveryInstructions: deliveryAddress?.deliveryInstructions?.toString().trim() || '',
+        addressType: deliveryAddress?.addressType || 'home'
       };
     }
 
@@ -335,3 +372,4 @@ module.exports = {
   createCustomerOrder,
   getOrderStatus
 };
+
