@@ -26,6 +26,11 @@ interface OrderDetails {
     name: string;
     address: string;
   };
+  // Scheduled order fields
+  isPreOrder?: boolean;
+  scheduledDateTime?: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
 }
 
 interface OrderItem {
@@ -96,6 +101,11 @@ interface OrderSession {
   orderNotes?: string;
   deliveryAddress?: DeliveryAddress;
   timestamp?: number;
+  // Scheduled order fields
+  is_pre_order?: boolean;
+  scheduled_datetime?: string;
+  scheduled_date?: string;
+  scheduled_time?: string;
 }
 
 interface OrderConfirmationPageProps {
@@ -325,7 +335,7 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
 
     try {
       const result = await orderService.getOrderStatus(orderId);
-      
+
       if (result.success) {
         setOrderDetails(result.data);
         // Set order items from API response
@@ -529,14 +539,68 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                   </span>
                 </div>
                 
-                {/* Estimated Completion Time */}
-                {orderDetails?.estimatedTime && orderDetails?.createdAt && (
+                {/* Conditional Time Display: Scheduled vs Estimated Completion */}
+                {/* Scheduled Time for Pre-orders */}
+                {(sessionData?.scheduled_datetime || orderDetails?.scheduledDateTime) && (
                   <div className="flex items-center py-2">
                     <span className="text-gray-500 text-sm">
-                      {t.orderTracking.completionTime}
+                      {language === 'fr' ? 'Programmé pour' : 'Scheduled for'}
                     </span>
                     <div className="flex-1 border-b border-dotted border-gray-300 mx-3"></div>
-                    <span className="font-medium text-orange-600 bg-orange-50 border border-orange-200 px-3 py-1 rounded-lg">
+                    <span className="font-medium text-orange-600 bg-orange-50 border border-orange-200 px-3 py-1 rounded-lg text-right">
+                      {(() => {
+                        // Get scheduled date and time from API response
+                        const scheduledDate = orderDetails?.scheduledDate;
+                        const scheduledTime = orderDetails?.scheduledTime;
+
+                        if (scheduledDate && scheduledTime) {
+                          try {
+                            // Parse ISO date string (e.g., "2025-09-29")
+                            const dateParts = scheduledDate.split('-');
+                            const year = parseInt(dateParts[0]);
+                            const month = parseInt(dateParts[1]) - 1; // Month is 0-indexed in JS Date
+                            const day = parseInt(dateParts[2]);
+
+                            // Parse 24-hour time string (e.g., "17:30:00")
+                            const timeParts = scheduledTime.split(':');
+                            const hours = parseInt(timeParts[0]);
+                            const minutes = parseInt(timeParts[1]);
+
+                            // Create date object in local timezone
+                            const displayDate = new Date(year, month, day, hours, minutes);
+
+                            // Format for display
+                            const timeString = displayDate.toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true
+                            });
+
+                            const dateString = displayDate.toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA', {
+                              month: 'short',
+                              day: 'numeric'
+                            });
+
+                            return `${dateString} at ${timeString}`;
+                          } catch (error) {
+                            console.error('Error parsing scheduled date/time:', error);
+                            return 'Invalid Date';
+                          }
+                        }
+                        return 'N/A';
+                      })()}
+                    </span>
+                  </div>
+                )}
+
+                {/* Estimated Completion Time for Immediate Orders */}
+                {!sessionData?.scheduled_datetime && !orderDetails?.scheduledDateTime && orderDetails?.estimatedTime && orderDetails?.createdAt && (
+                  <div className="flex items-center py-2">
+                    <span className="text-gray-500 text-sm">
+                      {language === 'fr' ? 'Prêt vers' : 'Ready by'}
+                    </span>
+                    <div className="flex-1 border-b border-dotted border-gray-300 mx-3"></div>
+                    <span className="font-medium text-orange-600 bg-orange-50 border border-orange-200 px-3 py-1 rounded-lg text-right">
                       {formatEstimatedCompletionTime(orderDetails.estimatedTime, orderDetails.createdAt, language)}
                     </span>
                   </div>
@@ -562,7 +626,7 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                       {language === 'fr' ? 'Adresse de livraison' : 'Delivery Address'}
                     </span>
                     <div className="flex-1 border-b border-dotted border-gray-300 mx-3 mt-3"></div>
-                    <div className="font-medium text-gray-900 bg-green-50 border border-green-200 px-3 py-2 rounded-lg max-w-sm">
+                    <div className="font-medium text-gray-900 bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg max-w-sm text-right">
                       <div className="text-sm">
                         <div>{deliveryAddress.streetAddress}</div>
                         {deliveryAddress.unitNumber && (

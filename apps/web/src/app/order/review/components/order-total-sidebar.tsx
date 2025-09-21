@@ -225,7 +225,12 @@ export function OrderTotalSidebar({
         deliveryFee: latestFormData.orderType === 'delivery' ? deliveryFee : 0,
         deliveryAddress: latestFormData.orderType === 'delivery' ? addressInfo : undefined,
         tableNumber: orderContext.tableNumber,
-        zone: orderContext.zone
+        zone: orderContext.zone,
+        // Scheduled order fields from API response
+        is_pre_order: result.data.isPreOrder || false,
+        scheduled_datetime: result.data.scheduledDateTime,
+        scheduled_date: result.data.scheduledDate,
+        scheduled_time: result.data.scheduledTime
       }
 
       sessionStorage.setItem('vizion-order-confirmation', JSON.stringify(confirmationData))
@@ -383,7 +388,12 @@ export function OrderTotalSidebar({
           deliveryFee: effectiveOrderType === 'delivery' ? deliveryFee : 0,
           deliveryAddress: effectiveOrderType === 'delivery' ? currentFormData.addressInfo : undefined,
           tableNumber: orderContext.tableNumber,
-          zone: orderContext.zone
+          zone: orderContext.zone,
+          // Scheduled order fields from API response
+          is_pre_order: result.data.isPreOrder || false,
+          scheduled_datetime: result.data.scheduledDateTime,
+          scheduled_date: result.data.scheduledDate,
+          scheduled_time: result.data.scheduledTime
         }
 
         sessionStorage.setItem('vizion-order-confirmation', JSON.stringify(confirmationData))
