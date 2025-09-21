@@ -243,7 +243,7 @@ module.exports = {
       // Fallback: require active branch membership for other roles
       const { data: userBranch, error: userBranchError } = await supabaseLocal
         .from('branch_users')
-        .select('branch_id, role, is_active')
+        .select('branch_id, role, is_active, branches!inner(id, chain_id)')
         .eq('user_id', currentUserId)
         .eq('is_active', true)
         .single();
@@ -257,6 +257,9 @@ module.exports = {
       req.currentUserId = currentUserId;
       req.userBranch = userBranch;
       req.userRole = userBranch.role;
+      // Set userChainId from branch relationship for branch-level users
+      req.userChainId = userBranch.branches?.chain_id || null;
+
       return next();
 
     } catch (error) {

@@ -22,9 +22,11 @@ class AnalyticsController {
         chainId,
         period = '7d',
         startDate,
-        endDate,
-        branchId
+        endDate
       } = req.query;
+
+      // Get branchId separately to allow reassignment for branch managers
+      let { branchId } = req.query;
 
       // Log request start
       logger.info('Analytics request received', {
@@ -85,16 +87,22 @@ class AnalyticsController {
       // Authorization context - CRITICAL SECURITY CHECK
       const isPlatformAdmin = req.userRole === 'platform_admin';
       const isChainOwner = req.userRole === 'chain_owner';
+      const isBranchManager = req.userRole === 'branch_manager';
       const userBranch = req.userBranch;
 
-      if (!isPlatformAdmin && !isChainOwner) {
-        // For non-admin/owner, branch context is required
-        if (!userBranch || !userBranch.branch_id) {
-          throw new AuthorizationError(
-            'Access denied: missing branch context',
-            { userRole: req.userRole, hasBranch: !!userBranch }
-          );
-        }
+      if (!isPlatformAdmin && !isChainOwner && !isBranchManager) {
+        throw new AuthorizationError(
+          'Access denied: insufficient permissions',
+          { userRole: req.userRole, requiredRoles: ['platform_admin', 'chain_owner', 'branch_manager'] }
+        );
+      }
+
+      // For branch managers and non-admin/owner roles, branch context is required
+      if ((isBranchManager || (!isPlatformAdmin && !isChainOwner)) && (!userBranch || !userBranch.branch_id)) {
+        throw new AuthorizationError(
+          'Access denied: missing branch context',
+          { userRole: req.userRole, hasBranch: !!userBranch }
+        );
       }
 
       // Chain owner must only access their own chain
@@ -105,6 +113,27 @@ class AnalyticsController {
             { userChainId: req.userChainId, requestedChainId: chainId }
           );
         }
+      }
+
+      // Branch manager can only access their own chain and branch
+      if (isBranchManager) {
+        if (!req.userChainId || chainId !== String(req.userChainId)) {
+          throw new AuthorizationError(
+            'Access denied: chain mismatch for branch manager',
+            { userChainId: req.userChainId, requestedChainId: chainId }
+          );
+        }
+
+        // Force branchId to user's own branch for security
+        if (!userBranch?.branch_id) {
+          throw new AuthorizationError(
+            'Access denied: branch manager missing branch assignment',
+            { userRole: req.userRole, userBranch: userBranch }
+          );
+        }
+
+        // Override any provided branchId with user's actual branch
+        branchId = String(userBranch.branch_id);
       }
 
       // Get analytics data

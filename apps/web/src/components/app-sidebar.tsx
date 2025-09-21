@@ -31,7 +31,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { language } = useLanguage()
   
   // Destructure what we need from enhanced auth
-  const { isPlatformAdmin, isChainOwner, email } = enhancedAuth
+  const { isPlatformAdmin, isChainOwner, isBranchManager, email } = enhancedAuth
 
   // Use centralized translations
   const t = translations[language] || translations.en
@@ -98,8 +98,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             },
           ],
         },
-        // Reports - Chain Owner only
-        ...(isChainOwner ? [{
+        // Reports - Chain Owner (full access) and Branch Manager (limited access)
+        ...((isChainOwner || isBranchManager) ? [{
           title: language === 'fr' ? 'Rapports' : 'Reports',
           url: "/reports",
           icon: BarChart3,
@@ -108,10 +108,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               title: language === 'fr' ? 'Analytiques' : 'Analytics',
               url: "/reports/analytics",
             },
-            {
+            // Activity logs - Chain Owner only
+            ...(isChainOwner ? [{
               title: language === 'fr' ? 'Journaux d\'Activité' : 'Activity Logs',
               url: "/reports/activity",
-            },
+            }] : []),
           ],
         }] : []),
         // Menu Management - Hide from Chain Owners (branch-specific)

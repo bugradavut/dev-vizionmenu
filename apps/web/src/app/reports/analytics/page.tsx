@@ -22,13 +22,16 @@ import { apiClient } from "@/services/api-client"
 
 export default function ChainAnalyticsPage() {
   const { language } = useLanguage()
-  const { chainId } = useEnhancedAuth()
+  const { chainId, isChainOwner, isBranchManager, branchId: userBranchId, branchName: userBranchName } = useEnhancedAuth()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<ChainAnalyticsResponse | null>(null)
   const [branches, setBranches] = useState<Array<{id: string, name: string}>>([])
-  const [selectedBranch, setSelectedBranch] = useState<string>('all')
+  const [selectedBranch, setSelectedBranch] = useState<string>(
+    // Branch managers start with their own branch, chain owners start with 'all'
+    isBranchManager && userBranchId ? userBranchId : 'all'
+  )
   const [branchesLoading, setBranchesLoading] = useState(true)
   const [branchSwitching, setBranchSwitching] = useState(false)
 
@@ -52,6 +55,13 @@ export default function ChainAnalyticsPage() {
 
   const fetchBranches = async () => {
     if (!chainId) return
+
+    // Branch managers don't need to fetch branches - they only see their own
+    if (isBranchManager) {
+      setBranchesLoading(false)
+      return
+    }
+
     setBranchesLoading(true)
     try {
       const response = await apiClient.get(`/api/v1/branches/by-chain/${chainId}`)
@@ -81,7 +91,10 @@ export default function ChainAnalyticsPage() {
       }
 
       // Add branchId if specific branch is selected
-      if (selectedBranch !== 'all') {
+      // For branch managers, always use their own branch (backend enforces this too)
+      if (isBranchManager && userBranchId) {
+        params.branchId = userBranchId
+      } else if (selectedBranch !== 'all') {
         params.branchId = selectedBranch
       }
 
@@ -113,6 +126,11 @@ export default function ChainAnalyticsPage() {
   }, [loading, branchSwitching])
 
   const handleBranchChange = async (newBranch: string) => {
+    // Branch managers cannot change branches - they're locked to their own
+    if (isBranchManager) {
+      return
+    }
+
     setBranchSwitching(true)
     setLoading(true) // Immediate loading state
     setSelectedBranch(newBranch)
@@ -150,27 +168,39 @@ export default function ChainAnalyticsPage() {
                   <p className="text-muted-foreground mt-2 text-lg">{t.subtitle}</p>
                 </div>
 
-                {/* Branch Selector */}
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <Select
-                    value={selectedBranch}
-                    onValueChange={handleBranchChange}
-                    disabled={branchesLoading || branchSwitching || loading}
-                  >
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder={t.selectBranch} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t.allBranches}</SelectItem>
-                      {branches.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Branch Selector - Chain Owner Only */}
+                {isChainOwner && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <Select
+                      value={selectedBranch}
+                      onValueChange={handleBranchChange}
+                      disabled={branchesLoading || branchSwitching || loading}
+                    >
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder={t.selectBranch} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t.allBranches}</SelectItem>
+                        {branches.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Branch Manager Info Display */}
+                {isBranchManager && userBranchName && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <div className="px-3 py-2 bg-muted rounded-md text-sm font-medium">
+                      {userBranchName}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -242,7 +272,7 @@ export default function ChainAnalyticsPage() {
                         title={t.revenueTrend}
                         type="area"
                         language={language}
-                        branchId={selectedBranch !== 'all' ? selectedBranch : undefined}
+                        branchId={isBranchManager && userBranchId ? userBranchId : (selectedBranch !== 'all' ? selectedBranch : undefined)}
                       />
                     </div>
 
@@ -251,7 +281,7 @@ export default function ChainAnalyticsPage() {
                       <PlatformBreakdownChart
                         title={t.platformBreakdown}
                         language={language}
-                        branchId={selectedBranch !== 'all' ? selectedBranch : undefined}
+                        branchId={isBranchManager && userBranchId ? userBranchId : (selectedBranch !== 'all' ? selectedBranch : undefined)}
                       />
                     </div>
 
@@ -261,7 +291,7 @@ export default function ChainAnalyticsPage() {
                         title={t.volumeTrend}
                         type="bar"
                         language={language}
-                        branchId={selectedBranch !== 'all' ? selectedBranch : undefined}
+                        branchId={isBranchManager && userBranchId ? userBranchId : (selectedBranch !== 'all' ? selectedBranch : undefined)}
                       />
                     </div>
 
@@ -271,7 +301,7 @@ export default function ChainAnalyticsPage() {
                         title={t.aovTrend}
                         type="line"
                         language={language}
-                        branchId={selectedBranch !== 'all' ? selectedBranch : undefined}
+                        branchId={isBranchManager && userBranchId ? userBranchId : (selectedBranch !== 'all' ? selectedBranch : undefined)}
                       />
                     </div>
                   </div>
