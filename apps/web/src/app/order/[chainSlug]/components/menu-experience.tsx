@@ -9,7 +9,7 @@ import { CartSidebar } from '@/app/order/components/cart-sidebar'
 import { MobileCart } from '@/app/order/components/mobile-cart'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
-import { DraggableWaiterButton } from '@/components/draggable-waiter-button'
+import { FloatingWaiterButton } from '@/components/floating-waiter-button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -520,7 +520,7 @@ export function MenuExperience({
 
       {/* QR Floating Waiter Call Button - Mobile & Tablet Only */}
       {orderContext.isQROrder && orderContext.tableNumber && !isDesktop && (
-        <DraggableWaiterButton
+        <FloatingWaiterButton
           branchId={branch.id}
           tableNumber={orderContext.tableNumber}
           zone={orderContext.zone}
