@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Bell, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { HandPlatter, Clock, CheckCircle, AlertCircle } from 'lucide-react'
 import { waiterCallsService } from '@/services/waiter-calls.service'
 import { useLanguage } from '@/contexts/language-context'
 import { cn } from '@/lib/utils'
@@ -12,22 +12,32 @@ interface WaiterCallButtonProps {
   tableNumber: number
   zone?: string
   className?: string
+  onHidden?: () => void
+  onStateChange?: (state: ButtonState) => void
 }
 
-type ButtonState = 'ready' | 'loading' | 'success' | 'cooldown' | 'error'
+type ButtonState = 'ready' | 'loading' | 'success' | 'cooldown' | 'error' | 'hidden'
 
 export function WaiterCallButton({
   branchId,
   tableNumber,
   zone,
-  className
+  className,
+  onHidden,
+  onStateChange
 }: WaiterCallButtonProps) {
   const { language } = useLanguage()
 
   // State management
-  const [buttonState, setButtonState] = useState<ButtonState>('ready')
+  const [buttonState, setButtonStateInternal] = useState<ButtonState>('ready')
   const [waitTime, setWaitTime] = useState(0)
   const [errorMessage, setErrorMessage] = useState('')
+
+  // Wrapper to notify parent of state changes
+  const setButtonState = (newState: ButtonState) => {
+    setButtonStateInternal(newState)
+    onStateChange?.(newState)
+  }
 
   // Countdown timer for cooldown state
   useEffect(() => {
@@ -60,11 +70,11 @@ export function WaiterCallButton({
       // Success state
       setButtonState('success')
 
-      // Auto-reset to cooldown after 2 seconds
+      // Show success message longer, then hide button completely
       setTimeout(() => {
-        setButtonState('cooldown')
-        setWaitTime(120) // 2 minutes cooldown
-      }, 2000)
+        setButtonState('hidden')
+        onHidden?.() // Notify parent component
+      }, 4000) // 4 seconds to ensure user sees the message
 
     } catch (error: unknown) {
       console.error('Failed to call waiter:', error)
@@ -114,7 +124,7 @@ export function WaiterCallButton({
           text: language === 'fr' ? 'Serveur notifié!' : 'Waiter notified!',
           disabled: true,
           variant: 'default' as const,
-          className: 'bg-green-600 hover:bg-green-600'
+          className: 'bg-green-500 hover:bg-green-500'
         }
 
       case 'cooldown':
@@ -139,16 +149,21 @@ export function WaiterCallButton({
 
       default: // ready
         return {
-          icon: <Bell className="w-5 h-5" />,
+          icon: <HandPlatter className="w-5 h-5" style={{ transform: 'scaleX(-1)' }} />,
           text: language === 'fr' ? 'Appeler le serveur' : 'Call waiter',
           disabled: false,
           variant: 'default' as const,
-          className: 'bg-orange-600 hover:bg-orange-700'
+          className: 'bg-teal-500 hover:bg-teal-600'
         }
     }
   }
 
   const buttonContent = getButtonContent()
+
+  // Hide button completely if in hidden state
+  if (buttonState === 'hidden') {
+    return null
+  }
 
   return (
     <Button

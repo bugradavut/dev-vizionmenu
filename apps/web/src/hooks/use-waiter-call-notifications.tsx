@@ -5,6 +5,7 @@ import { waiterCallsService, type WaiterCall } from '@/services/waiter-calls.ser
 import { useEnhancedAuth } from '@/hooks/use-enhanced-auth'
 import { useNotificationSound } from '@/hooks/use-notification-sound'
 import { useLanguage } from '@/contexts/language-context'
+import { HandPlatter } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export interface WaiterCallNotificationOptions {
@@ -40,7 +41,7 @@ export const useWaiterCallNotifications = (
   const seenCallsRef = useRef<Set<string>>(new Set())
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Show simple persistent waiter call notification
+  // Show modern waiter call notification matching order notification style
   const showWaiterCallNotification = useCallback((waiterCall: WaiterCall) => {
     // Play sound
     if (soundEnabled) {
@@ -51,48 +52,84 @@ export const useWaiterCallNotifications = (
       }
     }
 
-    // Create persistent toast notification
+    // Custom dismiss function with exit animation
+    const handleDismiss = (toastId: string) => {
+      // First trigger exit animation
+      const toastElement = document.querySelector(`[data-toast-id="${toastId}"]`);
+      if (toastElement) {
+        toastElement.classList.remove('toast-enter');
+        toastElement.classList.add('toast-exit');
+
+        // Wait for animation to complete, then dismiss
+        setTimeout(() => {
+          toast.dismiss(toastId);
+        }, 250); // Match CSS animation duration
+      } else {
+        // Fallback: immediate dismiss if element not found
+        toast.dismiss(toastId);
+      }
+    };
+
     toast.custom((toastProps) => (
-      <div className="bg-orange-50 dark:bg-orange-950/90 border border-orange-200 dark:border-orange-800 p-4 rounded-lg shadow-lg max-w-sm">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
+      <div data-toast-id={toastProps.id}>
+        <div className="bg-white dark:bg-gray-900 p-0 overflow-hidden toast-enter"
+             style={{
+               width: '320px',
+               maxWidth: '320px',
+               minWidth: '320px',
+               borderRadius: '20px',
+               border: '1px solid rgba(0, 0, 0, 0.08)',
+               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 10px 25px -5px rgba(0, 0, 0, 0.1)'
+             }}>
+          {/* Header */}
+          <div className="flex items-center gap-2 p-4 pb-3">
             <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-            <h3 className="font-semibold text-orange-900 dark:text-orange-100 text-sm">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
               {language === 'fr' ? 'Appel de serveur' : 'Waiter Call'}
             </h3>
           </div>
-        </div>
 
-        <div className="text-sm text-gray-700 dark:text-gray-300 mb-3">
-          <span className="font-bold text-orange-700 dark:text-orange-400">
-            {waiterCall.zone === 'Screen'
-              ? (language === 'fr' ? 'Écran' : 'Screen')
-              : waiterCall.zone
-                ? `Table ${waiterCall.table_number} - ${waiterCall.zone}`
-                : `Table ${waiterCall.table_number}`
-            }
-          </span>
-          {language === 'fr' ? ' demande de l\'assistance.' : ' needs assistance.'}
-        </div>
+          {/* Content */}
+          <div className="px-4 pb-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
+              <span className="font-bold text-orange-600 dark:text-orange-400">
+                {waiterCall.zone === 'Screen'
+                  ? (language === 'fr' ? 'Écran' : 'Screen')
+                  : waiterCall.zone
+                    ? `Table ${waiterCall.table_number} - ${waiterCall.zone}`
+                    : `Table ${waiterCall.table_number}`
+                }
+              </span>
+              {language === 'fr' ? ' demande de l\'assistance. Veuillez vous rendre à la table pour aider le client.' : ' needs assistance. Please go to the table to help the customer.'}
+            </div>
 
-        <button
-          onClick={async () => {
-            try {
-              await waiterCallsService.resolveWaiterCall(waiterCall.id)
-              toast.dismiss(toastProps.id)
-            } catch (error) {
-              console.error('Failed to resolve waiter call:', error)
-            }
-          }}
-          className="w-full bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-3 rounded text-sm transition-colors"
-        >
-          {language === 'fr' ? 'Résoudre' : 'Resolve'}
-        </button>
+            {/* Action Button */}
+            <button
+              onClick={async () => {
+                try {
+                  await waiterCallsService.resolveWaiterCall(waiterCall.id)
+                  handleDismiss(toastProps.id)
+                } catch (error) {
+                  console.error('Failed to resolve waiter call:', error)
+                }
+              }}
+              className="w-full text-white font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 text-sm"
+              style={{ backgroundColor: '#ea580c' }}
+              onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#c2410c'}
+              onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#ea580c'}
+            >
+              {language === 'fr' ? 'J\'arrive' : 'On my way'}
+              <HandPlatter className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
     ), {
-      duration: Infinity, // Never auto-dismiss
+      duration: Infinity, // Never auto-dismiss - only manual resolve
       position: 'top-right',
     })
+
+    // No auto-dismiss - notification stays until manually resolved
 
   }, [language, soundEnabled, playSound])
 

@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
-import { WaiterCallButton } from './waiter-call-button'
-import { MoreHorizontal } from 'lucide-react'
+import { useState } from 'react'
+import { waiterCallsService } from '@/services/waiter-calls.service'
+import { HandPlatter, CheckCircle } from 'lucide-react'
+import { useLanguage } from '@/contexts/language-context'
 import { cn } from '@/lib/utils'
 
 interface FloatingWaiterButtonProps {
@@ -11,89 +12,102 @@ interface FloatingWaiterButtonProps {
   zone?: string
 }
 
+type SimpleState = 'collapsed' | 'expanded' | 'calling' | 'success' | 'hidden'
+
 export function FloatingWaiterButton({
   branchId,
   tableNumber,
   zone
 }: FloatingWaiterButtonProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
-  const [isScrolling, setIsScrolling] = useState(false)
+  const [state, setState] = useState<SimpleState>('collapsed')
+  const { language } = useLanguage()
 
-  // Auto-collapse on scroll detection
-  const handleScroll = useCallback(() => {
-    setIsScrolling(true)
-    setIsExpanded(false)
-
-    // Reset scrolling state after scroll ends
-    const scrollTimer = setTimeout(() => {
-      setIsScrolling(false)
-    }, 150)
-
-    return () => clearTimeout(scrollTimer)
-  }, [])
-
-  // Auto-collapse on page interaction (touch/mouse move)
-  const handlePageInteraction = useCallback(() => {
-    if (isExpanded) {
-      setIsExpanded(false)
+  // Handle tab click
+  const handleTabClick = () => {
+    if (state === 'collapsed') {
+      setState('expanded')
     }
-  }, [isExpanded])
+  }
 
-  // Setup scroll and interaction listeners
-  useEffect(() => {
-    const handleTouchMove = () => handlePageInteraction()
-    const handleMouseMove = () => handlePageInteraction()
+  // Handle call waiter click
+  const handleCallWaiter = async () => {
+    try {
+      setState('calling')
 
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    window.addEventListener('touchmove', handleTouchMove, { passive: true })
-    window.addEventListener('mousemove', handleMouseMove, { passive: true })
+      await waiterCallsService.createWaiterCall({
+        branch_id: branchId,
+        table_number: tableNumber,
+        zone
+      })
 
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('touchmove', handleTouchMove)
-      window.removeEventListener('mousemove', handleMouseMove)
+      // Show success message
+      setState('success')
+
+      // Hide after 3 seconds
+      setTimeout(() => {
+        setState('hidden')
+      }, 3000)
+
+    } catch (error) {
+      console.error('Failed to call waiter:', error)
+      // Go back to expanded on error
+      setState('expanded')
     }
-  }, [handleScroll, handlePageInteraction])
+  }
 
-  // Toggle expanded state
-  const handleToggle = () => {
-    setIsExpanded(!isExpanded)
+  // Don't render if hidden
+  if (state === 'hidden') {
+    return null
   }
 
   return (
-    <div className="fixed right-0 top-1/2 -translate-y-1/2 z-50">
+    <div className="fixed -right-2 top-1/2 -translate-y-1/2 z-50">
       {/* Collapsed Tab */}
-      {!isExpanded && (
+      {state === 'collapsed' && (
         <button
-          onClick={handleToggle}
-          className={cn(
-            "group flex items-center justify-center",
-            "bg-gradient-to-l from-orange-500 to-orange-600",
-            "hover:from-orange-600 hover:to-orange-700",
-            "text-white shadow-lg hover:shadow-xl",
-            "rounded-l-xl border-r-0",
-            "w-12 h-16 transition-all duration-300",
-            "hover:w-14 hover:scale-105",
-            isScrolling && "opacity-75"
-          )}
+          onClick={handleTabClick}
+          className="group flex items-center justify-center bg-gradient-to-l from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white shadow-md hover:shadow-lg rounded-l-lg border-r-0 w-8 h-12 transition-all duration-300 ease-out hover:w-10 hover:h-14"
           title="Call Waiter"
         >
-          <MoreHorizontal
-            className="w-5 h-5 transition-transform duration-200 group-hover:scale-110"
-            style={{ transform: 'rotate(90deg)' }}
+          <HandPlatter
+            className="w-4 h-4 transition-all duration-200 group-hover:w-5 group-hover:h-5"
+            style={{ transform: 'scaleX(-1)' }}
           />
         </button>
       )}
 
-      {/* Expanded Button */}
-      {isExpanded && (
-        <div className="animate-in slide-in-from-right-full duration-300">
-          <WaiterCallButton
-            branchId={branchId}
-            tableNumber={tableNumber}
-            zone={zone}
-            className="rounded-l-xl border-r-0 shadow-xl min-w-[200px] h-16 text-base font-semibold"
-          />
+      {/* Expanded / Calling / Success States */}
+      {(state === 'expanded' || state === 'calling' || state === 'success') && (
+        <div className="animate-in slide-in-from-right-2 duration-300 ease-out">
+          <button
+            onClick={state === 'expanded' ? handleCallWaiter : undefined}
+            disabled={state === 'calling' || state === 'success'}
+            className={cn(
+              "flex items-center gap-2 px-4 py-3 rounded-l-lg border-r-0 shadow-xl min-w-[180px] h-12 text-sm font-medium transition-all duration-200",
+              state === 'expanded' && "bg-teal-500 hover:bg-teal-600 text-white cursor-pointer",
+              state === 'calling' && "bg-blue-500 text-white cursor-not-allowed",
+              state === 'success' && "bg-green-500 text-white cursor-not-allowed"
+            )}
+          >
+            {state === 'expanded' && (
+              <>
+                <HandPlatter className="w-5 h-5" style={{ transform: 'scaleX(-1)' }} />
+                <span>{language === 'fr' ? 'Appeler le serveur' : 'Call waiter'}</span>
+              </>
+            )}
+            {state === 'calling' && (
+              <>
+                <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                <span>{language === 'fr' ? 'Appel...' : 'Calling...'}</span>
+              </>
+            )}
+            {state === 'success' && (
+              <>
+                <CheckCircle className="w-5 h-5" />
+                <span>{language === 'fr' ? 'Serveur notifié!' : 'Waiter notified!'}</span>
+              </>
+            )}
+          </button>
         </div>
       )}
     </div>
