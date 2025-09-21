@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { waiterCallsService } from '@/services/waiter-calls.service'
 import { HandPlatter, CheckCircle } from 'lucide-react'
 import { useLanguage } from '@/contexts/language-context'
@@ -21,6 +21,36 @@ export function FloatingWaiterButton({
 }: FloatingWaiterButtonProps) {
   const [state, setState] = useState<SimpleState>('collapsed')
   const { language } = useLanguage()
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Auto-collapse when clicking outside or scrolling
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (state === 'expanded' && containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setState('collapsed')
+      }
+    }
+
+    const handleScroll = () => {
+      if (state === 'expanded') {
+        setState('collapsed')
+      }
+    }
+
+    // Add event listeners when expanded
+    if (state === 'expanded') {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('scroll', handleScroll, { passive: true })
+      window.addEventListener('scroll', handleScroll, { passive: true })
+    }
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('scroll', handleScroll)
+    }
+  }, [state])
 
   // Handle tab click
   const handleTabClick = () => {
@@ -61,7 +91,7 @@ export function FloatingWaiterButton({
   }
 
   return (
-    <div className="fixed -right-2 top-1/2 -translate-y-1/2 z-50">
+    <div ref={containerRef} className="fixed -right-2 top-1/2 -translate-y-1/2 z-50">
       {/* Collapsed Tab */}
       {state === 'collapsed' && (
         <button
