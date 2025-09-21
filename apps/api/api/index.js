@@ -64,6 +64,7 @@ const notificationsRoutes = require('./routes/notifications');
 const webhookTestRoutes = require('./routes/webhook-test');
 const activityLogsRoutes = require('./routes/activity-logs');
 const analyticsRoutes = require('./routes/analytics');
+const waiterCallsRoutes = require('./routes/waiter-calls.routes');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -173,6 +174,9 @@ app.use('/api/v1/reports/activity-logs', activityLogsRoutes);
 
 // Use analytics routes (protected - chain owner and platform admin)
 app.use('/api/v1/reports/analytics', analyticsRoutes);
+
+// Use waiter calls routes (mixed auth - create public, others protected)
+app.use('/api/v1/waiter-calls', waiterCallsRoutes);
 
 // Catch all other routes
 app.use('*', (req, res) => {

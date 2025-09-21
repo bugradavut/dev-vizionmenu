@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useOrderNotifications } from '@/hooks/use-order-notifications';
 import { useCrossTabNotifications } from '@/hooks/use-cross-tab-notifications';
+import { useWaiterCallNotifications } from '@/hooks/use-waiter-call-notifications';
 import { useEnhancedAuth } from '@/hooks/use-enhanced-auth';
 import { ordersService } from '@/services/orders.service';
 import { Toaster } from 'react-hot-toast';
@@ -396,6 +397,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     enabled: true,
     soundEnabled: true,
     toastEnabled: true
+  });
+
+  // Initialize waiter call notifications
+  useWaiterCallNotifications({
+    enabled: true,
+    soundEnabled: true
   });
 
   // Clear seen orders function (for debugging/admin use)
