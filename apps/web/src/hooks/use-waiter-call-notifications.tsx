@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { waiterCallsService, type WaiterCall } from '@/services/waiter-calls.service'
 import { useEnhancedAuth } from '@/hooks/use-enhanced-auth'
 import { useNotificationSound } from '@/hooks/use-notification-sound'
@@ -37,8 +37,53 @@ export const useWaiterCallNotifications = (
     fallbackToBeep: true
   })
 
-  // State for tracking seen calls
-  const seenCallsRef = useRef<Set<string>>(new Set())
+  // Independent localStorage-based tracking (no context dependency)
+  const [seenCalls, setSeenCalls] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('vision-menu-waiter-calls-seen');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Clean up old entries (older than 2 hours)
+        const twoHoursAgo = Date.now() - (2 * 60 * 60 * 1000);
+        const validCalls = new Set<string>();
+
+        parsed.calls?.forEach((callData: { id: string; timestamp: number }) => {
+          if (callData.timestamp > twoHoursAgo) {
+            validCalls.add(callData.id);
+          }
+        });
+
+        return validCalls;
+      }
+    } catch (error) {
+      console.warn('Failed to load seen waiter calls:', error);
+    }
+    return new Set();
+  });
+
+  // Add seen call with persistence
+  const addSeenCall = useCallback((callId: string) => {
+    setSeenCalls(prev => {
+      const newSeenCalls = new Set([...prev, callId]);
+
+      // Persist to localStorage with timestamp
+      try {
+        const callsData = {
+          calls: Array.from(newSeenCalls).map(id => ({
+            id,
+            timestamp: Date.now()
+          })),
+          savedAt: Date.now()
+        };
+        localStorage.setItem('vision-menu-waiter-calls-seen', JSON.stringify(callsData));
+      } catch (error) {
+        console.warn('Failed to save seen waiter calls:', error);
+      }
+
+      return newSeenCalls;
+    });
+  }, []);
+
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Show modern waiter call notification matching order notification style
@@ -108,6 +153,8 @@ export const useWaiterCallNotifications = (
               onClick={async () => {
                 try {
                   await waiterCallsService.resolveWaiterCall(waiterCall.id)
+                  // Add to seen calls when resolved
+                  addSeenCall(waiterCall.id)
                   handleDismiss(toastProps.id)
                 } catch (error) {
                   console.error('Failed to resolve waiter call:', error)
@@ -131,7 +178,7 @@ export const useWaiterCallNotifications = (
 
     // No auto-dismiss - notification stays until manually resolved
 
-  }, [language, soundEnabled, playSound])
+  }, [language, soundEnabled, playSound, addSeenCall])
 
   // Polling function to check for new waiter calls
   const pollWaiterCalls = useCallback(async () => {
@@ -142,12 +189,12 @@ export const useWaiterCallNotifications = (
     try {
       const pendingCalls = await waiterCallsService.getPendingWaiterCalls()
 
-      // Find new calls (not seen before)
-      const newCalls = pendingCalls.filter(call => !seenCallsRef.current.has(call.id))
+      // Find new calls (not seen before) using independent state
+      const newCalls = pendingCalls.filter(call => !seenCalls.has(call.id))
 
-      // Update seen calls
-      pendingCalls.forEach(call => {
-        seenCallsRef.current.add(call.id)
+      // Add new calls to seen calls
+      newCalls.forEach(call => {
+        addSeenCall(call.id)
       })
 
       // Show notifications for new calls
@@ -155,11 +202,17 @@ export const useWaiterCallNotifications = (
         showWaiterCallNotification(call)
       })
 
+      console.debug('🔔 Waiter calls poll:', {
+        total: pendingCalls.length,
+        new: newCalls.length,
+        seen: seenCalls.size
+      })
+
     } catch (error) {
       console.error('Failed to poll waiter calls:', error)
       // Silent fail for polling errors
     }
-  }, [enabled, branchId, user, showWaiterCallNotification])
+  }, [enabled, branchId, user, showWaiterCallNotification, seenCalls, addSeenCall])
 
   // Start/stop polling
   useEffect(() => {

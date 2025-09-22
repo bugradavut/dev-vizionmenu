@@ -44,6 +44,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [orders, setOrders] = useState<any[]>([]);
   
+
   // Initialize notification tracking with status + timestamp hybrid system
   const [notificationData, setNotificationData] = useState<{
     seenOrders: Set<string>;
@@ -404,6 +405,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     enabled: true,
     soundEnabled: true
   });
+
+
 
   // Clear seen orders function (for debugging/admin use)
   const clearSeenOrders = React.useCallback(() => {
