@@ -184,9 +184,10 @@ export function CategoriesTab() {
 
   return (
     <div className="space-y-6">
-      {/* Header with search and actions */}
-      <div className="flex flex-col gap-4">
-        <div className="space-y-1">
+      {/* Header - responsive layout */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+        {/* Title and description */}
+        <div className="space-y-1 flex-shrink-0">
           <h2 className="text-xl font-semibold tracking-tight">
             {t.navigation.categories}
           </h2>
@@ -194,9 +195,11 @@ export function CategoriesTab() {
             {t.menuManagement.categoriesTab.subtitle}
           </p>
         </div>
-        
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 min-w-0 max-w-sm">
+
+        {/* Search and actions */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-2">
+          {/* Search bar */}
+          <div className="relative w-full lg:w-80">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder={t.menuManagement.searchPlaceholder}
@@ -205,31 +208,43 @@ export function CategoriesTab() {
               className="pl-10"
             />
           </div>
-          
-          <Button 
-            variant="outline" 
-            onClick={() => setShowHidden(!showHidden)}
-            className={showHidden ? "bg-muted" : ""}
-          >
-            <EyeOff className="h-4 w-4 mr-2" />
-{showHidden 
-              ? (language === 'fr' ? 'Afficher les actifs' : 'Show Active') 
-              : (language === 'fr' ? 'Afficher les masqués' : 'Show Inactive')
-            } ({showHidden ? categories.filter(c => c.is_active).length : categories.filter(c => !c.is_active).length})
-          </Button>
 
-          <Button
-            variant="outline"
-            onClick={() => setIsImportModalOpen(true)}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            {language === 'fr' ? 'Importer Modèles' : 'Import Templates'}
-          </Button>
+          {/* Action buttons - all in one row on mobile/tablet */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowHidden(!showHidden)}
+              className={`${showHidden ? "bg-muted" : ""} text-xs sm:text-sm flex-1 sm:flex-none`}
+              size="sm"
+            >
+              <EyeOff className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="truncate">
+                {showHidden
+                  ? (language === 'fr' ? 'Actifs' : 'Active')
+                  : (language === 'fr' ? 'Masqués' : 'Inactive')
+                } ({showHidden ? categories.filter(c => c.is_active).length : categories.filter(c => !c.is_active).length})
+              </span>
+            </Button>
 
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t.menuManagement.newCategory}
-          </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsImportModalOpen(true)}
+              className="text-xs sm:text-sm flex-1 sm:flex-none"
+              size="sm"
+            >
+              <Download className="h-4 w-4 mr-1 sm:mr-2" />
+              {language === 'fr' ? 'Importer' : 'Import'}
+            </Button>
+
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="text-xs sm:text-sm flex-1 sm:flex-none"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+              {language === 'fr' ? 'Ajouter Catégorie' : 'Add Category'}
+            </Button>
+          </div>
         </div>
       </div>
 
