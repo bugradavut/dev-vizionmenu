@@ -18,6 +18,7 @@ import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 import { chainTemplatesService, type ChainTemplate } from '@/services/chain-templates.service'
 import { useEnhancedAuth } from '@/hooks/use-enhanced-auth'
+import toast from 'react-hot-toast'
 
 interface ChainTemplateImportModalProps {
   isOpen: boolean
@@ -39,8 +40,8 @@ export const ChainTemplateImportModal: React.FC<ChainTemplateImportModalProps> =
   const [isLoading, setIsLoading] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
 
-  // Load chain templates
-  const loadTemplates = async () => {
+  // Load chain templates with retry mechanism
+  const loadTemplates = async (retryCount = 0) => {
     if (!chainId) return
 
     try {
@@ -49,7 +50,19 @@ export const ChainTemplateImportModal: React.FC<ChainTemplateImportModalProps> =
       setTemplates(response.data.categories || [])
     } catch (error) {
       console.error('Failed to load chain templates:', error)
-      // TODO: Show error toast
+
+      if (retryCount < 2) {
+        setTimeout(() => {
+          loadTemplates(retryCount + 1)
+        }, 1000 * (retryCount + 1))
+        return
+      }
+
+      toast.error(
+        language === 'fr'
+          ? 'Erreur lors du chargement des modèles'
+          : 'Failed to load templates'
+      )
     } finally {
       setIsLoading(false)
     }
@@ -90,8 +103,19 @@ export const ChainTemplateImportModal: React.FC<ChainTemplateImportModalProps> =
       const successCount = results.filter(r => r.success).length
       const totalItems = results.reduce((sum, r) => sum + r.categories_created + r.items_created, 0)
 
-      // TODO: Show success/error toast with details
-      console.log(`Import completed: ${successCount}/${results.length} templates, ${totalItems} total items`)
+      if (successCount === results.length) {
+        toast.success(
+          language === 'fr'
+            ? `${successCount} modèles importés avec succès (${totalItems} éléments)`
+            : `${successCount} templates imported successfully (${totalItems} items)`
+        )
+      } else {
+        toast.error(
+          language === 'fr'
+            ? `${successCount}/${results.length} modèles importés. Certains ont échoué.`
+            : `${successCount}/${results.length} templates imported. Some failed.`
+        )
+      }
 
       // Reset and close
       setSelectedTemplates([])
@@ -99,7 +123,11 @@ export const ChainTemplateImportModal: React.FC<ChainTemplateImportModalProps> =
       onClose()
     } catch (error) {
       console.error('Failed to import templates:', error)
-      // TODO: Show error toast
+      toast.error(
+        language === 'fr'
+          ? 'Erreur lors de l\'importation des modèles'
+          : 'Failed to import templates'
+      )
     } finally {
       setIsImporting(false)
     }

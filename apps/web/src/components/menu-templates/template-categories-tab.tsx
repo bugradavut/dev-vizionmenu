@@ -19,6 +19,7 @@ import {
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 import { useEnhancedAuth } from '@/hooks/use-enhanced-auth'
+import toast from 'react-hot-toast'
 import { TemplateCard } from './template-card'
 import { CreateTemplateModal } from './create-template-modal'
 import { chainTemplatesService } from '@/services/chain-templates.service'
@@ -39,7 +40,7 @@ interface ChainTemplate {
 export function TemplateCategoriesTab() {
   const { language } = useLanguage()
   const t = translations[language] || translations.en
-  const { chainId } = useEnhancedAuth()
+  const { chainId, user } = useEnhancedAuth()
 
   // State management
   const [templates, setTemplates] = useState<ChainTemplate[]>([])
@@ -58,10 +59,9 @@ export function TemplateCategoriesTab() {
     return matchesSearch
   })
 
-  // Load templates
+  // Load templates - simple and clean
   const loadTemplates = async () => {
-    if (!chainId) {
-      console.error('No chain ID available')
+    if (!chainId || !user) {
       setIsLoading(false)
       return
     }
@@ -72,7 +72,11 @@ export function TemplateCategoriesTab() {
       setTemplates(result.data.categories || [])
     } catch (error) {
       console.error('Failed to load templates:', error)
-      // TODO: Show error toast
+      toast.error(
+        language === 'fr'
+          ? 'Erreur lors du chargement des modèles'
+          : 'Failed to load templates'
+      )
     } finally {
       setIsLoading(false)
     }
@@ -92,10 +96,18 @@ export function TemplateCategoriesTab() {
 
       await loadTemplates()
       setIsCreateModalOpen(false)
-      // TODO: Show success toast
+      toast.success(
+        language === 'fr'
+          ? 'Modèle créé avec succès'
+          : 'Template created successfully'
+      )
     } catch (error) {
       console.error('Failed to create template:', error)
-      // TODO: Show error toast
+      toast.error(
+        language === 'fr'
+          ? 'Erreur lors de la création du modèle'
+          : 'Failed to create template'
+      )
     }
   }
 
@@ -107,10 +119,18 @@ export function TemplateCategoriesTab() {
       await chainTemplatesService.updateTemplate(chainId, editingTemplate.id, templateData)
       await loadTemplates()
       setEditingTemplate(null)
-      // TODO: Show success toast
+      toast.success(
+        language === 'fr'
+          ? 'Modèle mis à jour avec succès'
+          : 'Template updated successfully'
+      )
     } catch (error) {
       console.error('Failed to update template:', error)
-      // TODO: Show error toast
+      toast.error(
+        language === 'fr'
+          ? 'Erreur lors de la mise à jour du modèle'
+          : 'Failed to update template'
+      )
     }
   }
 
@@ -130,10 +150,18 @@ export function TemplateCategoriesTab() {
       await loadTemplates()
       setDeleteDialogOpen(false)
       setTemplateToDelete(null)
-      // TODO: Show success toast
+      toast.success(
+        language === 'fr'
+          ? 'Modèle supprimé avec succès'
+          : 'Template deleted successfully'
+      )
     } catch (error) {
       console.error('Failed to delete template:', error)
-      // TODO: Show error toast
+      toast.error(
+        language === 'fr'
+          ? 'Erreur lors de la suppression du modèle'
+          : 'Failed to delete template'
+      )
     } finally {
       setIsDeleting(false)
     }
@@ -157,10 +185,13 @@ export function TemplateCategoriesTab() {
 
   // Load data on mount
   useEffect(() => {
-    if (chainId) {
+    if (chainId && user && typeof window !== 'undefined') {
       loadTemplates()
+    } else {
+      setTemplates([])
+      setIsLoading(false)
     }
-  }, [chainId])
+  }, [chainId, user])
 
 
   return (

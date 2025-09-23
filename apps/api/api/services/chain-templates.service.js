@@ -57,6 +57,7 @@ async function getChainTemplates(chainId, options = {}) {
         name: template.template_data.name,
         description: template.template_data.description,
         price: template.template_data.price,
+        image_url: template.template_data.image_url,
         variants: template.template_data.variants || [],
         ingredients: template.template_data.ingredients || [],
         allergens: template.template_data.allergens || [],
@@ -229,6 +230,7 @@ async function createCustomTemplate(chainId, templateData) {
     items = [],
     category_id,
     price,
+    image_url,
     variants = [],
     ingredients = [],
     allergens = [],
@@ -277,6 +279,7 @@ async function createCustomTemplate(chainId, templateData) {
       price: price,
       category_id: category_id,
       category_name: categoryTemplate?.template_data?.name || 'Unknown Category',
+      image_url: image_url || null,
       variants: variants,
       ingredients: ingredients,
       allergens: allergens,
@@ -369,7 +372,7 @@ async function updateTemplate(templateId, chainId, updateData) {
 }
 
 /**
- * Delete template
+ * Delete template (hard delete from database)
  * @param {string} templateId - Template ID
  * @param {string} chainId - Chain ID for security
  * @returns {Object} Delete result
@@ -387,13 +390,10 @@ async function deleteTemplate(templateId, chainId) {
     throw new Error('Template not found or access denied');
   }
 
-  // Soft delete - mark as inactive
+  // Hard delete from database
   const { error: deleteError } = await supabase
     .from('chain_menu_templates')
-    .update({
-      is_active: false,
-      updated_at: new Date().toISOString()
-    })
+    .delete()
     .eq('id', templateId)
     .eq('chain_id', chainId);
 
@@ -408,6 +408,74 @@ async function deleteTemplate(templateId, chainId) {
     template_name: existingTemplate.template_data.name,
     message: 'Template deleted successfully'
   };
+}
+
+/**
+ * Copy template image to branch storage
+ * @param {string} templateImageUrl - Template image URL
+ * @param {string} branchId - Target branch ID
+ * @returns {Object|null} Copy result with new URL
+ */
+async function copyTemplateImageToBranch(templateImageUrl, branchId) {
+  try {
+    // Extract path from template image URL
+    const urlParts = templateImageUrl.split('/storage/v1/object/public/menu-images/');
+    if (urlParts.length !== 2) {
+      console.warn('Invalid template image URL format:', templateImageUrl);
+      return null;
+    }
+
+    const templatePath = urlParts[1];
+
+    // Download the template image
+    const { data: imageData, error: downloadError } = await supabase.storage
+      .from('menu-images')
+      .download(templatePath);
+
+    if (downloadError || !imageData) {
+      console.error('Failed to download template image:', downloadError);
+      return null;
+    }
+
+    // Generate new file path for branch
+    const originalFileName = templatePath.split('/').pop() || 'template-image';
+    const fileExt = originalFileName.split('.').pop();
+    const newFileName = `imported_${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const branchPath = `menu-items/${branchId}/${newFileName}`;
+
+    // Upload to branch storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('menu-images')
+      .upload(branchPath, imageData, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError || !uploadData?.path) {
+      console.error('Failed to upload copied image:', uploadError);
+      return null;
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('menu-images')
+      .getPublicUrl(uploadData.path);
+
+    if (!urlData?.publicUrl) {
+      console.error('Failed to generate public URL for copied image');
+      return null;
+    }
+
+    return {
+      url: urlData.publicUrl,
+      path: uploadData.path,
+      size: imageData.size
+    };
+
+  } catch (error) {
+    console.error('Template image copy failed:', error);
+    return null;
+  }
 }
 
 /**
@@ -498,6 +566,25 @@ async function importTemplateToBranch(templateId, branchId) {
       if (template.template_data.items && template.template_data.items.length > 0) {
         for (const itemData of template.template_data.items) {
           try {
+            // Handle image copying if template item has image
+            let branchImageUrl = itemData.image_url;
+
+            if (itemData.image_url && itemData.image_url.includes('chain-templates/')) {
+              try {
+                // Copy template image to branch storage
+                const copyResult = await copyTemplateImageToBranch(itemData.image_url, branchId);
+                if (copyResult?.url) {
+                  branchImageUrl = copyResult.url;
+                  console.log(`Image copied successfully: ${itemData.image_url} -> ${branchImageUrl}`);
+                } else {
+                  console.warn(`Failed to copy image for item "${itemData.name}", using original URL`);
+                }
+              } catch (copyError) {
+                console.error(`Image copy failed for item "${itemData.name}":`, copyError);
+                // Continue with original URL if copy fails
+              }
+            }
+
             const { error: itemError } = await supabase
               .from('menu_items')
               .insert({
@@ -506,7 +593,7 @@ async function importTemplateToBranch(templateId, branchId) {
                 name: itemData.name,
                 description: itemData.description,
                 price: itemData.price,
-                image_url: itemData.image_url,
+                image_url: branchImageUrl,
                 allergens: itemData.allergens || [],
                 dietary_info: itemData.dietary_info || [],
                 preparation_time: itemData.preparation_time,

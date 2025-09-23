@@ -6,38 +6,34 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Loader2, Download } from 'lucide-react'
 import { useLanguage } from '@/contexts/language-context'
+import { useEnhancedAuth } from '@/hooks/use-enhanced-auth'
+import { branchesService, type Branch } from '@/services/branches.service'
+import toast from 'react-hot-toast'
 
 export function ImportTab() {
   const { language } = useLanguage()
-  const [branches, setBranches] = useState<Array<{ id: string; name: string; categories_count: number; items_count: number; description?: string }>>([])
+  const { chainId, user } = useEnhancedAuth()
+  const [branches, setBranches] = useState<Branch[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Load branches
   const loadBranches = async () => {
+    if (!chainId || !user) {
+      setIsLoading(false)
+      return
+    }
+
     try {
       setIsLoading(true)
-      // TODO: Implement API call to get chain branches
-      // const response = await fetch('/api/v1/branches')
-      // const result = await response.json()
-      // setBranches(result.data || [])
-
-      // Mock data for now
-      setBranches([
-        {
-          id: '1',
-          name: 'Downtown Branch',
-          categories_count: 8,
-          items_count: 45
-        },
-        {
-          id: '2',
-          name: 'Mall Branch',
-          categories_count: 12,
-          items_count: 67
-        }
-      ])
+      const result = await branchesService.getBranches({ chain_id: chainId })
+      setBranches(result.branches || [])
     } catch (error) {
       console.error('Failed to load branches:', error)
+      toast.error(
+        language === 'fr'
+          ? 'Erreur lors du chargement des succursales'
+          : 'Failed to load branches'
+      )
     } finally {
       setIsLoading(false)
     }
@@ -46,17 +42,48 @@ export function ImportTab() {
   // Handle import from branch
   const handleImportFromBranch = async (branchId: string) => {
     try {
-      // TODO: Implement import functionality
-      console.log('Import from branch:', branchId)
-      // Navigate to import selection page or open modal
+      const selectedBranch = branches.find(b => b.id === branchId)
+      if (!selectedBranch) {
+        toast.error(
+          language === 'fr'
+            ? 'Succursale introuvable'
+            : 'Branch not found'
+        )
+        return
+      }
+
+      if (selectedBranch.categories_count === 0) {
+        toast.error(
+          language === 'fr'
+            ? 'Aucune catégorie disponible dans cette succursale'
+            : 'No categories available in this branch'
+        )
+        return
+      }
+
+      toast.success(
+        language === 'fr'
+          ? `Fonctionnalité d'importation disponible prochainement pour ${selectedBranch.name}`
+          : `Import functionality coming soon for ${selectedBranch.name}`
+      )
     } catch (error) {
       console.error('Failed to import from branch:', error)
+      toast.error(
+        language === 'fr'
+          ? 'Erreur lors de l\'importation'
+          : 'Import failed'
+      )
     }
   }
 
   useEffect(() => {
-    loadBranches()
-  }, [])
+    if (chainId && user && typeof window !== 'undefined') {
+      loadBranches()
+    } else {
+      setBranches([])
+      setIsLoading(false)
+    }
+  }, [chainId, user])
 
   return (
     <div className="space-y-6">

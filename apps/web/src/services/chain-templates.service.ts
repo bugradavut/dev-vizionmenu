@@ -36,6 +36,7 @@ export interface CreateTemplateRequest {
   template_type: 'category' | 'item'
   category_id?: string
   price?: number
+  image_url?: string
   ingredients?: string[]
   allergens?: string[]
   nutritional_info?: object

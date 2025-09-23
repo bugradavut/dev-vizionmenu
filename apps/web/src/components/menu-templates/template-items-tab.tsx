@@ -26,6 +26,7 @@ import {
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 import { useEnhancedAuth } from '@/hooks/use-enhanced-auth'
+import toast from 'react-hot-toast'
 import { TemplateCard } from './template-card'
 import { CreateTemplateItemModal } from './create-template-item-modal'
 import { chainTemplatesService } from '@/services/chain-templates.service'
@@ -48,7 +49,7 @@ interface ChainTemplate {
 export function TemplateItemsTab() {
   const { language } = useLanguage()
   const t = translations[language] || translations.en
-  const { chainId } = useEnhancedAuth()
+  const { chainId, user } = useEnhancedAuth()
 
   // State management
   const [categories, setCategories] = useState<ChainTemplate[]>([])
@@ -72,8 +73,7 @@ export function TemplateItemsTab() {
 
   // Load categories for dropdown
   const loadCategories = async () => {
-    if (!chainId) {
-      console.error('No chain ID available')
+    if (!chainId || !user) {
       return
     }
 
@@ -82,13 +82,17 @@ export function TemplateItemsTab() {
       setCategories(result.data.categories || [])
     } catch (error) {
       console.error('Failed to load categories:', error)
+      toast.error(
+        language === 'fr'
+          ? 'Erreur lors du chargement des catégories'
+          : 'Failed to load categories'
+      )
     }
   }
 
   // Load items
   const loadItems = async () => {
-    if (!chainId) {
-      console.error('No chain ID available')
+    if (!chainId || !user) {
       setIsLoading(false)
       return
     }
@@ -99,13 +103,18 @@ export function TemplateItemsTab() {
       setItems(result.data.items || [])
     } catch (error) {
       console.error('Failed to load items:', error)
+      toast.error(
+        language === 'fr'
+          ? 'Erreur lors du chargement des articles'
+          : 'Failed to load items'
+      )
     } finally {
       setIsLoading(false)
     }
   }
 
   // Handle item creation
-  const handleCreateItem = async (itemData: { name: string; description?: string; price: number; category_id?: string; variants?: unknown[] }) => {
+  const handleCreateItem = async (itemData: { name: string; description?: string; price: number; category_id?: string; variants?: unknown[]; image_url?: string }) => {
     if (!chainId || !itemData.category_id) return
 
     try {
@@ -115,6 +124,7 @@ export function TemplateItemsTab() {
         template_type: 'item',
         category_id: itemData.category_id,
         price: itemData.price,
+        image_url: itemData.image_url,
         ingredients: [],
         allergens: [],
         nutritional_info: {}
@@ -122,21 +132,41 @@ export function TemplateItemsTab() {
 
       await loadItems()
       setIsCreateModalOpen(false)
+      toast.success(
+        language === 'fr'
+          ? 'Article créé avec succès'
+          : 'Item created successfully'
+      )
     } catch (error) {
       console.error('Failed to create item template:', error)
+      toast.error(
+        language === 'fr'
+          ? 'Erreur lors de la création de l\'article'
+          : 'Failed to create item'
+      )
     }
   }
 
   // Handle item update
-  const handleUpdateItem = async (itemData: { name: string; description?: string; price: number; category_id?: string; variants?: unknown[] }) => {
+  const handleUpdateItem = async (itemData: { name: string; description?: string; price: number; category_id?: string; variants?: unknown[]; image_url?: string }) => {
     if (!editingItem || !chainId) return
 
     try {
       await chainTemplatesService.updateTemplate(chainId, editingItem.id, itemData)
       await loadItems()
       setEditingItem(null)
+      toast.success(
+        language === 'fr'
+          ? 'Article mis à jour avec succès'
+          : 'Item updated successfully'
+      )
     } catch (error) {
       console.error('Failed to update item template:', error)
+      toast.error(
+        language === 'fr'
+          ? 'Erreur lors de la mise à jour de l\'article'
+          : 'Failed to update item'
+      )
     }
   }
 
@@ -156,8 +186,18 @@ export function TemplateItemsTab() {
       await loadItems()
       setDeleteDialogOpen(false)
       setItemToDelete(null)
+      toast.success(
+        language === 'fr'
+          ? 'Article supprimé avec succès'
+          : 'Item deleted successfully'
+      )
     } catch (error) {
       console.error('Failed to delete item template:', error)
+      toast.error(
+        language === 'fr'
+          ? 'Erreur lors de la suppression de l\'article'
+          : 'Failed to delete item'
+      )
     } finally {
       setIsDeleting(false)
     }
@@ -181,11 +221,15 @@ export function TemplateItemsTab() {
 
   // Load data on mount
   useEffect(() => {
-    if (chainId) {
+    if (chainId && user && typeof window !== 'undefined') {
       loadCategories()
       loadItems()
+    } else {
+      setCategories([])
+      setItems([])
+      setIsLoading(false)
     }
-  }, [chainId])
+  }, [chainId, user])
 
   return (
     <div className="space-y-6">
@@ -239,28 +283,14 @@ export function TemplateItemsTab() {
         </div>
       </div>
 
-      {/* Show message if no categories exist */}
-      {categories.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">
-            {language === 'fr'
-              ? 'Vous devez d\'abord créer des catégories avant de pouvoir ajouter des articles.'
-              : 'You need to create categories first before you can add items.'}
-          </p>
-          <Button variant="outline" onClick={() => window.location.href = '/menu-templates?tab=categories'}>
-            {language === 'fr' ? 'Créer des Catégories' : 'Create Categories'}
-          </Button>
+      {/* Loading state */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <span className="text-muted-foreground">{t.common.loading}</span>
         </div>
       ) : (
         <>
-          {/* Loading state */}
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin mr-2" />
-              <span className="text-muted-foreground">{t.common.loading}</span>
-            </div>
-          ) : (
-            <>
               {/* Items grid */}
               {filteredItems.length > 0 ? (
                 <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
@@ -292,8 +322,6 @@ export function TemplateItemsTab() {
                   )}
                 </div>
               )}
-            </>
-          )}
         </>
       )}
 

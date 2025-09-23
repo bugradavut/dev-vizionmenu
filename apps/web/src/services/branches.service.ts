@@ -23,6 +23,8 @@ export interface Branch {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  categories_count?: number;
+  items_count?: number;
   chain?: {
     id: string;
     name: string;

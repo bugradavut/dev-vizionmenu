@@ -19,6 +19,63 @@ export interface UploadProgress {
 }
 
 /**
+ * Upload template photo for chain templates
+ */
+export async function uploadTemplatePhoto(
+  file: File,
+  chainId: string,
+  onProgress?: (progress: UploadProgress) => void
+): Promise<UploadResult> {
+  try {
+    // Generate unique file path
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `chain-templates/${chainId}/${fileName}`;
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('menu-images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Supabase upload error:', error);
+      throw new Error(`Upload failed: ${error.message}`);
+    }
+
+    if (!data?.path) {
+      throw new Error('Upload completed but no path returned');
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('menu-images')
+      .getPublicUrl(data.path);
+
+    if (!urlData?.publicUrl) {
+      throw new Error('Failed to generate public URL');
+    }
+
+    // Simulate progress for user feedback
+    if (onProgress) {
+      onProgress({ loaded: file.size, total: file.size, percentage: 100 });
+    }
+
+    return {
+      url: urlData.publicUrl,
+      path: data.path,
+      size: file.size
+    };
+
+  } catch (error) {
+    console.error('Template photo upload failed:', error);
+    throw error instanceof Error ? error : new Error('Upload failed');
+  }
+}
+
+/**
  * Upload optimized photo directly to Supabase Storage
  */
 export async function uploadMenuItemPhoto(
@@ -154,6 +211,74 @@ export async function getBranchStorageUsage(branchId: string): Promise<{
   } catch (error) {
     console.error('Storage usage error:', error);
     return { totalFiles: 0, totalSize: 0, formattedSize: '0 KB' };
+  }
+}
+
+/**
+ * Copy template image to branch storage during import
+ */
+export async function copyTemplateImageToBranch(
+  templateImageUrl: string,
+  branchId: string
+): Promise<UploadResult | null> {
+  try {
+    // Extract path from template image URL
+    const urlParts = templateImageUrl.split('/storage/v1/object/public/menu-images/');
+    if (urlParts.length !== 2) {
+      console.warn('Invalid template image URL format:', templateImageUrl);
+      return null;
+    }
+
+    const templatePath = urlParts[1];
+
+    // Download the template image
+    const { data: imageData, error: downloadError } = await supabase.storage
+      .from('menu-images')
+      .download(templatePath);
+
+    if (downloadError || !imageData) {
+      console.error('Failed to download template image:', downloadError);
+      return null;
+    }
+
+    // Generate new file path for branch
+    const originalFileName = templatePath.split('/').pop() || 'template-image';
+    const fileExt = originalFileName.split('.').pop();
+    const newFileName = `imported_${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const branchPath = `menu-items/${branchId}/${newFileName}`;
+
+    // Upload to branch storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('menu-images')
+      .upload(branchPath, imageData, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError || !uploadData?.path) {
+      console.error('Failed to upload copied image:', uploadError);
+      return null;
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('menu-images')
+      .getPublicUrl(uploadData.path);
+
+    if (!urlData?.publicUrl) {
+      console.error('Failed to generate public URL for copied image');
+      return null;
+    }
+
+    return {
+      url: urlData.publicUrl,
+      path: uploadData.path,
+      size: imageData.size
+    };
+
+  } catch (error) {
+    console.error('Template image copy failed:', error);
+    return null;
   }
 }
 

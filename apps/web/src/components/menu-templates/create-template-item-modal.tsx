@@ -39,6 +39,8 @@ import {
   GripVertical
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/language-context'
+import { useEnhancedAuth } from '@/hooks/use-enhanced-auth'
+import { uploadTemplatePhoto } from '@/services/supabase-storage.service'
 
 interface ChainTemplate {
   id: string
@@ -106,8 +108,9 @@ export const CreateTemplateItemModal: React.FC<CreateTemplateItemModalProps> = (
   isLoading = false
 }) => {
   const { language } = useLanguage()
+  const { chainId } = useEnhancedAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [, setSelectedPhoto] = useState<File | null>(null)
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [isOptimizing, setIsOptimizing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -207,10 +210,24 @@ export const CreateTemplateItemModal: React.FC<CreateTemplateItemModalProps> = (
 
     setIsSubmitting(true)
     try {
+      let imageUrl: string | undefined
+
+      // Upload photo if selected and we have chainId
+      if (selectedPhoto && chainId) {
+        try {
+          const uploadResult = await uploadTemplatePhoto(selectedPhoto, chainId)
+          imageUrl = uploadResult.url
+        } catch (uploadError) {
+          console.error('Photo upload failed:', uploadError)
+          // Continue without photo if upload fails
+        }
+      }
+
       // Handle "none" category selection
       const submitData = {
         ...data,
-        category_id: data.category_id === "none" ? undefined : data.category_id
+        category_id: data.category_id === "none" ? undefined : data.category_id,
+        image_url: imageUrl
       }
 
       await onSubmit(submitData)
