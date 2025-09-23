@@ -233,9 +233,10 @@ export function TemplateItemsTab() {
 
   return (
     <div className="space-y-6">
-      {/* Header with search and actions */}
-      <div className="flex flex-col gap-4">
-        <div className="space-y-1">
+      {/* Header - responsive layout */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+        {/* Title and description */}
+        <div className="space-y-1 flex-shrink-0">
           <h2 className="text-xl font-semibold tracking-tight">
             {language === 'fr' ? 'Modèles d\'Articles' : 'Item Templates'}
           </h2>
@@ -246,8 +247,10 @@ export function TemplateItemsTab() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 min-w-0 max-w-sm">
+        {/* Search and actions */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-2">
+          {/* Search bar */}
+          <div className="relative w-full lg:w-80">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder={language === 'fr' ? 'Rechercher des articles...' : 'Search items...'}
@@ -257,29 +260,34 @@ export function TemplateItemsTab() {
             />
           </div>
 
-          <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder={language === 'fr' ? 'Toutes catégories' : 'All categories'} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">
-                {language === 'fr' ? 'Toutes catégories' : 'All categories'}
-              </SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+              <SelectTrigger className="w-full sm:w-48 h-9">
+                <SelectValue placeholder={language === 'fr' ? 'Toutes catégories' : 'All categories'} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  {language === 'fr' ? 'Toutes catégories' : 'All categories'}
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Button
-            onClick={() => setIsCreateModalOpen(true)}
-            disabled={categories.length === 0}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {language === 'fr' ? 'Nouvel Article' : 'New Item'}
-          </Button>
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              disabled={categories.length === 0}
+              className="text-xs sm:text-sm flex-1 sm:flex-none h-9"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+              {language === 'fr' ? 'Ajouter Article' : 'Add Item'}
+            </Button>
+          </div>
         </div>
       </div>
 

@@ -196,9 +196,10 @@ export function TemplateCategoriesTab() {
 
   return (
     <div className="space-y-6">
-      {/* Header with search and actions */}
-      <div className="flex flex-col gap-4">
-        <div className="space-y-1">
+      {/* Header - responsive layout */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+        {/* Title and description */}
+        <div className="space-y-1 flex-shrink-0">
           <h2 className="text-xl font-semibold tracking-tight">
             {language === 'fr' ? 'Modèles de Catégories' : 'Category Templates'}
           </h2>
@@ -209,8 +210,10 @@ export function TemplateCategoriesTab() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 min-w-0 max-w-sm">
+        {/* Search and actions */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-2">
+          {/* Search bar */}
+          <div className="relative w-full lg:w-80">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder={language === 'fr' ? 'Rechercher des modèles...' : 'Search templates...'}
@@ -220,11 +223,17 @@ export function TemplateCategoriesTab() {
             />
           </div>
 
-
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            {language === 'fr' ? 'Nouveau Modèle' : 'New Template'}
-          </Button>
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="text-xs sm:text-sm flex-1 sm:flex-none h-9"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+              {language === 'fr' ? 'Ajouter Modèle' : 'Add Template'}
+            </Button>
+          </div>
         </div>
       </div>
 
