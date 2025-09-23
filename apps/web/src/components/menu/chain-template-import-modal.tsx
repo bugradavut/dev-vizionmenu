@@ -187,20 +187,22 @@ export const ChainTemplateImportModal: React.FC<ChainTemplateImportModalProps> =
                         ? `${selectedCount} modèle(s) sélectionné(s)`
                         : `${selectedCount} template(s) selected`}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-3">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={selectAll}
                         disabled={isImporting}
+                        className="bg-green-50 border-green-400 text-green-700 hover:bg-green-100"
                       >
                         {language === 'fr' ? 'Tout sélectionner' : 'Select All'}
                       </Button>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={clearAll}
                         disabled={isImporting}
+                        className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
                       >
                         {language === 'fr' ? 'Tout déselectionner' : 'Clear All'}
                       </Button>
@@ -208,41 +210,58 @@ export const ChainTemplateImportModal: React.FC<ChainTemplateImportModalProps> =
                   </div>
 
                   {/* Templates list */}
-                  <div className="space-y-3 max-h-60 overflow-y-auto">
+                  <div className="space-y-4 max-h-60 overflow-y-auto">
                     {templates.map((template) => (
                       <div
                         key={template.id}
-                        className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50"
+                        className={`relative p-4 border-2 rounded-xl transition-all duration-200 cursor-pointer ${
+                          selectedTemplates.includes(template.id)
+                            ? 'border-blue-500 bg-blue-50 shadow-md'
+                            : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                        }`}
+                        onClick={() => !isImporting && toggleTemplate(template.id)}
                       >
-                        <Checkbox
-                          id={`template-${template.id}`}
-                          checked={selectedTemplates.includes(template.id)}
-                          onCheckedChange={() => toggleTemplate(template.id)}
-                          disabled={isImporting}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <Label
-                            htmlFor={`template-${template.id}`}
-                            className="font-medium cursor-pointer flex items-center gap-2"
-                          >
-                            <FileText className="w-4 h-4 text-blue-600" />
-                            {template.name}
-                          </Label>
-                          {template.description && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {template.description}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-4 mt-2">
-                            <Badge variant="secondary" className="text-xs">
-                              <Package className="w-3 h-3 mr-1" />
-                              {template.items_count} {language === 'fr' ? 'articles' : 'items'}
-                            </Badge>
-                            <Badge variant="outline" className="text-xs">
-                              v{template.version}
-                            </Badge>
+                        <div className="flex items-start space-x-4">
+                          <Checkbox
+                            id={`template-${template.id}`}
+                            checked={selectedTemplates.includes(template.id)}
+                            onCheckedChange={() => toggleTemplate(template.id)}
+                            disabled={isImporting}
+                            className="mt-1"
+                          />
+
+                          <div className="flex-1 min-w-0">
+                            {/* Header with title and badge */}
+                            <div className="flex items-center justify-between">
+                              {/* Left side - Title and description */}
+                              <div className="flex-1">
+                                <Label
+                                  htmlFor={`template-${template.id}`}
+                                  className="text-lg font-semibold cursor-pointer block"
+                                >
+                                  {template.name}
+                                </Label>
+                                {template.description && (
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {template.description}
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Right side - Items count badge */}
+                              <div className="flex items-center justify-center ml-4">
+                                <Badge
+                                  variant="secondary"
+                                  className="text-sm bg-gray-100 text-gray-700 border-gray-200 px-3 py-1 flex items-center"
+                                >
+                                  <Package className="w-4 h-4 mr-2" />
+                                  {template.items_count} {language === 'fr' ? 'articles' : 'items'}
+                                </Badge>
+                              </div>
+                            </div>
                           </div>
                         </div>
+
                       </div>
                     ))}
                   </div>
