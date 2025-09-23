@@ -11,17 +11,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { 
-  Plus, 
+import {
+  Plus,
   Search,
   Loader2,
-  EyeOff
+  EyeOff,
+  Download
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 import { menuService, type MenuCategory, type CreateCategoryRequest, type UpdateCategoryRequest } from '@/services/menu.service'
 import { MenuCategoryCard } from './menu-category-card'
 import { CategoryCreateModal } from './category-create-modal'
+import { ChainTemplateImportModal } from './chain-template-import-modal'
 
 // Define form data interface to match the modal's form schema
 interface CategoryFormData {
@@ -48,6 +50,7 @@ export function CategoriesTab() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showSmartDeleteDialog, setShowSmartDeleteDialog] = useState(false)
   const [itemCount, setItemCount] = useState(0)
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
 
   // Filter and sort categories based on search query, visibility, and display order
   const filteredCategories = categories
@@ -214,7 +217,15 @@ export function CategoriesTab() {
               : (language === 'fr' ? 'Afficher les masqués' : 'Show Inactive')
             } ({showHidden ? categories.filter(c => c.is_active).length : categories.filter(c => !c.is_active).length})
           </Button>
-          
+
+          <Button
+            variant="outline"
+            onClick={() => setIsImportModalOpen(true)}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {language === 'fr' ? 'Importer Modèles' : 'Import Templates'}
+          </Button>
+
           <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             {t.menuManagement.newCategory}
@@ -417,6 +428,13 @@ export function CategoriesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Chain Template Import Modal */}
+      <ChainTemplateImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImportComplete={loadCategories}
+      />
     </div>
   )
 }

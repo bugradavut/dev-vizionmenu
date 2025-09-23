@@ -50,7 +50,7 @@ class ApiClient {
   private async getAuthToken(): Promise<string | null> {
     // Get token from Supabase session
     if (typeof window === 'undefined') return null;
-    
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       return session?.access_token || null;

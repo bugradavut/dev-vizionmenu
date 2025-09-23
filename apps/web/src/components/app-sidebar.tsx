@@ -127,6 +127,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             },
           ],
         }] : []),
+        // Menu Templates - Chain Owner only
+        ...(isChainOwner ? [{
+          title: language === 'fr' ? 'Gestion de Menu' : 'Menu Management',
+          url: "/menu-templates",
+          icon: BookOpen,
+          items: [
+            {
+              title: language === 'fr' ? 'Modèles de Menu' : 'Menu Templates',
+              url: "/menu-templates",
+            },
+          ],
+        }] : []),
         // Campaigns - Hide from Chain Owners (branch-specific)
         ...(!isChainOwner ? [{
           title: t.navigation.campaigns,

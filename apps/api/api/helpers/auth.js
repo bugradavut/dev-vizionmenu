@@ -9,7 +9,10 @@ async function getUserBranchContext(req, res) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'Missing or invalid authorization header' }
+        type: 'unauthorized',
+        title: 'Unauthorized',
+        status: 401,
+        detail: 'Missing or invalid authorization header'
       });
       return null;
     }
@@ -24,13 +27,19 @@ async function getUserBranchContext(req, res) {
       
       if (!userId) {
         res.status(401).json({
-          error: { code: 'UNAUTHORIZED', message: 'Invalid token - no user ID' }
+          type: 'unauthorized',
+          title: 'Unauthorized',
+          status: 401,
+          detail: 'Invalid token - no user ID'
         });
         return null;
       }
     } catch (error) {
       res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'Invalid token format' }
+        type: 'unauthorized',
+        title: 'Unauthorized',
+        status: 401,
+        detail: 'Invalid token format'
       });
       return null;
     }
@@ -42,17 +51,47 @@ async function getUserBranchContext(req, res) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Get user branch context
+    // First try to get user as chain owner
+    const { data: chainOwner, error: chainError } = await supabase
+      .from('restaurant_chains')
+      .select('id, name')
+      .eq('owner_id', userId)
+      .single();
+
+    if (chainOwner) {
+      // User is a chain owner
+      return {
+        user_id: userId,
+        chain_id: chainOwner.id,
+        isPlatformAdmin: false,
+        isChainOwner: true,
+        chainId: chainOwner.id,
+        role: 'chain_owner',
+        is_active: true
+      };
+    }
+
+    // If not chain owner, try branch_users with branch info to get chain_id
     const { data: branchUser, error: branchError } = await supabase
       .from('branch_users')
-      .select('*')
+      .select(`
+        *,
+        branches!inner(
+          id,
+          name,
+          chain_id
+        )
+      `)
       .eq('user_id', userId)
       .eq('is_active', true)
       .single();
 
     if (branchError || !branchUser) {
       res.status(404).json({
-        error: { code: 'USER_NOT_FOUND', message: 'User not found in branch_users table' }
+        type: 'user_not_found',
+        title: 'User Not Found',
+        status: 404,
+        detail: 'User not found in branch_users table or as chain owner'
       });
       return null;
     }
@@ -60,16 +99,28 @@ async function getUserBranchContext(req, res) {
     // Check if user is active
     if (!branchUser.is_active) {
       res.status(403).json({
-        error: { code: 'ACCOUNT_INACTIVE', message: 'User account is inactive' }
+        type: 'account_inactive',
+        title: 'Account Inactive',
+        status: 403,
+        detail: 'User account is inactive'
       });
       return null;
     }
 
-    return branchUser;
+    return {
+      ...branchUser,
+      chainId: branchUser.branches.chain_id,
+      branchId: branchUser.branch_id,
+      isPlatformAdmin: false,
+      isChainOwner: false
+    };
   } catch (error) {
     console.error('getUserBranchContext error:', error);
     res.status(500).json({
-      error: { code: 'INTERNAL_ERROR', message: 'Failed to get user context' }
+      type: 'internal_error',
+      title: 'Internal Error',
+      status: 500,
+      detail: 'Failed to get user context'
     });
     return null;
   }
