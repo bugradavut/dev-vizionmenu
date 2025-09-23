@@ -15,6 +15,10 @@ export interface ChainTemplate {
   created_at: string
   updated_at: string
   version: number
+  image_url?: string
+  price?: number
+  category_id?: string
+  category_name?: string
 }
 
 export interface ChainTemplatesResponse {

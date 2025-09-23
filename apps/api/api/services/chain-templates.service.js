@@ -20,24 +20,24 @@ const supabase = createClient(
 async function getChainTemplates(chainId, options = {}) {
   const { template_type } = options;
 
-  let query = supabase
+  // Always fetch ALL templates first for accurate counts
+  let allQuery = supabase
     .from('chain_menu_templates')
     .select('*')
     .eq('chain_id', chainId)
     .eq('is_active', true)
     .order('created_at', { ascending: true });
 
-  // Filter by template type if specified
-  if (template_type) {
-    query = query.eq('template_type', template_type);
-  }
-
-  const { data: templates, error } = await query;
+  const { data: allTemplates, error } = await allQuery;
 
   if (error) {
     console.error('Templates fetch error:', error);
     throw new Error(`Failed to fetch templates: ${error.message}`);
   }
+
+  // Use all templates for processing
+  const templates = allTemplates;
+
 
   // Group templates by type
   const groupedTemplates = {
@@ -75,6 +75,12 @@ async function getChainTemplates(chainId, options = {}) {
         ...(itemTemplatesByCategory[template.id] || []) // Item templates for this category
       ];
 
+      // Count item templates that belong to this category
+      const itemTemplatesForCategory = templates.filter(t =>
+        t.template_type === 'item' && t.template_data.category_id === template.id
+      );
+
+
       groupedTemplates.categories.push({
         id: template.id,
         name: template.template_data.name,
@@ -82,7 +88,7 @@ async function getChainTemplates(chainId, options = {}) {
         icon: template.template_data.icon,
         display_order: template.template_data.display_order || 0,
         template_type: 'category',
-        items_count: categoryItems.length,
+        items_count: itemTemplatesForCategory.length,
         created_at: template.created_at,
         updated_at: template.updated_at,
         version: template.version,
@@ -98,6 +104,7 @@ async function getChainTemplates(chainId, options = {}) {
         name: template.template_data.name,
         description: template.template_data.description,
         price: template.template_data.price,
+        image_url: template.template_data.image_url,
         category_id: template.template_data.category_id,
         category_name: template.template_data.category_name,
         template_type: 'item',
@@ -109,8 +116,16 @@ async function getChainTemplates(chainId, options = {}) {
     }
   });
 
+  // Filter return data based on template_type if specified
+  let returnData = groupedTemplates;
+  if (template_type === 'category') {
+    returnData = { categories: groupedTemplates.categories, items: [] };
+  } else if (template_type === 'item') {
+    returnData = { categories: [], items: groupedTemplates.items };
+  }
+
   return {
-    data: groupedTemplates,
+    data: returnData,
     meta: {
       total: templates.length,
       categories: groupedTemplates.categories.length,
@@ -310,6 +325,10 @@ async function createCustomTemplate(chainId, templateData) {
     id: createdTemplate.id,
     name: template_data.name,
     description: template_data.description,
+    price: template_data.price,
+    image_url: template_data.image_url,
+    category_id: template_data.category_id,
+    category_name: template_data.category_name,
     template_type: createdTemplate.template_type,
     items_count: template_type === 'category' ? template_data.items.length : 1,
     created_at: createdTemplate.created_at,
