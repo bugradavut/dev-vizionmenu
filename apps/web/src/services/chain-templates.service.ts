@@ -34,6 +34,11 @@ export interface CreateTemplateRequest {
   description?: string
   icon?: string
   template_type: 'category' | 'item'
+  category_id?: string
+  price?: number
+  ingredients?: string[]
+  allergens?: string[]
+  nutritional_info?: object
   items?: Array<{
     name: string
     description?: string

@@ -9,7 +9,7 @@ import { useLanguage } from '@/contexts/language-context'
 
 export function ImportTab() {
   const { language } = useLanguage()
-  const [branches, setBranches] = useState([])
+  const [branches, setBranches] = useState<Array<{ id: string; name: string; categories_count: number; items_count: number; description?: string }>>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Load branches
@@ -82,7 +82,7 @@ export function ImportTab() {
         <>
           {branches.length > 0 ? (
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {branches.map((branch: { id: string; name: string; description?: string }) => (
+              {branches.map((branch) => (
                 <Card key={branch.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
                     <CardTitle className="text-lg">{branch.name}</CardTitle>

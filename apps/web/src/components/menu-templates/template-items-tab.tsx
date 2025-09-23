@@ -79,7 +79,7 @@ export function TemplateItemsTab() {
 
     try {
       const result = await chainTemplatesService.getChainTemplates(chainId, 'category')
-      setCategories(result.categories || [])
+      setCategories(result.data.categories || [])
     } catch (error) {
       console.error('Failed to load categories:', error)
     }
@@ -96,7 +96,7 @@ export function TemplateItemsTab() {
     try {
       setIsLoading(true)
       const result = await chainTemplatesService.getChainTemplates(chainId, 'item')
-      setItems(result.items || [])
+      setItems(result.data.items || [])
     } catch (error) {
       console.error('Failed to load items:', error)
     } finally {
@@ -105,8 +105,8 @@ export function TemplateItemsTab() {
   }
 
   // Handle item creation
-  const handleCreateItem = async (itemData: { name: string; description?: string; price: number; category_id: string; variants?: unknown[] }) => {
-    if (!chainId) return
+  const handleCreateItem = async (itemData: { name: string; description?: string; price: number; category_id?: string; variants?: unknown[] }) => {
+    if (!chainId || !itemData.category_id) return
 
     try {
       await chainTemplatesService.createTemplate(chainId, {
@@ -115,9 +115,9 @@ export function TemplateItemsTab() {
         template_type: 'item',
         category_id: itemData.category_id,
         price: itemData.price,
-        ingredients: itemData.ingredients || [],
-        allergens: itemData.allergens || [],
-        nutritional_info: itemData.nutritional_info || {}
+        ingredients: [],
+        allergens: [],
+        nutritional_info: {}
       })
 
       await loadItems()
@@ -128,7 +128,7 @@ export function TemplateItemsTab() {
   }
 
   // Handle item update
-  const handleUpdateItem = async (itemData: { name: string; description?: string; price: number; category_id: string; variants?: unknown[] }) => {
+  const handleUpdateItem = async (itemData: { name: string; description?: string; price: number; category_id?: string; variants?: unknown[] }) => {
     if (!editingItem || !chainId) return
 
     try {

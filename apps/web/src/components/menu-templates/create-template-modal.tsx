@@ -22,7 +22,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Plus, Minus } from 'lucide-react'
 import { useLanguage } from '@/contexts/language-context'
 import { CategoryIconPicker } from '@/components/menu/category-icon-picker'
 import { translations } from '@/lib/translations'
@@ -42,7 +41,7 @@ interface ChainTemplate {
 interface CreateTemplateModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (templateData: { name: string; description?: string; icon?: string; display_order?: number }) => Promise<void>
+  onSubmit: (templateData: { name: string; description?: string; icon?: string }) => Promise<void>
   template?: ChainTemplate | null
 }
 
@@ -54,10 +53,6 @@ const createTemplateSchema = (language: string) => z.object({
   description: z.string()
     .max(500, language === 'fr' ? 'La description doit contenir au maximum 500 caractères' : 'Description must be 500 characters or less')
     .optional(),
-  display_order: z.number()
-    .min(0, language === 'fr' ? 'L\'ordre d\'affichage doit être un nombre positif' : 'Display order must be a positive number')
-    .max(999, language === 'fr' ? 'L\'ordre d\'affichage doit être inférieur à 1000' : 'Display order must be less than 1000')
-    .default(0),
   icon: z.string().optional(),
 })
 
@@ -78,7 +73,6 @@ export const CreateTemplateModal: React.FC<CreateTemplateModalProps> = ({
     defaultValues: {
       name: '',
       description: '',
-      display_order: 0,
       icon: '',
     }
   })
@@ -89,14 +83,12 @@ export const CreateTemplateModal: React.FC<CreateTemplateModalProps> = ({
       form.reset({
         name: template.name,
         description: template.description || '',
-        display_order: 0,
         icon: template.icon || '',
       })
     } else if (isOpen) {
       form.reset({
         name: '',
         description: '',
-        display_order: 0,
         icon: '',
       })
     }
@@ -200,49 +192,6 @@ export const CreateTemplateModal: React.FC<CreateTemplateModalProps> = ({
               )}
             />
 
-            {/* Display Order */}
-            <FormField
-              control={form.control}
-              name="display_order"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    {language === 'fr' ? 'Ordre d\'affichage' : 'Display Order'}
-                  </FormLabel>
-                  <FormControl>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => field.onChange(Math.max(0, field.value - 1))}
-                        className="h-10 w-10"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="999"
-                        value={field.value}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        className="text-center"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => field.onChange(Math.min(999, field.value + 1))}
-                        className="h-10 w-10"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <DialogFooter>
               <Button

@@ -69,7 +69,7 @@ export function TemplateCategoriesTab() {
     try {
       setIsLoading(true)
       const result = await chainTemplatesService.getChainTemplates(chainId, 'category')
-      setTemplates(result.categories || [])
+      setTemplates(result.data.categories || [])
     } catch (error) {
       console.error('Failed to load templates:', error)
       // TODO: Show error toast
@@ -79,7 +79,7 @@ export function TemplateCategoriesTab() {
   }
 
   // Handle template creation
-  const handleCreateTemplate = async (templateData: { name: string; description?: string; icon?: string; display_order?: number }) => {
+  const handleCreateTemplate = async (templateData: { name: string; description?: string; icon?: string }) => {
     if (!chainId) return
 
     try {
@@ -87,8 +87,7 @@ export function TemplateCategoriesTab() {
         name: templateData.name,
         description: templateData.description,
         icon: templateData.icon,
-        template_type: 'category',
-        items: templateData.items || []
+        template_type: 'category'
       })
 
       await loadTemplates()
@@ -101,7 +100,7 @@ export function TemplateCategoriesTab() {
   }
 
   // Handle template update
-  const handleUpdateTemplate = async (templateData: { name: string; description?: string; icon?: string; display_order?: number }) => {
+  const handleUpdateTemplate = async (templateData: { name: string; description?: string; icon?: string }) => {
     if (!editingTemplate || !chainId) return
 
     try {

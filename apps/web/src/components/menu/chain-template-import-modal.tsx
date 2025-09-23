@@ -46,7 +46,7 @@ export const ChainTemplateImportModal: React.FC<ChainTemplateImportModalProps> =
     try {
       setIsLoading(true)
       const response = await chainTemplatesService.getChainTemplates(chainId)
-      setTemplates(response.categories || [])
+      setTemplates(response.data.categories || [])
     } catch (error) {
       console.error('Failed to load chain templates:', error)
       // TODO: Show error toast
