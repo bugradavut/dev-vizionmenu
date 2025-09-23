@@ -69,7 +69,7 @@ export function TemplateCategoriesTab() {
     try {
       setIsLoading(true)
       const result = await chainTemplatesService.getChainTemplates(chainId, 'category')
-      setTemplates(result.data.categories || [])
+      setTemplates(result?.categories || [])
     } catch (error) {
       console.error('Failed to load templates:', error)
       toast.error(

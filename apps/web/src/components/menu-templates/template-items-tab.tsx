@@ -79,7 +79,7 @@ export function TemplateItemsTab() {
 
     try {
       const result = await chainTemplatesService.getChainTemplates(chainId, 'category')
-      setCategories(result.data.categories || [])
+      setCategories(result?.categories || [])
     } catch (error) {
       console.error('Failed to load categories:', error)
       toast.error(
@@ -100,7 +100,7 @@ export function TemplateItemsTab() {
     try {
       setIsLoading(true)
       const result = await chainTemplatesService.getChainTemplates(chainId, 'item')
-      setItems(result.data.items || [])
+      setItems(result?.items || [])
     } catch (error) {
       console.error('Failed to load items:', error)
       toast.error(

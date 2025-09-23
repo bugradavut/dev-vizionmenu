@@ -18,15 +18,8 @@ export interface ChainTemplate {
 }
 
 export interface ChainTemplatesResponse {
-  data: {
-    categories: ChainTemplate[]
-    items: ChainTemplate[]
-  }
-  meta: {
-    total: number
-    categories: number
-    items: number
-  }
+  categories: ChainTemplate[]
+  items: ChainTemplate[]
 }
 
 export interface CreateTemplateRequest {
