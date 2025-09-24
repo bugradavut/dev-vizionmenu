@@ -1097,10 +1097,8 @@ export default function BranchSettingsPage() {
                                     key={day}
                                     type="button"
                                     onClick={() => handleWorkingDayToggle(day)}
-                                    disabled={restaurantClosed}
                                     className={cn(
                                       "flex items-center gap-2 rounded-full border px-2.5 py-1 text-sm transition-colors relative",
-                                      restaurantClosed && "cursor-not-allowed opacity-50",
                                       isSelected
                                         ? currentMode === 'advanced' && hasDifferentHours
                                           ? "border-purple-200 bg-purple-50 text-purple-600 shadow-sm"
@@ -1143,7 +1141,6 @@ export default function BranchSettingsPage() {
                                     id="restaurant-hours-open"
                                     value={openTime}
                                     onChange={handleOpenTimeChange}
-                                    disabled={restaurantClosed}
                                     placeholder="Select time"
                                   />
                                 </div>
@@ -1158,7 +1155,6 @@ export default function BranchSettingsPage() {
                                     id="restaurant-hours-close"
                                     value={closeTime}
                                     onChange={handleCloseTimeChange}
-                                    disabled={restaurantClosed}
                                     placeholder="Select time"
                                   />
                                 </div>
@@ -1167,17 +1163,16 @@ export default function BranchSettingsPage() {
 
                             {/* Advance Settings Button */}
                             <div className="pt-3 border-t border-gray-200 mt-4">
-                              <div className="pt-1 flex items-center justify-center">
+                              <div className="pt-1">
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   className={cn(
-                                    "text-xs transition-all duration-200",
+                                    "w-full text-xs transition-all duration-200",
                                     currentMode === 'advanced'
                                       ? "border border-purple-200 bg-purple-50 hover:bg-purple-100 hover:border-purple-300 text-purple-700"
                                       : "border border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300"
                                   )}
-                                  disabled={restaurantClosed}
                                   onClick={() => {
                                     if (currentMode === 'simple') {
                                       handleModeSwitch();

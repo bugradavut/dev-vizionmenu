@@ -31,7 +31,7 @@ import { OrderContextProvider } from '@/app/order/contexts/order-context'
 import { useCart } from '@/app/order/contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
 import { useCustomerBranchSettings } from '@/hooks/use-customer-branch-settings'
-import { migrateRestaurantHours, type RestaurantHours } from '@/utils/restaurant-hours'
+import { migrateRestaurantHours, isRestaurantMarkedAsBusy, type RestaurantHours } from '@/utils/restaurant-hours'
 import { RestaurantClosedModal } from '@/components/modals/restaurant-closed-modal'
 import { PreOrderModal } from '@/app/order/components/pre-order-modal'
 import type { Chain, Branch } from '@/services/customer-chains.service'
@@ -564,6 +564,7 @@ export function MenuExperience({
         }}
         onScheduleOrder={allowSchedulingWhenClosed ? handleScheduleOrder : undefined}
         restaurantHours={settings.restaurantHours ? migrateRestaurantHours(settings.restaurantHours as unknown as RestaurantHours) : undefined}
+        isBusy={settings.restaurantHours ? isRestaurantMarkedAsBusy(settings.restaurantHours as unknown as RestaurantHours) : false}
       />
 
       {/* Pre-Order Modal */}

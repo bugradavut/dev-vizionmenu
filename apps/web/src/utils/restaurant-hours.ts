@@ -378,6 +378,22 @@ export function switchToSimpleMode(restaurantHours: RestaurantHours): Restaurant
 }
 
 /**
+ * Check if restaurant is marked as busy (switch turned off manually)
+ */
+export function isRestaurantMarkedAsBusy(restaurantHours?: RestaurantHours): boolean {
+  if (!restaurantHours) {
+    return false;
+  }
+
+  // If restaurant is manually marked as closed (switch off)
+  if (!restaurantHours.isOpen) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Get all working days from restaurant hours (regardless of mode)
  */
 export function getAllWorkingDays(restaurantHours: RestaurantHours): string[] {
