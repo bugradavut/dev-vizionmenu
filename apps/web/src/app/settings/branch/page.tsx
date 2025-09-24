@@ -5,9 +5,9 @@ import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
 import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   SidebarInset,
   SidebarTrigger,
@@ -69,27 +69,45 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
   }
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={isOpen} onOpenChange={setIsOpen} modal={false}>
       <PopoverTrigger asChild>
         <Button
           id={id}
           variant="outline"
           disabled={disabled}
           className={cn(
-            "w-full justify-start pl-9 text-left font-normal",
+            "w-full justify-center text-center font-normal",
             !value && "text-muted-foreground"
           )}
         >
           {value || placeholder}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start">
-        <div className="p-3">
+      <PopoverContent
+        className="w-80 p-0 z-[100] shadow-lg"
+        align="start"
+        side="bottom"
+        avoidCollisions={true}
+        sideOffset={4}
+        collisionPadding={10}
+        sticky="always"
+        style={{ pointerEvents: 'auto', touchAction: 'auto' }}
+      >
+        <div className="p-3" style={{ touchAction: 'auto' }}>
           <div className="grid grid-cols-2 gap-4">
             {/* Hours */}
             <div>
               <div className="text-xs font-medium text-muted-foreground mb-2">Hours</div>
-              <ScrollArea className="h-32 w-full rounded border">
+              <div
+                className="h-32 w-full rounded border overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                style={{
+                  scrollBehavior: 'smooth',
+                  overscrollBehavior: 'contain',
+                  WebkitOverflowScrolling: 'touch'
+                }}
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+              >
                 <div className="grid grid-cols-3 gap-1 p-2">
                   {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map((hour) => (
                     <Button
@@ -103,13 +121,22 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                     </Button>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
 
             {/* Minutes */}
             <div>
               <div className="text-xs font-medium text-muted-foreground mb-2">Minutes</div>
-              <ScrollArea className="h-32 w-full rounded border">
+              <div
+                className="h-32 w-full rounded border overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                style={{
+                  scrollBehavior: 'smooth',
+                  overscrollBehavior: 'contain',
+                  WebkitOverflowScrolling: 'touch'
+                }}
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+              >
                 <div className="grid grid-cols-2 gap-1 p-2">
                   {['00', '15', '30', '45'].map((minute) => (
                     <Button
@@ -123,7 +150,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                     </Button>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
           </div>
         </div>
@@ -216,7 +243,8 @@ export default function BranchSettingsPage() {
   const t = translations[language] || translations.en
   const restaurantHoursCopy = (t.settingsBranch.restaurantHours ?? RESTAURANT_HOURS_FALLBACK[language] ?? RESTAURANT_HOURS_FALLBACK.en) as RestaurantHoursCopy
   const [saved, setSaved] = useState(false)
-  
+  const [showCustomSchedule, setShowCustomSchedule] = useState(false)
+
   // Local state for input values to allow empty strings
   const [baseDelayInput, setBaseDelayInput] = useState("")
   const [deliveryDelayInput, setDeliveryDelayInput] = useState("")
@@ -1002,6 +1030,20 @@ export default function BranchSettingsPage() {
                                 </div>
                               </div>
                             </div>
+
+                            {/* Customize Schedule Button - Inside Default Hours */}
+                            <div className="pt-3 flex items-center justify-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs border border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200"
+                                disabled={restaurantClosed}
+                                onClick={() => setShowCustomSchedule(true)}
+                              >
+                                <Clock className="h-3 w-3 mr-1.5" />
+                                {language === 'fr' ? 'Personnaliser les horaires par jour' : 'Customize Schedule per Day'}
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </CardContent>
@@ -1035,7 +1077,127 @@ export default function BranchSettingsPage() {
               </div>
             </div>
           )}
-          
+
+          {/* Custom Schedule Modal */}
+          <Dialog open={showCustomSchedule} onOpenChange={setShowCustomSchedule}>
+            <DialogContent
+              className="max-w-2xl max-h-[85vh] flex flex-col"
+              onPointerDownOutside={(e) => {
+                // Allow scroll in popovers
+                const target = e.target as Element
+                const isPopover = target?.closest('[data-radix-popper-content-wrapper]')
+                if (!isPopover) {
+                  setShowCustomSchedule(false)
+                }
+              }}
+            >
+              <DialogHeader className="flex-shrink-0">
+                <DialogTitle className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-50 rounded-lg">
+                    <Clock className="h-5 w-5 text-purple-600" />
+                  </div>
+                  {language === 'fr' ? 'Horaires personnalisés par jour' : 'Custom Schedule per Day'}
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  {language === 'fr'
+                    ? 'Définissez des heures différentes pour chaque jour de la semaine.'
+                    : 'Set different hours for each day of the week.'
+                  }
+                </p>
+
+                  <div className="max-h-[60vh] overflow-y-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-2">
+                      {workingDayOrder.map((day) => (
+                        <div key={day} className="border border-gray-200 rounded-lg p-4 space-y-4">
+                          {/* Day Header */}
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium">
+                              {restaurantHoursCopy.dayLabels[day]}
+                            </div>
+                            <Switch
+                              checked={selectedWorkingDays.includes(day)}
+                              onCheckedChange={() => handleWorkingDayToggle(day)}
+                              className="scale-75"
+                            />
+                          </div>
+
+                          {/* Time Settings */}
+                          {selectedWorkingDays.includes(day) ? (
+                            <div className="space-y-3">
+                              {/* Time Pickers Row */}
+                              <div className="grid grid-cols-2 gap-2">
+                                {/* Open Time */}
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-medium text-muted-foreground">
+                                    {language === 'fr' ? 'Ouverture' : 'Open'}
+                                  </label>
+                                  <CustomTimePicker
+                                    id={`${day}-open`}
+                                    value={openTime}
+                                    onChange={handleOpenTimeChange}
+                                    placeholder="09:00"
+                                  />
+                                </div>
+
+                                {/* Close Time */}
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-medium text-muted-foreground">
+                                    {language === 'fr' ? 'Fermeture' : 'Close'}
+                                  </label>
+                                  <CustomTimePicker
+                                    id={`${day}-close`}
+                                    value={closeTime}
+                                    onChange={handleCloseTimeChange}
+                                    placeholder="22:00"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center py-8 text-muted-foreground">
+                              <div className="text-center">
+                                <div className="text-2xl mb-2">🔒</div>
+                                <div className="text-xs">
+                                  {language === 'fr' ? 'Fermé' : 'Closed'}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+              </div>
+
+              {/* Footer */}
+              <div className="pt-4 border-t mt-6">
+                <div className="flex justify-between">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowCustomSchedule(false)}
+                  >
+                    {language === 'fr' ? '← Retour aux horaires simples' : '← Back to Simple Hours'}
+                  </Button>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowCustomSchedule(false)}
+                    >
+                      {language === 'fr' ? 'Annuler' : 'Cancel'}
+                    </Button>
+                    <Button onClick={() => setShowCustomSchedule(false)}>
+                      {language === 'fr' ? 'Enregistrer' : 'Save Changes'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
         </SidebarInset>
       </DashboardLayout>
     </AuthGuard>
