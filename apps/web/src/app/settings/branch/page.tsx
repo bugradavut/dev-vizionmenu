@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, CreditCard, DollarSign, Bike, CalendarDays, Check as CheckIcon } from "lucide-react"
+import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, CreditCard, DollarSign, Bike, CalendarDays, Check as CheckIcon, Lock } from "lucide-react"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
 import { useLanguage } from "@/contexts/language-context"
@@ -1031,18 +1031,20 @@ export default function BranchSettingsPage() {
                               </div>
                             </div>
 
-                            {/* Customize Schedule Button - Inside Default Hours */}
-                            <div className="pt-3 flex items-center justify-center">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-xs border border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200"
-                                disabled={restaurantClosed}
-                                onClick={() => setShowCustomSchedule(true)}
-                              >
-                                <Clock className="h-3 w-3 mr-1.5" />
-                                {language === 'fr' ? 'Personnaliser les horaires par jour' : 'Customize Schedule per Day'}
-                              </Button>
+                            {/* Advance Settings Button - Inside Default Hours */}
+                            <div className="pt-3 border-t border-gray-200 mt-4">
+                              <div className="pt-1 flex items-center justify-center">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs border border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200"
+                                  disabled={restaurantClosed}
+                                  onClick={() => setShowCustomSchedule(true)}
+                                >
+                                  <Clock className="h-3 w-3 mr-1.5" />
+                                  {language === 'fr' ? 'Paramètres avancés' : 'Advance Settings'}
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1096,17 +1098,22 @@ export default function BranchSettingsPage() {
                   <div className="p-2 bg-purple-50 rounded-lg">
                     <Clock className="h-5 w-5 text-purple-600" />
                   </div>
-                  {language === 'fr' ? 'Horaires personnalisés par jour' : 'Custom Schedule per Day'}
+                  {language === 'fr' ? 'Paramètres avancés' : 'Advance Settings'}
                 </DialogTitle>
+                <div className="mt-2">
+                  <p className="text-base font-medium text-foreground">
+                    {language === 'fr' ? 'Horaires personnalisés par jour' : 'Custom Schedule per Day'}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {language === 'fr'
+                      ? 'Définissez des heures différentes pour chaque jour de la semaine.'
+                      : 'Set different hours for each day of the week.'
+                    }
+                  </p>
+                </div>
               </DialogHeader>
 
               <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  {language === 'fr'
-                    ? 'Définissez des heures différentes pour chaque jour de la semaine.'
-                    : 'Set different hours for each day of the week.'
-                  }
-                </p>
 
                   <div className="max-h-[60vh] overflow-y-auto">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-2">
@@ -1157,9 +1164,9 @@ export default function BranchSettingsPage() {
                               </div>
                             </div>
                           ) : (
-                            <div className="flex items-center justify-center py-8 text-muted-foreground">
+                            <div className="flex items-center justify-center pt-4 text-muted-foreground">
                               <div className="text-center">
-                                <div className="text-2xl mb-2">🔒</div>
+                                <Lock className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
                                 <div className="text-xs">
                                   {language === 'fr' ? 'Fermé' : 'Closed'}
                                 </div>
