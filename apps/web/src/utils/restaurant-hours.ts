@@ -1,7 +1,9 @@
 /**
  * Restaurant Hours Utility Functions
- * Handles restaurant open/closed status calculation
+ * Handles restaurant open/closed status calculation using Canada Eastern Time
  */
+
+import { getCurrentCanadaEasternTime } from '@/lib/timezone';
 
 export interface RestaurantHours {
   isOpen: boolean;
@@ -68,7 +70,7 @@ export function isRestaurantCurrentlyOpen(restaurantHours?: RestaurantHours): bo
   }
 
   // Get current day and time
-  const now = new Date();
+  const now = getCurrentCanadaEasternTime();
   const currentDay = getDayOfWeek(now);
   const currentTime = getTimeString(now);
 
@@ -104,7 +106,7 @@ export function getRestaurantStatus(restaurantHours?: RestaurantHours) {
     };
   }
 
-  const now = new Date();
+  const now = getCurrentCanadaEasternTime();
   const currentDay = getDayOfWeek(now);
 
   // Get hours for current day
@@ -215,7 +217,7 @@ export function getRestaurantStatusMessage(restaurantHours?: RestaurantHours, la
     };
   }
 
-  const now = new Date();
+  const now = getCurrentCanadaEasternTime();
   const currentDay = getDayOfWeek(now);
   const dayHours = getRestaurantHoursForDay(restaurantHours, currentDay);
 
@@ -253,7 +255,7 @@ export function getNextOpeningTime(restaurantHours?: RestaurantHours): Date | nu
     return null;
   }
 
-  const now = new Date();
+  const now = getCurrentCanadaEasternTime();
   const currentDay = getDayOfWeek(now);
 
   // Check if opens later today

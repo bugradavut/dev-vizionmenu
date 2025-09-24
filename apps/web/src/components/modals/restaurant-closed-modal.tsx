@@ -4,6 +4,7 @@ import { Clock } from 'lucide-react'
 import { useLanguage } from '@/contexts/language-context'
 import type { RestaurantHours } from '@/utils/restaurant-hours'
 import { migrateRestaurantHours } from '@/utils/restaurant-hours'
+import { getCurrentCanadaEasternTime } from '@/lib/timezone'
 import {
   Dialog,
   DialogContent,
@@ -68,7 +69,7 @@ export function RestaurantClosedModal({
                     }
 
                     // Advanced mode: show today's hours or next working day
-                    const today = new Date().getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+                    const today = getCurrentCanadaEasternTime().getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
                     const dayMap = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
                     const todayKey = dayMap[today];
 
