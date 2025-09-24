@@ -1174,9 +1174,6 @@ export default function BranchSettingsPage() {
                                       : "border border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300"
                                   )}
                                   onClick={() => {
-                                    if (currentMode === 'simple') {
-                                      handleModeSwitch();
-                                    }
                                     setShowCustomSchedule(true);
                                   }}
                                 >
@@ -1386,8 +1383,7 @@ export default function BranchSettingsPage() {
                     }}
                   >
                     <ChevronLeft className="h-4 w-4 mr-1" />
-                    <span className="hidden sm:inline">{language === 'fr' ? 'Retour au mode simple' : 'Back to Simple Mode'}</span>
-                    <span className="sm:hidden">{language === 'fr' ? 'Retour' : 'Back'}</span>
+                    {language === 'fr' ? 'Retour au mode simple' : 'Back to Simple Mode'}
                   </Button>
 
                   <div className="flex gap-2 sm:order-2 flex-1 sm:flex-none">
@@ -1398,8 +1394,19 @@ export default function BranchSettingsPage() {
                     >
                       {language === 'fr' ? 'Annuler' : 'Cancel'}
                     </Button>
-                    <Button onClick={() => setShowCustomSchedule(false)} className="flex-1 sm:flex-none">
-                      {language === 'fr' ? 'Enregistrer' : 'Save Changes'}
+                    <Button
+                      onClick={() => {
+                        if (currentMode === 'simple') {
+                          handleModeSwitch();
+                        }
+                        setShowCustomSchedule(false);
+                      }}
+                      className="flex-1 sm:flex-none"
+                    >
+                      {currentMode === 'simple'
+                        ? (language === 'fr' ? 'Activer le mode avancé' : 'Enable Advanced Mode')
+                        : (language === 'fr' ? 'Appliquer les modifications' : 'Apply Changes')
+                      }
                     </Button>
                   </div>
                 </div>
