@@ -1227,7 +1227,7 @@ export default function BranchSettingsPage() {
           {/* Custom Schedule Modal */}
           <Dialog open={showCustomSchedule} onOpenChange={setShowCustomSchedule}>
             <DialogContent
-              className="max-w-2xl max-h-[85vh] flex flex-col"
+              className="max-w-2xl max-h-[90vh] sm:max-h-[85vh] flex flex-col"
               onPointerDownOutside={(e) => {
                 // Allow scroll in popovers
                 const target = e.target as Element
@@ -1244,21 +1244,10 @@ export default function BranchSettingsPage() {
                   </div>
                   {language === 'fr' ? 'Paramètres avancés' : 'Advance Settings'}
                 </DialogTitle>
-                <div className="mt-2">
-                  <p className="text-base font-medium text-foreground">
-                    {language === 'fr' ? 'Horaires personnalisés par jour' : 'Custom Schedule per Day'}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {language === 'fr'
-                      ? 'Définissez des heures différentes pour chaque jour de la semaine.'
-                      : 'Set different hours for each day of the week.'
-                    }
-                  </p>
-                </div>
               </DialogHeader>
 
-              <div className="space-y-4">
-                <div className="max-h-[60vh] overflow-y-auto">
+              <div className="space-y-4 flex-1 min-h-0 flex flex-col">
+                <div className="flex-1 overflow-y-auto">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-2">
                     {workingDayOrder.map((day) => {
                       const daySchedule = migratedHours?.advancedSchedule?.[day] || {
@@ -1390,29 +1379,31 @@ export default function BranchSettingsPage() {
               </div>
 
               {/* Footer */}
-              <div className="pt-4 border-t mt-6">
-                <div className="flex justify-between">
+              <div className="pt-4 border-t mt-6 flex-shrink-0">
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border border-gray-200 hover:bg-gray-50"
+                    className="border border-gray-200 hover:bg-gray-50 sm:order-1"
                     onClick={() => {
                       handleModeSwitch(); // Switch back to simple
                       setShowCustomSchedule(false);
                     }}
                   >
                     <ChevronLeft className="h-4 w-4 mr-1" />
-                    {language === 'fr' ? 'Retour au mode simple' : 'Back to Simple Mode'}
+                    <span className="hidden sm:inline">{language === 'fr' ? 'Retour au mode simple' : 'Back to Simple Mode'}</span>
+                    <span className="sm:hidden">{language === 'fr' ? 'Retour' : 'Back'}</span>
                   </Button>
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 sm:order-2 flex-1 sm:flex-none">
                     <Button
                       variant="outline"
                       onClick={() => setShowCustomSchedule(false)}
+                      className="flex-1 sm:flex-none"
                     >
                       {language === 'fr' ? 'Annuler' : 'Cancel'}
                     </Button>
-                    <Button onClick={() => setShowCustomSchedule(false)}>
+                    <Button onClick={() => setShowCustomSchedule(false)} className="flex-1 sm:flex-none">
                       {language === 'fr' ? 'Enregistrer' : 'Save Changes'}
                     </Button>
                   </div>
