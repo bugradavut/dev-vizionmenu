@@ -3,6 +3,7 @@
 import { Clock } from 'lucide-react'
 import { useLanguage } from '@/contexts/language-context'
 import type { RestaurantHours } from '@/utils/restaurant-hours'
+import { migrateRestaurantHours } from '@/utils/restaurant-hours'
 import {
   Dialog,
   DialogContent,
@@ -58,7 +59,37 @@ export function RestaurantClosedModal({
                   {language === 'fr' ? 'Heures d\'ouverture' : 'Opening Hours'}
                 </p>
                 <p className="text-blue-700 dark:text-blue-400 font-semibold">
-                  {restaurantHours.defaultHours.openTime} - {restaurantHours.defaultHours.closeTime}
+                  {(() => {
+                    const migrated = migrateRestaurantHours(restaurantHours);
+
+                    // Simple mode: use default hours
+                    if (migrated.mode === 'simple') {
+                      return `${migrated.simpleSchedule.defaultHours.openTime} - ${migrated.simpleSchedule.defaultHours.closeTime}`;
+                    }
+
+                    // Advanced mode: show today's hours or next working day
+                    const today = new Date().getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+                    const dayMap = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+                    const todayKey = dayMap[today];
+
+                    // Try to get today's hours first
+                    const todaySchedule = migrated.advancedSchedule[todayKey];
+                    if (todaySchedule?.enabled) {
+                      return `${todaySchedule.openTime} - ${todaySchedule.closeTime} (Today)`;
+                    }
+
+                    // If today is closed, show next working day
+                    const nextWorkingDay = Object.entries(migrated.advancedSchedule)
+                      .find(([, schedule]) => schedule?.enabled);
+
+                    if (nextWorkingDay) {
+                      const [, schedule] = nextWorkingDay;
+                      return `${schedule.openTime} - ${schedule.closeTime} (General)`;
+                    }
+
+                    // Fallback
+                    return 'See schedule';
+                  })()}
                 </p>
               </div>
             </div>

@@ -5,11 +5,52 @@
 
 export interface RestaurantHours {
   isOpen: boolean;
-  workingDays: string[];
-  defaultHours: {
-    openTime: string; // HH:MM format (24-hour)
-    closeTime: string; // HH:MM format (24-hour)
+  mode: 'simple' | 'advanced';
+  // Simple mode - same hours for all working days
+  simpleSchedule: {
+    workingDays: string[];
+    defaultHours: {
+      openTime: string; // HH:MM format (24-hour)
+      closeTime: string; // HH:MM format (24-hour)
+    };
   };
+  // Advanced mode - custom hours per day
+  advancedSchedule: {
+    [day: string]: {
+      enabled: boolean;
+      openTime: string;
+      closeTime: string;
+    };
+  };
+  // Legacy support - will be migrated to new structure
+  workingDays?: string[];
+  defaultHours?: {
+    openTime: string;
+    closeTime: string;
+  };
+}
+
+/**
+ * Get restaurant hours for a specific day
+ */
+export function getRestaurantHoursForDay(restaurantHours: RestaurantHours, targetDay: string): { openTime: string; closeTime: string } | null {
+  // Migrate legacy data if needed
+  const migratedHours = migrateRestaurantHours(restaurantHours);
+
+  if (migratedHours.mode === 'advanced') {
+    // Advanced mode: check day-specific schedule
+    const daySchedule = migratedHours.advancedSchedule[targetDay];
+    return daySchedule?.enabled ? {
+      openTime: daySchedule.openTime,
+      closeTime: daySchedule.closeTime
+    } : null;
+  } else {
+    // Simple mode: check working days and use default hours
+    if (!migratedHours.simpleSchedule.workingDays.includes(targetDay)) {
+      return null;
+    }
+    return migratedHours.simpleSchedule.defaultHours;
+  }
 }
 
 /**
@@ -31,15 +72,14 @@ export function isRestaurantCurrentlyOpen(restaurantHours?: RestaurantHours): bo
   const currentDay = getDayOfWeek(now);
   const currentTime = getTimeString(now);
 
-  // Check if current day is in working days
-  if (!restaurantHours.workingDays.includes(currentDay)) {
+  // Get hours for current day
+  const dayHours = getRestaurantHoursForDay(restaurantHours, currentDay);
+  if (!dayHours) {
     return false;
   }
 
   // Check if current time is within open hours
-  const { openTime, closeTime } = restaurantHours.defaultHours;
-
-  return isTimeWithinRange(currentTime, openTime, closeTime);
+  return isTimeWithinRange(currentTime, dayHours.openTime, dayHours.closeTime);
 }
 
 /**
@@ -67,7 +107,9 @@ export function getRestaurantStatus(restaurantHours?: RestaurantHours) {
   const now = new Date();
   const currentDay = getDayOfWeek(now);
 
-  if (!restaurantHours.workingDays.includes(currentDay)) {
+  // Get hours for current day
+  const dayHours = getRestaurantHoursForDay(restaurantHours, currentDay);
+  if (!dayHours) {
     return {
       isOpen: false,
       status: 'closed_today',
@@ -76,7 +118,7 @@ export function getRestaurantStatus(restaurantHours?: RestaurantHours) {
   }
 
   const currentTime = getTimeString(now);
-  const { openTime, closeTime } = restaurantHours.defaultHours;
+  const { openTime, closeTime } = dayHours;
 
   if (isCurrentlyOpen) {
     return {
@@ -165,20 +207,32 @@ export function shouldBlockOrders(restaurantHours?: RestaurantHours): boolean {
 export function getRestaurantStatusMessage(restaurantHours?: RestaurantHours, language: 'en' | 'fr' = 'en') {
   const status = getRestaurantStatus(restaurantHours);
 
+  if (!restaurantHours) {
+    return {
+      isOpen: false,
+      message: language === 'fr' ? 'Horaires non disponibles' : 'Hours not available',
+      status: 'unknown'
+    };
+  }
+
+  const now = new Date();
+  const currentDay = getDayOfWeek(now);
+  const dayHours = getRestaurantHoursForDay(restaurantHours, currentDay);
+
   const messages = {
     en: {
-      open: `Open until ${formatTime(restaurantHours?.defaultHours?.closeTime || '22:00')}`,
+      open: `Open until ${formatTime(dayHours?.closeTime || '22:00')}`,
       closed_manually: 'Currently closed',
       closed_today: 'Closed today',
-      opens_later: `Opens at ${formatTime(restaurantHours?.defaultHours?.openTime || '09:00')}`,
+      opens_later: `Opens at ${formatTime(dayHours?.openTime || '09:00')}`,
       closed_for_day: 'Closed for today',
       unknown: 'Hours not available'
     },
     fr: {
-      open: `Ouvert jusqu'à ${formatTime(restaurantHours?.defaultHours?.closeTime || '22:00')}`,
+      open: `Ouvert jusqu'à ${formatTime(dayHours?.closeTime || '22:00')}`,
       closed_manually: 'Actuellement fermé',
       closed_today: 'Fermé aujourd\'hui',
-      opens_later: `Ouvre à ${formatTime(restaurantHours?.defaultHours?.openTime || '09:00')}`,
+      opens_later: `Ouvre à ${formatTime(dayHours?.openTime || '09:00')}`,
       closed_for_day: 'Fermé pour aujourd\'hui',
       unknown: 'Horaires non disponibles'
     }
@@ -201,12 +255,11 @@ export function getNextOpeningTime(restaurantHours?: RestaurantHours): Date | nu
 
   const now = new Date();
   const currentDay = getDayOfWeek(now);
-  const { workingDays, defaultHours } = restaurantHours;
 
   // Check if opens later today
-  if (workingDays.includes(currentDay)) {
-    const openTime = defaultHours.openTime;
-    const [hours, minutes] = openTime.split(':').map(Number);
+  const todayHours = getRestaurantHoursForDay(restaurantHours, currentDay);
+  if (todayHours) {
+    const [hours, minutes] = todayHours.openTime.split(':').map(Number);
     const todayOpening = new Date(now);
     todayOpening.setHours(hours, minutes, 0, 0);
 
@@ -223,16 +276,118 @@ export function getNextOpeningTime(restaurantHours?: RestaurantHours): Date | nu
     const nextDayIndex = (currentDayIndex + i) % 7;
     const nextDay = dayNames[nextDayIndex];
 
-    if (workingDays.includes(nextDay)) {
+    const nextDayHours = getRestaurantHoursForDay(restaurantHours, nextDay);
+    if (nextDayHours) {
       const nextDate = new Date(now);
       nextDate.setDate(now.getDate() + i);
-      const [hours, minutes] = defaultHours.openTime.split(':').map(Number);
+      const [hours, minutes] = nextDayHours.openTime.split(':').map(Number);
       nextDate.setHours(hours, minutes, 0, 0);
       return nextDate;
     }
   }
 
   return null;
+}
+
+/**
+ * Migrate legacy restaurant hours to new structure
+ */
+export function migrateRestaurantHours(restaurantHours: RestaurantHours): RestaurantHours {
+  // If already migrated, return as-is
+  if (restaurantHours.mode && restaurantHours.simpleSchedule) {
+    return restaurantHours;
+  }
+
+  // Legacy data migration
+  const workingDays = restaurantHours.workingDays || ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+  const defaultHours = restaurantHours.defaultHours || { openTime: '09:00', closeTime: '22:00' };
+
+  return {
+    isOpen: restaurantHours.isOpen,
+    mode: 'simple',
+    simpleSchedule: {
+      workingDays,
+      defaultHours
+    },
+    advancedSchedule: {}
+  };
+}
+
+/**
+ * Switch from simple to advanced mode
+ */
+export function switchToAdvancedMode(restaurantHours: RestaurantHours): RestaurantHours {
+  const migrated = migrateRestaurantHours(restaurantHours);
+
+  if (migrated.mode === 'advanced') {
+    return migrated;
+  }
+
+  // Create advanced schedule from simple schedule
+  const advancedSchedule: { [key: string]: { enabled: boolean; openTime: string; closeTime: string } } = {};
+  const allDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+  allDays.forEach(day => {
+    const isEnabled = migrated.simpleSchedule.workingDays.includes(day);
+    advancedSchedule[day] = {
+      enabled: isEnabled,
+      openTime: migrated.simpleSchedule.defaultHours.openTime,
+      closeTime: migrated.simpleSchedule.defaultHours.closeTime
+    };
+  });
+
+  return {
+    ...migrated,
+    mode: 'advanced',
+    advancedSchedule
+  };
+}
+
+/**
+ * Switch from advanced to simple mode
+ */
+export function switchToSimpleMode(restaurantHours: RestaurantHours): RestaurantHours {
+  const migrated = migrateRestaurantHours(restaurantHours);
+
+  if (migrated.mode === 'simple') {
+    return migrated;
+  }
+
+  // Find most common hours from advanced schedule
+  const enabledDays = Object.entries(migrated.advancedSchedule)
+    .filter(([, schedule]) => schedule.enabled)
+    .map(([day]) => day);
+
+  // Use first enabled day's hours as default, or fallback
+  const firstEnabledDay = Object.values(migrated.advancedSchedule).find(schedule => schedule.enabled);
+  const defaultHours = firstEnabledDay ? {
+    openTime: firstEnabledDay.openTime,
+    closeTime: firstEnabledDay.closeTime
+  } : { openTime: '09:00', closeTime: '22:00' };
+
+  return {
+    ...migrated,
+    mode: 'simple',
+    simpleSchedule: {
+      workingDays: enabledDays,
+      defaultHours
+    }
+  };
+}
+
+/**
+ * Get all working days from restaurant hours (regardless of mode)
+ */
+export function getAllWorkingDays(restaurantHours: RestaurantHours): string[] {
+  const migrated = migrateRestaurantHours(restaurantHours);
+
+  if (migrated.mode === 'advanced') {
+    return Object.entries(migrated.advancedSchedule)
+      .filter(([, schedule]) => schedule.enabled)
+      .map(([day]) => day);
+  }
+
+  return migrated.simpleSchedule.workingDays;
 }
 
 /**

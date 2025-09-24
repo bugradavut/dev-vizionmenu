@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Branch } from '@/services/customer-chains.service'
 import { useLanguage } from '@/contexts/language-context'
-import { getRestaurantStatus } from '@/utils/restaurant-hours'
+import { getRestaurantStatus, migrateRestaurantHours, type RestaurantHours } from '@/utils/restaurant-hours'
 
 interface BranchSelectionModalProps {
   isOpen: boolean
@@ -132,7 +132,8 @@ export function BranchSelectionModal({
                     {/* Branch Details */}
                     <div className="flex items-center gap-6">
                       {(() => {
-                        const status = getRestaurantStatus(branch.restaurantHours);
+                        const migratedHours = branch.restaurantHours ? migrateRestaurantHours(branch.restaurantHours as unknown as RestaurantHours) : undefined;
+                        const status = getRestaurantStatus(migratedHours);
                         const isOpen = status.isOpen;
                         const statusText = language === 'fr'
                           ? (isOpen ? 'Ouvert maintenant' : 'Fermé')

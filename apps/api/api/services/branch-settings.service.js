@@ -54,14 +54,7 @@ async function getBranchSettings(branchId) {
         allowCounterPayment: settings.paymentSettings?.allowCounterPayment ?? false,
         defaultPaymentMethod: settings.paymentSettings?.defaultPaymentMethod || 'online',
       },
-      restaurantHours: {
-        isOpen: settings.restaurantHours?.isOpen ?? true,
-        workingDays: settings.restaurantHours?.workingDays || ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
-        defaultHours: {
-          openTime: settings.restaurantHours?.defaultHours?.openTime || '09:00',
-          closeTime: settings.restaurantHours?.defaultHours?.closeTime || '22:00'
-        }
-      },
+      restaurantHours: buildRestaurantHours(settings.restaurantHours),
       minimumOrderAmount: settings.minimumOrderAmount || 0,
       deliveryFee: settings.deliveryFee || 0,
       freeDeliveryThreshold: settings.freeDeliveryThreshold || 0,
@@ -100,6 +93,7 @@ async function updateBranchSettings(branchId, settingsData) {
       orderFlow,
       timingSettings,
       paymentSettings,
+      restaurantHours,
       minimumOrderAmount = 0,
       deliveryFee = 0,
       freeDeliveryThreshold = 0
@@ -120,6 +114,11 @@ async function updateBranchSettings(branchId, settingsData) {
       throw new Error('Free delivery threshold must be between 0 and 10000');
     }
 
+    // Validate restaurant hours if provided
+    if (restaurantHours) {
+      validateRestaurantHours(restaurantHours);
+    }
+
     // Prepare settings JSON (excluding minimumOrderAmount and deliveryFee)
     const settingsJson = {
       orderFlow: orderFlow || 'standard',
@@ -135,6 +134,7 @@ async function updateBranchSettings(branchId, settingsData) {
         allowCounterPayment: paymentSettings?.allowCounterPayment ?? false,
         defaultPaymentMethod: paymentSettings?.defaultPaymentMethod || 'online',
       },
+      restaurantHours: restaurantHours ? sanitizeRestaurantHours(restaurantHours) : undefined,
     };
 
     // Update branch in database
@@ -173,6 +173,7 @@ async function updateBranchSettings(branchId, settingsData) {
       branchName: updatedBranch.name,
       settings: {
         ...settingsJson,
+        restaurantHours: buildRestaurantHours(updatedBranch.settings?.restaurantHours),
         minimumOrderAmount: updatedBranch.minimum_order_amount || 0,
         deliveryFee: updatedBranch.delivery_fee || 0,
         freeDeliveryThreshold: updatedBranch.free_delivery_threshold || 0,
@@ -314,6 +315,203 @@ async function getBranchInfo(branchId) {
     console.error('Error getting branch info:', error);
     throw error;
   }
+}
+
+/**
+ * Build restaurant hours object with proper structure
+ * Handles legacy data migration and default values
+ */
+function buildRestaurantHours(restaurantHours) {
+  if (!restaurantHours) {
+    // Default restaurant hours
+    return {
+      isOpen: true,
+      mode: 'simple',
+      simpleSchedule: {
+        workingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+        defaultHours: {
+          openTime: '09:00',
+          closeTime: '22:00'
+        }
+      },
+      advancedSchedule: {}
+    };
+  }
+
+  // If already in new format, return as-is
+  if (restaurantHours.mode && restaurantHours.simpleSchedule) {
+    return {
+      isOpen: restaurantHours.isOpen ?? true,
+      mode: restaurantHours.mode,
+      simpleSchedule: restaurantHours.simpleSchedule,
+      advancedSchedule: restaurantHours.advancedSchedule || {}
+    };
+  }
+
+  // Legacy data migration
+  return {
+    isOpen: restaurantHours.isOpen ?? true,
+    mode: 'simple',
+    simpleSchedule: {
+      workingDays: restaurantHours.workingDays || ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+      defaultHours: {
+        openTime: restaurantHours.defaultHours?.openTime || '09:00',
+        closeTime: restaurantHours.defaultHours?.closeTime || '22:00'
+      }
+    },
+    advancedSchedule: {}
+  };
+}
+
+/**
+ * Validate restaurant hours structure
+ */
+function validateRestaurantHours(restaurantHours) {
+  if (!restaurantHours || typeof restaurantHours !== 'object') {
+    throw new Error('Restaurant hours must be an object');
+  }
+
+  const { mode, simpleSchedule, advancedSchedule } = restaurantHours;
+
+  // Validate mode
+  if (mode && !['simple', 'advanced'].includes(mode)) {
+    throw new Error('Restaurant hours mode must be "simple" or "advanced"');
+  }
+
+  // Validate simple schedule
+  if (mode === 'simple' && simpleSchedule) {
+    validateSimpleSchedule(simpleSchedule);
+  }
+
+  // Validate advanced schedule
+  if (mode === 'advanced' && advancedSchedule) {
+    validateAdvancedSchedule(advancedSchedule);
+  }
+
+  return true;
+}
+
+/**
+ * Validate simple schedule structure
+ */
+function validateSimpleSchedule(simpleSchedule) {
+  if (!simpleSchedule || typeof simpleSchedule !== 'object') {
+    throw new Error('Simple schedule must be an object');
+  }
+
+  const { workingDays, defaultHours } = simpleSchedule;
+
+  // Validate working days
+  if (!Array.isArray(workingDays)) {
+    throw new Error('Working days must be an array');
+  }
+
+  const validDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+  const invalidDays = workingDays.filter(day => !validDays.includes(day));
+  if (invalidDays.length > 0) {
+    throw new Error(`Invalid working days: ${invalidDays.join(', ')}`);
+  }
+
+  // Validate default hours
+  if (!defaultHours || typeof defaultHours !== 'object') {
+    throw new Error('Default hours must be an object');
+  }
+
+  validateTimeString(defaultHours.openTime, 'Open time');
+  validateTimeString(defaultHours.closeTime, 'Close time');
+}
+
+/**
+ * Validate advanced schedule structure
+ */
+function validateAdvancedSchedule(advancedSchedule) {
+  if (!advancedSchedule || typeof advancedSchedule !== 'object') {
+    throw new Error('Advanced schedule must be an object');
+  }
+
+  const validDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+  Object.entries(advancedSchedule).forEach(([day, schedule]) => {
+    if (!validDays.includes(day)) {
+      throw new Error(`Invalid day in advanced schedule: ${day}`);
+    }
+
+    if (!schedule || typeof schedule !== 'object') {
+      throw new Error(`Day schedule for ${day} must be an object`);
+    }
+
+    const { enabled, openTime, closeTime } = schedule;
+
+    if (typeof enabled !== 'boolean') {
+      throw new Error(`Enabled flag for ${day} must be a boolean`);
+    }
+
+    if (enabled) {
+      validateTimeString(openTime, `Open time for ${day}`);
+      validateTimeString(closeTime, `Close time for ${day}`);
+    }
+  });
+}
+
+/**
+ * Validate time string format (HH:MM)
+ */
+function validateTimeString(timeString, fieldName) {
+  if (!timeString || typeof timeString !== 'string') {
+    throw new Error(`${fieldName} must be a string`);
+  }
+
+  const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+  if (!timeRegex.test(timeString)) {
+    throw new Error(`${fieldName} must be in HH:MM format`);
+  }
+}
+
+/**
+ * Sanitize restaurant hours for database storage
+ * Remove any potentially dangerous or unnecessary fields
+ */
+function sanitizeRestaurantHours(restaurantHours) {
+  if (!restaurantHours) {
+    return null;
+  }
+
+  const sanitized = {
+    isOpen: Boolean(restaurantHours.isOpen ?? true),
+    mode: restaurantHours.mode === 'advanced' ? 'advanced' : 'simple'
+  };
+
+  if (restaurantHours.simpleSchedule) {
+    sanitized.simpleSchedule = {
+      workingDays: Array.isArray(restaurantHours.simpleSchedule.workingDays)
+        ? restaurantHours.simpleSchedule.workingDays.filter(day =>
+            ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].includes(day)
+          )
+        : ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+      defaultHours: {
+        openTime: restaurantHours.simpleSchedule.defaultHours?.openTime || '09:00',
+        closeTime: restaurantHours.simpleSchedule.defaultHours?.closeTime || '22:00'
+      }
+    };
+  }
+
+  if (restaurantHours.advancedSchedule) {
+    sanitized.advancedSchedule = {};
+    const validDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+    validDays.forEach(day => {
+      const daySchedule = restaurantHours.advancedSchedule[day];
+      if (daySchedule && typeof daySchedule === 'object') {
+        sanitized.advancedSchedule[day] = {
+          enabled: Boolean(daySchedule.enabled),
+          openTime: daySchedule.openTime || '09:00',
+          closeTime: daySchedule.closeTime || '22:00'
+        };
+      }
+    });
+  }
+
+  return sanitized;
 }
 
 module.exports = {

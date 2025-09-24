@@ -18,7 +18,11 @@ export interface PaymentSettings {
   defaultPaymentMethod: 'online' | 'counter';
 }
 
-export interface RestaurantHours {
+// Import RestaurantHours from utils to maintain consistency
+import type { RestaurantHours } from '../utils/restaurant-hours';
+
+// Legacy interface for backward compatibility
+export interface LegacyRestaurantHours {
   isOpen: boolean;
   workingDays: string[];
   defaultHours: {
@@ -160,12 +164,22 @@ export const getDefaultSettings = (): BranchSettings => ({
   },
   restaurantHours: {
     isOpen: true,
+    mode: 'simple',
+    simpleSchedule: {
+      workingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+      defaultHours: {
+        openTime: '09:00',
+        closeTime: '22:00',
+      }
+    },
+    advancedSchedule: {},
+    // Legacy fields for backward compatibility
     workingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
     defaultHours: {
       openTime: '09:00',
       closeTime: '22:00',
     },
-  },
+  } as RestaurantHours,
   minimumOrderAmount: 0, // Default: no minimum order amount
   deliveryFee: 0, // Default: no delivery fee
   freeDeliveryThreshold: 0, // Default: no free delivery threshold

@@ -35,10 +35,25 @@ export interface Branch {
   email?: string;
   restaurantHours?: {
     isOpen: boolean;
-    workingDays: string[];
-    defaultHours: {
+    mode?: 'simple' | 'advanced';
+    workingDays?: string[];
+    defaultHours?: {
       openTime: string;
       closeTime: string;
+    };
+    simpleSchedule?: {
+      workingDays: string[];
+      defaultHours: {
+        openTime: string;
+        closeTime: string;
+      };
+    };
+    advancedSchedule?: {
+      [day: string]: {
+        enabled: boolean;
+        openTime: string;
+        closeTime: string;
+      };
     };
   };
 }

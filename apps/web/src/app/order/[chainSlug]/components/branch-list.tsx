@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { MapPin, Phone, Clock } from 'lucide-react'
 import { Branch } from '../types/order-flow.types'
 import { useLanguage } from '@/contexts/language-context'
-import { getRestaurantStatus } from '@/utils/restaurant-hours'
+import { getRestaurantStatus, migrateRestaurantHours, type RestaurantHours } from '@/utils/restaurant-hours'
 
 interface BranchListProps {
   branches: Branch[]
@@ -108,7 +108,8 @@ export function BranchList({
                     </div>
                   )}
                   {(() => {
-                    const status = getRestaurantStatus(branch.restaurantHours);
+                    const migratedHours = branch.restaurantHours ? migrateRestaurantHours(branch.restaurantHours as unknown as RestaurantHours) : undefined;
+                    const status = getRestaurantStatus(migratedHours);
                     const isOpen = status.isOpen;
                     const statusText = language === 'fr'
                       ? (isOpen ? 'Ouvert maintenant' : 'Fermé')

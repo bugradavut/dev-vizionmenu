@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, CreditCard, DollarSign, Bike, CalendarDays, Check as CheckIcon, Lock } from "lucide-react"
+import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, CreditCard, DollarSign, Bike, CalendarDays, Check as CheckIcon, Lock, ChevronLeft } from "lucide-react"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
 import { useLanguage } from "@/contexts/language-context"
@@ -251,11 +251,43 @@ export default function BranchSettingsPage() {
   const [minimumOrderInput, setMinimumOrderInput] = useState("")
   const [deliveryFeeInput, setDeliveryFeeInput] = useState("")
   const [freeDeliveryThresholdInput, setFreeDeliveryThresholdInput] = useState("")
-  // Initialize from settings instead of local state
-  const restaurantClosed = !settings.restaurantHours?.isOpen
-  const selectedWorkingDays = settings.restaurantHours?.workingDays || ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-  const openTime = settings.restaurantHours?.defaultHours?.openTime || "09:00"
-  const closeTime = settings.restaurantHours?.defaultHours?.closeTime || "22:00"
+  // Migrate restaurant hours to new structure and get current state
+  const migratedHours = React.useMemo(() => {
+    if (!settings.restaurantHours) return null;
+
+    // If already in new format, return as-is
+    if (settings.restaurantHours.mode) {
+      return settings.restaurantHours;
+    }
+
+    // Legacy data migration - only if no mode is set
+    return {
+      isOpen: settings.restaurantHours.isOpen ?? true,
+      mode: 'simple' as 'simple' | 'advanced',
+      simpleSchedule: {
+        workingDays: settings.restaurantHours.workingDays || ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+        defaultHours: {
+          openTime: settings.restaurantHours.defaultHours?.openTime || '09:00',
+          closeTime: settings.restaurantHours.defaultHours?.closeTime || '22:00'
+        }
+      },
+      advancedSchedule: {}
+    };
+  }, [settings.restaurantHours]);
+
+  const restaurantClosed = !migratedHours?.isOpen;
+  const currentMode = migratedHours?.mode || 'simple';
+
+  // Get current working days and hours based on mode
+  const selectedWorkingDays = currentMode === 'advanced'
+    ? Object.entries(migratedHours?.advancedSchedule || {})
+        .filter(([, schedule]) => schedule && schedule.enabled)
+        .map(([day]) => day)
+    : migratedHours?.simpleSchedule?.workingDays || [];
+
+  const { openTime, closeTime } = currentMode === 'advanced'
+    ? { openTime: '09:00', closeTime: '22:00' } // Will be shown per-day in modal
+    : migratedHours?.simpleSchedule?.defaultHours || { openTime: '09:00', closeTime: '22:00' };
   const workingDayOrder: RestaurantHoursDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
   
@@ -359,53 +391,140 @@ export default function BranchSettingsPage() {
 
   // Restaurant hours handlers - now connected to real API
   const handleRestaurantClosedToggle = (value: boolean) => {
+    if (!migratedHours) return;
     updateSettings({
       restaurantHours: {
-        ...settings.restaurantHours,
+        ...migratedHours,
         isOpen: !value
       }
-    })
-  }
+    });
+  };
+
+  const handleModeSwitch = () => {
+    if (!migratedHours) return;
+
+    if (currentMode === 'simple') {
+      // Switch to advanced: copy simple settings to all enabled days
+      const advancedSchedule: { [key: string]: { enabled: boolean; openTime: string; closeTime: string } } = {};
+      const allDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+      allDays.forEach(day => {
+        const isEnabled = selectedWorkingDays.includes(day);
+        advancedSchedule[day] = {
+          enabled: isEnabled,
+          openTime: migratedHours.simpleSchedule.defaultHours.openTime,
+          closeTime: migratedHours.simpleSchedule.defaultHours.closeTime
+        };
+      });
+
+      updateSettings({
+        restaurantHours: {
+          ...migratedHours,
+          mode: 'advanced',
+          advancedSchedule
+        }
+      });
+    } else {
+      // Switch to simple: find most common hours or use first enabled day
+      const enabledDays = Object.entries(migratedHours.advancedSchedule)
+        .filter(([, schedule]) => schedule.enabled)
+        .map(([day]) => day);
+
+      const firstEnabledSchedule = Object.values(migratedHours.advancedSchedule)
+        .find(schedule => schedule.enabled);
+
+      const defaultHours = firstEnabledSchedule ? {
+        openTime: firstEnabledSchedule.openTime,
+        closeTime: firstEnabledSchedule.closeTime
+      } : { openTime: '09:00', closeTime: '22:00' };
+
+      updateSettings({
+        restaurantHours: {
+          ...migratedHours,
+          mode: 'simple',
+          simpleSchedule: {
+            workingDays: enabledDays,
+            defaultHours
+          }
+        }
+      });
+    }
+  };
 
   const handleWorkingDayToggle = (day: RestaurantHoursDay) => {
-    const currentWorkingDays = settings.restaurantHours?.workingDays || []
-    const newWorkingDays = currentWorkingDays.includes(day)
-      ? currentWorkingDays.filter((existingDay) => existingDay !== day)
-      : [...currentWorkingDays, day]
+    if (!migratedHours) return;
 
-    updateSettings({
-      restaurantHours: {
-        ...settings.restaurantHours,
-        workingDays: newWorkingDays
-      }
-    })
-  }
+    if (currentMode === 'simple') {
+      const currentWorkingDays = migratedHours.simpleSchedule.workingDays || [];
+      const newWorkingDays = currentWorkingDays.includes(day)
+        ? currentWorkingDays.filter((existingDay) => existingDay !== day)
+        : [...currentWorkingDays, day];
+
+      updateSettings({
+        restaurantHours: {
+          ...migratedHours,
+          simpleSchedule: {
+            ...migratedHours.simpleSchedule,
+            workingDays: newWorkingDays
+          }
+        }
+      });
+    } else {
+      // Advanced mode: toggle day enabled status
+      const currentSchedule = migratedHours.advancedSchedule[day] || {
+        enabled: false,
+        openTime: '09:00',
+        closeTime: '22:00'
+      };
+
+      updateSettings({
+        restaurantHours: {
+          ...migratedHours,
+          advancedSchedule: {
+            ...migratedHours.advancedSchedule,
+            [day]: {
+              ...currentSchedule,
+              enabled: !currentSchedule.enabled
+            }
+          }
+        }
+      });
+    }
+  };
 
   const handleOpenTimeChange = (newOpenTime: string) => {
+    if (!migratedHours || currentMode !== 'simple') return;
+
     updateSettings({
       restaurantHours: {
-        ...settings.restaurantHours,
-        defaultHours: {
-          ...settings.restaurantHours?.defaultHours,
-          openTime: newOpenTime,
-          closeTime: settings.restaurantHours?.defaultHours?.closeTime || "22:00"
+        ...migratedHours,
+        simpleSchedule: {
+          ...migratedHours.simpleSchedule,
+          defaultHours: {
+            ...migratedHours.simpleSchedule.defaultHours,
+            openTime: newOpenTime
+          }
         }
       }
-    })
-  }
+    });
+  };
 
   const handleCloseTimeChange = (newCloseTime: string) => {
+    if (!migratedHours || currentMode !== 'simple') return;
+
     updateSettings({
       restaurantHours: {
-        ...settings.restaurantHours,
-        defaultHours: {
-          ...settings.restaurantHours?.defaultHours,
-          openTime: settings.restaurantHours?.defaultHours?.openTime || "09:00",
-          closeTime: newCloseTime
+        ...migratedHours,
+        simpleSchedule: {
+          ...migratedHours.simpleSchedule,
+          defaultHours: {
+            ...migratedHours.simpleSchedule.defaultHours,
+            closeTime: newCloseTime
+          }
         }
       }
-    })
-  }
+    });
+  };
 
   // Handle plus/minus button changes - best practice approach
   const handleBaseDelayAdjustment = (increment: number) => {
@@ -958,10 +1077,21 @@ export default function BranchSettingsPage() {
                           <div className="flex-1 space-y-3">
                             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                               {restaurantHoursCopy.workingDaysLabel}
+                              {currentMode === 'advanced' && (
+                                <span className="ml-2 text-purple-600 font-normal">
+                                  ({language === 'fr' ? 'Mode avancé' : 'Advanced Mode'})
+                                </span>
+                              )}
                             </p>
                             <div className="grid grid-cols-2 gap-2">
                               {workingDayOrder.map((day) => {
-                                const isSelected = selectedWorkingDays.includes(day)
+                                const isSelected = selectedWorkingDays.includes(day);
+                                // In advanced mode, show different hours if they exist
+                                const daySchedule = currentMode === 'advanced' ? migratedHours?.advancedSchedule?.[day] : null;
+                                const hasDifferentHours = daySchedule &&
+                                  (daySchedule.openTime !== (migratedHours?.simpleSchedule?.defaultHours?.openTime || '09:00') ||
+                                   daySchedule.closeTime !== (migratedHours?.simpleSchedule?.defaultHours?.closeTime || '22:00'));
+
                                 return (
                                   <button
                                     key={day}
@@ -969,10 +1099,12 @@ export default function BranchSettingsPage() {
                                     onClick={() => handleWorkingDayToggle(day)}
                                     disabled={restaurantClosed}
                                     className={cn(
-                                      "flex items-center gap-2 rounded-full border px-2.5 py-1 text-sm transition-colors",
+                                      "flex items-center gap-2 rounded-full border px-2.5 py-1 text-sm transition-colors relative",
                                       restaurantClosed && "cursor-not-allowed opacity-50",
                                       isSelected
-                                        ? "border-orange-200 bg-orange-50 text-orange-600 shadow-sm"
+                                        ? currentMode === 'advanced' && hasDifferentHours
+                                          ? "border-purple-200 bg-purple-50 text-purple-600 shadow-sm"
+                                          : "border-orange-200 bg-orange-50 text-orange-600 shadow-sm"
                                         : "border-muted-foreground/20 text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
                                     )}
                                   >
@@ -980,7 +1112,9 @@ export default function BranchSettingsPage() {
                                       className={cn(
                                         "inline-flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-semibold",
                                         isSelected
-                                          ? "border-orange-200 bg-orange-500 text-white shadow-sm"
+                                          ? currentMode === 'advanced' && hasDifferentHours
+                                            ? "border-purple-200 bg-purple-500 text-white shadow-sm"
+                                            : "border-orange-200 bg-orange-500 text-white shadow-sm"
                                           : "border-muted-foreground/20 text-muted-foreground"
                                       )}
                                     >
@@ -1031,15 +1165,25 @@ export default function BranchSettingsPage() {
                               </div>
                             </div>
 
-                            {/* Advance Settings Button - Inside Default Hours */}
+                            {/* Advance Settings Button */}
                             <div className="pt-3 border-t border-gray-200 mt-4">
                               <div className="pt-1 flex items-center justify-center">
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="text-xs border border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200"
+                                  className={cn(
+                                    "text-xs transition-all duration-200",
+                                    currentMode === 'advanced'
+                                      ? "border border-purple-200 bg-purple-50 hover:bg-purple-100 hover:border-purple-300 text-purple-700"
+                                      : "border border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300"
+                                  )}
                                   disabled={restaurantClosed}
-                                  onClick={() => setShowCustomSchedule(true)}
+                                  onClick={() => {
+                                    if (currentMode === 'simple') {
+                                      handleModeSwitch();
+                                    }
+                                    setShowCustomSchedule(true);
+                                  }}
                                 >
                                   <Clock className="h-3 w-3 mr-1.5" />
                                   {language === 'fr' ? 'Paramètres avancés' : 'Advance Settings'}
@@ -1095,8 +1239,8 @@ export default function BranchSettingsPage() {
             >
               <DialogHeader className="flex-shrink-0">
                 <DialogTitle className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-50 rounded-lg">
-                    <Clock className="h-5 w-5 text-purple-600" />
+                  <div className="p-2 bg-gray-50 rounded-lg">
+                    <Clock className="h-5 w-5 text-gray-600" />
                   </div>
                   {language === 'fr' ? 'Paramètres avancés' : 'Advance Settings'}
                 </DialogTitle>
@@ -1114,25 +1258,90 @@ export default function BranchSettingsPage() {
               </DialogHeader>
 
               <div className="space-y-4">
+                <div className="max-h-[60vh] overflow-y-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-2">
+                    {workingDayOrder.map((day) => {
+                      const daySchedule = migratedHours?.advancedSchedule?.[day] || {
+                        enabled: selectedWorkingDays.includes(day),
+                        openTime: '09:00',
+                        closeTime: '22:00'
+                      };
 
-                  <div className="max-h-[60vh] overflow-y-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-2">
-                      {workingDayOrder.map((day) => (
-                        <div key={day} className="border border-gray-200 rounded-lg p-4 space-y-4">
+                      const handleDayToggle = () => {
+                        if (!migratedHours) return;
+                        const newSchedule = {
+                          ...migratedHours.advancedSchedule,
+                          [day]: {
+                            ...daySchedule,
+                            enabled: !daySchedule.enabled
+                          }
+                        };
+
+                        updateSettings({
+                          restaurantHours: {
+                            ...migratedHours,
+                            advancedSchedule: newSchedule
+                          }
+                        });
+                      };
+
+                      const handleDayOpenTimeChange = (newOpenTime: string) => {
+                        if (!migratedHours) return;
+                        const newSchedule = {
+                          ...migratedHours.advancedSchedule,
+                          [day]: {
+                            ...daySchedule,
+                            openTime: newOpenTime
+                          }
+                        };
+
+                        updateSettings({
+                          restaurantHours: {
+                            ...migratedHours,
+                            advancedSchedule: newSchedule
+                          }
+                        });
+                      };
+
+                      const handleDayCloseTimeChange = (newCloseTime: string) => {
+                        if (!migratedHours) return;
+                        const newSchedule = {
+                          ...migratedHours.advancedSchedule,
+                          [day]: {
+                            ...daySchedule,
+                            closeTime: newCloseTime
+                          }
+                        };
+
+                        updateSettings({
+                          restaurantHours: {
+                            ...migratedHours,
+                            advancedSchedule: newSchedule
+                          }
+                        });
+                      };
+
+                      return (
+                        <div key={day} className={cn(
+                          "border rounded-lg p-4 space-y-4 transition-colors",
+                          daySchedule.enabled
+                            ? "border-gray-200 bg-gray-50"
+                            : "border-gray-200 bg-gray-50"
+                        )}>
                           {/* Day Header */}
                           <div className="flex items-center justify-between">
                             <div className="text-sm font-medium">
                               {restaurantHoursCopy.dayLabels[day]}
                             </div>
                             <Switch
-                              checked={selectedWorkingDays.includes(day)}
-                              onCheckedChange={() => handleWorkingDayToggle(day)}
+                              checked={daySchedule.enabled}
+                              onCheckedChange={handleDayToggle}
                               className="scale-75"
                             />
                           </div>
 
                           {/* Time Settings */}
-                          {selectedWorkingDays.includes(day) ? (
+                          {daySchedule.enabled ? (
                             <div className="space-y-3">
                               {/* Time Pickers Row */}
                               <div className="grid grid-cols-2 gap-2">
@@ -1143,8 +1352,8 @@ export default function BranchSettingsPage() {
                                   </label>
                                   <CustomTimePicker
                                     id={`${day}-open`}
-                                    value={openTime}
-                                    onChange={handleOpenTimeChange}
+                                    value={daySchedule.openTime}
+                                    onChange={handleDayOpenTimeChange}
                                     placeholder="09:00"
                                   />
                                 </div>
@@ -1156,8 +1365,8 @@ export default function BranchSettingsPage() {
                                   </label>
                                   <CustomTimePicker
                                     id={`${day}-close`}
-                                    value={closeTime}
-                                    onChange={handleCloseTimeChange}
+                                    value={daySchedule.closeTime}
+                                    onChange={handleDayCloseTimeChange}
                                     placeholder="22:00"
                                   />
                                 </div>
@@ -1174,19 +1383,26 @@ export default function BranchSettingsPage() {
                             </div>
                           )}
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
+                </div>
               </div>
 
               {/* Footer */}
               <div className="pt-4 border-t mt-6">
                 <div className="flex justify-between">
                   <Button
-                    variant="ghost"
-                    onClick={() => setShowCustomSchedule(false)}
+                    variant="outline"
+                    size="sm"
+                    className="border border-gray-200 hover:bg-gray-50"
+                    onClick={() => {
+                      handleModeSwitch(); // Switch back to simple
+                      setShowCustomSchedule(false);
+                    }}
                   >
-                    {language === 'fr' ? '← Retour aux horaires simples' : '← Back to Simple Hours'}
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    {language === 'fr' ? 'Retour au mode simple' : 'Back to Simple Mode'}
                   </Button>
 
                   <div className="flex gap-2">
