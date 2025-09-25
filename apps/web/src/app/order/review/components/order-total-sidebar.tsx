@@ -7,6 +7,7 @@ import { translations } from '@/lib/translations'
 import { orderService } from '@/services/order-service'
 import { commissionService } from '@/services/commission.service'
 import { stripePaymentService } from '@/services/stripe.service'
+import { uberDirectService } from '@/services/uber-direct.service'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Loader2, AlertCircle } from 'lucide-react'
@@ -117,6 +118,39 @@ export function OrderTotalSidebar({
     setIsSubmitting(false)
   }
 
+  // Create Uber Direct delivery if needed
+  const createUberDirectDelivery = async (
+    formData: CustomerFormData,
+    orderId: string
+  ): Promise<string | null> => {
+    if (
+      formData.orderType === 'delivery' &&
+      formData.uberDirectQuote &&
+      formData.addressInfo
+    ) {
+      try {
+        const result = await uberDirectService.createDelivery(
+          orderContext.branchId,
+          formData.uberDirectQuote.quote_id,
+          orderId
+        )
+
+        if (result.success) {
+          console.log('✅ Uber Direct delivery created:', result.data.delivery_id)
+          return result.data.delivery_id
+        } else {
+          console.error('❌ Failed to create Uber Direct delivery:', result.error)
+          // Don't fail the entire order - just log the error
+          return null
+        }
+      } catch (error) {
+        console.error('❌ Uber Direct delivery error:', error)
+        return null
+      }
+    }
+    return null
+  }
+
   // Submit order after successful payment
   const submitOrderAfterPayment = async (
     paymentIntentId: string,
@@ -195,6 +229,9 @@ export function OrderTotalSidebar({
     )
 
     if (result.success) {
+      // Create Uber Direct delivery after successful order submission
+      await createUberDirectDelivery(latestFormData, result.data.orderId)
+
       const confirmationData = {
         orderId: result.data.orderId,
         orderNumber: result.data.orderNumber || result.data.orderId.substring(0, 8).toUpperCase(),
@@ -358,6 +395,9 @@ export function OrderTotalSidebar({
       )
 
       if (result.success) {
+        // Create Uber Direct delivery after successful order submission
+        await createUberDirectDelivery(currentFormData, result.data.orderId)
+
         const confirmationData = {
           orderId: result.data.orderId,
           orderNumber: result.data.orderNumber || result.data.orderId.substring(0, 8).toUpperCase(),

@@ -1,15 +1,16 @@
 "use client"
 
-import React, { useState, forwardRef, useImperativeHandle, useCallback } from 'react'
+import React, { useState, forwardRef, useImperativeHandle, useCallback, useEffect } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Home, Building, Building2, MapPin, Utensils, ShoppingBag, Bike } from 'lucide-react'
+import { Home, Building, Building2, MapPin, Utensils, ShoppingBag, Bike, Loader2, Clock, DollarSign } from 'lucide-react'
 import { AddressAutocomplete } from '@/components/address-autocomplete'
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
+import { useUberDirectQuote } from '@/hooks/use-uber-direct-quote'
 
 // Canadian postal code utilities
 function formatCanadianPostalCode(input: string): string {
@@ -92,6 +93,13 @@ export interface CustomerFormData {
   customerInfo: CustomerInfo
   addressInfo?: DeliveryAddressInfo
   orderType: OrderType
+  uberDirectQuote?: {
+    quote_id: string
+    delivery_fee: number
+    eta_minutes: number
+    expires_at: string
+    test_mode: boolean
+  }
 }
 
 export interface CustomerValidationResult {
@@ -123,6 +131,18 @@ const CustomerInformationSectionComponent = forwardRef<CustomerInformationSectio
   const t = translations[contextLanguage] || translations.en
   const currentLanguage = language || contextLanguage
   const { toast } = useToast()
+
+  // Uber Direct integration
+  const {
+    quote,
+    isLoading: isQuoteLoading,
+    error: quoteError,
+    isQuoteExpired,
+    getQuote,
+    clearQuote,
+    formatPrice,
+    formatETA
+  } = useUberDirectQuote()
 
   // Get translations based on language
   const getOrderTypeText = (type: string) => {
@@ -260,7 +280,8 @@ const CustomerInformationSectionComponent = forwardRef<CustomerInformationSectio
     const formData: CustomerFormData = {
       customerInfo: sanitizedCustomerInfo,
       addressInfo: normalizedAddress,
-      orderType: sanitizedCustomerInfo.orderType
+      orderType: sanitizedCustomerInfo.orderType,
+      uberDirectQuote: quote && !isQuoteExpired ? quote : undefined
     }
 
     const validationResult: CustomerValidationResult = {
@@ -372,6 +393,11 @@ const addressTypes = [
       } else {
         onOrderTypeChange(null)
       }
+
+      // Clear quote when switching away from delivery
+      if (value !== 'delivery' && quote) {
+        clearQuote()
+      }
     }
 
     if (showValidationErrors && (field === 'name' || field === 'phone' || field === 'email')) {
@@ -394,16 +420,62 @@ const addressTypes = [
 
   const handleAddressChange = (field: keyof DeliveryAddress, value: string) => {
     setAddress(prev => ({ ...prev, [field]: value }))
-    
+
     // Clear validation error for this field when user types (only if errors are being shown)
     const errorKey = `address_${field}`
     if (showValidationErrors && validationErrors[errorKey]) {
       setValidationErrors(prev => ({ ...prev, [errorKey]: false }))
     }
-    
+
     // Trigger validation after state update (but don't show errors)
     setTimeout(() => validateForm(false), 0)
+
+    // Clear existing quote when address changes
+    if (quote) {
+      clearQuote()
+    }
   }
+
+  // Fetch quote when address is complete and valid
+  const fetchQuoteIfReady = useCallback(async () => {
+    if (
+      customerInfo.orderType === 'delivery' &&
+      !orderContext?.isQROrder &&
+      orderContext?.branchId &&
+      address.streetNumber.trim() &&
+      address.streetName.trim() &&
+      address.city.trim() &&
+      address.province.trim() &&
+      address.postalCode.trim() &&
+      isValidCanadianPostalCode(address.postalCode.trim())
+    ) {
+      const addressInfo = buildNormalizedAddressInfo()
+      if (addressInfo && !isQuoteLoading && !quote) {
+        await getQuote(orderContext.branchId, addressInfo)
+      }
+    }
+  }, [
+    customerInfo.orderType,
+    orderContext?.isQROrder,
+    orderContext?.branchId,
+    address.streetNumber,
+    address.streetName,
+    address.city,
+    address.province,
+    address.postalCode,
+    isQuoteLoading,
+    quote,
+    getQuote
+  ])
+
+  // Auto-fetch quote when address becomes complete
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchQuoteIfReady()
+    }, 1000) // Debounce for 1 second
+
+    return () => clearTimeout(timeoutId)
+  }, [fetchQuoteIfReady])
 
   const handleAddressInputFocus = (fieldName: string) => {
     // Clear red border when user focuses on address input (only if errors are being shown)
@@ -588,18 +660,76 @@ const addressTypes = [
                 <span className="font-medium">{getOrderTypeText('takeaway')}</span>
               </Button>
               
-              <Button
-                variant={customerInfo.orderType === 'delivery' ? 'default' : 'outline'}
-                onClick={() => handleCustomerChange('orderType', 'delivery')}
-                className={`flex items-center justify-center gap-2 h-11 rounded-lg transition-all ${
-                  customerInfo.orderType === 'delivery' 
-                    ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922] hover:bg-orange-100' 
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <Bike className="h-4 w-4" />
-                <span className="font-medium">{getOrderTypeText('delivery')}</span>
-              </Button>
+              <div className="relative">
+                <Button
+                  variant={customerInfo.orderType === 'delivery' ? 'default' : 'outline'}
+                  onClick={() => handleCustomerChange('orderType', 'delivery')}
+                  className={`flex items-center justify-center gap-2 h-11 rounded-lg transition-all w-full ${
+                    customerInfo.orderType === 'delivery'
+                      ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922] hover:bg-orange-100'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <Bike className="h-4 w-4" />
+                  <span className="font-medium">{getOrderTypeText('delivery')}</span>
+                </Button>
+
+                {/* Uber Direct Quote Display */}
+                {customerInfo.orderType === 'delivery' && !orderContext?.isQROrder && (
+                  <div className="mt-2">
+                    {isQuoteLoading && (
+                      <div className="flex items-center justify-center gap-2 text-sm text-gray-600 py-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>{currentLanguage === 'fr' ? 'Calcul du prix...' : 'Getting quote...'}</span>
+                      </div>
+                    )}
+
+                    {quote && !isQuoteExpired && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2 text-green-700">
+                            <DollarSign className="h-4 w-4" />
+                            <span className="font-medium">
+                              {currentLanguage === 'fr' ? 'Livraison' : 'Delivery'}: {formatPrice(quote.delivery_fee)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-green-600">
+                            <Clock className="h-3 w-3" />
+                            <span className="text-xs">{formatETA(quote.eta_minutes)}</span>
+                          </div>
+                        </div>
+                        {quote.test_mode && (
+                          <div className="mt-1 text-xs text-green-600">
+                            {currentLanguage === 'fr' ? '🧪 Mode test' : '🧪 Test mode'}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {quoteError && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <div className="text-sm text-yellow-700">
+                          {currentLanguage === 'fr'
+                            ? 'Prix de livraison sera calculé après la saisie de l\'adresse'
+                            : 'Delivery price will be calculated after entering address'
+                          }
+                        </div>
+                      </div>
+                    )}
+
+                    {isQuoteExpired && quote && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <div className="text-sm text-red-700">
+                          {currentLanguage === 'fr'
+                            ? 'Devis expiré. Veuillez rafraîchir.'
+                            : 'Quote expired. Please refresh.'
+                          }
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
