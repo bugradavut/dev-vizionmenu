@@ -54,6 +54,28 @@ router.put('/skipthedishes/order/:orderId/status', platformSyncController.update
 router.get('/skipthedishes/export-csv', platformSyncController.exportSkipTheDishesCSV);
 
 // =====================================================
+// UBER DIRECT ROUTES ✅ NEW
+// White-label courier dispatch service
+// ✅ TEST MODE SAFE - No real deliveries
+// =====================================================
+
+// Get delivery quote (Protected - needs auth)
+router.post('/uber-direct/quote', platformSyncController.getUberDirectQuote);
+
+// Create delivery (Protected - needs auth)
+router.post('/uber-direct/delivery', platformSyncController.createUberDirectDelivery);
+
+// Cancel delivery (Protected - needs auth)
+router.post('/uber-direct/cancel', platformSyncController.cancelUberDirectDelivery);
+
+// 🌍 PUBLIC ENDPOINTS (No auth required)
+// Webhook processing (Uber calls this)
+router.post('/uber-direct/webhooks', platformSyncController.processUberDirectWebhook);
+
+// Service status (For testing)
+router.get('/uber-direct/status', platformSyncController.getUberDirectStatus);
+
+// =====================================================
 // GENERAL PLATFORM SYNC ROUTES
 // =====================================================
 

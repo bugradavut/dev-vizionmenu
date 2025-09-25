@@ -7,6 +7,7 @@
 const uberEatsService = require('../services/uber-eats.service');
 const doorDashService = require('../services/doordash.service');
 const skipTheDishesService = require('../services/skipthedishes.service');
+const uberDirectService = require('../services/uber-direct.service');
 
 /**
  * Sync menu to Uber Eats platform
@@ -595,24 +596,259 @@ async function bulkSyncMenus(req, res) {
   }
 }
 
+/**
+ * ========================================
+ * UBER DIRECT DELIVERY SERVICE ENDPOINTS
+ * White-label courier dispatch service
+ * ✅ TEST MODE SAFE - No real deliveries
+ * ========================================
+ */
+
+/**
+ * Get delivery quote from Uber Direct
+ * POST /api/v1/platform-sync/uber-direct/quote
+ */
+async function getUberDirectQuote(req, res) {
+  try {
+    const { branch_id, dropoff_address } = req.body;
+
+    if (!branch_id || !dropoff_address) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'branch_id and dropoff_address are required',
+        required_fields: ['branch_id', 'dropoff_address']
+      });
+    }
+
+    // Validate dropoff address format
+    const requiredAddressFields = ['street', 'city', 'state', 'zip'];
+    const missingFields = requiredAddressFields.filter(field =>
+      !dropoff_address[field] && !dropoff_address[field.replace('street', 'line1')]
+    );
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        error: 'Invalid address',
+        message: `Missing required address fields: ${missingFields.join(', ')}`,
+        provided_address: dropoff_address
+      });
+    }
+
+    console.log(`🚀 Getting Uber Direct quote for branch ${branch_id}...`);
+    const quote = await uberDirectService.createDeliveryQuote(branch_id, dropoff_address);
+
+    res.json({
+      success: true,
+      message: 'Uber Direct quote generated successfully',
+      data: {
+        quote_id: quote.quote_id,
+        delivery_fee: quote.delivery_fee,
+        currency: quote.currency,
+        eta_minutes: quote.eta_minutes,
+        pickup_duration: quote.pickup_duration,
+        delivery_duration: quote.delivery_duration,
+        expires_at: quote.expires_at,
+        platform: 'uber_direct',
+        test_mode: uberDirectService.isTestMode
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Uber Direct quote error:', error.message);
+    res.status(500).json({
+      error: 'Quote generation failed',
+      message: error.message,
+      platform: 'uber_direct',
+      test_mode: uberDirectService.isTestMode
+    });
+  }
+}
+
+/**
+ * Create delivery with Uber Direct
+ * POST /api/v1/platform-sync/uber-direct/delivery
+ */
+async function createUberDirectDelivery(req, res) {
+  try {
+    const { order_id, quote_id } = req.body;
+
+    if (!order_id || !quote_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'order_id and quote_id are required',
+        required_fields: ['order_id', 'quote_id']
+      });
+    }
+
+    console.log(`🚚 Creating Uber Direct delivery for order ${order_id}...`);
+    const delivery = await uberDirectService.createDelivery(order_id, quote_id);
+
+    res.json({
+      success: true,
+      message: uberDirectService.isTestMode ?
+        'Test delivery created successfully (no real courier dispatched)' :
+        'Uber Direct delivery created successfully',
+      data: {
+        uber_delivery_id: delivery.uber_delivery_id,
+        tracking_url: delivery.tracking_url,
+        status: delivery.status,
+        courier_info: delivery.courier_info,
+        estimated_arrival: delivery.estimated_arrival,
+        platform: 'uber_direct',
+        test_mode: uberDirectService.isTestMode
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Uber Direct delivery creation error:', error.message);
+    res.status(500).json({
+      error: 'Delivery creation failed',
+      message: error.message,
+      platform: 'uber_direct',
+      test_mode: uberDirectService.isTestMode
+    });
+  }
+}
+
+/**
+ * Cancel Uber Direct delivery (for testing)
+ * POST /api/v1/platform-sync/uber-direct/cancel
+ */
+async function cancelUberDirectDelivery(req, res) {
+  try {
+    const { delivery_id } = req.body;
+
+    if (!delivery_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'delivery_id is required'
+      });
+    }
+
+    console.log(`🚫 Cancelling Uber Direct delivery ${delivery_id}...`);
+    const result = await uberDirectService.cancelDelivery(delivery_id);
+
+    res.json({
+      success: true,
+      message: 'Delivery cancelled successfully',
+      data: {
+        delivery_id: result.delivery_id,
+        status: result.status,
+        cancelled_at: result.cancelled_at,
+        platform: 'uber_direct',
+        test_mode: uberDirectService.isTestMode
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Uber Direct cancellation error:', error.message);
+    res.status(500).json({
+      error: 'Delivery cancellation failed',
+      message: error.message,
+      platform: 'uber_direct',
+      test_mode: uberDirectService.isTestMode
+    });
+  }
+}
+
+/**
+ * Process Uber Direct webhook
+ * POST /api/v1/platform-sync/uber-direct/webhooks
+ */
+async function processUberDirectWebhook(req, res) {
+  try {
+    // Verify webhook signature (implement signature verification here)
+    const signature = req.headers['x-uber-signature'];
+
+    if (!signature) {
+      console.warn('⚠️ Uber Direct webhook received without signature');
+    }
+
+    console.log('📡 Processing Uber Direct webhook...', req.body?.event_type);
+    const success = await uberDirectService.processWebhook(req.body);
+
+    if (success) {
+      res.status(200).json({
+        success: true,
+        message: 'Webhook processed successfully'
+      });
+    } else {
+      res.status(400).json({
+        error: 'Webhook processing failed',
+        message: 'Invalid webhook payload or processing error'
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Uber Direct webhook error:', error.message);
+    res.status(500).json({
+      error: 'Webhook processing failed',
+      message: error.message
+    });
+  }
+}
+
+/**
+ * Get Uber Direct service status and configuration
+ * GET /api/v1/platform-sync/uber-direct/status
+ */
+async function getUberDirectStatus(req, res) {
+  try {
+    res.json({
+      success: true,
+      message: 'Uber Direct service status',
+      data: {
+        platform: 'uber_direct',
+        service_name: 'Uber Direct White-Label Courier',
+        test_mode: uberDirectService.isTestMode,
+        customer_id: uberDirectService.customerId,
+        base_url: uberDirectService.baseUrl,
+        features: {
+          quote_generation: true,
+          delivery_creation: true,
+          real_time_tracking: true,
+          webhook_processing: true,
+          delivery_cancellation: true
+        },
+        integration_type: 'white_label_courier',
+        description: 'White-label courier service - customers see VizionMenu brand, not Uber'
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Uber Direct status error:', error.message);
+    res.status(500).json({
+      error: 'Status check failed',
+      message: error.message
+    });
+  }
+}
+
 module.exports = {
   // Uber Eats endpoints
   syncUberEatsMenu,
   processUberEatsOrder,
   updateUberEatsOrderStatus,
-  
+
   // DoorDash endpoints
   syncDoorDashMenu,
   processDoorDashOrder,
   confirmDoorDashOrder,
   updateDoorDashOrderStatus,
-  
+
   // SkipTheDishes endpoints
   syncSkipTheDishesMenu,
   processSkipTheDishesOrder,
   updateSkipTheDishesOrderStatus,
   exportSkipTheDishesCSV,
-  
+
+  // Uber Direct endpoints ✅ NEW
+  getUberDirectQuote,
+  createUberDirectDelivery,
+  cancelUberDirectDelivery,
+  processUberDirectWebhook,
+  getUberDirectStatus,
+
   // General endpoints
   getPlatformSyncStatus,
   bulkSyncMenus
