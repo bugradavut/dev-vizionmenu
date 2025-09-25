@@ -18,11 +18,11 @@ const supabase = createClient(
  */
 class UberDirectService {
   constructor() {
-    // ✅ TEST CREDENTIALS - Safe for development
-    this.clientId = process.env.UBER_DIRECT_CLIENT_ID || 'zEQd8AIyG2_iwvfmFaG3aDbIvl_3BnKF';
-    this.clientSecret = process.env.UBER_DIRECT_CLIENT_SECRET || 'ZUT3J3KLxC32NQulzwusYFBc9QXw0Q-ciTpLeNGs';
-    this.customerId = process.env.UBER_DIRECT_CUSTOMER_ID || '7c307e48-95f3-5205-b5c7-ec8b0074339a';
-    this.baseUrl = process.env.UBER_DIRECT_BASE_URL || 'https://api.uber.com/v1/customers/7c307e48-95f3-5205-b5c7-ec8b0074339a';
+    // ✅ ENVIRONMENT VARIABLES ONLY - No hardcoded credentials
+    this.clientId = process.env.UBER_DIRECT_CLIENT_ID;
+    this.clientSecret = process.env.UBER_DIRECT_CLIENT_SECRET;
+    this.customerId = process.env.UBER_DIRECT_CUSTOMER_ID;
+    this.baseUrl = process.env.UBER_DIRECT_BASE_URL;
     this.authUrl = 'https://auth.uber.com/oauth/v2/token';
     this.scope = 'eats.deliveries';
 
@@ -31,8 +31,12 @@ class UberDirectService {
     this.tokenExpiresAt = null;
 
     // 🧪 Test mode detection
-    this.isTestMode = process.env.UBER_DIRECT_TEST_MODE === 'true' ||
-                      this.customerId === '7c307e48-95f3-5205-b5c7-ec8b0074339a';
+    this.isTestMode = process.env.UBER_DIRECT_TEST_MODE === 'true';
+
+    // Validate required environment variables
+    if (!this.clientId || !this.clientSecret || !this.customerId || !this.baseUrl) {
+      throw new Error('Missing required Uber Direct environment variables: UBER_DIRECT_CLIENT_ID, UBER_DIRECT_CLIENT_SECRET, UBER_DIRECT_CUSTOMER_ID, UBER_DIRECT_BASE_URL');
+    }
 
     console.log(`🧪 Uber Direct Service initialized in ${this.isTestMode ? 'TEST' : 'PRODUCTION'} mode`);
   }
