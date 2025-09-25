@@ -88,7 +88,7 @@ export class UberDirectService {
         headers['Authorization'] = `Bearer ${authToken}`;
       }
 
-      const response = await fetch(`${this.baseUrl}/platform-sync/uber-direct/quote`, {
+      const response = await fetch(`${this.baseUrl}/uber-direct/uber-direct/quote`, {
         method: 'POST',
         headers,
         body: JSON.stringify(quoteRequest)
