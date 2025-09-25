@@ -135,31 +135,30 @@ class UberDirectService {
         throw new Error(`Branch not found: ${branchError?.message || 'Invalid branch ID'}`);
       }
 
-      // Prepare pickup address from branch data
-      const pickupAddress = {
-        street_address: [branch.address?.street || branch.address?.line1 || "425 Market St"],
-        city: branch.address?.city || "San Francisco",
-        state: branch.address?.state || branch.address?.province || "CA",
-        zip_code: branch.address?.zip || branch.address?.postal_code || "94105",
-        country: branch.address?.country || "US"
-      };
+      // Parse branch address using Nominatim API (same as frontend)
+      const branchAddressText = branch.address || "Queen Street, Ottawa, ON, K1A 0H5, Canada";
+      console.log(`🔍 Parsing branch address: "${branchAddressText}"`);
 
-      // Prepare dropoff address
+      const pickupAddress = await this.parseAddressWithNominatim(branchAddressText);
+
+      // Prepare dropoff address (fix: string not array)
       const formattedDropoffAddress = {
-        street_address: [dropoffAddress.street || dropoffAddress.line1 || dropoffAddress.address_line_1],
+        street_address: dropoffAddress.street || dropoffAddress.line1 || dropoffAddress.address_line_1,
         city: dropoffAddress.city,
         state: dropoffAddress.state || dropoffAddress.province,
         zip_code: dropoffAddress.zip || dropoffAddress.postal_code,
-        country: dropoffAddress.country || "US"
+        country: "CA" // Canada
       };
 
       const quotePayload = {
-        pickup_address: pickupAddress,
-        dropoff_address: formattedDropoffAddress,
+        pickup_address: JSON.stringify(pickupAddress),
+        dropoff_address: JSON.stringify(formattedDropoffAddress),
         pickup_times: [0] // ASAP delivery
       };
 
       console.log(`📋 Creating Uber Direct quote for branch ${branch.name}...`);
+      console.log('🔍 DEBUG - Quote payload:', JSON.stringify(quotePayload, null, 2));
+      console.log('🔍 DEBUG - Request URL:', `${this.baseUrl}/delivery_quotes`);
 
       const response = await fetch(`${this.baseUrl}/delivery_quotes`, {
         method: 'POST',
@@ -173,17 +172,25 @@ class UberDirectService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('🔍 DEBUG - Error response:', JSON.stringify(errorData, null, 2));
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       const quote = await response.json();
 
-      // Format response for VizionMenu system
+      // Debug the actual quote response format
+      console.log('🔍 DEBUG - Raw quote response:', JSON.stringify(quote, null, 2));
+
+      // Format response for VizionMenu system - handle different response formats
       const formattedQuote = {
-        quote_id: quote.id || quote.estimate_id,
-        delivery_fee: quote.fee ? (quote.fee.amount / 100) : 0, // Convert cents to dollars
-        currency: quote.fee?.currency_code || 'USD',
-        eta_minutes: quote.pickup_duration ? (quote.pickup_duration + quote.delivery_duration) : 45,
+        quote_id: quote.id || quote.estimate_id || quote.quote_id,
+        delivery_fee: quote.fee ?
+          (typeof quote.fee === 'number' ? quote.fee / 100 : quote.fee.amount / 100) :
+          (quote.delivery_fee || quote.amount || 5.99), // Default fallback
+        currency: quote.fee?.currency_code || quote.currency || 'CAD',
+        eta_minutes: quote.pickup_duration && quote.delivery_duration ?
+          (quote.pickup_duration + quote.delivery_duration) :
+          (quote.eta_minutes || quote.total_time || 45), // Default fallback
         dropoff_eta: quote.dropoff_eta,
         expires_at: quote.expires || new Date(Date.now() + 15 * 60000).toISOString(), // 15 minutes
         pickup_duration: quote.pickup_duration || 15,
@@ -197,6 +204,141 @@ class UberDirectService {
 
     } catch (error) {
       console.error('❌ Uber Direct quote error:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Parse address using Nominatim API (same as frontend)
+   * @param {string} addressText - Full address string
+   * @returns {Promise<object>} Parsed address components
+   */
+  async parseAddressWithNominatim(addressText) {
+    try {
+      const apiUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=ca&q=${encodeURIComponent(addressText)}`;
+
+      const response = await fetch(apiUrl);
+      if (!response.ok) {
+        throw new Error(`Nominatim API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (!data || data.length === 0) {
+        throw new Error('No address found');
+      }
+
+      const address = data[0].address;
+      console.log(`🔍 Nominatim parsed address:`, address);
+
+      // Build street address (house number + road)
+      const streetParts = [];
+      if (address.house_number) streetParts.push(address.house_number);
+      if (address.road) streetParts.push(address.road);
+      const streetAddress = streetParts.join(' ') || address.display_name.split(',')[0];
+
+      // Get city (prefer city over town/village)
+      const city = address.city || address.town || address.village || 'Unknown';
+
+      // Convert province name to abbreviation
+      const provinceMap = {
+        'Alberta': 'AB',
+        'British Columbia': 'BC',
+        'Manitoba': 'MB',
+        'New Brunswick': 'NB',
+        'Newfoundland and Labrador': 'NL',
+        'Northwest Territories': 'NT',
+        'Nova Scotia': 'NS',
+        'Nunavut': 'NU',
+        'Ontario': 'ON',
+        'Prince Edward Island': 'PE',
+        'Quebec': 'QC',
+        'Saskatchewan': 'SK',
+        'Yukon': 'YT'
+      };
+
+      const province = provinceMap[address.state] || address.state || 'ON';
+      const postalCode = address.postcode || 'K1A 0H5';
+
+      const parsedAddress = {
+        street_address: streetAddress,
+        city: city,
+        state: province,
+        zip_code: postalCode,
+        country: "CA"
+      };
+
+      console.log(`✅ Parsed pickup address:`, parsedAddress);
+      return parsedAddress;
+
+    } catch (error) {
+      console.error(`❌ Address parsing failed: ${error.message}`);
+
+      // Fallback: Use hardcoded parsing (existing logic)
+      console.log(`🔄 Using fallback parsing...`);
+      const addressParts = addressText.split(', ');
+      return {
+        street_address: addressParts[0] || "Queen Street",
+        city: "Edmonton", // Assume Edmonton for now
+        state: "AB",
+        zip_code: "T5J 3B1",
+        country: "CA"
+      };
+    }
+  }
+
+  /**
+   * Create quote from existing order data
+   * Used when quote_id is 'auto' in delivery creation
+   *
+   * @param {string} orderId - VizionMenu order ID
+   * @returns {Promise<object>} Quote information
+   */
+  async createQuoteFromOrder(orderId) {
+    try {
+      // Get order details from database
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          branch_id,
+          delivery_address,
+          branches(
+            id,
+            name,
+            address,
+            phone
+          )
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (orderError || !order) {
+        throw new Error(`Order not found: ${orderError?.message || 'Invalid order ID'}`);
+      }
+
+      if (!order.delivery_address) {
+        throw new Error(`No delivery address found for order ${orderId}`);
+      }
+
+      // Build address from JSON delivery_address field
+      const deliveryAddress = order.delivery_address;
+      const dropoffAddress = {
+        street: deliveryAddress.street,
+        city: deliveryAddress.city,
+        state: deliveryAddress.province,
+        zip: deliveryAddress.postalCode
+      };
+
+      console.log(`🧮 Creating quote for order ${orderId} with address:`, dropoffAddress);
+
+      // Use existing createDeliveryQuote method
+      const quote = await this.createDeliveryQuote(order.branch_id, dropoffAddress);
+
+      console.log(`✅ Quote created for order ${orderId}: $${quote.delivery_fee}`);
+      return quote;
+
+    } catch (error) {
+      console.error(`❌ Failed to create quote from order ${orderId}:`, error.message);
       throw error;
     }
   }
@@ -222,9 +364,7 @@ class UberDirectService {
             id,
             quantity,
             menu_item_name,
-            menu_item_price,
-            total_price,
-            special_requests
+            menu_item_price
           ),
           branches(
             id,
@@ -240,28 +380,35 @@ class UberDirectService {
         throw new Error(`Order not found: ${orderError?.message || 'Invalid order ID'}`);
       }
 
+      // Build address from JSON delivery_address field for dropoff
+      const deliveryAddress = order.delivery_address;
+      const dropoffAddress = {
+        street_address: deliveryAddress.street,
+        city: deliveryAddress.city,
+        state: deliveryAddress.province,
+        zip_code: deliveryAddress.postalCode,
+        country: "CA"
+      };
+
+      // Parse branch address for pickup
+      const branchAddressText = order.branches.address || "Queen Street, Ottawa, ON, K1A 0H5, Canada";
+      const pickupAddress = await this.parseAddressWithNominatim(branchAddressText);
+
       // Prepare delivery payload
       const deliveryPayload = {
         external_order_id: orderId,
         quote_id: quoteId,
-        pickup_contact: {
-          first_name: order.branches.name || "Restaurant",
-          phone: order.branches.phone || "+1-555-000-0000"
-        },
+        pickup_address: JSON.stringify(pickupAddress),
+        pickup_name: order.branches.name || "Restaurant",
+        pickup_phone_number: order.branches.phone || "+1-555-000-0000",
         pickup_instructions: `Order #${order.order_number || orderId}. Please call when arrived.`,
-        dropoff_contact: {
-          first_name: order.customer_name?.split(' ')[0] || 'Customer',
-          last_name: order.customer_name?.split(' ').slice(1).join(' ') || '',
-          email: order.customer_email || '',
-          phone: order.customer_phone || ''
-        },
+        dropoff_address: JSON.stringify(dropoffAddress),
+        dropoff_name: order.customer_name || 'Customer',
+        dropoff_phone_number: order.customer_phone || '+1-555-000-0000',
         dropoff_instructions: order.special_instructions || 'Standard delivery',
-        order_items: order.order_items.map(item => ({
-          name: item.menu_item_name,
-          quantity: item.quantity,
-          price: Math.round(item.menu_item_price * 100), // Convert to cents
-          currency_code: 'CAD'
-        })),
+        manifest: order.order_items.map(item =>
+          `${item.quantity}x ${item.menu_item_name} - $${(item.menu_item_price * item.quantity).toFixed(2)} CAD`
+        ).join(', '),
         order_total: {
           amount: Math.round((order.total_amount || 0) * 100), // Convert to cents
           currency_code: 'CAD'
@@ -269,6 +416,7 @@ class UberDirectService {
       };
 
       console.log(`🚚 Creating Uber Direct delivery for order ${order.order_number || orderId}...`);
+      console.log('🔍 DEBUG - Delivery payload:', JSON.stringify(deliveryPayload, null, 2));
 
       const response = await fetch(`${this.baseUrl}/deliveries`, {
         method: 'POST',
@@ -282,6 +430,7 @@ class UberDirectService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('🔍 DEBUG - Delivery error response:', JSON.stringify(errorData, null, 2));
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -294,7 +443,6 @@ class UberDirectService {
           uber_delivery_id: delivery.id || delivery.delivery_id,
           third_party_platform: 'uber_direct',
           third_party_order_id: delivery.id || delivery.delivery_id,
-          delivery_tracking_url: delivery.tracking_url || delivery.tracking?.url,
           updated_at: new Date().toISOString()
         })
         .eq('id', orderId);

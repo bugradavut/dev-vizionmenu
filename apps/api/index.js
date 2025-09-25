@@ -143,8 +143,8 @@ app.use('/api/v1/campaigns', campaignsRoutes);
 // Use platform sync routes (protected - auth required)
 app.use('/api/v1/platform-sync', requireAuthWithBranch, platformSyncRoutes);
 
-// 🧪 UBER DIRECT PUBLIC ENDPOINTS - For webhooks and testing
-// Webhooks must be public (Uber calls them), Status for testing
+// 🧪 UBER DIRECT PUBLIC ENDPOINTS - For customer orders and webhooks
+// Customer delivery creation, webhooks, quotes - NO AUTH required
 app.use('/api/v1/uber-direct', platformSyncRoutes);
 
 // Use admin chain routes (platform admin only)

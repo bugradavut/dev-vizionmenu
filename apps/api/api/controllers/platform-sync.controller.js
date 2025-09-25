@@ -670,18 +670,27 @@ async function getUberDirectQuote(req, res) {
  */
 async function createUberDirectDelivery(req, res) {
   try {
-    const { order_id, quote_id } = req.body;
+    const { order_id, quote_id, branch_id } = req.body;
 
-    if (!order_id || !quote_id) {
+    if (!order_id) {
       return res.status(400).json({
         error: 'Invalid request',
-        message: 'order_id and quote_id are required',
-        required_fields: ['order_id', 'quote_id']
+        message: 'order_id is required',
+        required_fields: ['order_id']
       });
     }
 
     console.log(`🚚 Creating Uber Direct delivery for order ${order_id}...`);
-    const delivery = await uberDirectService.createDelivery(order_id, quote_id);
+
+    // If quote_id is 'auto', create quote + delivery automatically using order address
+    let finalQuoteId = quote_id;
+    if (quote_id === 'auto') {
+      console.log(`🧮 Auto-generating quote for order ${order_id}...`);
+      const quote = await uberDirectService.createQuoteFromOrder(order_id);
+      finalQuoteId = quote.quote_id;
+    }
+
+    const delivery = await uberDirectService.createDelivery(order_id, finalQuoteId);
 
     res.json({
       success: true,

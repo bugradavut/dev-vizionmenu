@@ -59,15 +59,15 @@ router.get('/skipthedishes/export-csv', platformSyncController.exportSkipTheDish
 // ✅ TEST MODE SAFE - No real deliveries
 // =====================================================
 
-// Create delivery (Protected - needs auth)
-router.post('/uber-direct/delivery', platformSyncController.createUberDirectDelivery);
-
 // Cancel delivery (Protected - needs auth)
 router.post('/uber-direct/cancel', platformSyncController.cancelUberDirectDelivery);
 
 // 🌍 PUBLIC ENDPOINTS (No auth required)
 // Customer-facing quote endpoint (no auth needed)
 router.post('/uber-direct/quote', platformSyncController.getUberDirectQuote);
+
+// Customer-facing delivery creation (no auth needed - called from customer order flow)
+router.post('/uber-direct/delivery', platformSyncController.createUberDirectDelivery);
 
 // Webhook processing (Uber calls this)
 router.post('/uber-direct/webhooks', platformSyncController.processUberDirectWebhook);

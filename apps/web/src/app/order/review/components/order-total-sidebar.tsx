@@ -118,20 +118,20 @@ export function OrderTotalSidebar({
     setIsSubmitting(false)
   }
 
-  // Create Uber Direct delivery if needed
+  // Create Uber Direct delivery if needed (backend handles quote + delivery)
   const createUberDirectDelivery = async (
     formData: CustomerFormData,
     orderId: string
   ): Promise<string | null> => {
     if (
       formData.orderType === 'delivery' &&
-      formData.uberDirectQuote &&
       formData.addressInfo
     ) {
       try {
+        // Backend will handle quote creation + delivery creation automatically
         const result = await uberDirectService.createDelivery(
           orderContext.branchId,
-          formData.uberDirectQuote.quote_id,
+          'auto', // Backend will generate quote automatically
           orderId
         )
 
@@ -230,7 +230,8 @@ export function OrderTotalSidebar({
 
     if (result.success) {
       // Create Uber Direct delivery after successful order submission
-      await createUberDirectDelivery(latestFormData, result.data.orderId)
+      const deliveryId = await createUberDirectDelivery(latestFormData, result.data.orderId)
+      console.log('🚚 Delivery creation result:', deliveryId)
 
       const confirmationData = {
         orderId: result.data.orderId,
