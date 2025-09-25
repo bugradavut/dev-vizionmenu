@@ -990,6 +990,26 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                       </div>
                       <Separator className="my-3" />
                       <div className="space-y-2 text-sm">
+                        {/* Payment Method */}
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">{language === 'fr' ? 'Méthode de paiement' : 'Payment Method'}</span>
+                          <span>
+                            {(() => {
+                              const method = order.payment_method?.toLowerCase();
+                              if (method === 'counter') {
+                                return language === 'fr' ? 'À la caisse' : 'Pay at Counter';
+                              } else if (method === 'online') {
+                                return language === 'fr' ? 'Paiement en ligne' : 'Online Payment';
+                              } else if (method === 'cash') {
+                                return language === 'fr' ? 'Comptant' : 'Cash';
+                              } else if (method === 'card') {
+                                return language === 'fr' ? 'Carte' : 'Card';
+                              } else {
+                                return order.payment_method || (language === 'fr' ? 'Non spécifié' : 'Not specified');
+                              }
+                            })()}
+                          </span>
+                        </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{t.orderDetail.orderDate}</span>
                           <span>{new Date(order.created_at).toLocaleDateString('en-CA', {
