@@ -565,6 +565,7 @@ class UberDirectService {
 
       // Map Uber status to user-friendly status
       const statusMapping = {
+        'pending': { display: 'Finding courier...', progress: 10 },
         'created': { display: 'Finding courier...', progress: 10 },
         'courier_assigned': { display: 'Courier assigned', progress: 25 },
         'courier_en_route_to_pickup': { display: 'Courier heading to restaurant', progress: 40 },
