@@ -341,6 +341,14 @@ async function getOrderDetail(orderId, userBranch) {
     delivery_address: existingOrder.delivery_address, // Add delivery_address field
     third_party_order_id: existingOrder.third_party_order_id,
     third_party_platform: existingOrder.third_party_platform,
+
+    // NEW: Uber Direct delivery fields
+    uber_delivery_id: existingOrder.uber_delivery_id,
+    delivery_status: existingOrder.delivery_status,
+    courier_info: existingOrder.courier_info,
+    delivery_eta: existingOrder.delivery_eta,
+    status_history: existingOrder.status_history,
+
     created_at: existingOrder.created_at,
     updated_at: existingOrder.updated_at,
     items: (existingOrder.order_items || []).map(item => ({

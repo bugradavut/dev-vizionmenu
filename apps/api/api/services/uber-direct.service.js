@@ -570,6 +570,7 @@ class UberDirectService {
         'courier_assigned': { display: 'Courier assigned', progress: 25 },
         'courier_en_route_to_pickup': { display: 'Courier heading to restaurant', progress: 40 },
         'arrived_at_pickup': { display: 'Courier arrived at restaurant', progress: 55 },
+        'picking_up': { display: 'Picking up order', progress: 60 },
         'picked_up': { display: 'Order picked up', progress: 70 },
         'courier_en_route_to_dropoff': { display: 'Out for delivery', progress: 85 },
         'delivered': { display: 'Delivered successfully', progress: 100 },
@@ -578,11 +579,11 @@ class UberDirectService {
 
       const mappedStatus = statusMapping[status] || { display: status, progress: 0 };
 
-      // Get current order for status history
+      // Get current order for status history using external_order_id (our Order ID)
       const { data: currentOrder } = await supabase
         .from('orders')
         .select('status_history, delivery_status')
-        .eq('uber_delivery_id', delivery_id)
+        .eq('id', external_order_id)
         .single();
 
       // Build status history entry
@@ -616,11 +617,11 @@ class UberDirectService {
         };
       }
 
-      // Update order in database
+      // Update order in database using external_order_id (our Order ID)
       const { error: updateError } = await supabase
         .from('orders')
         .update(updateData)
-        .eq('uber_delivery_id', delivery_id);
+        .eq('id', external_order_id);
 
       if (updateError) {
         console.error('⚠️ Failed to update order from webhook:', updateError.message);

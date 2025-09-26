@@ -140,7 +140,6 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
       const success = await updateStatus({ status: newStatus });
       if (success) {
         // Optionally show success message
-        console.log(`Order status updated to: ${newStatus}`);
       }
     } catch (error) {
       console.error('Failed to update order status:', error);
@@ -810,20 +809,9 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                       </Card>
                     </AccordionItem>
 
-                    {/* DEBUG: Show order data for debugging */}
-                    {order.order_type === 'delivery' && (
-                      <div className="p-4 bg-gray-100 rounded text-xs">
-                        <pre>{JSON.stringify({
-                          order_type: order.order_type,
-                          uber_delivery_id: order.uber_delivery_id,
-                          delivery_status: order.delivery_status,
-                          status_history: order.status_history
-                        }, null, 2)}</pre>
-                      </div>
-                    )}
 
-                    {/* Delivery Status - Only show for delivery orders with Uber Direct */}
-                    {order.order_type === 'delivery' && order.uber_delivery_id && (
+                    {/* Delivery Status - COMMENTED OUT FOR UI ADJUSTMENT */}
+                    {/* {order.order_type === 'delivery' && order.uber_delivery_id && (
                       <AccordionItem value="delivery" className="border-none">
                         <UberDeliveryStatus
                           uberDeliveryId={order.uber_delivery_id}
@@ -836,7 +824,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                           className="shadow-none border-0"
                         />
                       </AccordionItem>
-                    )}
+                    )} */}
 
                   </Accordion>
                 </div>
