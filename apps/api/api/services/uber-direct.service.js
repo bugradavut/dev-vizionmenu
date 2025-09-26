@@ -532,7 +532,7 @@ class UberDirectService {
 
       // Handle different webhook event types
       if (event_type === 'event.delivery_status' || event_type === 'delivery.status_updated' || event_type === 'delivery_status') {
-        return await this.handleDeliveryStatusUpdate(resource, event_time);
+        return await this.handleDeliveryStatusUpdate(resource, event_time, webhookPayload.courier);
       }
 
       if (event_type === 'event.delivery_created' || event_type === 'delivery.created') {
@@ -557,9 +557,10 @@ class UberDirectService {
    * Handle delivery status update webhook
    * Maps Uber statuses to VizionMenu display statuses
    */
-  async handleDeliveryStatusUpdate(resource, eventTime) {
+  async handleDeliveryStatusUpdate(resource, eventTime, courierInfo) {
     try {
-      const { id: delivery_id, status, courier, estimated_arrival_time, external_id: external_order_id } = resource;
+      const { id: delivery_id, status, estimated_arrival_time, external_id: external_order_id } = resource;
+      const courier = courierInfo; // Courier info comes from top-level payload
 
       console.log(`📊 Status update: ${delivery_id} -> ${status}`);
 
