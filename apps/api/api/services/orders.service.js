@@ -620,7 +620,7 @@ async function createOrder(orderData, branchId) {
     
     notes: notes || null,
     special_instructions: specialInstructions || null,
-    third_party_platform: source === 'qr_code' ? null : source, // qr_code doesn't set platform
+    third_party_platform: ['qr_code', 'web'].includes(source) ? null : source, // Internal orders don't set platform
     // Pre-order fields
     is_pre_order: isPreOrder,
     scheduled_datetime: scheduledDateTime,
