@@ -136,7 +136,11 @@ export const useBranchSettings = (options: UseBranchSettingsOptions = {}): UseBr
             ...current.restaurantHours,
             ...updates.restaurantHours
           }
-        : current.restaurantHours || getDefaultSettings().restaurantHours
+        : current.restaurantHours || getDefaultSettings().restaurantHours,
+      // Ensure deliveryZones are properly merged
+      deliveryZones: updates.deliveryZones
+        ? { ...current.deliveryZones, ...updates.deliveryZones }
+        : current.deliveryZones
     }));
   }, []);
 

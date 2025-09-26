@@ -21,6 +21,19 @@ export interface PaymentSettings {
 // Import RestaurantHours from utils to maintain consistency
 import type { RestaurantHours } from '../utils/restaurant-hours';
 
+// Delivery Zones types
+export interface DeliveryZone {
+  id: string;
+  name: string;
+  polygon: [number, number][];
+  active: boolean;
+}
+
+export interface DeliveryZonesData {
+  enabled: boolean;
+  zones: DeliveryZone[];
+}
+
 // Legacy interface for backward compatibility
 export interface LegacyRestaurantHours {
   isOpen: boolean;
@@ -39,6 +52,7 @@ export interface BranchSettings {
   minimumOrderAmount?: number;
   deliveryFee?: number;
   freeDeliveryThreshold?: number;
+  deliveryZones?: DeliveryZonesData;
 }
 
 export interface BranchSettingsResponse {
@@ -118,6 +132,7 @@ export const updateBranchSettings = async (
       minimumOrderAmount: settings.minimumOrderAmount,
       deliveryFee: settings.deliveryFee,
       freeDeliveryThreshold: settings.freeDeliveryThreshold,
+      deliveryZones: settings.deliveryZones,
     };
 
     // Use Express.js API URL
@@ -183,4 +198,8 @@ export const getDefaultSettings = (): BranchSettings => ({
   minimumOrderAmount: 0, // Default: no minimum order amount
   deliveryFee: 0, // Default: no delivery fee
   freeDeliveryThreshold: 0, // Default: no free delivery threshold
+  deliveryZones: {
+    enabled: false,
+    zones: []
+  }, // Default: delivery zones disabled
 });

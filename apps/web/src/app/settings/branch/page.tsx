@@ -24,6 +24,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/translations"
 import { cn } from "@/lib/utils"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { DeliveryZonesCard } from "@/components/delivery-zones"
 
 type RestaurantHoursDay = keyof typeof translations.en.settingsBranch.restaurantHours.dayLabels
 
@@ -1187,6 +1188,14 @@ export default function BranchSettingsPage() {
                       </CardContent>
                     </Card>
                   </div>
+                </div>
+
+                {/* Delivery Zones Card - Full Width at Bottom */}
+                <div className="grid grid-cols-1 gap-6">
+                  <DeliveryZonesCard
+                    value={settings.deliveryZones}
+                    onChange={(deliveryZones) => updateSettings({ deliveryZones })}
+                  />
                 </div>
 
               </div>
