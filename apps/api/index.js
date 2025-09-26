@@ -250,7 +250,8 @@ app.use('*', (req, res) => {
       'POST /api/v1/platform-sync/skipthedishes/menu',
       'POST /api/v1/platform-sync/skipthedishes/order',
       'PUT /api/v1/platform-sync/skipthedishes/order/:orderId/status',
-      'GET /api/v1/platform-sync/skipthedishes/export-csv'
+      'GET /api/v1/platform-sync/skipthedishes/export-csv',
+      'POST /api/v1/platform-sync/uber-direct/webhooks'
     ]
   });
 });
