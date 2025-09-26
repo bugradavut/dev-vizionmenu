@@ -61,6 +61,17 @@ const requireAuth = (req, res, next) => {
  */
 const requireAuthWithBranch = async (req, res, next) => {
   try {
+    // Allow public endpoints without authentication
+    const publicEndpoints = [
+      'POST /api/v1/platform-sync/uber-direct/webhooks'
+    ];
+
+    const currentEndpoint = `${req.method} ${req.path}`;
+    if (publicEndpoints.includes(currentEndpoint)) {
+      console.log(`🚪 Bypassing auth for public endpoint: ${currentEndpoint}`);
+      return next();
+    }
+
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
