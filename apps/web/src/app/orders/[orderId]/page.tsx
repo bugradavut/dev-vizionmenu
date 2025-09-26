@@ -810,6 +810,18 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                       </Card>
                     </AccordionItem>
 
+                    {/* DEBUG: Show order data for debugging */}
+                    {order.order_type === 'delivery' && (
+                      <div className="p-4 bg-gray-100 rounded text-xs">
+                        <pre>{JSON.stringify({
+                          order_type: order.order_type,
+                          uber_delivery_id: order.uber_delivery_id,
+                          delivery_status: order.delivery_status,
+                          status_history: order.status_history
+                        }, null, 2)}</pre>
+                      </div>
+                    )}
+
                     {/* Delivery Status - Only show for delivery orders with Uber Direct */}
                     {order.order_type === 'delivery' && order.uber_delivery_id && (
                       <AccordionItem value="delivery" className="border-none">
