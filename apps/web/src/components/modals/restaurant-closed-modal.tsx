@@ -42,15 +42,15 @@ export function RestaurantClosedModal({
             <div className="flex-1">
               <DialogTitle className="text-xl font-semibold text-foreground mb-1">
                 {isBusy
-                  ? (language === 'fr' ? 'Trop occupé' : 'Too Busy')
+                  ? (language === 'fr' ? 'Temporairement indisponible' : 'Temporarily Unavailable')
                   : (language === 'fr' ? 'Restaurant fermé' : 'Restaurant Closed')
                 }
               </DialogTitle>
               <p className="text-muted-foreground text-sm">
                 {isBusy
                   ? (language === 'fr'
-                    ? 'Nous sommes trop occupés pour accepter de nouvelles commandes pour le moment.'
-                    : 'We\'re too busy to accept new orders right now.')
+                    ? 'Nous ne acceptons pas de nouvelles commandes pour le moment.'
+                    : 'We are not accepting new orders at this time.')
                   : (language === 'fr'
                     ? 'Les commandes ne sont pas disponibles pour le moment.'
                     : 'Ordering is currently unavailable.')
@@ -70,8 +70,8 @@ export function RestaurantClosedModal({
                 </p>
                 <p className="text-orange-700 dark:text-orange-400 text-sm">
                   {language === 'fr'
-                    ? 'Merci pour votre patience pendant cette période chargée.'
-                    : 'Thank you for your patience during this busy period.'
+                    ? 'Merci pour votre patience.'
+                    : 'Thank you for your patience.'
                   }
                 </p>
               </div>
@@ -81,7 +81,7 @@ export function RestaurantClosedModal({
               <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <div className="text-center space-y-1">
                   <p className="text-sm font-medium text-blue-900 dark:text-blue-300">
-                    {language === 'fr' ? 'Heures d\'ouverture' : 'Opening Hours'}
+                    {language === 'fr' ? 'Nos heures de service' : 'Our Business Hours'}
                   </p>
                   <p className="text-blue-700 dark:text-blue-400 font-semibold">
                     {(() => {
