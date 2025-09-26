@@ -29,7 +29,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/translations"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
-import { UberDeliveryStatus } from "@/components/delivery/uber-delivery-status"
+// import { UberDeliveryStatus } from "@/components/delivery/uber-delivery-status"
 
 // Types - Clean and simple interface definitions
 
