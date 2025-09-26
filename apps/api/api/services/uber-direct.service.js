@@ -515,7 +515,7 @@ class UberDirectService {
 
   /**
    * Process webhook payload from Uber Direct
-   * Handles delivery status updates and courier information
+   * Handles delivery status updates and courier information with comprehensive logging
    *
    * @param {object} webhookPayload - Webhook data from Uber
    * @returns {Promise<boolean>} Processing success
@@ -525,42 +525,166 @@ class UberDirectService {
       const { event_type, resource, event_time } = webhookPayload;
 
       console.log(`📡 Processing Uber Direct webhook: ${event_type}`);
+      console.log('🔍 DEBUG - Webhook payload:', JSON.stringify(webhookPayload, null, 2));
 
-      if (event_type === 'delivery_status') {
-        const { order_id, status, courier, estimated_arrival_time } = resource;
+      // Handle different webhook event types
+      if (event_type === 'delivery.status_updated' || event_type === 'delivery_status') {
+        return await this.handleDeliveryStatusUpdate(resource, event_time);
+      }
 
-        // Update order in database
-        const updateData = {
-          delivery_status: status,
+      if (event_type === 'delivery.created') {
+        console.log(`📦 Delivery created: ${resource.id}`);
+        return true;
+      }
+
+      if (event_type === 'delivery.cancelled') {
+        return await this.handleDeliveryCancellation(resource, event_time);
+      }
+
+      console.log(`ℹ️ Unhandled webhook event type: ${event_type}`);
+      return true;
+
+    } catch (error) {
+      console.error('❌ Webhook processing failed:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Handle delivery status update webhook
+   * Maps Uber statuses to VizionMenu display statuses
+   */
+  async handleDeliveryStatusUpdate(resource, eventTime) {
+    try {
+      const { id: delivery_id, status, courier, estimated_arrival_time, external_order_id } = resource;
+
+      console.log(`📊 Status update: ${delivery_id} -> ${status}`);
+
+      // Map Uber status to user-friendly status
+      const statusMapping = {
+        'created': { display: 'Finding courier...', progress: 10 },
+        'courier_assigned': { display: 'Courier assigned', progress: 25 },
+        'courier_en_route_to_pickup': { display: 'Courier heading to restaurant', progress: 40 },
+        'arrived_at_pickup': { display: 'Courier arrived at restaurant', progress: 55 },
+        'picked_up': { display: 'Order picked up', progress: 70 },
+        'courier_en_route_to_dropoff': { display: 'Out for delivery', progress: 85 },
+        'delivered': { display: 'Delivered successfully', progress: 100 },
+        'cancelled': { display: 'Delivery cancelled', progress: 0 }
+      };
+
+      const mappedStatus = statusMapping[status] || { display: status, progress: 0 };
+
+      // Get current order for status history
+      const { data: currentOrder } = await supabase
+        .from('orders')
+        .select('status_history, delivery_status')
+        .eq('uber_delivery_id', delivery_id)
+        .single();
+
+      // Build status history entry
+      const statusEntry = {
+        status: status,
+        display_status: mappedStatus.display,
+        timestamp: eventTime || new Date().toISOString(),
+        progress: mappedStatus.progress
+      };
+
+      // Update status history
+      const currentHistory = currentOrder?.status_history || [];
+      const updatedHistory = [...currentHistory, statusEntry];
+
+      // Prepare update data
+      const updateData = {
+        delivery_status: status,
+        delivery_eta: estimated_arrival_time ? new Date(estimated_arrival_time).toISOString() : null,
+        status_history: updatedHistory,
+        updated_at: new Date().toISOString()
+      };
+
+      // Add courier information if available
+      if (courier) {
+        updateData.courier_info = {
+          name: courier.name || 'Unknown',
+          phone: courier.phone || null,
+          location: courier.location || null,
+          estimated_arrival: estimated_arrival_time || null,
           updated_at: new Date().toISOString()
         };
+      }
 
-        if (courier) {
-          updateData.courier_info = {
-            name: courier.name,
-            phone: courier.phone,
-            location: courier.location,
-            estimated_arrival: estimated_arrival_time
-          };
-        }
+      // Update order in database
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update(updateData)
+        .eq('uber_delivery_id', delivery_id);
 
-        const { error: updateError } = await supabase
-          .from('orders')
-          .update(updateData)
-          .eq('uber_delivery_id', order_id);
+      if (updateError) {
+        console.error('⚠️ Failed to update order from webhook:', updateError.message);
+        return false;
+      }
 
-        if (updateError) {
-          console.warn('⚠️ Failed to update order from webhook:', updateError.message);
-          return false;
-        }
+      console.log(`✅ Order updated: ${delivery_id} -> ${mappedStatus.display} (${mappedStatus.progress}%)`);
 
-        console.log(`✅ Order updated from webhook: ${order_id} -> ${status}`);
+      // Log courier info if available
+      if (courier?.name) {
+        console.log(`👤 Courier: ${courier.name} ${courier.phone ? `(${courier.phone})` : ''}`);
       }
 
       return true;
 
     } catch (error) {
-      console.error('❌ Webhook processing failed:', error.message);
+      console.error('❌ Status update processing failed:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Handle delivery cancellation webhook
+   */
+  async handleDeliveryCancellation(resource, eventTime) {
+    try {
+      const { id: delivery_id, cancellation_reason } = resource;
+
+      console.log(`🚫 Delivery cancelled: ${delivery_id}, reason: ${cancellation_reason}`);
+
+      const updateData = {
+        delivery_status: 'cancelled',
+        updated_at: new Date().toISOString()
+      };
+
+      // Add cancellation to status history
+      const { data: currentOrder } = await supabase
+        .from('orders')
+        .select('status_history')
+        .eq('uber_delivery_id', delivery_id)
+        .single();
+
+      const statusEntry = {
+        status: 'cancelled',
+        display_status: 'Delivery cancelled',
+        timestamp: eventTime || new Date().toISOString(),
+        progress: 0,
+        reason: cancellation_reason
+      };
+
+      const currentHistory = currentOrder?.status_history || [];
+      updateData.status_history = [...currentHistory, statusEntry];
+
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update(updateData)
+        .eq('uber_delivery_id', delivery_id);
+
+      if (updateError) {
+        console.error('⚠️ Failed to update cancelled delivery:', updateError.message);
+        return false;
+      }
+
+      console.log(`✅ Delivery cancellation recorded: ${delivery_id}`);
+      return true;
+
+    } catch (error) {
+      console.error('❌ Cancellation processing failed:', error.message);
       return false;
     }
   }

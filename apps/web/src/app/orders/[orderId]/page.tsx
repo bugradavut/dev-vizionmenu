@@ -29,6 +29,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/translations"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
+import { UberDeliveryStatus } from "@/components/delivery/uber-delivery-status"
 
 // Types - Clean and simple interface definitions
 
@@ -808,6 +809,22 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         </AccordionContent>
                       </Card>
                     </AccordionItem>
+
+                    {/* Delivery Status - Only show for delivery orders with Uber Direct */}
+                    {order.order_type === 'delivery' && order.uber_delivery_id && (
+                      <AccordionItem value="delivery" className="border-none">
+                        <UberDeliveryStatus
+                          uberDeliveryId={order.uber_delivery_id}
+                          deliveryStatus={order.delivery_status}
+                          courierInfo={order.courier_info}
+                          deliveryEta={order.delivery_eta}
+                          statusHistory={order.status_history}
+                          trackingUrl={order.tracking_url}
+                          onRefresh={refetch}
+                          className="shadow-none border-0"
+                        />
+                      </AccordionItem>
+                    )}
 
                   </Accordion>
                 </div>
