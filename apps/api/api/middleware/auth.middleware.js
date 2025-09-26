@@ -67,7 +67,18 @@ const requireAuthWithBranch = async (req, res, next) => {
     ];
 
     const currentEndpoint = `${req.method} ${req.path}`;
-    if (publicEndpoints.includes(currentEndpoint)) {
+    const currentUrl = `${req.method} ${req.url}`;
+    const currentOriginalUrl = `${req.method} ${req.originalUrl}`;
+
+    console.log(`🔍 Auth Debug - Method: ${req.method}`);
+    console.log(`🔍 Auth Debug - Path: ${req.path}`);
+    console.log(`🔍 Auth Debug - URL: ${req.url}`);
+    console.log(`🔍 Auth Debug - OriginalURL: ${req.originalUrl}`);
+    console.log(`🔍 Auth Debug - CurrentEndpoint: ${currentEndpoint}`);
+
+    if (publicEndpoints.includes(currentEndpoint) ||
+        publicEndpoints.includes(currentUrl) ||
+        publicEndpoints.includes(currentOriginalUrl)) {
       console.log(`🚪 Bypassing auth for public endpoint: ${currentEndpoint}`);
       return next();
     }
