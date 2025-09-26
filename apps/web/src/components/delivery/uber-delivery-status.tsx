@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import {
   Truck,
   MapPin,
-  Phone,
   Clock,
   CheckCircle2,
   AlertCircle,
@@ -20,7 +19,7 @@ import { useLanguage } from "@/contexts/language-context"
 interface CourierInfo {
   name: string
   phone?: string
-  location?: any
+  location?: unknown
   estimated_arrival?: string
   updated_at: string
 }
@@ -72,7 +71,7 @@ export function UberDeliveryStatus({
 
   // Get current status info
   const getCurrentStatus = () => {
-    if (!deliveryStatus) return { display: t.noDelivery, progress: 0 }
+    if (!deliveryStatus) return { display: t.noDelivery, progress: 0, color: 'bg-gray-500' }
 
     const statusMapping: Record<string, { display: string, progress: number, color: string }> = {
       'created': {

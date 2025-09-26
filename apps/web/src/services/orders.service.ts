@@ -90,12 +90,32 @@ export interface Order {
     couponId?: string;
   } | null;
   
-  // NEW: Tip details (Phase 1)  
+  // NEW: Tip details (Phase 1)
   tipDetails?: {
     amount: number;
     type: 'percentage' | 'fixed';
     value: number;
   } | null;
+
+  // NEW: Uber Direct delivery fields
+  uber_delivery_id?: string;
+  delivery_status?: string;
+  courier_info?: {
+    name: string;
+    phone?: string;
+    location?: unknown;
+    estimated_arrival?: string;
+    updated_at: string;
+  };
+  delivery_eta?: string;
+  status_history?: Array<{
+    status: string;
+    display_status: string;
+    timestamp: string;
+    progress: number;
+    reason?: string;
+  }>;
+  tracking_url?: string;
   
   // NEW: Free delivery information (Phase 3)
   deliveryInfo?: {
