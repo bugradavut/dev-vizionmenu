@@ -522,22 +522,25 @@ class UberDirectService {
    */
   async processWebhook(webhookPayload) {
     try {
-      const { event_type, resource, event_time } = webhookPayload;
+      const { kind, data, created, delivery_id, status } = webhookPayload;
+      const event_type = kind; // Uber uses 'kind' field for event type
+      const resource = data; // Uber uses 'data' field for resource
+      const event_time = created;
 
       console.log(`📡 Processing Uber Direct webhook: ${event_type}`);
       console.log('🔍 DEBUG - Webhook payload:', JSON.stringify(webhookPayload, null, 2));
 
       // Handle different webhook event types
-      if (event_type === 'delivery.status_updated' || event_type === 'delivery_status') {
+      if (event_type === 'event.delivery_status' || event_type === 'delivery.status_updated' || event_type === 'delivery_status') {
         return await this.handleDeliveryStatusUpdate(resource, event_time);
       }
 
-      if (event_type === 'delivery.created') {
+      if (event_type === 'event.delivery_created' || event_type === 'delivery.created') {
         console.log(`📦 Delivery created: ${resource.id}`);
         return true;
       }
 
-      if (event_type === 'delivery.cancelled') {
+      if (event_type === 'event.delivery_cancelled' || event_type === 'delivery.cancelled') {
         return await this.handleDeliveryCancellation(resource, event_time);
       }
 
@@ -556,7 +559,7 @@ class UberDirectService {
    */
   async handleDeliveryStatusUpdate(resource, eventTime) {
     try {
-      const { id: delivery_id, status, courier, estimated_arrival_time, external_order_id } = resource;
+      const { id: delivery_id, status, courier, estimated_arrival_time, external_id: external_order_id } = resource;
 
       console.log(`📊 Status update: ${delivery_id} -> ${status}`);
 
