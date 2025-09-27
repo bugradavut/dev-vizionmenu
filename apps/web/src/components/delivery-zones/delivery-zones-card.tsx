@@ -45,10 +45,12 @@ export function DeliveryZonesCard({ value, onChange }: DeliveryZonesCardProps) {
       active: true
     }
 
-    onChange?.({
+    const updatedZones = {
       ...deliveryZones,
       zones: [...deliveryZones.zones, newZone]
-    })
+    }
+
+    onChange?.(updatedZones)
   }
 
 

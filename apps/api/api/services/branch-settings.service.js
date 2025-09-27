@@ -126,7 +126,7 @@ async function updateBranchSettings(branchId, settingsData) {
       validateDeliveryZones(deliveryZones);
     }
 
-    // Prepare settings JSON (excluding minimumOrderAmount and deliveryFee)
+    // Prepare complete settings JSON (including all settings)
     const settingsJson = {
       orderFlow: orderFlow || 'standard',
       timingSettings: {
@@ -143,26 +143,25 @@ async function updateBranchSettings(branchId, settingsData) {
       },
       restaurantHours: restaurantHours ? sanitizeRestaurantHours(restaurantHours) : undefined,
       deliveryZones: deliveryZones ? sanitizeDeliveryZones(deliveryZones) : undefined,
+      // Include order amounts in settings JSON
+      minimumOrderAmount: minimumOrderAmount || 0,
+      deliveryFee: deliveryFee || 0,
+      freeDeliveryThreshold: freeDeliveryThreshold || 0,
     };
 
-    // Update branch in database
+
+    // Update branch in database (only settings and updated_at)
     const { data: updatedBranch, error: updateError } = await supabase
       .from('branches')
       .update({
         settings: settingsJson,
-        minimum_order_amount: minimumOrderAmount,
-        delivery_fee: deliveryFee,
-        free_delivery_threshold: freeDeliveryThreshold,
         updated_at: new Date().toISOString(),
       })
       .eq('id', branchId)
       .select(`
         id,
         name,
-        settings,
-        minimum_order_amount,
-        delivery_fee,
-        free_delivery_threshold
+        settings
       `)
       .single();
 
@@ -182,9 +181,9 @@ async function updateBranchSettings(branchId, settingsData) {
       settings: {
         ...settingsJson,
         restaurantHours: buildRestaurantHours(updatedBranch.settings?.restaurantHours),
-        minimumOrderAmount: updatedBranch.minimum_order_amount || 0,
-        deliveryFee: updatedBranch.delivery_fee || 0,
-        freeDeliveryThreshold: updatedBranch.free_delivery_threshold || 0,
+        minimumOrderAmount: updatedBranch.settings?.minimumOrderAmount || 0,
+        deliveryFee: updatedBranch.settings?.deliveryFee || 0,
+        freeDeliveryThreshold: updatedBranch.settings?.freeDeliveryThreshold || 0,
         deliveryZones: updatedBranch.settings?.deliveryZones || { enabled: false, zones: [] },
       },
     };

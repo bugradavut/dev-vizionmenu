@@ -40,6 +40,12 @@ export function DeliveryZonesMap({
 
         // Clear container completely and reset all Leaflet state
         const container = mapRef.current
+
+        // Enhanced DOM ready check
+        if (!container || !container.offsetParent) {
+          return
+        }
+
         container.innerHTML = ''
 
         // Remove all possible Leaflet references
@@ -55,14 +61,24 @@ export function DeliveryZonesMap({
         container.style.height = height
         container.style.position = 'relative'
 
-        // Force reflow to ensure DOM is ready
-        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        container.offsetHeight
+        // Force reflow to ensure DOM is ready - with null check
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+          container.offsetHeight
+        } catch {
+          return
+        }
 
         // Wait longer for container to be fully ready
         await new Promise(resolve => setTimeout(resolve, 200))
 
         if (!mounted || !mapRef.current) return
+
+        // Final container validation before map creation
+        const finalContainer = mapRef.current
+        if (!finalContainer || finalContainer.offsetWidth === 0 || finalContainer.offsetHeight === 0) {
+          return
+        }
 
         // Import Leaflet
         const L = await import('leaflet')
@@ -75,8 +91,8 @@ export function DeliveryZonesMap({
           shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
         })
 
-        // Create map instance with error handling
-        const map = L.map(mapRef.current, {
+        // Create map instance with error handling and additional safeguards
+        const map = L.map(finalContainer, {
           center,
           zoom: 12,
           zoomControl: true,
@@ -225,12 +241,26 @@ export function DeliveryZonesMap({
       }
     }
 
-    // Poll for DOM element to be ready
+    // Poll for DOM element to be ready with enhanced checks
+    let pollCount = 0
+    const maxPollAttempts = 50 // 5 seconds max wait
+
     const pollForElement = () => {
+      pollCount++
+
       if (mapRef.current && mounted) {
-        initMap()
-      } else if (mounted) {
+        // Additional readiness check
+        const container = mapRef.current
+        if (container.offsetParent && container.offsetWidth > 0) {
+          initMap()
+          return
+        }
+      }
+
+      if (mounted && pollCount < maxPollAttempts) {
         timeoutId = setTimeout(pollForElement, 100)
+      } else if (pollCount >= maxPollAttempts) {
+        setError(language === 'fr' ? 'Timeout de chargement de la carte' : 'Map loading timeout')
       }
     }
 
