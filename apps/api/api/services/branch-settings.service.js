@@ -58,6 +58,7 @@ async function getBranchSettings(branchId) {
       minimumOrderAmount: settings.minimumOrderAmount || 0,
       deliveryFee: settings.deliveryFee || 0,
       freeDeliveryThreshold: settings.freeDeliveryThreshold || 0,
+      deliveryZones: settings.deliveryZones || { enabled: false, zones: [] },
     };
 
     return {
@@ -96,7 +97,8 @@ async function updateBranchSettings(branchId, settingsData) {
       restaurantHours,
       minimumOrderAmount = 0,
       deliveryFee = 0,
-      freeDeliveryThreshold = 0
+      freeDeliveryThreshold = 0,
+      deliveryZones
     } = settingsData;
 
     // Validate minimum order amount
@@ -119,6 +121,11 @@ async function updateBranchSettings(branchId, settingsData) {
       validateRestaurantHours(restaurantHours);
     }
 
+    // Validate delivery zones if provided
+    if (deliveryZones) {
+      validateDeliveryZones(deliveryZones);
+    }
+
     // Prepare settings JSON (excluding minimumOrderAmount and deliveryFee)
     const settingsJson = {
       orderFlow: orderFlow || 'standard',
@@ -135,6 +142,7 @@ async function updateBranchSettings(branchId, settingsData) {
         defaultPaymentMethod: paymentSettings?.defaultPaymentMethod || 'online',
       },
       restaurantHours: restaurantHours ? sanitizeRestaurantHours(restaurantHours) : undefined,
+      deliveryZones: deliveryZones ? sanitizeDeliveryZones(deliveryZones) : undefined,
     };
 
     // Update branch in database
@@ -177,6 +185,7 @@ async function updateBranchSettings(branchId, settingsData) {
         minimumOrderAmount: updatedBranch.minimum_order_amount || 0,
         deliveryFee: updatedBranch.delivery_fee || 0,
         freeDeliveryThreshold: updatedBranch.free_delivery_threshold || 0,
+        deliveryZones: updatedBranch.settings?.deliveryZones || { enabled: false, zones: [] },
       },
     };
   } catch (error) {
@@ -509,6 +518,125 @@ function sanitizeRestaurantHours(restaurantHours) {
         };
       }
     });
+  }
+
+  return sanitized;
+}
+
+/**
+ * Validate delivery zones structure
+ */
+function validateDeliveryZones(deliveryZones) {
+  if (!deliveryZones || typeof deliveryZones !== 'object') {
+    throw new Error('Delivery zones must be an object');
+  }
+
+  const { enabled, zones } = deliveryZones;
+
+  // Validate enabled flag
+  if (typeof enabled !== 'boolean') {
+    throw new Error('Delivery zones enabled flag must be a boolean');
+  }
+
+  // Validate zones array
+  if (!Array.isArray(zones)) {
+    throw new Error('Delivery zones must be an array');
+  }
+
+  // Validate each zone
+  zones.forEach((zone, index) => {
+    if (!zone || typeof zone !== 'object') {
+      throw new Error(`Zone ${index + 1} must be an object`);
+    }
+
+    const { id, name, polygon, active } = zone;
+
+    if (!id || typeof id !== 'string') {
+      throw new Error(`Zone ${index + 1} must have a valid ID`);
+    }
+
+    if (!name || typeof name !== 'string') {
+      throw new Error(`Zone ${index + 1} must have a valid name`);
+    }
+
+    if (typeof active !== 'boolean') {
+      throw new Error(`Zone ${index + 1} active flag must be a boolean`);
+    }
+
+    if (!Array.isArray(polygon)) {
+      throw new Error(`Zone ${index + 1} polygon must be an array`);
+    }
+
+    // Validate polygon coordinates
+    if (polygon.length < 3) {
+      throw new Error(`Zone ${index + 1} polygon must have at least 3 points`);
+    }
+
+    polygon.forEach((point, pointIndex) => {
+      if (!Array.isArray(point) || point.length !== 2) {
+        throw new Error(`Zone ${index + 1} polygon point ${pointIndex + 1} must be an array of [lat, lng]`);
+      }
+
+      const [lat, lng] = point;
+      if (typeof lat !== 'number' || typeof lng !== 'number') {
+        throw new Error(`Zone ${index + 1} polygon point ${pointIndex + 1} coordinates must be numbers`);
+      }
+
+      // Basic coordinate validation
+      if (lat < -90 || lat > 90) {
+        throw new Error(`Zone ${index + 1} polygon point ${pointIndex + 1} latitude must be between -90 and 90`);
+      }
+
+      if (lng < -180 || lng > 180) {
+        throw new Error(`Zone ${index + 1} polygon point ${pointIndex + 1} longitude must be between -180 and 180`);
+      }
+    });
+  });
+
+  return true;
+}
+
+/**
+ * Sanitize delivery zones for database storage
+ */
+function sanitizeDeliveryZones(deliveryZones) {
+  if (!deliveryZones) {
+    return { enabled: false, zones: [] };
+  }
+
+  const sanitized = {
+    enabled: Boolean(deliveryZones.enabled),
+    zones: []
+  };
+
+  if (Array.isArray(deliveryZones.zones)) {
+    sanitized.zones = deliveryZones.zones.map(zone => {
+      if (!zone || typeof zone !== 'object') {
+        return null;
+      }
+
+      const sanitizedZone = {
+        id: String(zone.id || ''),
+        name: String(zone.name || ''),
+        active: Boolean(zone.active),
+        polygon: []
+      };
+
+      // Sanitize polygon coordinates
+      if (Array.isArray(zone.polygon)) {
+        sanitizedZone.polygon = zone.polygon
+          .filter(point => Array.isArray(point) && point.length === 2)
+          .map(([lat, lng]) => [
+            parseFloat(lat) || 0,
+            parseFloat(lng) || 0
+          ])
+          .filter(([lat, lng]) =>
+            lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+          );
+      }
+
+      return sanitizedZone;
+    }).filter(zone => zone && zone.id && zone.polygon.length >= 3);
   }
 
   return sanitized;

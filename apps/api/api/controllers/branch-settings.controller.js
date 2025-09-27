@@ -96,6 +96,28 @@ const updateBranchSettings = async (req, res) => {
       settingsData.freeDeliveryThreshold = threshold;
     }
 
+    // Basic validation for delivery zones if provided
+    if (settingsData.deliveryZones !== undefined) {
+      if (typeof settingsData.deliveryZones !== 'object' || settingsData.deliveryZones === null) {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_DELIVERY_ZONES',
+            message: 'Delivery zones must be an object',
+          },
+        });
+      }
+
+      // Check for zones array if enabled
+      if (settingsData.deliveryZones.enabled && !Array.isArray(settingsData.deliveryZones.zones)) {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_DELIVERY_ZONES_ARRAY',
+            message: 'Delivery zones must contain a zones array when enabled',
+          },
+        });
+      }
+    }
+
     const result = await branchSettingsService.updateBranchSettings(branchId, settingsData);
 
     // Audit log: update branch settings (branch manager and above) - Enhanced
