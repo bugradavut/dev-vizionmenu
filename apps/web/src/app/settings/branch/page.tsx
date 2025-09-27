@@ -410,7 +410,12 @@ export default function BranchSettingsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${JSON.parse(localStorage.getItem('sb-hfaqldkvnefjerosndxr-auth-token') || '{}').access_token}`
+          'Authorization': `Bearer ${(() => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const projectId = supabaseUrl.split('//')[1]?.split('.')[0] || '';
+    const authKey = `sb-${projectId}-auth-token`;
+    return JSON.parse(localStorage.getItem(authKey) || '{}').access_token;
+  })()}`
         },
         body: JSON.stringify({
           enabled: isUberDirectEnabled,
@@ -448,7 +453,12 @@ export default function BranchSettingsPage() {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/uber-direct/branch-settings/${branchId}`, {
         headers: {
-          'Authorization': `Bearer ${JSON.parse(localStorage.getItem('sb-hfaqldkvnefjerosndxr-auth-token') || '{}').access_token}`
+          'Authorization': `Bearer ${(() => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const projectId = supabaseUrl.split('//')[1]?.split('.')[0] || '';
+    const authKey = `sb-${projectId}-auth-token`;
+    return JSON.parse(localStorage.getItem(authKey) || '{}').access_token;
+  })()}`
         }
       })
       const data = await response.json()
