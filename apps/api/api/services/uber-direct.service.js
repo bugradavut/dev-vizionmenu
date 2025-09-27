@@ -122,7 +122,12 @@ class UberDirectService {
    */
   async createDeliveryQuote(branchId, dropoffAddress) {
     try {
-      const token = await this.getValidToken();
+      // Get branch-specific Uber Direct credentials
+      const branchCredentials = await this.getBranchCredentials(branchId);
+      const token = await this.getBranchToken(branchCredentials);
+
+      // Build base URL with branch customer ID
+      const branchBaseUrl = `https://api.uber.com/v1/customers/${branchCredentials.customerId}`;
 
       // Get branch information from database
       const { data: branch, error: branchError } = await supabase
@@ -158,9 +163,9 @@ class UberDirectService {
 
       console.log(`📋 Creating Uber Direct quote for branch ${branch.name}...`);
       console.log('🔍 DEBUG - Quote payload:', JSON.stringify(quotePayload, null, 2));
-      console.log('🔍 DEBUG - Request URL:', `${this.baseUrl}/delivery_quotes`);
+      console.log('🔍 DEBUG - Request URL:', `${branchBaseUrl}/delivery_quotes`);
 
-      const response = await fetch(`${this.baseUrl}/delivery_quotes`, {
+      const response = await fetch(`${branchBaseUrl}/delivery_quotes`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -344,6 +349,82 @@ class UberDirectService {
   }
 
   /**
+   * Get branch-specific Uber Direct credentials
+   * Never uses platform credentials - branch must have own account
+   *
+   * @param {string} branchId - Branch ID to get credentials for
+   * @returns {Promise<object>} Branch credentials
+   */
+  async getBranchCredentials(branchId) {
+    try {
+      const { data: branch, error: branchError } = await supabase
+        .from('branches')
+        .select('uber_direct_enabled, uber_direct_client_id, uber_direct_client_secret, uber_direct_customer_id')
+        .eq('id', branchId)
+        .single();
+
+      if (branchError || !branch) {
+        throw new Error(`Branch not found: ${branchError?.message || 'Invalid branch ID'}`);
+      }
+
+      if (!branch.uber_direct_enabled) {
+        throw new Error('Branch has Uber Direct disabled');
+      }
+
+      if (!branch.uber_direct_client_id || !branch.uber_direct_client_secret || !branch.uber_direct_customer_id) {
+        throw new Error('Branch has incomplete Uber Direct credentials. Please configure in settings.');
+      }
+
+      return {
+        clientId: branch.uber_direct_client_id,
+        clientSecret: branch.uber_direct_client_secret, // TODO: Add decryption
+        customerId: branch.uber_direct_customer_id
+      };
+
+    } catch (error) {
+      console.error('❌ Failed to get branch credentials:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Get OAuth token using branch-specific credentials
+   * @param {object} credentials - Branch credentials
+   * @returns {Promise<string>} Access token
+   */
+  async getBranchToken(credentials) {
+    try {
+      const response = await fetch(this.authUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
+        },
+        body: new URLSearchParams({
+          client_id: credentials.clientId,
+          client_secret: credentials.clientSecret,
+          grant_type: 'client_credentials',
+          scope: this.scope
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error_description || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const tokenData = await response.json();
+      console.log(`✅ Branch authentication successful for customer ${credentials.customerId}`);
+
+      return tokenData.access_token;
+
+    } catch (error) {
+      console.error('❌ Branch authentication failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
    * Create delivery order with Uber Direct
    * Dispatches courier for pickup and delivery
    *
@@ -353,7 +434,6 @@ class UberDirectService {
    */
   async createDelivery(orderId, quoteId) {
     try {
-      const token = await this.getValidToken();
 
       // Get order details from database
       const { data: order, error: orderError } = await supabase
@@ -379,6 +459,15 @@ class UberDirectService {
       if (orderError || !order) {
         throw new Error(`Order not found: ${orderError?.message || 'Invalid order ID'}`);
       }
+
+      // Get branch-specific Uber Direct credentials
+      const branchCredentials = await this.getBranchCredentials(order.branch_id);
+      const token = await this.getBranchToken(branchCredentials);
+
+      // Build base URL with branch customer ID
+      const branchBaseUrl = `https://api.uber.com/v1/customers/${branchCredentials.customerId}`;
+
+      console.log(`🏪 Using branch credentials for ${order.branches.name} (Customer ID: ${branchCredentials.customerId})`)
 
       // Build address from JSON delivery_address field for dropoff
       const deliveryAddress = order.delivery_address;
@@ -428,7 +517,7 @@ class UberDirectService {
       console.log(`🚚 Creating Uber Direct delivery for order ${order.order_number || orderId}...`);
       console.log('🔍 DEBUG - Delivery payload:', JSON.stringify(deliveryPayload, null, 2));
 
-      const response = await fetch(`${this.baseUrl}/deliveries`, {
+      const response = await fetch(`${branchBaseUrl}/deliveries`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

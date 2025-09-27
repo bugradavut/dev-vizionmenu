@@ -248,6 +248,11 @@ export default function BranchSettingsPage() {
   const [showCustomSchedule, setShowCustomSchedule] = useState(false)
   const [isUberDirectModalOpen, setIsUberDirectModalOpen] = useState(false)
   const [isUberDirectEnabled, setIsUberDirectEnabled] = useState(false)
+  const [uberDirectCustomerId, setUberDirectCustomerId] = useState("")
+  const [uberDirectClientId, setUberDirectClientId] = useState("")
+  const [uberDirectClientSecret, setUberDirectClientSecret] = useState("")
+  const [isSavingUberDirect, setIsSavingUberDirect] = useState(false)
+  const [testConnectionStatus, setTestConnectionStatus] = useState("")
 
   // Local state for input values to allow empty strings
   const [baseDelayInput, setBaseDelayInput] = useState("")
@@ -390,6 +395,67 @@ export default function BranchSettingsPage() {
       updateSettings({
         freeDeliveryThreshold: numValue
       })
+    }
+  }
+
+  // Handle Uber Direct settings save
+  const handleSaveUberDirect = async () => {
+    if (!branchId) return
+
+    setIsSavingUberDirect(true)
+    setTestConnectionStatus("")
+
+    try {
+      const response = await fetch(`/api/v1/uber-direct/branch-settings/${branchId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          enabled: isUberDirectEnabled,
+          customer_id: uberDirectCustomerId,
+          client_id: uberDirectClientId,
+          client_secret: uberDirectClientSecret
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setTestConnectionStatus("✅ Credentials saved successfully")
+        setIsUberDirectModalOpen(false)
+        // Reset form
+        if (!isUberDirectEnabled) {
+          setUberDirectCustomerId("")
+          setUberDirectClientId("")
+          setUberDirectClientSecret("")
+        }
+      } else {
+        setTestConnectionStatus(`❌ Error: ${data.message}`)
+      }
+    } catch (error) {
+      setTestConnectionStatus(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsSavingUberDirect(false)
+    }
+  }
+
+  // Load Uber Direct settings when modal opens
+  const loadUberDirectSettings = async () => {
+    if (!branchId) return
+
+    try {
+      const response = await fetch(`/api/v1/uber-direct/branch-settings/${branchId}`)
+      const data = await response.json()
+
+      if (data.success) {
+        setIsUberDirectEnabled(data.branch.uber_direct_enabled)
+        setUberDirectCustomerId(data.branch.customer_id)
+        setUberDirectClientId(data.branch.client_id)
+        // Don't load client_secret for security
+      }
+    } catch (error) {
+      console.error('Failed to load Uber Direct settings:', error)
     }
   }
 
@@ -1437,7 +1503,10 @@ export default function BranchSettingsPage() {
           </Dialog>
 
           {/* Uber Direct Modal */}
-          <Dialog open={isUberDirectModalOpen} onOpenChange={setIsUberDirectModalOpen}>
+          <Dialog open={isUberDirectModalOpen} onOpenChange={(open) => {
+            setIsUberDirectModalOpen(open)
+            if (open) loadUberDirectSettings()
+          }}>
             <DialogContent className="sm:max-w-[420px]">
               <DialogHeader>
                 <VisuallyHidden>
@@ -1478,18 +1547,57 @@ export default function BranchSettingsPage() {
                         id="uber-customer-id"
                         placeholder="Enter your Customer ID"
                         className="w-full"
+                        value={uberDirectCustomerId}
+                        onChange={(e) => setUberDirectCustomerId(e.target.value)}
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Enter your Customer ID or{" "}
-                        <Button
-                          variant="link"
-                          className="p-0 h-auto text-xs text-blue-600"
-                          onClick={() => window.open('https://merchants.ubereats.com/us/en/services/uber-direct/', '_blank')}
-                        >
-                          create an account
-                        </Button>
-                      </p>
                     </div>
+
+                    {/* Client ID Input */}
+                    <div className="space-y-2">
+                      <Label htmlFor="uber-client-id" className="text-sm font-medium">
+                        Client ID
+                      </Label>
+                      <Input
+                        id="uber-client-id"
+                        placeholder="Enter your Client ID"
+                        className="w-full"
+                        value={uberDirectClientId}
+                        onChange={(e) => setUberDirectClientId(e.target.value)}
+                      />
+                    </div>
+
+                    {/* Client Secret Input */}
+                    <div className="space-y-2">
+                      <Label htmlFor="uber-client-secret" className="text-sm font-medium">
+                        Client Secret
+                      </Label>
+                      <Input
+                        id="uber-client-secret"
+                        type="password"
+                        placeholder="Enter your Client Secret"
+                        className="w-full"
+                        value={uberDirectClientSecret}
+                        onChange={(e) => setUberDirectClientSecret(e.target.value)}
+                      />
+                    </div>
+
+                    <p className="text-xs text-muted-foreground">
+                      Enter your credentials or{" "}
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto text-xs text-blue-600"
+                        onClick={() => window.open('https://merchants.ubereats.com/us/en/services/uber-direct/', '_blank')}
+                      >
+                        create an account
+                      </Button>
+                    </p>
+
+                    {/* Test Connection Status */}
+                    {testConnectionStatus && (
+                      <div className="text-xs p-2 rounded bg-gray-50">
+                        {testConnectionStatus}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1498,11 +1606,15 @@ export default function BranchSettingsPage() {
                   <Button
                     variant="outline"
                     onClick={() => setIsUberDirectModalOpen(false)}
+                    disabled={isSavingUberDirect}
                   >
                     Cancel
                   </Button>
-                  <Button>
-                    Save Changes
+                  <Button
+                    onClick={handleSaveUberDirect}
+                    disabled={isSavingUberDirect}
+                  >
+                    {isSavingUberDirect ? "Saving..." : "Save Changes"}
                   </Button>
                 </div>
               </div>

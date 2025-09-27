@@ -66,6 +66,7 @@ const activityLogsRoutes = require('./routes/activity-logs');
 const analyticsRoutes = require('./routes/analytics');
 const waiterCallsRoutes = require('./routes/waiter-calls.routes');
 const chainTemplatesRoutes = require('./routes/chain-templates.routes');
+const uberDirectSettingsRoutes = require('./uber-direct-settings');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -146,6 +147,11 @@ app.use('/api/v1/platform-sync', requireAuthWithBranch, platformSyncRoutes);
 // 🧪 UBER DIRECT PUBLIC ENDPOINTS - For customer orders and webhooks
 // Customer delivery creation, webhooks, quotes - NO AUTH required
 app.use('/api/v1/uber-direct', platformSyncRoutes);
+
+// Uber Direct branch settings (protected - auth required)
+app.post('/api/v1/uber-direct/branch-settings/:branchId', requireAuthWithBranch, uberDirectSettingsRoutes.saveBranchCredentials);
+app.get('/api/v1/uber-direct/branch-settings/:branchId', requireAuthWithBranch, uberDirectSettingsRoutes.getBranchCredentials);
+app.post('/api/v1/uber-direct/branch-settings/:branchId/test', requireAuthWithBranch, uberDirectSettingsRoutes.testBranchConnection);
 
 // Use admin chain routes (platform admin only)
 app.use('/api/v1/admin/chains', adminChainRoutes);
