@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, CreditCard, DollarSign, Bike, CalendarDays, Check as CheckIcon, Lock, ChevronLeft } from "lucide-react"
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
 import { useLanguage } from "@/contexts/language-context"
@@ -245,6 +246,8 @@ export default function BranchSettingsPage() {
   const restaurantHoursCopy = (t.settingsBranch.restaurantHours ?? RESTAURANT_HOURS_FALLBACK[language] ?? RESTAURANT_HOURS_FALLBACK.en) as RestaurantHoursCopy
   const [saved, setSaved] = useState(false)
   const [showCustomSchedule, setShowCustomSchedule] = useState(false)
+  const [isUberDirectModalOpen, setIsUberDirectModalOpen] = useState(false)
+  const [isUberDirectEnabled, setIsUberDirectEnabled] = useState(false)
 
   // Local state for input values to allow empty strings
   const [baseDelayInput, setBaseDelayInput] = useState("")
@@ -671,23 +674,25 @@ export default function BranchSettingsPage() {
                   {/* Auto-Ready System Card */}
                   <Card>
                     <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
                           <div className="p-2 bg-purple-50 rounded-lg">
                             <Settings className="h-5 w-5 text-purple-600" />
                           </div>
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <CardTitle className="text-base">Auto-Ready System</CardTitle>
                             <p className="text-xs text-muted-foreground mt-1">
                               Automatically complete orders when time expires
                             </p>
                           </div>
                         </div>
-                        <Switch
-                          checked={settings.timingSettings?.autoReady || false}
-                          onCheckedChange={handleAutoReadyChange}
-                          className="data-[state=checked]:bg-primary"
-                        />
+                        <div className="flex-shrink-0 pt-1">
+                          <Switch
+                            checked={settings.timingSettings?.autoReady || false}
+                            onCheckedChange={handleAutoReadyChange}
+                            className="data-[state=checked]:bg-primary"
+                          />
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent>
@@ -824,7 +829,7 @@ export default function BranchSettingsPage() {
 
                   {/* Delivery Fee Card */}
                   <Card>
-                    <CardHeader className="pb-3">
+                    <CardHeader className="pb-3 relative">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-purple-50 rounded-lg">
                           <Bike className="h-5 w-5 text-purple-600" />
@@ -836,6 +841,14 @@ export default function BranchSettingsPage() {
                           </p>
                         </div>
                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsUberDirectModalOpen(true)}
+                        className="absolute top-3 right-3 h-8 w-8 p-0 border-gray-300"
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {/* Base Delivery Fee Input */}
@@ -1418,6 +1431,79 @@ export default function BranchSettingsPage() {
                       }
                     </Button>
                   </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Uber Direct Modal */}
+          <Dialog open={isUberDirectModalOpen} onOpenChange={setIsUberDirectModalOpen}>
+            <DialogContent className="sm:max-w-[420px]">
+              <DialogHeader>
+                <VisuallyHidden>
+                  <DialogTitle>Uber Direct Integration Settings</DialogTitle>
+                </VisuallyHidden>
+              </DialogHeader>
+              <div className="space-y-6 py-4">
+                {/* Uber Direct Logo and Switch */}
+                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src="/uber-direct.svg"
+                      alt="Uber Direct"
+                      className="h-10 w-10"
+                    />
+                    <div>
+                      <h3 className="text-sm font-medium">Uber Direct</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Auto courier dispatch
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={isUberDirectEnabled}
+                    onCheckedChange={setIsUberDirectEnabled}
+                  />
+                </div>
+
+                {/* Conditional Content - Only show when enabled */}
+                {isUberDirectEnabled && (
+                  <div className="space-y-4">
+                    {/* Customer ID Input */}
+                    <div className="space-y-2">
+                      <Label htmlFor="uber-customer-id" className="text-sm font-medium">
+                        Uber Direct Customer ID
+                      </Label>
+                      <Input
+                        id="uber-customer-id"
+                        placeholder="Enter your Customer ID"
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Enter your Customer ID or{" "}
+                        <Button
+                          variant="link"
+                          className="p-0 h-auto text-xs text-blue-600"
+                          onClick={() => window.open('https://merchants.ubereats.com/us/en/services/uber-direct/', '_blank')}
+                        >
+                          create an account
+                        </Button>
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsUberDirectModalOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button>
+                    Save Changes
+                  </Button>
                 </div>
               </div>
             </DialogContent>

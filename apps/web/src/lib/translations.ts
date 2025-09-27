@@ -482,8 +482,8 @@ export const translations = {
       noMinimumSet: "No minimum order amount set",
       minimumOrderWarning: "Orders below {amount} will be blocked",
       
-      // Delivery Fee
-      deliveryFeeTitle: "Delivery Fee",
+      // Delivery Settings
+      deliveryFeeTitle: "Delivery Settings",
       deliveryFeeDesc: "Set delivery fee for delivery orders", 
       noDeliveryFee: "No delivery fee set (free delivery)",
       deliveryFeeApplied: "{amount} will be added to delivery orders",
@@ -1728,8 +1728,8 @@ export const translations = {
       noMinimumSet: "Aucun montant minimum défini",
       minimumOrderWarning: "Les commandes inférieures à {amount} seront bloquées",
       
-      // Delivery Fee - Canadian French
-      deliveryFeeTitle: "Frais de livraison",
+      // Delivery Settings - Canadian French
+      deliveryFeeTitle: "Paramètres de livraison",
       deliveryFeeDesc: "Définir les frais de livraison pour les commandes à livrer",
       noDeliveryFee: "Aucun frais de livraison défini (livraison gratuite)",
       deliveryFeeApplied: "{amount} sera ajouté aux commandes de livraison",
