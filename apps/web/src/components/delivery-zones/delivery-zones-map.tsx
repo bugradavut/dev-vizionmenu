@@ -38,15 +38,29 @@ export function DeliveryZonesMap({
 
         setError(null)
 
-        // Clear container completely
+        // Clear container completely and reset all Leaflet state
         const container = mapRef.current
         container.innerHTML = ''
 
-        // Remove any existing Leaflet references
-        delete (container as { _leaflet_id?: number })._leaflet_id
+        // Remove all possible Leaflet references
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (container as any)._leaflet_id
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (container as any)._leaflet_pos
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (container as any)._leaflet_transform
 
-        // Wait for container to be ready
-        await new Promise(resolve => setTimeout(resolve, 100))
+        // Reset container style to ensure proper dimensions
+        container.style.width = '100%'
+        container.style.height = height
+        container.style.position = 'relative'
+
+        // Force reflow to ensure DOM is ready
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        container.offsetHeight
+
+        // Wait longer for container to be fully ready
+        await new Promise(resolve => setTimeout(resolve, 200))
 
         if (!mounted || !mapRef.current) return
 
@@ -61,12 +75,17 @@ export function DeliveryZonesMap({
           shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
         })
 
-        // Create map instance
+        // Create map instance with error handling
         const map = L.map(mapRef.current, {
           center,
           zoom: 12,
-          zoomControl: true
+          zoomControl: true,
+          preferCanvas: false,
+          attributionControl: true
         })
+
+        // Wait for map to be fully initialized
+        await new Promise(resolve => setTimeout(resolve, 100))
 
         // Define different map layers - clean selection
         const baseLayers = {
@@ -93,6 +112,13 @@ export function DeliveryZonesMap({
 
         // Add layer control
         L.control.layers(baseLayers).addTo(map)
+
+        // Force map to recalculate size - fixes dimension issues
+        setTimeout(() => {
+          if (map && mounted) {
+            map.invalidateSize()
+          }
+        }, 100)
 
         if (!mounted) return
 
@@ -225,7 +251,7 @@ export function DeliveryZonesMap({
         mapInstanceRef.current = null
       }
     }
-  }, [center, language, onZoneAdd, zones])
+  }, [center, height, language, onZoneAdd, zones])
 
   if (error) {
     return (
