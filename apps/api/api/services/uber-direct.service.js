@@ -415,6 +415,16 @@ class UberDirectService {
         }
       };
 
+      // 🧪 ADD ROBO COURIER FOR TEST MODE - Enables automatic courier assignment simulation
+      if (this.isTestMode) {
+        deliveryPayload.test_specifications = {
+          robo_courier_specification: {
+            mode: "auto"  // Simulates full courier lifecycle automatically (every ~30s)
+          }
+        };
+        console.log('🤖 Robo Courier enabled for test mode - automatic courier assignment activated');
+      }
+
       console.log(`🚚 Creating Uber Direct delivery for order ${order.order_number || orderId}...`);
       console.log('🔍 DEBUG - Delivery payload:', JSON.stringify(deliveryPayload, null, 2));
 
