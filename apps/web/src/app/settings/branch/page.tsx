@@ -410,6 +410,7 @@ export default function BranchSettingsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
           enabled: isUberDirectEnabled,
@@ -445,7 +446,11 @@ export default function BranchSettingsPage() {
     if (!branchId) return
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/uber-direct/branch-settings/${branchId}`)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/uber-direct/branch-settings/${branchId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
       const data = await response.json()
 
       if (data.success) {
