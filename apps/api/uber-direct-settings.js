@@ -24,7 +24,7 @@ async function saveBranchCredentials(req, res) {
     if (enabled && (!customer_id || !client_id || !client_secret)) {
       return res.status(400).json({
         error: 'Missing required credentials',
-        message: 'customer_id, client_id, and client_secret are required when enabled is true'
+        message: 'Please fill in all three fields: Customer ID, Client ID, and Client Secret to enable Uber Direct'
       });
     }
 

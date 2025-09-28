@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, CreditCard, DollarSign, Bike, CalendarDays, Check as CheckIcon, Lock, ChevronLeft } from "lucide-react"
+import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, CreditCard, DollarSign, Bike, CalendarDays, Check as CheckIcon, Lock, ChevronLeft, X } from "lucide-react"
 import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
@@ -428,7 +428,7 @@ export default function BranchSettingsPage() {
       const data = await response.json()
 
       if (data.success) {
-        setTestConnectionStatus("✅ Credentials saved successfully")
+        setTestConnectionStatus("success|Credentials saved successfully")
         setIsUberDirectModalOpen(false)
         // Reset form
         if (!isUberDirectEnabled) {
@@ -437,10 +437,10 @@ export default function BranchSettingsPage() {
           setUberDirectClientSecret("")
         }
       } else {
-        setTestConnectionStatus(`❌ Error: ${data.message}`)
+        setTestConnectionStatus(`error|Error: ${data.message}`)
       }
     } catch (error) {
-      setTestConnectionStatus(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setTestConnectionStatus(`error|Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsSavingUberDirect(false)
     }
@@ -1609,8 +1609,19 @@ export default function BranchSettingsPage() {
 
                     {/* Test Connection Status */}
                     {testConnectionStatus && (
-                      <div className="text-xs p-2 rounded bg-gray-50">
-                        {testConnectionStatus}
+                      <div className={`text-xs p-3 rounded-lg border flex items-center gap-2 ${
+                        testConnectionStatus.startsWith('success|')
+                          ? 'bg-green-50 border-green-200 text-green-700'
+                          : 'bg-red-50 border-red-200 text-red-700'
+                      }`}>
+                        {testConnectionStatus.startsWith('success|') ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <X className="h-4 w-4 text-red-600" />
+                        )}
+                        <span className="font-medium">
+                          {testConnectionStatus.split('|')[1] || testConnectionStatus}
+                        </span>
                       </div>
                     )}
                   </div>
