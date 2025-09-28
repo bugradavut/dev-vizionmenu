@@ -31,9 +31,10 @@ async function getChainBySlug(slug) {
 /**
  * Get active branches for a chain
  * @param {string} chainId - Chain ID
+ * @param {boolean} includeDeliveryZones - Whether to include delivery zones data
  * @returns {Array} Active branches with location data
  */
-async function getChainBranches(chainId) {
+async function getChainBranches(chainId, includeDeliveryZones = false) {
   if (!chainId) {
     throw new Error('Chain ID is required');
   }
@@ -72,7 +73,7 @@ async function getChainBranches(chainId) {
     // Extract restaurant hours from branch settings
     const restaurantHours = branch.settings?.restaurantHours || defaultHours;
 
-    return {
+    const result = {
       id: branch.id,
       name: branch.name,
       slug: branch.slug,
@@ -82,6 +83,16 @@ async function getChainBranches(chainId) {
       email: branch.email,
       restaurantHours: restaurantHours
     };
+
+    // Include delivery zones if requested
+    if (includeDeliveryZones) {
+      result.deliveryZones = branch.settings?.deliveryZones || {
+        enabled: false,
+        zones: []
+      };
+    }
+
+    return result;
   });
 
   return transformedBranches;

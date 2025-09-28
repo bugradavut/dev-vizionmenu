@@ -20,8 +20,8 @@ export interface Branch {
     country: string;
   };
   location?: {
-    latitude: number;
-    longitude: number;
+    lat: number;
+    lng: number;
   };
   phone?: string;
   email?: string;
@@ -47,6 +47,15 @@ export interface Branch {
         closeTime: string;
       };
     };
+  };
+  deliveryZones?: {
+    enabled: boolean;
+    zones: {
+      id: string;
+      name: string;
+      polygon: [number, number][];
+      active: boolean;
+    }[];
   };
 }
 
@@ -94,6 +103,14 @@ class CustomerChainsService {
    */
   async getChainWithBranches(slug: string): Promise<ChainWithBranches> {
     return this.getChainBranches(slug);
+  }
+
+  /**
+   * Get branches with delivery zones for location-based ranking
+   */
+  async getChainBranchesWithDeliveryZones(slug: string): Promise<ChainWithBranches> {
+    const response = await apiClient.get(`/api/v1/customer/chains/${slug}/branches?include_delivery_zones=true`);
+    return response.data as ChainWithBranches;
   }
 }
 

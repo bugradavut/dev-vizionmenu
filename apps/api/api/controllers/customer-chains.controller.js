@@ -30,17 +30,21 @@ const getChainBySlug = async (req, res) => {
 const getChainBranches = async (req, res) => {
   try {
     const { slug } = req.params;
-    
+    const { include_delivery_zones } = req.query;
+
     if (!slug) {
       return res.status(400).json({
         error: { code: 'MISSING_CHAIN_SLUG', message: 'Chain slug is required' }
       });
     }
-    
+
     // Get chain first to validate and get ID
     const chain = await customerChainsService.getChainBySlug(slug);
-    const branches = await customerChainsService.getChainBranches(chain.id);
-    
+
+    // Get branches with optional delivery zones
+    const includeDeliveryZones = include_delivery_zones === 'true';
+    const branches = await customerChainsService.getChainBranches(chain.id, includeDeliveryZones);
+
     res.json({
       data: {
         chain: chain,

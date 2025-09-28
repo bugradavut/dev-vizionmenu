@@ -4,7 +4,7 @@ import { use, useState, useEffect } from 'react'
 import { notFound } from 'next/navigation'
 import { customerChainsService } from '@/services/customer-chains.service'
 import { customerMenuService, type CustomerMenu } from '@/services/customer-menu.service'
-import { BranchSelectionModal } from './components/branch-selection-modal'
+import { SmartBranchSelectionModal } from './components/smart-branch-selection-modal'
 import { MenuExperience } from './components/menu-experience'
 import { OrderContext } from './types/order-flow.types'
 import { Chain, Branch } from '@/services/customer-chains.service'
@@ -254,15 +254,14 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
         </div>
       </div>
 
-      {/* Branch Selection Modal */}
-      <BranchSelectionModal 
+      {/* Smart Branch Selection Modal */}
+      <SmartBranchSelectionModal
         isOpen={showBranchModal}
         onClose={() => setShowBranchModal(false)}
         onBranchSelect={handleBranchSelect}
-        branches={branches}
-        loading={false}
+        chainSlug={orderContext.chainSlug}
         chainName={chain.name}
-        selectedBranch={selectedBranch}
+        orderType="delivery"
       />
 
       {/* Content Layer - Above Pattern Background */}
