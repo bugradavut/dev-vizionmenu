@@ -11,14 +11,12 @@ import type { Coordinates } from '@/utils/geometry'
 
 interface AddressInputProps {
   onLocationSelect: (coordinates: Coordinates, formattedAddress: string) => void
-  onCancel?: () => void
   placeholder?: string
   className?: string
 }
 
 export function AddressInput({
   onLocationSelect,
-  onCancel,
   placeholder,
   className = ""
 }: AddressInputProps) {
@@ -128,12 +126,12 @@ export function AddressInput({
             </div>
           )}
 
-          {/* Simple Buttons */}
-          <div className="flex gap-3 pt-3">
+          {/* Submit Button */}
+          <div className="pt-3">
             <Button
               type="submit"
               disabled={loading || !address.trim()}
-              className="flex-1 h-11 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-lg transition-colors"
+              className="w-full h-11 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-lg transition-colors"
             >
               {loading ? (
                 <>
@@ -144,21 +142,10 @@ export function AddressInput({
                 text.button
               )}
             </Button>
-
-            {onCancel && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
-                disabled={loading}
-                className="h-11 px-6 border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-medium"
-              >
-                {text.cancel}
-              </Button>
-            )}
           </div>
         </form>
       </div>
+
     </div>
   )
 }

@@ -91,6 +91,12 @@ export function SmartBranchSelectionModal({
     setCurrentStep('branch_selection')
   }
 
+  const handleBackToPermission = () => {
+    setCurrentStep('permission')
+    // Reset location state when going back
+    location.clearLocation()
+  }
+
   const handleBranchClick = (branch: RankedBranch) => {
     setSelectedBranchId(branch.id)
     setIsClosing(true)
@@ -109,11 +115,21 @@ export function SmartBranchSelectionModal({
               <DialogTitle>{text.title}</DialogTitle>
             </DialogHeader>
           </VisuallyHidden>
-          <div className="p-6">
+          <div className="flex-1 overflow-y-auto">
             <AddressInput
               onLocationSelect={handleAddressSelect}
-              onCancel={() => setCurrentStep('permission')}
             />
+          </div>
+
+          {/* Back Button Footer */}
+          <div className="bg-white border border-gray-200 rounded-xl m-4">
+            <Button
+              variant="ghost"
+              onClick={handleBackToPermission}
+              className="w-full h-12 text-sm text-muted-foreground hover:text-foreground font-medium"
+            >
+              ← {language === 'fr' ? 'Retour' : 'Back'}
+            </Button>
           </div>
         </>
       )
@@ -136,12 +152,22 @@ export function SmartBranchSelectionModal({
           />
         </div>
 
-        {/* Sticky Footer with Skip Option */}
-        <div className="bg-white border border-gray-200 rounded-xl m-4">
+        {/* Footer */}
+        <div className="bg-white px-6 py-3 border-t border-gray-200 flex justify-between items-center">
+          {(location.location.loading || location.location.error) ? (
+            <Button
+              variant="ghost"
+              onClick={handleBackToPermission}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              ← {language === 'fr' ? 'Retour' : 'Back'}
+            </Button>
+          ) : <div></div>}
+
           <Button
             variant="ghost"
             onClick={handleSkipLocation}
-            className="w-full h-12 text-sm text-muted-foreground hover:text-foreground font-medium"
+            className="text-xs text-muted-foreground hover:text-foreground"
           >
             {text.skipLocation}
           </Button>
@@ -354,7 +380,7 @@ export function SmartBranchSelectionModal({
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent
-        className="max-w-sm sm:max-w-md md:max-w-lg w-[90vw] sm:w-[80vw] md:w-full max-h-[80vh] p-0 flex flex-col overflow-hidden"
+        className="max-w-sm sm:max-w-md md:max-w-lg w-[90vw] sm:w-[80vw] md:w-full max-h-[80vh] p-0 flex flex-col overflow-hidden gap-0"
         hideCloseButton={true}
       >
         {currentStep === 'branch_selection' ? renderBranchSelection() : renderLocationStep()}
