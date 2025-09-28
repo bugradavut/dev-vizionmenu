@@ -261,6 +261,7 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
         onBranchSelect={handleBranchSelect}
         chainSlug={orderContext.chainSlug}
         chainName={chain.name}
+        chainLogoUrl={chain.logo_url}
         orderType="delivery"
       />
 
