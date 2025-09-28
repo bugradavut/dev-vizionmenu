@@ -11,6 +11,7 @@ import 'leaflet-draw/dist/leaflet.draw.css'
 interface DeliveryZonesMapProps {
   zones: DeliveryZone[]
   onZoneAdd?: (polygon: [number, number][]) => void
+  onZoneDelete?: (deletedZones: string[]) => void
   height?: string
   center?: [number, number]
 }
@@ -18,6 +19,7 @@ interface DeliveryZonesMapProps {
 export function DeliveryZonesMap({
   zones,
   onZoneAdd,
+  onZoneDelete,
   height = "400px",
   center = [53.5461, -113.4938] // Edmonton default
 }: DeliveryZonesMapProps) {
@@ -138,24 +140,7 @@ export function DeliveryZonesMap({
 
         if (!mounted) return
 
-        // Display existing zones
-        zones.forEach((zone) => {
-          if (zone.polygon.length >= 3) {
-            L.polygon(zone.polygon, {
-              color: zone.active ? '#8b5cf6' : '#94a3b8',
-              fillColor: zone.active ? '#8b5cf6' : '#94a3b8',
-              fillOpacity: zone.active ? 0.2 : 0.1,
-              weight: 2
-            }).addTo(map).bindPopup(`
-              <div style="font-family: sans-serif;">
-                <strong>${zone.name}</strong><br/>
-                <small>${zone.polygon.length} points</small>
-              </div>
-            `)
-          }
-        })
-
-        // Import and setup Leaflet.draw
+        // Import and setup Leaflet.draw first
         await import('leaflet-draw')
 
         // Wait a bit for plugin to initialize
@@ -163,6 +148,33 @@ export function DeliveryZonesMap({
 
         // Create FeatureGroup for drawn items
         const drawnItems = L.featureGroup().addTo(map)
+
+        // Create a map to track layer ID to zone ID mapping
+        const layerToZoneMap = new Map<number, string>()
+
+        // Display existing zones and add them to drawnItems for editing
+        zones.forEach((zone) => {
+          if (zone.polygon.length >= 3) {
+            const polygon = L.polygon(zone.polygon, {
+              color: zone.active ? '#8b5cf6' : '#94a3b8',
+              fillColor: zone.active ? '#8b5cf6' : '#94a3b8',
+              fillOpacity: zone.active ? 0.2 : 0.1,
+              weight: 2
+            }).bindPopup(`
+              <div style="font-family: sans-serif;">
+                <strong>${zone.name}</strong><br/>
+                <small>${zone.polygon.length} points</small>
+              </div>
+            `)
+
+            // Add to drawnItems so it can be edited/deleted
+            drawnItems.addLayer(polygon)
+
+            // Track the mapping between layer ID and zone ID
+            const layerId = L.Util.stamp(polygon)
+            layerToZoneMap.set(layerId, zone.id)
+          }
+        })
 
         // Check if Draw is available
         if (!(L as { Control: { Draw?: unknown } }).Control.Draw) {
@@ -221,9 +233,24 @@ export function DeliveryZonesMap({
         })
 
         // Handle polygon deletion with proper typing
-        map.on('draw:deleted', () => {
-          // In real implementation, we'd track which zones were deleted
-          // For now, this is handled by the parent component
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        map.on('draw:deleted', (e: any) => {
+          const deletedZoneIds: string[] = []
+
+          // Get all deleted layers
+          e.layers.eachLayer((layer: L.Layer) => {
+            const layerId = L.Util.stamp(layer)
+            const zoneId = layerToZoneMap.get(layerId)
+            if (zoneId) {
+              deletedZoneIds.push(zoneId)
+              layerToZoneMap.delete(layerId)
+            }
+          })
+
+          // Notify parent component about deleted zones
+          if (deletedZoneIds.length > 0) {
+            onZoneDelete?.(deletedZoneIds)
+          }
         })
 
         // Handle polygon editing
@@ -299,7 +326,7 @@ export function DeliveryZonesMap({
 
 
   return (
-    <div className="w-full relative">
+    <div className="w-full relative z-0">
       <div
         ref={(el) => {
           mapRef.current = el

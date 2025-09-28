@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { MapPin } from "lucide-react"
@@ -16,10 +16,20 @@ interface DeliveryZonesCardProps {
 
 export function DeliveryZonesCard({ value, onChange }: DeliveryZonesCardProps) {
   const { language } = useLanguage()
-  const [showMap, setShowMap] = useState(false)
-  const [mapKey, setMapKey] = useState(0)
 
   const deliveryZones = value || { enabled: false, zones: [] }
+
+  // Initialize showMap based on whether delivery zones are enabled
+  const [showMap, setShowMap] = useState(deliveryZones.enabled)
+  const [mapKey, setMapKey] = useState(0)
+
+  // Update showMap when deliveryZones.enabled changes (for initial data load)
+  useEffect(() => {
+    setShowMap(deliveryZones.enabled)
+    if (deliveryZones.enabled) {
+      setMapKey(k => k + 1) // Force fresh map instance when data loads
+    }
+  }, [deliveryZones.enabled])
 
   const handleEnabledChange = (enabled: boolean) => {
     onChange?.({
@@ -48,6 +58,20 @@ export function DeliveryZonesCard({ value, onChange }: DeliveryZonesCardProps) {
     const updatedZones = {
       ...deliveryZones,
       zones: [...deliveryZones.zones, newZone]
+    }
+
+    onChange?.(updatedZones)
+  }
+
+  const handleZoneDelete = (deletedZoneIds: string[]) => {
+    // Filter out deleted zones
+    const remainingZones = deliveryZones.zones.filter(
+      zone => !deletedZoneIds.includes(zone.id)
+    )
+
+    const updatedZones = {
+      ...deliveryZones,
+      zones: remainingZones
     }
 
     onChange?.(updatedZones)
@@ -87,12 +111,13 @@ export function DeliveryZonesCard({ value, onChange }: DeliveryZonesCardProps) {
           <>
             {/* Map Component */}
             {showMap && (
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-lg overflow-hidden relative z-0">
                 <MapErrorBoundary>
                   <DeliveryZonesMap
                     key={`map-${mapKey}`}
                     zones={deliveryZones.zones}
                     onZoneAdd={handleZoneAdd}
+                    onZoneDelete={handleZoneDelete}
                     height="400px"
                   />
                 </MapErrorBoundary>
