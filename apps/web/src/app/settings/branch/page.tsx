@@ -474,7 +474,8 @@ export default function BranchSettingsPage() {
         setIsUberDirectEnabled(data.branch.uber_direct_enabled)
         setUberDirectCustomerId(data.branch.customer_id)
         setUberDirectClientId(data.branch.client_id)
-        // Don't load client_secret for security
+        // Show masked placeholder if secret exists, otherwise empty
+        setUberDirectClientSecret(data.branch.has_credentials ? '••••••••••••••••••••••••••••••••' : '')
       }
     } catch (error) {
       console.error('Failed to load Uber Direct settings:', error)
