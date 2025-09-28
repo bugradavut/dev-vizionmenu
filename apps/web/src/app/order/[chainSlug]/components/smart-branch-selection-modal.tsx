@@ -121,14 +121,22 @@ export function SmartBranchSelectionModal({
             />
           </div>
 
-          {/* Back Button Footer */}
-          <div className="bg-white border border-gray-200 rounded-xl m-4">
+          {/* Footer */}
+          <div className="bg-white px-6 py-3 border-t border-gray-200 flex justify-between items-center">
             <Button
               variant="ghost"
               onClick={handleBackToPermission}
-              className="w-full h-12 text-sm text-muted-foreground hover:text-foreground font-medium"
+              className="text-xs text-muted-foreground hover:text-foreground"
             >
               ← {language === 'fr' ? 'Retour' : 'Back'}
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={handleSkipLocation}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              {text.skipLocation}
             </Button>
           </div>
         </>
