@@ -6,7 +6,7 @@ import { orderService } from '@/services/order-service';
 import { useLanguage } from '@/contexts/language-context';
 import { translations } from '@/lib/translations';
 import { useCart } from '../../contexts/cart-context';
-import { Check, Package, CheckCircle2, RefreshCw, TicketPercent } from 'lucide-react';
+import { Check, Package, CheckCircle2, RefreshCw, TicketPercent, ExternalLink } from 'lucide-react';
 
 interface OrderDetails {
   orderId: string;
@@ -31,6 +31,8 @@ interface OrderDetails {
   scheduledDateTime?: string;
   scheduledDate?: string;
   scheduledTime?: string;
+  // Uber Direct tracking URL
+  uberTrackingUrl?: string;
 }
 
 interface OrderItem {
@@ -381,9 +383,16 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
   const progressSteps = getProgressSteps(currentStatus, language, orderDetails?.createdAt);
   const currentDate = new Date().toLocaleDateString((language === 'fr') ? 'fr-CA' : 'en-CA', {
     day: 'numeric',
-    month: 'long', 
+    month: 'long',
     year: 'numeric'
   });
+
+  // Check if we should show tracking button instead of check status
+  const showTrackingButton =
+    currentStatus === 'completed' &&
+    orderDetails?.uberTrackingUrl &&
+    orderType === 'delivery';
+
 
   if (loading) {
     return (
@@ -963,15 +972,25 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
             {/* Action Buttons - Separate card in right column */}
             <div className="bg-white rounded-2xl border border-gray-300 p-4">
               <div className="grid grid-cols-2 gap-3">
-                {/* Check Status */}
-                <button
-                  onClick={handleRefreshStatus}
-                  disabled={refreshing}
-                  className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                  {language === 'fr' ? 'Vérifier statut' : 'Check Status'}
-                </button>
+                {/* Conditional: Track Delivery or Check Status */}
+                {showTrackingButton ? (
+                  <button
+                    onClick={() => window.open(orderDetails?.uberTrackingUrl, '_blank')}
+                    className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-black border border-black rounded-lg hover:bg-gray-800 transition-colors"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    {language === 'fr' ? 'Suivre livraison' : 'Track Delivery'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleRefreshStatus}
+                    disabled={refreshing}
+                    className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                    {language === 'fr' ? 'Vérifier statut' : 'Check Status'}
+                  </button>
+                )}
 
                 {/* New Order - Always visible */}
                 <button

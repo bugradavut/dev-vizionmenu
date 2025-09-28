@@ -540,6 +540,7 @@ class UberDirectService {
         .from('orders')
         .update({
           uber_delivery_id: delivery.id || delivery.delivery_id,
+          uber_tracking_url: delivery.tracking_url || delivery.tracking?.url,
           // Don't set third_party_platform - Uber Direct is courier service, not platform
           // third_party_order_id remains null - this is for uber_eats/doordash integration
           updated_at: new Date().toISOString()

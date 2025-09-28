@@ -37,6 +37,8 @@ export interface OrderSubmissionResponse {
     name: string;
     address: string;
   };
+  // Uber Direct tracking URL for delivery orders
+  uberTrackingUrl?: string;
 }
 
 export interface OrderSubmissionError {

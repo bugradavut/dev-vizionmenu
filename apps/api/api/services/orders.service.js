@@ -215,6 +215,7 @@ async function getOrderDetail(orderId, userBranch) {
         )
       `)
       .eq('id', orderId);
+
       
     // Only filter by branch_id if userBranch is provided (for authenticated requests)
     if (userBranch && userBranch.branch_id) {
@@ -222,6 +223,8 @@ async function getOrderDetail(orderId, userBranch) {
     }
     
     const { data, error } = await query.single();
+
+
     existingOrder = data;
     findError = error;
     
@@ -344,6 +347,7 @@ async function getOrderDetail(orderId, userBranch) {
 
     // NEW: Uber Direct delivery fields
     uber_delivery_id: existingOrder.uber_delivery_id,
+    uber_tracking_url: existingOrder.uber_tracking_url, // Add missing tracking URL field
     delivery_status: existingOrder.delivery_status,
     courier_info: existingOrder.courier_info,
     delivery_eta: existingOrder.delivery_eta,

@@ -326,8 +326,9 @@ const getOrderStatus = async (req, res) => {
       console.warn('Failed to load branch info for order:', branchError.message);
     }
 
+
     // Return public information including order items for confirmation page
-    res.json({ 
+    res.json({
       data: {
         orderId: order.id,
         orderNumber: order.orderNumber || order.id.split('-')[0].toUpperCase(),
@@ -355,7 +356,9 @@ const getOrderStatus = async (req, res) => {
           taxAmount: parseFloat(order.tax_amount || 0),
           total: parseFloat(order.total_amount || 0)
         },
-        branch: branchInfo
+        branch: branchInfo,
+        // Uber Direct tracking URL for delivery orders
+        uberTrackingUrl: order.uber_tracking_url || null
       }
     });
     
