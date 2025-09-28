@@ -314,6 +314,13 @@ export default function BranchSettingsPage() {
     }
   }, [settings.timingSettings, settings.minimumOrderAmount, settings.deliveryFee, settings.freeDeliveryThreshold, loading])
 
+  // Load Uber Direct settings on page load
+  React.useEffect(() => {
+    if (branchId && !loading) {
+      loadUberDirectSettings()
+    }
+  }, [branchId, loading])
+
   // Handle save
   const handleSave = async () => {
     const success = await saveSettings(settings)
@@ -922,14 +929,19 @@ export default function BranchSettingsPage() {
                           </p>
                         </div>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsUberDirectModalOpen(true)}
-                        className="absolute top-3 right-3 h-8 w-8 p-0 border-gray-300"
-                      >
-                        <Settings className="h-4 w-4" />
-                      </Button>
+                      <div className="absolute top-3 right-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsUberDirectModalOpen(true)}
+                          className="h-8 w-8 p-0 border-gray-300 relative"
+                        >
+                          <Settings className="h-4 w-4" />
+                          {isUberDirectEnabled && (
+                            <div className="absolute -top-1 -right-1 h-3 w-3 bg-orange-500 rounded-full border-2 border-white animate-pulse"></div>
+                          )}
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {/* Base Delivery Fee Input */}
