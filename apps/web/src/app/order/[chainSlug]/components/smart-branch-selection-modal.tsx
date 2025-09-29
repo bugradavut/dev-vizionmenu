@@ -4,9 +4,10 @@ import React, { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { Button } from '@/components/ui/button'
-import { MapPin, Phone, Navigation, AlertCircle, Store } from 'lucide-react'
+import { MapPin, Phone, Navigation, AlertCircle, Store, Truck } from 'lucide-react'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
 import { useLanguage } from '@/contexts/language-context'
 import { getRestaurantStatus, migrateRestaurantHours, type RestaurantHours } from '@/utils/restaurant-hours'
 import { LocationPermission, AddressInput } from '@/components/location'
@@ -58,6 +59,8 @@ export function SmartBranchSelectionModal({
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null)
   const [isClosing, setIsClosing] = useState(false)
   const [currentStep, setCurrentStep] = useState<LocationStep>('permission')
+  const [showWarningDialog, setShowWarningDialog] = useState(false)
+  const [pendingBranch, setPendingBranch] = useState<RankedBranch | null>(null)
 
   // Smart branch selection with location
   const smartSelection = useSmartBranchSelection({
@@ -85,7 +88,12 @@ export function SmartBranchSelectionModal({
       closed: language === 'fr' ? 'Fermé' : 'Closed',
       delivers: language === 'fr' ? 'Livre à votre adresse' : 'Delivers to you',
       noDelivery: language === 'fr' ? 'Hors zone de livraison' : 'Outside delivery area',
-      skipLocation: language === 'fr' ? 'Voir toutes les succursales' : 'See All Branches',
+      warningTitle: language === 'fr' ? 'Hors zone de livraison' : 'Outside Delivery Area',
+      warningMessage: language === 'fr'
+        ? 'Ce restaurant est hors de votre zone de livraison. Vous devrez peut-être récupérer votre commande. Continuer quand même?'
+        : 'This location is outside your delivery area. You may need to pick up your order instead. Continue anyway?',
+      warningContinue: language === 'fr' ? 'Continuer' : 'Continue',
+      warningCancel: language === 'fr' ? 'Annuler' : 'Cancel',
     }
   }
 
@@ -99,15 +107,12 @@ export function SmartBranchSelectionModal({
     setCurrentStep('address_input')
   }
 
-  const handleAddressSelect = (coordinates: Coordinates, formattedAddress: string) => {
+  const handleAddressSelect = (coordinates: Coordinates) => {
     location.setManualLocation(coordinates)
     smartSelection.rankBranches(coordinates)
     setCurrentStep('branch_selection')
   }
 
-  const handleSkipLocation = () => {
-    setCurrentStep('branch_selection')
-  }
 
   const handleBackToPermission = () => {
     setCurrentStep('permission')
@@ -124,12 +129,38 @@ export function SmartBranchSelectionModal({
     if (!selectedBranchId) return
 
     const selectedBranch = state.branches.find(branch => branch.id === selectedBranchId)
-    if (selectedBranch) {
-      setIsClosing(true)
-      setTimeout(() => {
-        onBranchSelect(selectedBranch)
-      }, 150)
+    if (!selectedBranch) return
+
+    // Check if branch is outside delivery area and we're doing delivery
+    if (orderType === 'delivery' && selectedBranch.deliveryStatus === 'no_delivery') {
+      setPendingBranch(selectedBranch)
+      setShowWarningDialog(true)
+      return
     }
+
+    // Normal flow - proceed to menu
+    proceedWithBranch(selectedBranch)
+  }
+
+  const proceedWithBranch = (branch: RankedBranch) => {
+    setIsClosing(true)
+    setTimeout(() => {
+      onBranchSelect(branch)
+    }, 150)
+  }
+
+  const handleWarningConfirm = () => {
+    if (pendingBranch) {
+      setShowWarningDialog(false)
+      proceedWithBranch(pendingBranch)
+      setPendingBranch(null)
+    }
+  }
+
+  const handleWarningCancel = () => {
+    setShowWarningDialog(false)
+    setPendingBranch(null)
+    // Keep the branch selected but don't proceed
   }
 
   const renderLocationStep = () => {
@@ -157,13 +188,6 @@ export function SmartBranchSelectionModal({
               ← {language === 'fr' ? 'Retour' : 'Back'}
             </Button>
 
-            <Button
-              variant="ghost"
-              onClick={handleSkipLocation}
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              {text.skipLocation}
-            </Button>
           </div>
         </>
       )
@@ -198,19 +222,12 @@ export function SmartBranchSelectionModal({
             </Button>
           ) : <div></div>}
 
-          <Button
-            variant="ghost"
-            onClick={handleSkipLocation}
-            className="text-xs text-muted-foreground hover:text-foreground"
-          >
-            {text.skipLocation}
-          </Button>
         </div>
       </>
     )
   }
 
-  const renderBranchCard = (branch: RankedBranch, index: number) => {
+  const renderBranchCard = (branch: RankedBranch) => {
     const statusInfo = (() => {
       const migratedHours = branch.restaurantHours
         ? migrateRestaurantHours(branch.restaurantHours as unknown as RestaurantHours)
@@ -394,7 +411,7 @@ export function SmartBranchSelectionModal({
                   </Button>
                 </div>
               ) : (
-                state.branches.map((branch, index) => renderBranchCard(branch, index))
+                state.branches.map((branch) => renderBranchCard(branch))
               )}
           </RadioGroup>
         </div>
@@ -425,13 +442,29 @@ export function SmartBranchSelectionModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent
-        className="max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl w-[95vw] sm:w-[450px] lg:w-[500px] xl:w-[600px] max-h-[90vh] p-0 flex flex-col gap-0 overflow-hidden"
-        hideCloseButton={true}
-      >
-        {currentStep === 'branch_selection' ? renderBranchSelection() : renderLocationStep()}
-      </DialogContent>
-    </Dialog>
+    <>
+      {/* Main Branch Selection Modal */}
+      <Dialog open={isOpen} onOpenChange={() => {}}>
+        <DialogContent
+          className="max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl w-[95vw] sm:w-[450px] lg:w-[500px] xl:w-[600px] max-h-[90vh] p-0 flex flex-col gap-0 overflow-hidden"
+          hideCloseButton={true}
+        >
+          {currentStep === 'branch_selection' ? renderBranchSelection() : renderLocationStep()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Outside Delivery Area Warning Dialog */}
+      <ConfirmationDialog
+        isOpen={showWarningDialog}
+        onClose={handleWarningCancel}
+        onConfirm={handleWarningConfirm}
+        title={text.warningTitle}
+        description={text.warningMessage}
+        confirmText={text.warningContinue}
+        cancelText={text.warningCancel}
+        variant="warning"
+        icon={<Truck className="h-5 w-5" />}
+      />
+    </>
   )
 }

@@ -170,7 +170,7 @@ export function AddressInput({
           <Popover open={showSuggestions} onOpenChange={setShowSuggestions}>
             <PopoverTrigger asChild>
               <div className="relative">
-                <div className="relative bg-white border border-gray-300 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-200 focus-within:shadow-xl focus-within:border-blue-500">
+                <div className="relative bg-white border border-gray-300 rounded-full shadow-lg transition-shadow duration-200 focus-within:border-blue-500">
                   {/* Search Icon */}
                   <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
                     <MapPin className="w-5 h-5 text-gray-400" />
@@ -208,7 +208,7 @@ export function AddressInput({
             </PopoverTrigger>
 
             <PopoverContent
-              className="w-96 p-0 shadow-2xl border-0 bg-white rounded-2xl"
+              className="w-[calc(100vw-2rem)] sm:w-96 p-0 shadow-[0_35px_80px_-15px_rgba(0,0,0,0.7)] border-0 bg-white rounded-2xl"
               align="center"
               side="bottom"
               sideOffset={8}
@@ -267,7 +267,7 @@ export function AddressInput({
                     {suggestions.map((suggestion, index) => (
                       <div
                         key={`${suggestion.place_id}-${index}`}
-                        className="flex items-center gap-3 p-4 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-all duration-200 hover:shadow-sm"
+                        className="flex items-center gap-3 p-4 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-all duration-200 hover:shadow-sm mx-2 first:mt-2 last:mb-2 hover:rounded-lg"
                         onClick={() => handleSuggestionClick(suggestion)}
                       >
                         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
