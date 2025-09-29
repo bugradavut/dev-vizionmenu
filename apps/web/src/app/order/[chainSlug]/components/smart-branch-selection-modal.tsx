@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { Button } from '@/components/ui/button'
-import { MapPin, Phone, Navigation, Star, AlertCircle, Store } from 'lucide-react'
+import { MapPin, Phone, Navigation, AlertCircle, Store } from 'lucide-react'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { useLanguage } from '@/contexts/language-context'
@@ -81,11 +81,10 @@ export function SmartBranchSelectionModal({
       locationStep: language === 'fr' ? 'Trouvez votre succursale' : 'Find Your Branch',
       branchStep: language === 'fr' ? 'Choisissez votre succursale' : 'Choose Your Branch',
       loading: language === 'fr' ? 'Chargement du menu...' : 'Loading menu...',
-      recommended: language === 'fr' ? 'Recommandé' : 'Recommended',
       open: language === 'fr' ? 'Ouvert maintenant' : 'Open now',
       closed: language === 'fr' ? 'Fermé' : 'Closed',
-      delivers: language === 'fr' ? 'Adresinize teslimat yapıyor' : 'Delivers to you',
-      noDelivery: language === 'fr' ? 'Bu bölgeye teslimat yapmıyor' : 'No delivery to this area',
+      delivers: language === 'fr' ? 'Livre à votre adresse' : 'Delivers to you',
+      noDelivery: language === 'fr' ? 'Hors zone de livraison' : 'Outside delivery area',
       skipLocation: language === 'fr' ? 'Voir toutes les succursales' : 'See All Branches',
     }
   }
@@ -100,7 +99,7 @@ export function SmartBranchSelectionModal({
     setCurrentStep('address_input')
   }
 
-  const handleAddressSelect = (coordinates: Coordinates) => {
+  const handleAddressSelect = (coordinates: Coordinates, formattedAddress: string) => {
     location.setManualLocation(coordinates)
     smartSelection.rankBranches(coordinates)
     setCurrentStep('branch_selection')
@@ -226,7 +225,6 @@ export function SmartBranchSelectionModal({
     })()
 
     // const deliveryStatusInfo = branchRankingService.getDeliveryStatusText(branch, language)
-    const isRecommended = index === 0 && branch.priority === 1
 
     const isSelected = selectedBranchId === branch.id
 
@@ -243,20 +241,9 @@ export function SmartBranchSelectionModal({
         }`}
         onClick={() => !isClosing && handleBranchSelect(branch)}
       >
-        {/* Recommended Badge */}
-        {isRecommended && (
-          <div className="absolute top-3 right-3 z-10">
-            <div className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm">
-              <span className="flex items-center gap-1">
-                <Star className="w-3 h-3" />
-                {text.recommended}
-              </span>
-            </div>
-          </div>
-        )}
 
-        <div className="p-4">
-          <div className="flex items-start gap-3">
+        <div className="p-3">
+          <div className="flex items-start gap-2.5">
             {/* Simple Location Icon */}
             <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
               isSelected
@@ -269,8 +256,8 @@ export function SmartBranchSelectionModal({
             {/* Branch Info */}
             <div className="flex-1 min-w-0">
               <div className="mb-2">
-                <h3 className="font-semibold text-base text-gray-900 truncate mb-1">{branch.name}</h3>
-                <p className="text-sm text-gray-600 line-clamp-2">
+                <h3 className="font-semibold text-base text-gray-900 mb-1 line-clamp-2 leading-tight">{branch.name}</h3>
+                <p className="text-sm text-gray-600 line-clamp-2 leading-tight">
                   {typeof branch.address === 'string'
                     ? branch.address
                     : branch.address
@@ -281,7 +268,7 @@ export function SmartBranchSelectionModal({
               </div>
 
               {/* Status and Info Pills */}
-              <div className="flex items-center flex-wrap gap-2">
+              <div className="flex items-center flex-wrap gap-1.5">
                 {/* Open/Closed Status */}
                 <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border ${
                   statusInfo.isOpen
@@ -304,29 +291,29 @@ export function SmartBranchSelectionModal({
 
                 {/* Phone */}
                 {branch.phone && (
-                  <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 text-gray-700 border border-gray-200 rounded-full text-xs font-medium">
-                    <Phone className="w-3 h-3" />
-                    {branch.phone}
+                  <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 text-gray-700 border border-gray-200 rounded-full text-xs font-medium max-w-[140px]">
+                    <Phone className="w-3 h-3 flex-shrink-0" />
+                    <span className="truncate">{branch.phone}</span>
                   </div>
                 )}
 
                 {/* Delivery Status */}
                 {branch.deliveryStatus === 'delivers' && (
-                  <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-emerald-100 text-emerald-700 border border-emerald-400 rounded-full text-xs font-medium">
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-emerald-100 text-emerald-700 border border-emerald-400 rounded-full text-xs font-medium max-w-[160px]">
+                    <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
                       <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z"/>
                     </svg>
-                    {text.delivers}
+                    <span className="truncate">{text.delivers}</span>
                   </div>
                 )}
 
                 {branch.deliveryStatus === 'no_delivery' && orderType === 'delivery' && (
-                  <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-orange-100 text-orange-700 border border-orange-200 rounded-full text-xs font-medium">
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-orange-100 text-orange-700 border border-orange-200 rounded-full text-xs font-medium max-w-[180px]">
+                    <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd"/>
                     </svg>
-                    {text.noDelivery}
+                    <span className="truncate">{text.noDelivery}</span>
                   </div>
                 )}
               </div>
@@ -370,7 +357,7 @@ export function SmartBranchSelectionModal({
         </div>
 
         {/* Branch List */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
           <RadioGroup
             value={selectedBranchId || ''}
             onValueChange={() => {}}
@@ -440,7 +427,7 @@ export function SmartBranchSelectionModal({
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent
-        className="max-w-sm sm:max-w-md md:max-w-lg w-[90vw] sm:w-[80vw] md:w-full max-h-[80vh] p-0 flex flex-col overflow-hidden gap-0"
+        className="max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl w-[95vw] sm:w-[450px] lg:w-[500px] xl:w-[600px] max-h-[90vh] p-0 flex flex-col gap-0 overflow-hidden"
         hideCloseButton={true}
       >
         {currentStep === 'branch_selection' ? renderBranchSelection() : renderLocationStep()}
