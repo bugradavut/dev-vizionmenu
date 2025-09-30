@@ -65,7 +65,7 @@ async function syncMenuToUberEats(branchId, userBranch) {
     const duration = Date.now() - startTime;
     await logPlatformSync(
       branchId,
-      'uber_eats', 
+      'uber_eats',
       'menu_upload',
       'sync_menu_to_platform',
       syncResult.success ? 'success' : 'failed',
@@ -74,7 +74,7 @@ async function syncMenuToUberEats(branchId, userBranch) {
       itemsFailed,
       errors.length > 0 ? { errors } : null,
       duration,
-      userBranch.user_id
+      userBranch ? userBranch.user_id : null
     );
 
     return {
@@ -95,7 +95,7 @@ async function syncMenuToUberEats(branchId, userBranch) {
     await logPlatformSync(
       branchId,
       'uber_eats',
-      'menu_upload', 
+      'menu_upload',
       'sync_menu_to_platform',
       'failed',
       itemsProcessed,
@@ -103,7 +103,7 @@ async function syncMenuToUberEats(branchId, userBranch) {
       itemsProcessed,
       { error: error.message },
       duration,
-      userBranch.user_id
+      userBranch ? userBranch.user_id : null
     );
 
     throw new Error(`Uber Eats menu sync failed: ${error.message}`);
@@ -285,7 +285,7 @@ async function updateOrderStatusOnUberEats(externalOrderId, vizionStatus, userBr
 
     // Log status update
     await logPlatformSync(
-      userBranch.branch_id,
+      userBranch ? userBranch.branch_id : null,
       'uber_eats',
       'status_update',
       'update_order_status',
@@ -295,9 +295,9 @@ async function updateOrderStatusOnUberEats(externalOrderId, vizionStatus, userBr
       updateResult.success ? 0 : 1,
       updateResult.success ? null : { error: updateResult.error },
       null,
-      userBranch.user_id,
-      { 
-        external_order_id: externalOrderId, 
+      userBranch ? userBranch.user_id : null,
+      {
+        external_order_id: externalOrderId,
         vizion_status: vizionStatus,
         uber_eats_status: uberEatsStatus
       }
@@ -308,7 +308,7 @@ async function updateOrderStatusOnUberEats(externalOrderId, vizionStatus, userBr
   } catch (error) {
     // Log failed status update
     await logPlatformSync(
-      userBranch.branch_id,
+      userBranch ? userBranch.branch_id : null,
       'uber_eats',
       'status_update',
       'update_order_status',
@@ -318,7 +318,7 @@ async function updateOrderStatusOnUberEats(externalOrderId, vizionStatus, userBr
       1,
       { error: error.message },
       null,
-      userBranch.user_id,
+      userBranch ? userBranch.user_id : null,
       { external_order_id: externalOrderId, vizion_status: vizionStatus }
     );
 
