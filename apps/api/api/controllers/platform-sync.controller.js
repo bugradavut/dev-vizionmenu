@@ -1343,7 +1343,7 @@ async function uploadUberEatsMenu(req, res) {
       success: true,
       message: 'Complete menu uploaded successfully to Uber Eats',
       data: {
-        branch_id: accessCheck.targetBranchId,
+        branch_id: branch_id,
         store_id: store_id,
         menu_items_count: menu_data.categories ?
           menu_data.categories.reduce((total, cat) => total + (cat.items ? cat.items.length : 0), 0) : 0,
