@@ -876,6 +876,9 @@ async function getUberDirectStatus(req, res) {
  */
 async function activateUberEatsIntegration(req, res) {
   try {
+    console.log('🔍 activateUberEatsIntegration - Request body:', req.body);
+    console.log('🔍 activateUberEatsIntegration - Headers:', req.headers);
+
     const { store_id, branch_id } = req.body;
 
     if (!store_id) {
@@ -892,7 +895,9 @@ async function activateUberEatsIntegration(req, res) {
       });
     }
 
+    console.log('🔍 Calling activateIntegration with:', { store_id, branch_id });
     const result = await uberEatsService.activateIntegration(store_id, branch_id, null);
+    console.log('✅ activateIntegration result:', result);
 
     res.status(200).json({
       success: true,
