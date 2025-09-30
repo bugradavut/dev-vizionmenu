@@ -1370,17 +1370,16 @@ async function uploadUberEatsMenu(req, res) {
 
 /**
  * Update Uber Eats store holiday hours
- * POST /api/platform-sync/uber-eats/stores/:storeId/holiday-hours
+ * PUT /api/platform-sync/uber-eats/store/holiday-hours
  */
 async function updateUberEatsHolidayHours(req, res) {
   try {
-    const { storeId } = req.params;
-    const { branch_id, holiday_hours } = req.body;
+    const { store_id, branch_id, holiday_hours } = req.body;
 
-    if (!storeId) {
+    if (!store_id) {
       return res.status(400).json({
         error: 'Invalid request',
-        message: 'storeId is required'
+        message: 'store_id is required'
       });
     }
 
@@ -1398,13 +1397,13 @@ async function updateUberEatsHolidayHours(req, res) {
       });
     }
 
-    const result = await uberEatsService.updateHolidayHours(storeId, branch_id, holiday_hours, null);
+    const result = await uberEatsService.updateHolidayHours(store_id, branch_id, holiday_hours, null);
 
     res.status(200).json({
       success: true,
       message: 'Holiday hours updated successfully on Uber Eats',
       data: {
-        store_id: storeId,
+        store_id: store_id,
         branch_id: branch_id,
         holiday_hours: holiday_hours,
         holiday_count: holiday_hours.length,
