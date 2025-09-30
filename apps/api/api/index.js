@@ -155,7 +155,7 @@ app.post('/api/v1/platform-sync/uber-eats/integration/remove', platformSyncContr
 app.put('/api/v1/platform-sync/uber-eats/integration/update', platformSyncController.updateUberEatsIntegrationDetails);
 
 // Menu
-app.post('/api/v1/platform-sync/uber-eats/menu/upload', platformSyncController.uploadCompleteMenuToUberEats);
+app.post('/api/v1/platform-sync/uber-eats/menu/upload', platformSyncController.uploadUberEatsMenu);
 app.put('/api/v1/platform-sync/uber-eats/menu/item/:itemId', platformSyncController.updateUberEatsMenuItem);
 
 // Order
