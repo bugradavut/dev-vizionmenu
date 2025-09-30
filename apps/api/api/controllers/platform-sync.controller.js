@@ -10,6 +10,37 @@ const skipTheDishesService = require('../services/skipthedishes.service');
 const uberDirectService = require('../services/uber-direct.service');
 
 /**
+ * Helper function to check branch access permissions
+ * Branch managers can only access their own branch
+ * Chain owners can access any branch
+ */
+function checkBranchAccess(requestedBranchId, userBranch, actionName) {
+  // If no specific branch requested, use user's branch (always allowed)
+  if (!requestedBranchId) {
+    return { allowed: true, targetBranchId: userBranch.branch_id };
+  }
+
+  // If requesting own branch, always allowed
+  if (requestedBranchId === userBranch.branch_id) {
+    return { allowed: true, targetBranchId: requestedBranchId };
+  }
+
+  // If requesting different branch, only chain owners allowed
+  if (userBranch.role === 'chain_owner') {
+    return { allowed: true, targetBranchId: requestedBranchId };
+  }
+
+  // Access denied
+  return {
+    allowed: false,
+    error: {
+      status: 403,
+      message: `Only chain owners can ${actionName} for other branches`
+    }
+  };
+}
+
+/**
  * Sync menu to Uber Eats platform
  * POST /api/platform-sync/uber-eats/menu
  */
@@ -833,6 +864,710 @@ async function getUberDirectStatus(req, res) {
   }
 }
 
+// =====================================================
+// UBER EATS INTEGRATION CONFIG ENDPOINTS ✅ NEW
+// Required by Uber Eats for validation approval
+// Handles store provisioning (activate/remove/update integration)
+// =====================================================
+
+/**
+ * Activate Uber Eats integration for a store
+ * POST /api/platform-sync/uber-eats/integration/activate
+ */
+async function activateUberEatsIntegration(req, res) {
+  try {
+    const { store_id, branch_id } = req.body;
+
+    if (!store_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'store_id is required'
+      });
+    }
+
+    const targetBranchId = branch_id || req.userBranch.branch_id;
+
+    // Security check for cross-branch access
+    if (branch_id && branch_id !== req.userBranch.branch_id && req.userBranch.role !== 'chain_owner') {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'Only chain owners can activate integration for other branches'
+      });
+    }
+
+    const result = await uberEatsService.activateIntegration(store_id, targetBranchId, req.userBranch);
+
+    res.status(200).json({
+      success: true,
+      message: 'Uber Eats integration activated successfully',
+      data: {
+        store_id: store_id,
+        branch_id: targetBranchId,
+        integration_status: 'active',
+        activated_at: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Uber Eats integration activation error:', error);
+    res.status(500).json({
+      error: 'Integration activation failed',
+      message: error.message,
+      platform: 'uber_eats'
+    });
+  }
+}
+
+/**
+ * Remove Uber Eats integration for a store
+ * POST /api/platform-sync/uber-eats/integration/remove
+ */
+async function removeUberEatsIntegration(req, res) {
+  try {
+    const { store_id, branch_id } = req.body;
+
+    if (!store_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'store_id is required'
+      });
+    }
+
+    const targetBranchId = branch_id || req.userBranch.branch_id;
+
+    // Security check for cross-branch access
+    if (branch_id && branch_id !== req.userBranch.branch_id && req.userBranch.role !== 'chain_owner') {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'Only chain owners can remove integration for other branches'
+      });
+    }
+
+    const result = await uberEatsService.removeIntegration(store_id, targetBranchId, req.userBranch);
+
+    res.status(200).json({
+      success: true,
+      message: 'Uber Eats integration removed successfully',
+      data: {
+        store_id: store_id,
+        branch_id: targetBranchId,
+        integration_status: 'removed',
+        removed_at: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Uber Eats integration removal error:', error);
+    res.status(500).json({
+      error: 'Integration removal failed',
+      message: error.message,
+      platform: 'uber_eats'
+    });
+  }
+}
+
+/**
+ * Update Uber Eats integration details for a store
+ * PUT /api/platform-sync/uber-eats/integration/update
+ */
+async function updateUberEatsIntegrationDetails(req, res) {
+  try {
+    const { store_id, branch_id, integration_settings } = req.body;
+
+    if (!store_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'store_id is required'
+      });
+    }
+
+    const targetBranchId = branch_id || req.userBranch.branch_id;
+
+    // Security check for cross-branch access
+    if (branch_id && branch_id !== req.userBranch.branch_id && req.userBranch.role !== 'chain_owner') {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'Only chain owners can update integration for other branches'
+      });
+    }
+
+    const result = await uberEatsService.updateIntegrationDetails(
+      store_id,
+      targetBranchId,
+      integration_settings,
+      req.userBranch
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Uber Eats integration details updated successfully',
+      data: {
+        store_id: store_id,
+        branch_id: targetBranchId,
+        integration_status: 'updated',
+        updated_at: new Date().toISOString(),
+        settings: integration_settings
+      }
+    });
+
+  } catch (error) {
+    console.error('Uber Eats integration update error:', error);
+    res.status(500).json({
+      error: 'Integration update failed',
+      message: error.message,
+      platform: 'uber_eats'
+    });
+  }
+}
+
+// =====================================================
+// UBER EATS ORDER MANAGEMENT ENDPOINTS ✅ NEW
+// Required by Uber Eats for validation approval
+// Handles order lifecycle (accept/deny/cancel/get/update)
+// =====================================================
+
+/**
+ * Accept Uber Eats order
+ * POST /api/platform-sync/uber-eats/orders/:orderId/accept
+ */
+async function acceptUberEatsOrder(req, res) {
+  try {
+    const { orderId } = req.params;
+    const { branch_id } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'orderId is required'
+      });
+    }
+
+    // Check branch access
+    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'accept orders');
+    if (!accessCheck.allowed) {
+      return res.status(accessCheck.error.status).json({
+        error: 'Access denied',
+        message: accessCheck.error.message
+      });
+    }
+
+    const result = await uberEatsService.acceptOrder(orderId, accessCheck.targetBranchId, req.userBranch);
+
+    res.status(200).json({
+      success: true,
+      message: 'Uber Eats order accepted successfully',
+      data: {
+        order_id: orderId,
+        external_order_id: result.external_order_id,
+        branch_id: accessCheck.targetBranchId,
+        status: 'accepted',
+        accepted_at: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Uber Eats order accept error:', error);
+    res.status(500).json({
+      error: 'Order accept failed',
+      message: error.message,
+      platform: 'uber_eats'
+    });
+  }
+}
+
+/**
+ * Deny Uber Eats order
+ * POST /api/platform-sync/uber-eats/orders/:orderId/deny
+ */
+async function denyUberEatsOrder(req, res) {
+  try {
+    const { orderId } = req.params;
+    const { branch_id, reason } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'orderId is required'
+      });
+    }
+
+    // Check branch access
+    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'deny orders');
+    if (!accessCheck.allowed) {
+      return res.status(accessCheck.error.status).json({
+        error: 'Access denied',
+        message: accessCheck.error.message
+      });
+    }
+
+    const result = await uberEatsService.denyOrder(orderId, accessCheck.targetBranchId, reason, req.userBranch);
+
+    res.status(200).json({
+      success: true,
+      message: 'Uber Eats order denied successfully',
+      data: {
+        order_id: orderId,
+        external_order_id: result.external_order_id,
+        branch_id: accessCheck.targetBranchId,
+        status: 'denied',
+        reason: reason,
+        denied_at: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Uber Eats order deny error:', error);
+    res.status(500).json({
+      error: 'Order deny failed',
+      message: error.message,
+      platform: 'uber_eats'
+    });
+  }
+}
+
+/**
+ * Cancel Uber Eats order
+ * POST /api/platform-sync/uber-eats/orders/:orderId/cancel
+ */
+async function cancelUberEatsOrder(req, res) {
+  try {
+    const { orderId } = req.params;
+    const { branch_id, reason } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'orderId is required'
+      });
+    }
+
+    // Check branch access
+    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'cancel orders');
+    if (!accessCheck.allowed) {
+      return res.status(accessCheck.error.status).json({
+        error: 'Access denied',
+        message: accessCheck.error.message
+      });
+    }
+
+    const result = await uberEatsService.cancelOrder(orderId, accessCheck.targetBranchId, reason, req.userBranch);
+
+    res.status(200).json({
+      success: true,
+      message: 'Uber Eats order cancelled successfully',
+      data: {
+        order_id: orderId,
+        external_order_id: result.external_order_id,
+        branch_id: accessCheck.targetBranchId,
+        status: 'cancelled',
+        reason: reason,
+        cancelled_at: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Uber Eats order cancel error:', error);
+    res.status(500).json({
+      error: 'Order cancel failed',
+      message: error.message,
+      platform: 'uber_eats'
+    });
+  }
+}
+
+/**
+ * Get Uber Eats order details
+ * GET /api/platform-sync/uber-eats/orders/:orderId
+ */
+async function getUberEatsOrderDetails(req, res) {
+  try {
+    const { orderId } = req.params;
+    const { branch_id } = req.query;
+
+    if (!orderId) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'orderId is required'
+      });
+    }
+
+    // Check branch access
+    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'view orders');
+    if (!accessCheck.allowed) {
+      return res.status(accessCheck.error.status).json({
+        error: 'Access denied',
+        message: accessCheck.error.message
+      });
+    }
+
+    const orderDetails = await uberEatsService.getOrderDetails(orderId, accessCheck.targetBranchId, req.userBranch);
+
+    res.status(200).json({
+      success: true,
+      message: 'Order details retrieved successfully',
+      data: orderDetails
+    });
+
+  } catch (error) {
+    console.error('Uber Eats order details error:', error);
+    res.status(500).json({
+      error: 'Order details retrieval failed',
+      message: error.message,
+      platform: 'uber_eats'
+    });
+  }
+}
+
+/**
+ * Update Uber Eats order
+ * PUT /api/platform-sync/uber-eats/orders/:orderId
+ */
+async function updateUberEatsOrder(req, res) {
+  try {
+    const { orderId } = req.params;
+    const { branch_id, status, updates } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'orderId is required'
+      });
+    }
+
+    // Check branch access
+    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'update orders');
+    if (!accessCheck.allowed) {
+      return res.status(accessCheck.error.status).json({
+        error: 'Access denied',
+        message: accessCheck.error.message
+      });
+    }
+
+    const result = await uberEatsService.updateOrder(orderId, accessCheck.targetBranchId, { status, ...updates }, req.userBranch);
+
+    res.status(200).json({
+      success: true,
+      message: 'Uber Eats order updated successfully',
+      data: {
+        order_id: orderId,
+        external_order_id: result.external_order_id,
+        branch_id: accessCheck.targetBranchId,
+        status: status,
+        updated_at: new Date().toISOString(),
+        updates: updates
+      }
+    });
+
+  } catch (error) {
+    console.error('Uber Eats order update error:', error);
+    res.status(500).json({
+      error: 'Order update failed',
+      message: error.message,
+      platform: 'uber_eats'
+    });
+  }
+}
+
+// =====================================================
+// UBER EATS MENU MANAGEMENT ENDPOINTS ✅ NEW
+// Required by Uber Eats for validation approval
+// Handles menu uploads and item updates
+// =====================================================
+
+/**
+ * Update Uber Eats menu item
+ * PUT /api/platform-sync/uber-eats/menu/items/:itemId
+ */
+async function updateUberEatsMenuItem(req, res) {
+  try {
+    const { itemId } = req.params;
+    const { branch_id, item_updates } = req.body;
+
+    if (!itemId) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'itemId is required'
+      });
+    }
+
+    if (!item_updates) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'item_updates is required'
+      });
+    }
+
+    // Check branch access
+    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'update menu items');
+    if (!accessCheck.allowed) {
+      return res.status(accessCheck.error.status).json({
+        error: 'Access denied',
+        message: accessCheck.error.message
+      });
+    }
+
+    const result = await uberEatsService.updateMenuItem(itemId, accessCheck.targetBranchId, item_updates, req.userBranch);
+
+    res.status(200).json({
+      success: true,
+      message: 'Menu item updated successfully on Uber Eats',
+      data: {
+        item_id: itemId,
+        branch_id: accessCheck.targetBranchId,
+        updates: item_updates,
+        updated_at: new Date().toISOString(),
+        uber_response: result
+      }
+    });
+
+  } catch (error) {
+    console.error('Uber Eats menu item update error:', error);
+    res.status(500).json({
+      error: 'Menu item update failed',
+      message: error.message,
+      platform: 'uber_eats'
+    });
+  }
+}
+
+/**
+ * Upload complete menu to Uber Eats
+ * PUT /api/platform-sync/uber-eats/menu/upload
+ */
+async function uploadUberEatsMenu(req, res) {
+  try {
+    const { branch_id, menu_data, store_id } = req.body;
+
+    if (!menu_data) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'menu_data is required'
+      });
+    }
+
+    // Check branch access
+    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'upload menus');
+    if (!accessCheck.allowed) {
+      return res.status(accessCheck.error.status).json({
+        error: 'Access denied',
+        message: accessCheck.error.message
+      });
+    }
+
+    // Use existing sync function but with direct menu data
+    const result = await uberEatsService.uploadCompleteMenu(accessCheck.targetBranchId, menu_data, store_id, req.userBranch);
+
+    res.status(200).json({
+      success: true,
+      message: 'Complete menu uploaded successfully to Uber Eats',
+      data: {
+        branch_id: accessCheck.targetBranchId,
+        store_id: store_id,
+        menu_items_count: menu_data.categories ?
+          menu_data.categories.reduce((total, cat) => total + (cat.items ? cat.items.length : 0), 0) : 0,
+        uploaded_at: new Date().toISOString(),
+        uber_response: result
+      }
+    });
+
+  } catch (error) {
+    console.error('Uber Eats menu upload error:', error);
+    res.status(500).json({
+      error: 'Menu upload failed',
+      message: error.message,
+      platform: 'uber_eats'
+    });
+  }
+}
+
+// =====================================================
+// UBER EATS STORE MANAGEMENT ENDPOINTS ✅ NEW
+// Required by Uber Eats for validation approval
+// Handles store configuration (holiday hours, etc.)
+// =====================================================
+
+/**
+ * Update Uber Eats store holiday hours
+ * POST /api/platform-sync/uber-eats/stores/:storeId/holiday-hours
+ */
+async function updateUberEatsHolidayHours(req, res) {
+  try {
+    const { storeId } = req.params;
+    const { branch_id, holiday_hours } = req.body;
+
+    if (!storeId) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'storeId is required'
+      });
+    }
+
+    if (!holiday_hours || !Array.isArray(holiday_hours)) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'holiday_hours array is required'
+      });
+    }
+
+    // Check branch access
+    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'update holiday hours');
+    if (!accessCheck.allowed) {
+      return res.status(accessCheck.error.status).json({
+        error: 'Access denied',
+        message: accessCheck.error.message
+      });
+    }
+
+    const result = await uberEatsService.updateHolidayHours(storeId, accessCheck.targetBranchId, holiday_hours, req.userBranch);
+
+    res.status(200).json({
+      success: true,
+      message: 'Holiday hours updated successfully on Uber Eats',
+      data: {
+        store_id: storeId,
+        branch_id: accessCheck.targetBranchId,
+        holiday_hours: holiday_hours,
+        holiday_count: holiday_hours.length,
+        updated_at: new Date().toISOString(),
+        uber_response: result
+      }
+    });
+
+  } catch (error) {
+    console.error('Uber Eats holiday hours update error:', error);
+    res.status(500).json({
+      error: 'Holiday hours update failed',
+      message: error.message,
+      platform: 'uber_eats'
+    });
+  }
+}
+
+// =====================================================
+// UBER EATS WEBHOOK RECEIVERS ✅ NEW
+// Required by Uber Eats for validation approval
+// Handles incoming webhooks from Uber (order notifications, cancellations)
+// Must respond with 200 status code within seconds
+// =====================================================
+
+/**
+ * Handle Uber Eats order notification webhook
+ * POST /api/platform-sync/uber-eats/webhooks/order-notification
+ */
+async function processUberEatsOrderNotificationWebhook(req, res) {
+  try {
+    // CRITICAL: Acknowledge webhook immediately with 200 response
+    res.status(200).json({
+      success: true,
+      message: 'Order notification webhook received',
+      timestamp: new Date().toISOString()
+    });
+
+    // Process webhook payload asynchronously after response
+    const { event_type, data, resource_href, resource_id } = req.body;
+
+    console.log('🔔 Uber Eats Order Notification Webhook:', {
+      event_type,
+      resource_id,
+      resource_href,
+      timestamp: new Date().toISOString()
+    });
+
+    // Validate webhook signature (security check)
+    const signature = req.headers['x-uber-signature'];
+    if (signature) {
+      const isValid = await uberEatsService.validateWebhookSignature(req.body, signature);
+      if (!isValid) {
+        console.error('❌ Invalid webhook signature from Uber Eats');
+        return; // Don't process invalid webhooks
+      }
+    }
+
+    // Process the order notification asynchronously
+    if (event_type === 'orders.notification' && resource_id) {
+      // Fetch full order details and process
+      setTimeout(async () => {
+        try {
+          await uberEatsService.processOrderNotificationWebhook(resource_id, data, req.body);
+          console.log('✅ Order notification processed successfully:', resource_id);
+        } catch (error) {
+          console.error('❌ Order notification processing failed:', error);
+        }
+      }, 100); // Process after response sent
+    }
+
+  } catch (error) {
+    console.error('Uber Eats order notification webhook error:', error);
+    // Still send 200 response to acknowledge receipt
+    if (!res.headersSent) {
+      res.status(200).json({
+        success: true,
+        message: 'Webhook received but processing failed',
+        error: error.message
+      });
+    }
+  }
+}
+
+/**
+ * Handle Uber Eats order cancelled webhook
+ * POST /api/platform-sync/uber-eats/webhooks/order-cancelled
+ */
+async function processUberEatsOrderCancelledWebhook(req, res) {
+  try {
+    // CRITICAL: Acknowledge webhook immediately with 200 response
+    res.status(200).json({
+      success: true,
+      message: 'Order cancelled webhook received',
+      timestamp: new Date().toISOString()
+    });
+
+    // Process webhook payload asynchronously after response
+    const { event_type, data, resource_href, resource_id } = req.body;
+
+    console.log('❌ Uber Eats Order Cancelled Webhook:', {
+      event_type,
+      resource_id,
+      resource_href,
+      timestamp: new Date().toISOString()
+    });
+
+    // Validate webhook signature (security check)
+    const signature = req.headers['x-uber-signature'];
+    if (signature) {
+      const isValid = await uberEatsService.validateWebhookSignature(req.body, signature);
+      if (!isValid) {
+        console.error('❌ Invalid webhook signature from Uber Eats');
+        return; // Don't process invalid webhooks
+      }
+    }
+
+    // Process the order cancellation asynchronously
+    if ((event_type === 'orders.cancel' || event_type === 'orders.failure') && resource_id) {
+      // Process cancellation
+      setTimeout(async () => {
+        try {
+          await uberEatsService.processOrderCancelledWebhook(resource_id, data, req.body);
+          console.log('✅ Order cancellation processed successfully:', resource_id);
+        } catch (error) {
+          console.error('❌ Order cancellation processing failed:', error);
+        }
+      }, 100); // Process after response sent
+    }
+
+  } catch (error) {
+    console.error('Uber Eats order cancelled webhook error:', error);
+    // Still send 200 response to acknowledge receipt
+    if (!res.headersSent) {
+      res.status(200).json({
+        success: true,
+        message: 'Webhook received but processing failed',
+        error: error.message
+      });
+    }
+  }
+}
+
 module.exports = {
   // Uber Eats endpoints
   syncUberEatsMenu,
@@ -857,6 +1592,44 @@ module.exports = {
   cancelUberDirectDelivery,
   processUberDirectWebhook,
   getUberDirectStatus,
+
+  // =====================================================
+  // UBER EATS INTEGRATION CONFIG ENDPOINTS ✅ NEW
+  // Required by Uber for validation approval
+  // =====================================================
+  activateUberEatsIntegration,
+  removeUberEatsIntegration,
+  updateUberEatsIntegrationDetails,
+
+  // =====================================================
+  // UBER EATS ORDER MANAGEMENT ENDPOINTS ✅ NEW
+  // Required by Uber for validation approval
+  // =====================================================
+  acceptUberEatsOrder,
+  denyUberEatsOrder,
+  cancelUberEatsOrder,
+  getUberEatsOrderDetails,
+  updateUberEatsOrder,
+
+  // =====================================================
+  // UBER EATS MENU MANAGEMENT ENDPOINTS ✅ NEW
+  // Required by Uber for validation approval
+  // =====================================================
+  updateUberEatsMenuItem,
+  uploadUberEatsMenu,
+
+  // =====================================================
+  // UBER EATS STORE MANAGEMENT ENDPOINTS ✅ NEW
+  // Required by Uber for validation approval
+  // =====================================================
+  updateUberEatsHolidayHours,
+
+  // =====================================================
+  // UBER EATS WEBHOOK RECEIVERS ✅ NEW
+  // Required by Uber for validation approval
+  // =====================================================
+  processUberEatsOrderNotificationWebhook,
+  processUberEatsOrderCancelledWebhook,
 
   // General endpoints
   getPlatformSyncStatus,

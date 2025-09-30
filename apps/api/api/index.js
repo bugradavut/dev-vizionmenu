@@ -141,6 +141,12 @@ app.use('/api/v1/customer', customerBranchRoutes);
 // Use campaigns routes
 app.use('/api/v1/campaigns', campaignsRoutes);
 
+// 🔓 UBER EATS WEBHOOKS - NO AUTH (Uber calls these endpoints)
+// Must be declared BEFORE the protected platform-sync routes
+const platformSyncController = require('./controllers/platform-sync.controller');
+app.post('/api/v1/platform-sync/uber-eats/webhooks/order-notification', platformSyncController.processUberEatsOrderNotificationWebhook);
+app.post('/api/v1/platform-sync/uber-eats/webhooks/order-cancelled', platformSyncController.processUberEatsOrderCancelledWebhook);
+
 // Use platform sync routes (protected - auth required)
 app.use('/api/v1/platform-sync', requireAuthWithBranch, platformSyncRoutes);
 

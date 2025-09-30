@@ -945,6 +945,505 @@ async function logPlatformSync(branchId, platform, syncType, operation, status, 
   }
 }
 
+/**
+ * =====================================================
+ * INTEGRATION CONFIG FUNCTIONS
+ * For Uber Eats validation requirements
+ * =====================================================
+ */
+
+/**
+ * Activate Uber Eats integration for a branch
+ * @param {string} storeId - Uber Eats store ID
+ * @param {string} branchId - Branch ID
+ * @param {Object} userBranch - User branch context
+ * @returns {Object} Activation result
+ */
+async function activateIntegration(storeId, branchId, userBranch) {
+  try {
+    // Update or insert integration record
+    const { data, error } = await supabase
+      .from('platform_integrations')
+      .upsert({
+        branch_id: branchId,
+        platform: 'uber_eats',
+        store_id: storeId,
+        integration_status: 'active',
+        activated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'branch_id,platform'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to activate integration: ${error.message}`);
+    }
+
+    console.log(`✅ Uber Eats integration activated for store ${storeId}`);
+
+    return {
+      success: true,
+      integration: data
+    };
+  } catch (error) {
+    console.error('Activation error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Remove Uber Eats integration for a branch
+ * @param {string} storeId - Uber Eats store ID
+ * @param {string} branchId - Branch ID
+ * @param {Object} userBranch - User branch context
+ * @returns {Object} Removal result
+ */
+async function removeIntegration(storeId, branchId, userBranch) {
+  try {
+    const { data, error } = await supabase
+      .from('platform_integrations')
+      .update({
+        integration_status: 'removed',
+        deactivated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('branch_id', branchId)
+      .eq('platform', 'uber_eats')
+      .eq('store_id', storeId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to remove integration: ${error.message}`);
+    }
+
+    console.log(`✅ Uber Eats integration removed for store ${storeId}`);
+
+    return {
+      success: true,
+      integration: data
+    };
+  } catch (error) {
+    console.error('Removal error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update Uber Eats integration details
+ * @param {string} storeId - Uber Eats store ID
+ * @param {string} branchId - Branch ID
+ * @param {Object} integrationSettings - Settings to update
+ * @param {Object} userBranch - User branch context
+ * @returns {Object} Update result
+ */
+async function updateIntegrationDetails(storeId, branchId, integrationSettings, userBranch) {
+  try {
+    const { data, error } = await supabase
+      .from('platform_integrations')
+      .update({
+        integration_settings: integrationSettings,
+        updated_at: new Date().toISOString()
+      })
+      .eq('branch_id', branchId)
+      .eq('platform', 'uber_eats')
+      .eq('store_id', storeId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update integration: ${error.message}`);
+    }
+
+    console.log(`✅ Uber Eats integration updated for store ${storeId}`);
+
+    return {
+      success: true,
+      integration: data
+    };
+  } catch (error) {
+    console.error('Update error:', error);
+    throw error;
+  }
+}
+
+/**
+ * =====================================================
+ * ORDER MANAGEMENT FUNCTIONS
+ * For Uber Eats validation requirements
+ * =====================================================
+ */
+
+/**
+ * Accept order on Uber Eats
+ */
+async function acceptOrder(orderId, branchId, userBranch) {
+  try {
+    const result = await acceptOrDenyUberEatsOrder(orderId, true);
+
+    // Update internal order status
+    await supabase
+      .from('orders')
+      .update({ order_status: 'confirmed' })
+      .eq('third_party_order_id', orderId)
+      .eq('branch_id', branchId);
+
+    return {
+      success: result.success,
+      external_order_id: orderId
+    };
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Deny order on Uber Eats
+ */
+async function denyOrder(orderId, branchId, reason, userBranch) {
+  try {
+    const result = await acceptOrDenyUberEatsOrder(orderId, false, reason);
+
+    // Update internal order status
+    await supabase
+      .from('orders')
+      .update({ order_status: 'rejected' })
+      .eq('third_party_order_id', orderId)
+      .eq('branch_id', branchId);
+
+    return {
+      success: result.success,
+      external_order_id: orderId
+    };
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Cancel order on Uber Eats
+ */
+async function cancelOrder(orderId, branchId, reason, userBranch) {
+  try {
+    // Call Uber API to cancel
+    const result = await performUberEatsOrderCancellation(orderId, reason);
+
+    // Update internal order status
+    await supabase
+      .from('orders')
+      .update({ order_status: 'cancelled' })
+      .eq('third_party_order_id', orderId)
+      .eq('branch_id', branchId);
+
+    return {
+      success: result.success,
+      external_order_id: orderId
+    };
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Get order details from Uber Eats
+ */
+async function getOrderDetails(orderId, branchId, userBranch) {
+  try {
+    const orderDetails = await fetchUberEatsOrderDetails(orderId);
+    return orderDetails;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Update order on Uber Eats
+ */
+async function updateOrder(orderId, branchId, updates, userBranch) {
+  try {
+    if (updates.status) {
+      const result = await performUberEatsStatusUpdate(orderId, updates.status);
+
+      // Update internal order
+      await supabase
+        .from('orders')
+        .update({ order_status: updates.status })
+        .eq('third_party_order_id', orderId)
+        .eq('branch_id', branchId);
+
+      return {
+        success: result.success,
+        external_order_id: orderId
+      };
+    }
+
+    return { success: true, external_order_id: orderId };
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * =====================================================
+ * MENU MANAGEMENT FUNCTIONS
+ * For Uber Eats validation requirements
+ * =====================================================
+ */
+
+/**
+ * Update single menu item on Uber Eats
+ */
+async function updateMenuItem(itemId, branchId, itemUpdates, userBranch) {
+  try {
+    // Mock implementation for now
+    console.log(`📝 Updating menu item ${itemId} on Uber Eats`);
+
+    return {
+      success: true,
+      item_id: itemId,
+      updates: itemUpdates
+    };
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Upload complete menu to Uber Eats
+ */
+async function uploadCompleteMenu(branchId, menuData, storeId, userBranch) {
+  try {
+    // Get branch info
+    const { data: branch } = await supabase
+      .from('branches')
+      .select('*')
+      .eq('id', branchId)
+      .single();
+
+    // Convert menu data directly from body (simplified for testing)
+    const uberMenu = {
+      items: [],
+      categories: [],
+      menus: [],
+      modifier_groups: []
+    };
+
+    // Process categories and items from body
+    if (menuData.categories && Array.isArray(menuData.categories)) {
+      menuData.categories.forEach(category => {
+        // Add category
+        uberMenu.categories.push({
+          id: category.id || `cat_${Date.now()}`,
+          title: {
+            translations: {
+              en_us: category.name || 'Unnamed Category'
+            }
+          },
+          subtitle: {
+            translations: {
+              en_us: category.description || ''
+            }
+          },
+          items: (category.items || []).map(item => item.id)
+        });
+
+        // Add items
+        if (category.items && Array.isArray(category.items)) {
+          category.items.forEach(item => {
+            uberMenu.items.push({
+              id: item.id,
+              external_data: item.id,
+              title: {
+                translations: {
+                  en_us: item.name
+                }
+              },
+              description: {
+                translations: {
+                  en_us: item.description || ''
+                }
+              },
+              price: item.price || 0,
+              core_price: item.price || 0,
+              images: [],
+              quantity_info: {
+                quantity: {
+                  max_permitted: 99,
+                  min_permitted: 1,
+                  default_quantity: 1
+                }
+              },
+              suspension_info: {
+                suspension: {
+                  suspended_until: item.is_available ? null : Math.floor(Date.now() / 1000) + 86400
+                }
+              },
+              modifier_group_ids: { ids: [] }
+            });
+          });
+        }
+      });
+
+      // Add default menu
+      uberMenu.menus.push({
+        id: `menu_${branchId}`,
+        title: {
+          translations: {
+            en_us: `${branch?.name || 'Restaurant'} Menu`
+          }
+        },
+        category_ids: uberMenu.categories.map(cat => cat.id)
+      });
+    }
+
+    // Perform upload
+    const result = await performUberEatsMenuSync(storeId, uberMenu);
+
+    return result;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * =====================================================
+ * STORE MANAGEMENT FUNCTIONS
+ * For Uber Eats validation requirements
+ * =====================================================
+ */
+
+/**
+ * Update holiday hours on Uber Eats
+ */
+async function updateHolidayHours(storeId, branchId, holidayHours, userBranch) {
+  try {
+    // Store holiday hours in database
+    for (const holiday of holidayHours) {
+      await supabase
+        .from('store_holiday_hours')
+        .upsert({
+          branch_id: branchId,
+          platform: 'uber_eats',
+          holiday_name: holiday.name,
+          holiday_date: holiday.date,
+          is_closed: holiday.is_closed,
+          open_time: holiday.open_time || null,
+          close_time: holiday.close_time || null,
+          updated_at: new Date().toISOString()
+        });
+    }
+
+    console.log(`✅ Holiday hours updated for store ${storeId}`);
+
+    return {
+      success: true,
+      store_id: storeId,
+      holiday_count: holidayHours.length
+    };
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * =====================================================
+ * WEBHOOK PROCESSING FUNCTIONS
+ * For Uber Eats validation requirements
+ * =====================================================
+ */
+
+/**
+ * Process order notification webhook
+ */
+async function processOrderNotificationWebhook(orderId, data, webhookPayload) {
+  try {
+    console.log(`📥 Processing order notification for ${orderId}`);
+
+    // Fetch order details and create in system
+    const orderDetails = await fetchUberEatsOrderDetails(orderId);
+
+    if (orderDetails) {
+      // Find branch by store mapping
+      const { data: integration } = await supabase
+        .from('platform_integrations')
+        .select('branch_id')
+        .eq('platform', 'uber_eats')
+        .eq('integration_status', 'active')
+        .single();
+
+      if (integration) {
+        await processUberEatsOrder(webhookPayload, integration.branch_id);
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Webhook processing error:', error);
+    return false;
+  }
+}
+
+/**
+ * Process order cancelled webhook
+ */
+async function processOrderCancelledWebhook(orderId, data, webhookPayload) {
+  try {
+    console.log(`❌ Processing order cancellation for ${orderId}`);
+
+    // Update order status in database
+    await supabase
+      .from('orders')
+      .update({
+        order_status: 'cancelled',
+        updated_at: new Date().toISOString()
+      })
+      .eq('third_party_order_id', orderId)
+      .eq('third_party_platform', 'uber_eats');
+
+    return true;
+  } catch (error) {
+    console.error('Webhook processing error:', error);
+    return false;
+  }
+}
+
+/**
+ * Validate webhook signature
+ */
+async function validateWebhookSignature(body, signature) {
+  // Use existing function
+  return validateUberEatsWebhookSignature(JSON.stringify(body), signature, process.env.UBER_CLIENT_SECRET || 'test_secret');
+}
+
+/**
+ * Perform order cancellation on Uber Eats
+ */
+async function performUberEatsOrderCancellation(orderId, reason) {
+  if (process.env.NODE_ENV === 'production' && process.env.UBER_EATS_ACCESS_TOKEN) {
+    // Real API call
+    try {
+      const response = await fetch(`https://api.uber.com/v1/eats/orders/${orderId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.UBER_EATS_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason: reason || 'RESTAURANT_REQUEST' })
+      });
+
+      return { success: response.ok };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  } else {
+    // Mock
+    console.log(`🚫 [MOCK] Cancelling Uber Eats order ${orderId}`);
+    return { success: true };
+  }
+}
+
 module.exports = {
   syncMenuToUberEats,
   processUberEatsOrder,
@@ -955,5 +1454,24 @@ module.exports = {
   getMenuWithMappings,
   convertMenuToUberEatsFormat,
   convertUberEatsOrderToVizion,
-  convertStatusToUberEats
+  convertStatusToUberEats,
+  // Integration Config
+  activateIntegration,
+  removeIntegration,
+  updateIntegrationDetails,
+  // Order Management
+  acceptOrder,
+  denyOrder,
+  cancelOrder,
+  getOrderDetails,
+  updateOrder,
+  // Menu Management
+  updateMenuItem,
+  uploadCompleteMenu,
+  // Store Management
+  updateHolidayHours,
+  // Webhooks
+  processOrderNotificationWebhook,
+  processOrderCancelledWebhook,
+  validateWebhookSignature
 };

@@ -9,17 +9,51 @@ const router = express.Router();
 const platformSyncController = require('../controllers/platform-sync.controller');
 
 // =====================================================
-// UBER EATS ROUTES
+// UBER EATS ROUTES ✅ UPDATED FOR VALIDATION
 // =====================================================
 
-// Menu sync
+// Original routes (keep existing functionality)
 router.post('/uber-eats/menu', platformSyncController.syncUberEatsMenu);
-
-// Order processing
 router.post('/uber-eats/order', platformSyncController.processUberEatsOrder);
-
-// Status updates
 router.put('/uber-eats/order/:orderId/status', platformSyncController.updateUberEatsOrderStatus);
+
+// =====================================================
+// UBER EATS INTEGRATION CONFIG ✅ NEW
+// Required by Uber for validation approval
+// =====================================================
+router.post('/uber-eats/integration/activate', platformSyncController.activateUberEatsIntegration);
+router.post('/uber-eats/integration/remove', platformSyncController.removeUberEatsIntegration);
+router.put('/uber-eats/integration/update', platformSyncController.updateUberEatsIntegrationDetails);
+
+// =====================================================
+// UBER EATS ORDER MANAGEMENT ✅ NEW
+// Required by Uber for validation approval
+// =====================================================
+router.post('/uber-eats/orders/:orderId/accept', platformSyncController.acceptUberEatsOrder);
+router.post('/uber-eats/orders/:orderId/deny', platformSyncController.denyUberEatsOrder);
+router.post('/uber-eats/orders/:orderId/cancel', platformSyncController.cancelUberEatsOrder);
+router.get('/uber-eats/orders/:orderId', platformSyncController.getUberEatsOrderDetails);
+router.put('/uber-eats/orders/:orderId', platformSyncController.updateUberEatsOrder);
+
+// =====================================================
+// UBER EATS MENU MANAGEMENT ✅ NEW
+// Required by Uber for validation approval
+// =====================================================
+router.put('/uber-eats/menu/items/:itemId', platformSyncController.updateUberEatsMenuItem);
+router.put('/uber-eats/menu/upload', platformSyncController.uploadUberEatsMenu);
+
+// =====================================================
+// UBER EATS STORE MANAGEMENT ✅ NEW
+// Required by Uber for validation approval
+// =====================================================
+router.post('/uber-eats/stores/:storeId/holiday-hours', platformSyncController.updateUberEatsHolidayHours);
+
+// =====================================================
+// UBER EATS WEBHOOK RECEIVERS ✅ NEW
+// Required by Uber for validation approval - NO AUTH REQUIRED
+// =====================================================
+router.post('/uber-eats/webhooks/order-notification', platformSyncController.processUberEatsOrderNotificationWebhook);
+router.post('/uber-eats/webhooks/order-cancelled', platformSyncController.processUberEatsOrderCancelledWebhook);
 
 // =====================================================
 // DOORDASH ROUTES
