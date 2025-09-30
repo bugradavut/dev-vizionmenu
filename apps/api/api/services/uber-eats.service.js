@@ -961,8 +961,6 @@ async function logPlatformSync(branchId, platform, syncType, operation, status, 
  */
 async function activateIntegration(storeId, branchId, userBranch) {
   try {
-    console.log('🔍 activateIntegration called with:', { storeId, branchId, userBranch });
-
     // Update or insert integration record
     const { data, error } = await supabase
       .from('platform_integrations')
@@ -980,18 +978,17 @@ async function activateIntegration(storeId, branchId, userBranch) {
       .single();
 
     if (error) {
-      console.error('❌ Supabase upsert error:', error);
       throw new Error(`Failed to activate integration: ${error.message}`);
     }
 
-    console.log(`✅ Uber Eats integration activated for store ${storeId}`, data);
+    console.log(`✅ Uber Eats integration activated for store ${storeId}`);
 
     return {
       success: true,
       integration: data
     };
   } catch (error) {
-    console.error('❌ Activation error:', error);
+    console.error('Activation error:', error);
     throw error;
   }
 }
