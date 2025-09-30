@@ -46,7 +46,7 @@ router.put('/uber-eats/menu/upload', platformSyncController.uploadUberEatsMenu);
 // UBER EATS STORE MANAGEMENT ✅ NEW
 // Required by Uber for validation approval
 // =====================================================
-router.post('/uber-eats/stores/:storeId/holiday-hours', platformSyncController.updateUberEatsHolidayHours);
+router.post('/uber-eats/stores/:storeId/holiday-hours', platformSyncController.updateUberEatsStoreHolidayHours);
 
 // =====================================================
 // UBER EATS WEBHOOK RECEIVERS ✅ NEW
