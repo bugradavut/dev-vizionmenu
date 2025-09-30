@@ -141,11 +141,32 @@ app.use('/api/v1/customer', customerBranchRoutes);
 // Use campaigns routes
 app.use('/api/v1/campaigns', campaignsRoutes);
 
-// 🔓 UBER EATS WEBHOOKS - NO AUTH (Uber calls these endpoints)
+// 🔓 UBER EATS VALIDATION ENDPOINTS - NO AUTH (Uber calls these for validation)
 // Must be declared BEFORE the protected platform-sync routes
 const platformSyncController = require('./controllers/platform-sync.controller');
+
+// Webhooks
 app.post('/api/v1/platform-sync/uber-eats/webhooks/order-notification', platformSyncController.processUberEatsOrderNotificationWebhook);
 app.post('/api/v1/platform-sync/uber-eats/webhooks/order-cancelled', platformSyncController.processUberEatsOrderCancelledWebhook);
+
+// Integration Config
+app.post('/api/v1/platform-sync/uber-eats/integration/activate', platformSyncController.activateUberEatsIntegration);
+app.post('/api/v1/platform-sync/uber-eats/integration/remove', platformSyncController.removeUberEatsIntegration);
+app.put('/api/v1/platform-sync/uber-eats/integration/update', platformSyncController.updateUberEatsIntegrationDetails);
+
+// Menu
+app.post('/api/v1/platform-sync/uber-eats/menu/upload', platformSyncController.uploadCompleteMenuToUberEats);
+app.put('/api/v1/platform-sync/uber-eats/menu/item/:itemId', platformSyncController.updateUberEatsMenuItem);
+
+// Order
+app.post('/api/v1/platform-sync/uber-eats/order/:orderId/accept', platformSyncController.acceptUberEatsOrder);
+app.post('/api/v1/platform-sync/uber-eats/order/:orderId/cancel', platformSyncController.cancelUberEatsOrder);
+app.post('/api/v1/platform-sync/uber-eats/order/:orderId/deny', platformSyncController.denyUberEatsOrder);
+app.get('/api/v1/platform-sync/uber-eats/order/:orderId', platformSyncController.getUberEatsOrderDetails);
+app.put('/api/v1/platform-sync/uber-eats/order/:orderId', platformSyncController.updateUberEatsOrder);
+
+// Store
+app.put('/api/v1/platform-sync/uber-eats/store/holiday-hours', platformSyncController.updateUberEatsStoreHolidayHours);
 
 // Use platform sync routes (protected - auth required)
 app.use('/api/v1/platform-sync', requireAuthWithBranch, platformSyncRoutes);

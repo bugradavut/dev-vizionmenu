@@ -885,24 +885,21 @@ async function activateUberEatsIntegration(req, res) {
       });
     }
 
-    const targetBranchId = branch_id || req.userBranch.branch_id;
-
-    // Security check for cross-branch access
-    if (branch_id && branch_id !== req.userBranch.branch_id && req.userBranch.role !== 'chain_owner') {
-      return res.status(403).json({
-        error: 'Access denied',
-        message: 'Only chain owners can activate integration for other branches'
+    if (!branch_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'branch_id is required'
       });
     }
 
-    const result = await uberEatsService.activateIntegration(store_id, targetBranchId, req.userBranch);
+    const result = await uberEatsService.activateIntegration(store_id, branch_id, null);
 
     res.status(200).json({
       success: true,
       message: 'Uber Eats integration activated successfully',
       data: {
         store_id: store_id,
-        branch_id: targetBranchId,
+        branch_id: branch_id,
         integration_status: 'active',
         activated_at: new Date().toISOString()
       }
@@ -933,24 +930,21 @@ async function removeUberEatsIntegration(req, res) {
       });
     }
 
-    const targetBranchId = branch_id || req.userBranch.branch_id;
-
-    // Security check for cross-branch access
-    if (branch_id && branch_id !== req.userBranch.branch_id && req.userBranch.role !== 'chain_owner') {
-      return res.status(403).json({
-        error: 'Access denied',
-        message: 'Only chain owners can remove integration for other branches'
+    if (!branch_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'branch_id is required'
       });
     }
 
-    const result = await uberEatsService.removeIntegration(store_id, targetBranchId, req.userBranch);
+    const result = await uberEatsService.removeIntegration(store_id, branch_id, null);
 
     res.status(200).json({
       success: true,
       message: 'Uber Eats integration removed successfully',
       data: {
         store_id: store_id,
-        branch_id: targetBranchId,
+        branch_id: branch_id,
         integration_status: 'removed',
         removed_at: new Date().toISOString()
       }
@@ -981,21 +975,18 @@ async function updateUberEatsIntegrationDetails(req, res) {
       });
     }
 
-    const targetBranchId = branch_id || req.userBranch.branch_id;
-
-    // Security check for cross-branch access
-    if (branch_id && branch_id !== req.userBranch.branch_id && req.userBranch.role !== 'chain_owner') {
-      return res.status(403).json({
-        error: 'Access denied',
-        message: 'Only chain owners can update integration for other branches'
+    if (!branch_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'branch_id is required'
       });
     }
 
     const result = await uberEatsService.updateIntegrationDetails(
       store_id,
-      targetBranchId,
+      branch_id,
       integration_settings,
-      req.userBranch
+      null
     );
 
     res.status(200).json({
@@ -1003,7 +994,7 @@ async function updateUberEatsIntegrationDetails(req, res) {
       message: 'Uber Eats integration details updated successfully',
       data: {
         store_id: store_id,
-        branch_id: targetBranchId,
+        branch_id: branch_id,
         integration_status: 'updated',
         updated_at: new Date().toISOString(),
         settings: integration_settings
@@ -1042,16 +1033,14 @@ async function acceptUberEatsOrder(req, res) {
       });
     }
 
-    // Check branch access
-    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'accept orders');
-    if (!accessCheck.allowed) {
-      return res.status(accessCheck.error.status).json({
-        error: 'Access denied',
-        message: accessCheck.error.message
+    if (!branch_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'branch_id is required'
       });
     }
 
-    const result = await uberEatsService.acceptOrder(orderId, accessCheck.targetBranchId, req.userBranch);
+    const result = await uberEatsService.acceptOrder(orderId, branch_id, null);
 
     res.status(200).json({
       success: true,
@@ -1059,7 +1048,7 @@ async function acceptUberEatsOrder(req, res) {
       data: {
         order_id: orderId,
         external_order_id: result.external_order_id,
-        branch_id: accessCheck.targetBranchId,
+        branch_id: branch_id,
         status: 'accepted',
         accepted_at: new Date().toISOString()
       }
@@ -1091,16 +1080,14 @@ async function denyUberEatsOrder(req, res) {
       });
     }
 
-    // Check branch access
-    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'deny orders');
-    if (!accessCheck.allowed) {
-      return res.status(accessCheck.error.status).json({
-        error: 'Access denied',
-        message: accessCheck.error.message
+    if (!branch_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'branch_id is required'
       });
     }
 
-    const result = await uberEatsService.denyOrder(orderId, accessCheck.targetBranchId, reason, req.userBranch);
+    const result = await uberEatsService.denyOrder(orderId, branch_id, reason, null);
 
     res.status(200).json({
       success: true,
@@ -1108,7 +1095,7 @@ async function denyUberEatsOrder(req, res) {
       data: {
         order_id: orderId,
         external_order_id: result.external_order_id,
-        branch_id: accessCheck.targetBranchId,
+        branch_id: branch_id,
         status: 'denied',
         reason: reason,
         denied_at: new Date().toISOString()
@@ -1141,16 +1128,14 @@ async function cancelUberEatsOrder(req, res) {
       });
     }
 
-    // Check branch access
-    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'cancel orders');
-    if (!accessCheck.allowed) {
-      return res.status(accessCheck.error.status).json({
-        error: 'Access denied',
-        message: accessCheck.error.message
+    if (!branch_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'branch_id is required'
       });
     }
 
-    const result = await uberEatsService.cancelOrder(orderId, accessCheck.targetBranchId, reason, req.userBranch);
+    const result = await uberEatsService.cancelOrder(orderId, branch_id, reason, null);
 
     res.status(200).json({
       success: true,
@@ -1158,7 +1143,7 @@ async function cancelUberEatsOrder(req, res) {
       data: {
         order_id: orderId,
         external_order_id: result.external_order_id,
-        branch_id: accessCheck.targetBranchId,
+        branch_id: branch_id,
         status: 'cancelled',
         reason: reason,
         cancelled_at: new Date().toISOString()
@@ -1191,16 +1176,14 @@ async function getUberEatsOrderDetails(req, res) {
       });
     }
 
-    // Check branch access
-    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'view orders');
-    if (!accessCheck.allowed) {
-      return res.status(accessCheck.error.status).json({
-        error: 'Access denied',
-        message: accessCheck.error.message
+    if (!branch_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'branch_id is required'
       });
     }
 
-    const orderDetails = await uberEatsService.getOrderDetails(orderId, accessCheck.targetBranchId, req.userBranch);
+    const orderDetails = await uberEatsService.getOrderDetails(orderId, branch_id, null);
 
     res.status(200).json({
       success: true,
@@ -1234,16 +1217,14 @@ async function updateUberEatsOrder(req, res) {
       });
     }
 
-    // Check branch access
-    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'update orders');
-    if (!accessCheck.allowed) {
-      return res.status(accessCheck.error.status).json({
-        error: 'Access denied',
-        message: accessCheck.error.message
+    if (!branch_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'branch_id is required'
       });
     }
 
-    const result = await uberEatsService.updateOrder(orderId, accessCheck.targetBranchId, { status, ...updates }, req.userBranch);
+    const result = await uberEatsService.updateOrder(orderId, branch_id, { status, ...updates }, null);
 
     res.status(200).json({
       success: true,
@@ -1251,7 +1232,7 @@ async function updateUberEatsOrder(req, res) {
       data: {
         order_id: orderId,
         external_order_id: result.external_order_id,
-        branch_id: accessCheck.targetBranchId,
+        branch_id: branch_id,
         status: status,
         updated_at: new Date().toISOString(),
         updates: updates
@@ -1290,6 +1271,13 @@ async function updateUberEatsMenuItem(req, res) {
       });
     }
 
+    if (!branch_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'branch_id is required'
+      });
+    }
+
     if (!item_updates) {
       return res.status(400).json({
         error: 'Invalid request',
@@ -1297,23 +1285,14 @@ async function updateUberEatsMenuItem(req, res) {
       });
     }
 
-    // Check branch access
-    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'update menu items');
-    if (!accessCheck.allowed) {
-      return res.status(accessCheck.error.status).json({
-        error: 'Access denied',
-        message: accessCheck.error.message
-      });
-    }
-
-    const result = await uberEatsService.updateMenuItem(itemId, accessCheck.targetBranchId, item_updates, req.userBranch);
+    const result = await uberEatsService.updateMenuItem(itemId, branch_id, item_updates, null);
 
     res.status(200).json({
       success: true,
       message: 'Menu item updated successfully on Uber Eats',
       data: {
         item_id: itemId,
-        branch_id: accessCheck.targetBranchId,
+        branch_id: branch_id,
         updates: item_updates,
         updated_at: new Date().toISOString(),
         uber_response: result
@@ -1338,6 +1317,13 @@ async function uploadUberEatsMenu(req, res) {
   try {
     const { branch_id, menu_data, store_id } = req.body;
 
+    if (!branch_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'branch_id is required'
+      });
+    }
+
     if (!menu_data) {
       return res.status(400).json({
         error: 'Invalid request',
@@ -1345,17 +1331,8 @@ async function uploadUberEatsMenu(req, res) {
       });
     }
 
-    // Check branch access
-    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'upload menus');
-    if (!accessCheck.allowed) {
-      return res.status(accessCheck.error.status).json({
-        error: 'Access denied',
-        message: accessCheck.error.message
-      });
-    }
-
     // Use existing sync function but with direct menu data
-    const result = await uberEatsService.uploadCompleteMenu(accessCheck.targetBranchId, menu_data, store_id, req.userBranch);
+    const result = await uberEatsService.uploadCompleteMenu(branch_id, menu_data, store_id, null);
 
     res.status(200).json({
       success: true,
@@ -1402,6 +1379,13 @@ async function updateUberEatsHolidayHours(req, res) {
       });
     }
 
+    if (!branch_id) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'branch_id is required'
+      });
+    }
+
     if (!holiday_hours || !Array.isArray(holiday_hours)) {
       return res.status(400).json({
         error: 'Invalid request',
@@ -1409,23 +1393,14 @@ async function updateUberEatsHolidayHours(req, res) {
       });
     }
 
-    // Check branch access
-    const accessCheck = checkBranchAccess(branch_id, req.userBranch, 'update holiday hours');
-    if (!accessCheck.allowed) {
-      return res.status(accessCheck.error.status).json({
-        error: 'Access denied',
-        message: accessCheck.error.message
-      });
-    }
-
-    const result = await uberEatsService.updateHolidayHours(storeId, accessCheck.targetBranchId, holiday_hours, req.userBranch);
+    const result = await uberEatsService.updateHolidayHours(storeId, branch_id, holiday_hours, null);
 
     res.status(200).json({
       success: true,
       message: 'Holiday hours updated successfully on Uber Eats',
       data: {
         store_id: storeId,
-        branch_id: accessCheck.targetBranchId,
+        branch_id: branch_id,
         holiday_hours: holiday_hours,
         holiday_count: holiday_hours.length,
         updated_at: new Date().toISOString(),
@@ -1622,7 +1597,7 @@ module.exports = {
   // UBER EATS STORE MANAGEMENT ENDPOINTS ✅ NEW
   // Required by Uber for validation approval
   // =====================================================
-  updateUberEatsHolidayHours,
+  updateUberEatsStoreHolidayHours: updateUberEatsHolidayHours,
 
   // =====================================================
   // UBER EATS WEBHOOK RECEIVERS ✅ NEW
