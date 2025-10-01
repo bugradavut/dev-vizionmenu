@@ -6,7 +6,8 @@ console.log('Working directory:', process.cwd());
 // Load environment variables for local development
 if (process.env.NODE_ENV !== 'production') {
   try {
-    require('dotenv').config();
+    const path = require('path');
+    require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
   } catch (error) {
     console.log('⚠️  dotenv not found, using environment variables directly');
     // Fallback: set environment variables manually for local dev
@@ -67,6 +68,7 @@ const analyticsRoutes = require('./routes/analytics');
 const waiterCallsRoutes = require('./routes/waiter-calls.routes');
 const chainTemplatesRoutes = require('./routes/chain-templates.routes');
 const uberDirectSettingsRoutes = require('./uber-direct-settings');
+const uberEatsAuthRoutes = require('./routes/uber-eats-auth.routes');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -179,6 +181,10 @@ app.use('/api/v1/uber-direct', platformSyncRoutes);
 app.post('/api/v1/uber-direct/branch-settings/:branchId', requireAuthWithBranch, uberDirectSettingsRoutes.saveBranchCredentials);
 app.get('/api/v1/uber-direct/branch-settings/:branchId', requireAuthWithBranch, uberDirectSettingsRoutes.getBranchCredentials);
 app.post('/api/v1/uber-direct/branch-settings/:branchId/test', requireAuthWithBranch, uberDirectSettingsRoutes.testBranchConnection);
+
+// 🔐 UBER EATS OAUTH ROUTES - For restaurant owner OAuth flow
+// NO AUTH required - public endpoints for OAuth flow
+app.use('/api/v1/uber-eats/auth', uberEatsAuthRoutes);
 
 // Use admin chain routes (platform admin only)
 app.use('/api/v1/admin/chains', adminChainRoutes);

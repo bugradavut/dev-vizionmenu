@@ -1,16 +1,143 @@
 // =====================================================
 // UBER EATS INTEGRATION SERVICE
 // Complete Uber Eats API integration for menu sync, order processing, and status updates
-// Supports both mock testing and production API calls
+// Supports both mock testing and production API calls with OAuth token management
 // =====================================================
 
 const { createClient } = require('@supabase/supabase-js');
+const { encryptToString, decryptFromString } = require('../utils/encryption');
 
 // Create Supabase client
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+
+/**
+ * =====================================================
+ * OAUTH TOKEN MANAGEMENT
+ * Handles access token retrieval and refresh
+ * =====================================================
+ */
+
+/**
+ * Get valid access token for a branch (with auto-refresh)
+ * @param {string} branchId - Branch ID
+ * @returns {Promise<string>} Valid access token
+ */
+async function getValidAccessToken(branchId) {
+  // Get integration record
+  const { data: integration, error } = await supabase
+    .from('platform_integrations')
+    .select('access_token, refresh_token, token_expires_at, integration_status')
+    .eq('branch_id', branchId)
+    .eq('platform', 'uber_eats')
+    .single();
+
+  if (error || !integration) {
+    throw new Error('Uber Eats integration not found for this branch');
+  }
+
+  if (integration.integration_status !== 'active') {
+    throw new Error('Uber Eats integration is not active');
+  }
+
+  // Check if token is expired or about to expire (within 5 minutes)
+  const expiresAt = new Date(integration.token_expires_at);
+  const now = new Date();
+  const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+
+  if (expiresAt > fiveMinutesFromNow) {
+    // Token is still valid, decrypt and return
+    return decryptFromString(integration.access_token);
+  }
+
+  // Token expired or about to expire - refresh it
+  console.log(`🔄 Refreshing expired token for branch: ${branchId}`);
+  return await refreshAccessToken(branchId, integration.refresh_token);
+}
+
+/**
+ * Refresh access token using refresh token
+ * @param {string} branchId - Branch ID
+ * @param {string} encryptedRefreshToken - Encrypted refresh token from database
+ * @returns {Promise<string>} New access token
+ */
+async function refreshAccessToken(branchId, encryptedRefreshToken) {
+  const UBER_EATS_TEST_MODE = process.env.UBER_EATS_TEST_MODE === 'true';
+
+  if (UBER_EATS_TEST_MODE) {
+    // Mock mode: Generate new fake token
+    console.log('🧪 MOCK MODE: Simulating token refresh');
+    const newAccessToken = 'mock_refreshed_access_token_' + Date.now();
+    const newRefreshToken = 'mock_refreshed_refresh_token_' + Date.now();
+    const expiresIn = 3600;
+
+    // Update database
+    await supabase
+      .from('platform_integrations')
+      .update({
+        access_token: encryptToString(newAccessToken),
+        refresh_token: encryptToString(newRefreshToken),
+        token_expires_at: new Date(Date.now() + expiresIn * 1000).toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('branch_id', branchId)
+      .eq('platform', 'uber_eats');
+
+    return newAccessToken;
+  }
+
+  // Production mode: Real token refresh
+  const clientId = process.env.UBER_EATS_CLIENT_ID;
+  const clientSecret = process.env.UBER_EATS_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error('UBER_EATS_CLIENT_ID or CLIENT_SECRET not configured');
+  }
+
+  // Decrypt refresh token
+  const refreshToken = decryptFromString(encryptedRefreshToken);
+
+  // Request new access token
+  const tokenResponse = await fetch('https://login.uber.com/oauth/v2/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken
+    })
+  });
+
+  if (!tokenResponse.ok) {
+    const errorData = await tokenResponse.json();
+    throw new Error(`Token refresh failed: ${errorData.error_description || errorData.error}`);
+  }
+
+  const tokenData = await tokenResponse.json();
+  const newAccessToken = tokenData.access_token;
+  const newRefreshToken = tokenData.refresh_token || refreshToken; // Some APIs don't return new refresh token
+  const expiresIn = tokenData.expires_in || 3600;
+
+  // Update database with new tokens
+  await supabase
+    .from('platform_integrations')
+    .update({
+      access_token: encryptToString(newAccessToken),
+      refresh_token: encryptToString(newRefreshToken),
+      token_expires_at: new Date(Date.now() + expiresIn * 1000).toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('branch_id', branchId)
+    .eq('platform', 'uber_eats');
+
+  console.log(`✅ Token refreshed successfully for branch: ${branchId}`);
+  return newAccessToken;
+}
 
 /**
  * Sync complete menu to Uber Eats platform
@@ -1455,6 +1582,9 @@ module.exports = {
   convertMenuToUberEatsFormat,
   convertUberEatsOrderToVizion,
   convertStatusToUberEats,
+  // OAuth Token Management
+  getValidAccessToken,
+  refreshAccessToken,
   // Integration Config
   activateIntegration,
   removeIntegration,
