@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, CreditCard, DollarSign, Bike, CalendarDays, Check as CheckIcon, Lock, ChevronLeft, X } from "lucide-react"
+import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, DollarSign, Bike, CalendarDays, Check as CheckIcon, Lock, ChevronLeft, X } from "lucide-react"
 import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
@@ -28,6 +28,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { DeliveryZonesCard } from "@/components/delivery-zones"
 import { UberEatsIntegrationCard } from "@/components/uber-eats-integration-card"
 import { AutoReadyCard } from "@/components/branch-settings/auto-ready-card"
+import { PaymentMethodsCard } from "@/components/branch-settings/payment-methods-card"
 
 type RestaurantHoursDay = keyof typeof translations.en.settingsBranch.restaurantHours.dayLabels
 
@@ -769,62 +770,10 @@ export default function BranchSettingsPage() {
                   />
 
                   {/* Payment Methods Card */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-50 rounded-lg">
-                          <CreditCard className="h-5 w-5 text-purple-600" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-base">Payment Methods</CardTitle>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Configure payment options for customers
-                          </p>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {/* Online Payment Toggle */}
-                      <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                        <div>
-                          <Label htmlFor="online-payment" className="text-sm font-medium">Pay Online</Label>
-                          <p className="text-xs text-muted-foreground">Credit card payments</p>
-                        </div>
-                        <Switch
-                          id="online-payment"
-                          checked={settings.paymentSettings?.allowOnlinePayment ?? true}
-                          onCheckedChange={(enabled) => updateSettings({
-                            paymentSettings: {
-                              ...settings.paymentSettings,
-                              allowOnlinePayment: enabled,
-                              allowCounterPayment: settings.paymentSettings?.allowCounterPayment ?? false,
-                              defaultPaymentMethod: settings.paymentSettings?.defaultPaymentMethod ?? 'online'
-                            }
-                          })}
-                        />
-                      </div>
-                      
-                      {/* Counter Payment Toggle */}
-                      <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                        <div>
-                          <Label htmlFor="counter-payment" className="text-sm font-medium">Pay at Counter</Label>
-                          <p className="text-xs text-muted-foreground">Cash or card at pickup</p>
-                        </div>
-                        <Switch
-                          id="counter-payment"
-                          checked={settings.paymentSettings?.allowCounterPayment ?? false}
-                          onCheckedChange={(enabled) => updateSettings({
-                            paymentSettings: {
-                              ...settings.paymentSettings,
-                              allowOnlinePayment: settings.paymentSettings?.allowOnlinePayment ?? true,
-                              allowCounterPayment: enabled,
-                              defaultPaymentMethod: settings.paymentSettings?.defaultPaymentMethod ?? 'online'
-                            }
-                          })}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <PaymentMethodsCard
+                    paymentSettings={settings.paymentSettings || {}}
+                    onPaymentSettingsChange={(paymentSettings) => updateSettings({ paymentSettings })}
+                  />
 
                   {/* Minimum Order Amount Card */}
                   <Card>
