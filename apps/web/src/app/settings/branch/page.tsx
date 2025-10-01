@@ -26,6 +26,7 @@ import { translations } from "@/lib/translations"
 import { cn } from "@/lib/utils"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { DeliveryZonesCard } from "@/components/delivery-zones"
+import { UberEatsIntegrationCard } from "@/components/uber-eats-integration-card"
 
 type RestaurantHoursDay = keyof typeof translations.en.settingsBranch.restaurantHours.dayLabels
 
@@ -1303,6 +1304,11 @@ export default function BranchSettingsPage() {
                     value={settings.deliveryZones}
                     onChange={(deliveryZones) => updateSettings({ deliveryZones })}
                   />
+                </div>
+
+                {/* Uber Eats Integration Card */}
+                <div className="grid grid-cols-1 gap-6">
+                  <UberEatsIntegrationCard />
                 </div>
 
               </div>

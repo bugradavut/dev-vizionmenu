@@ -192,7 +192,7 @@ router.get('/callback', async (req, res) => {
 
     // Redirect to frontend success page
     const frontendUrl = process.env.FRONTEND_URL || 'https://dev-vizionmenu.vercel.app';
-    res.redirect(`${frontendUrl}/settings/integrations?uber_eats=connected&store_id=${storeId}`);
+    res.redirect(`${frontendUrl}/settings/branch?uber_eats=connected&store_id=${storeId}`);
 
   } catch (error) {
     console.error('OAuth callback error:', error);
