@@ -29,6 +29,7 @@ import { DeliveryZonesCard } from "@/components/delivery-zones"
 import { UberEatsIntegrationCard } from "@/components/uber-eats-integration-card"
 import { AutoReadyCard } from "@/components/branch-settings/auto-ready-card"
 import { PaymentMethodsCard } from "@/components/branch-settings/payment-methods-card"
+import { MinimumOrderCard } from "@/components/branch-settings/minimum-order-card"
 
 type RestaurantHoursDay = keyof typeof translations.en.settingsBranch.restaurantHours.dayLabels
 
@@ -776,53 +777,17 @@ export default function BranchSettingsPage() {
                   />
 
                   {/* Minimum Order Amount Card */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-50 rounded-lg">
-                          <DollarSign className="h-5 w-5 text-purple-600" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-base">{t.settingsBranch.minimumOrderTitle}</CardTitle>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {t.settingsBranch.minimumOrderDesc}
-                          </p>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="minimum-order" className="text-sm font-medium">Amount ($CAD)</Label>
-                        <div className="relative">
-                          <Input
-                            id="minimum-order"
-                            type="number"
-                            value={minimumOrderInput}
-                            onChange={(e) => handleMinimumOrderChange(e.target.value)}
-                            className="pr-12"
-                            placeholder="0.00"
-                            min="0"
-                            max="1000"
-                            step="0.01"
-                          />
-                          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                            <span className="text-sm text-muted-foreground">CAD</span>
-                          </div>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {(settings.minimumOrderAmount || 0) === 0 ? (
-                            <span className="text-green-600">
-                              • {t.settingsBranch.noMinimumSet}
-                            </span>
-                          ) : (
-                            <span className="text-blue-600">
-                              • {t.settingsBranch.minimumOrderWarning.replace('{amount}', `$${settings.minimumOrderAmount?.toFixed(2) || '0.00'}`)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <MinimumOrderCard
+                    minimumOrderAmount={settings.minimumOrderAmount || 0}
+                    minimumOrderInput={minimumOrderInput}
+                    onMinimumOrderChange={handleMinimumOrderChange}
+                    translations={{
+                      title: t.settingsBranch.minimumOrderTitle,
+                      description: t.settingsBranch.minimumOrderDesc,
+                      noMinimumSet: t.settingsBranch.noMinimumSet,
+                      minimumOrderWarning: t.settingsBranch.minimumOrderWarning
+                    }}
+                  />
 
                   {/* Delivery Fee Card */}
                   <Card>
