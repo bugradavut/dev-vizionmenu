@@ -30,6 +30,7 @@ import { UberEatsIntegrationCard } from "@/components/uber-eats-integration-card
 import { AutoReadyCard } from "@/components/branch-settings/auto-ready-card"
 import { PaymentMethodsCard } from "@/components/branch-settings/payment-methods-card"
 import { MinimumOrderCard } from "@/components/branch-settings/minimum-order-card"
+import { DeliveryFeeCard } from "@/components/branch-settings/delivery-fee-card"
 
 type RestaurantHoursDay = keyof typeof translations.en.settingsBranch.restaurantHours.dayLabels
 
@@ -790,101 +791,25 @@ export default function BranchSettingsPage() {
                   />
 
                   {/* Delivery Fee Card */}
-                  <Card>
-                    <CardHeader className="pb-3 relative">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-50 rounded-lg">
-                          <Bike className="h-5 w-5 text-purple-600" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-base">{t.settingsBranch.deliveryFeeTitle}</CardTitle>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {t.settingsBranch.deliveryFeeDesc}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="absolute top-3 right-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIsUberDirectModalOpen(true)}
-                          className="h-8 w-8 p-0 border-gray-300 relative"
-                        >
-                          <Settings className="h-4 w-4" />
-                          {isUberDirectEnabled && (
-                            <div className="absolute -top-1 -right-1 h-3 w-3 bg-orange-500 rounded-full border-2 border-white animate-pulse"></div>
-                          )}
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Base Delivery Fee Input */}
-                      <div className="space-y-2">
-                        <Label htmlFor="delivery-fee" className="text-sm font-medium">Base Fee ($CAD)</Label>
-                        <div className="relative">
-                          <Input
-                            id="delivery-fee"
-                            type="number"
-                            value={deliveryFeeInput}
-                            onChange={(e) => handleDeliveryFeeChange(e.target.value)}
-                            className="pr-12"
-                            placeholder="0.00"
-                            min="0"
-                            max="100"
-                            step="0.01"
-                          />
-                          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                            <span className="text-sm text-muted-foreground">CAD</span>
-                          </div>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {(settings.deliveryFee || 0) === 0 ? (
-                            <span className="text-green-600">
-                              • {t.settingsBranch.noDeliveryFee}
-                            </span>
-                          ) : (
-                            <span className="text-blue-600">
-                              • {t.settingsBranch.deliveryFeeApplied.replace('{amount}', `$${settings.deliveryFee?.toFixed(2) || '0.00'}`)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Free Delivery Threshold Input */}
-                      <div className="space-y-2">
-                        <Label htmlFor="free-delivery-threshold" className="text-sm font-medium">
-                          {t.settingsBranch.freeDeliveryThreshold} ($CAD)
-                        </Label>
-                        <div className="relative">
-                          <Input
-                            id="free-delivery-threshold"
-                            type="number"
-                            value={freeDeliveryThresholdInput}
-                            onChange={(e) => handleFreeDeliveryThresholdChange(e.target.value)}
-                            className="pr-12"
-                            placeholder="0.00"
-                            min="0"
-                            max="10000"
-                            step="0.01"
-                          />
-                          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                            <span className="text-sm text-muted-foreground">CAD</span>
-                          </div>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {(settings.freeDeliveryThreshold || 0) === 0 ? (
-                            <span className="text-blue-600">
-                              • {t.settingsBranch.noFreeDelivery}
-                            </span>
-                          ) : (
-                            <span className="text-blue-600">
-                              • {t.settingsBranch.freeDeliveryEnabled.replace('{amount}', `$${settings.freeDeliveryThreshold?.toFixed(2) || '0.00'}`)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <DeliveryFeeCard
+                    deliveryFee={settings.deliveryFee || 0}
+                    deliveryFeeInput={deliveryFeeInput}
+                    freeDeliveryThreshold={settings.freeDeliveryThreshold || 0}
+                    freeDeliveryThresholdInput={freeDeliveryThresholdInput}
+                    isUberDirectEnabled={isUberDirectEnabled}
+                    onDeliveryFeeChange={handleDeliveryFeeChange}
+                    onFreeDeliveryThresholdChange={handleFreeDeliveryThresholdChange}
+                    onUberDirectClick={() => setIsUberDirectModalOpen(true)}
+                    translations={{
+                      title: t.settingsBranch.deliveryFeeTitle,
+                      description: t.settingsBranch.deliveryFeeDesc,
+                      noDeliveryFee: t.settingsBranch.noDeliveryFee,
+                      deliveryFeeApplied: t.settingsBranch.deliveryFeeApplied,
+                      freeDeliveryThreshold: t.settingsBranch.freeDeliveryThreshold,
+                      noFreeDelivery: t.settingsBranch.noFreeDelivery,
+                      freeDeliveryEnabled: t.settingsBranch.freeDeliveryEnabled
+                    }}
+                  />
                 </div>
 
                 {/* Second Row: Kitchen & Delivery Timing + Total Time */}
