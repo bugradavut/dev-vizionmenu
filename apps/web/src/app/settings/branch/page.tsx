@@ -32,6 +32,7 @@ import { PaymentMethodsCard } from "@/components/branch-settings/payment-methods
 import { MinimumOrderCard } from "@/components/branch-settings/minimum-order-card"
 import { DeliveryFeeCard } from "@/components/branch-settings/delivery-fee-card"
 import { TimingCardsGroup } from "@/components/branch-settings/timing-cards-group"
+import { RestaurantHoursCard } from "@/components/branch-settings/restaurant-hours-card"
 
 type RestaurantHoursDay = keyof typeof translations.en.settingsBranch.restaurantHours.dayLabels
 
@@ -828,157 +829,26 @@ export default function BranchSettingsPage() {
                     onBaseDelayAdjustment={handleBaseDelayAdjustment}
                     onDeliveryDelayAdjustment={handleDeliveryDelayAdjustment}
                   />
-                  
-                  {/* Right Column - Restaurant Hours Mock */}
-                  <div className="h-full">
-                    <Card className="h-full border border-purple-100 shadow-sm">
-                      <CardHeader className="pb-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-3">
-                            <div className="rounded-lg bg-purple-50 p-2 text-purple-600">
-                              <CalendarDays className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <CardTitle className="text-sm">{restaurantHoursCopy.title}</CardTitle>
-                              <p className="text-xs text-muted-foreground">
-                                {restaurantHoursCopy.subtitle}
-                              </p>
-                            </div>
-                          </div>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "flex items-center gap-2 text-xs font-semibold border px-3 py-1.5",
-                              !restaurantClosed
-                                ? "bg-emerald-50 text-emerald-600 border-emerald-400"
-                                : "bg-rose-50 text-rose-600 border-rose-200"
-                            )}
-                          >
-                            {!restaurantClosed ? restaurantHoursCopy.statusOpen : restaurantHoursCopy.statusClosed}
-                            <Switch
-                              aria-label={restaurantHoursCopy.closedToggleAria}
-                              checked={!restaurantClosed}
-                              onCheckedChange={(checked) => handleRestaurantClosedToggle(!checked)}
-                              className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-rose-500 scale-75"
-                            />
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-5">
-                        <div className="flex flex-col gap-6 lg:flex-row">
-                          <div className="flex-1 space-y-3">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                              {restaurantHoursCopy.workingDaysLabel}
-                              {currentMode === 'advanced' && (
-                                <span className="ml-2 text-purple-600 font-normal">
-                                  ({language === 'fr' ? 'Mode avancé' : 'Advanced Mode'})
-                                </span>
-                              )}
-                            </p>
-                            <div className="grid grid-cols-2 gap-2">
-                              {workingDayOrder.map((day) => {
-                                const isSelected = selectedWorkingDays.includes(day);
-                                // In advanced mode, show different hours if they exist
-                                const daySchedule = currentMode === 'advanced' ? migratedHours?.advancedSchedule?.[day] : null;
-                                const hasDifferentHours = daySchedule &&
-                                  (daySchedule.openTime !== (migratedHours?.simpleSchedule?.defaultHours?.openTime || '09:00') ||
-                                   daySchedule.closeTime !== (migratedHours?.simpleSchedule?.defaultHours?.closeTime || '22:00'));
 
-                                return (
-                                  <button
-                                    key={day}
-                                    type="button"
-                                    onClick={() => handleWorkingDayToggle(day)}
-                                    className={cn(
-                                      "flex items-center gap-2 rounded-full border px-2.5 py-1 text-sm transition-colors relative",
-                                      isSelected
-                                        ? currentMode === 'advanced' && hasDifferentHours
-                                          ? "border-purple-200 bg-purple-50 text-purple-600 shadow-sm"
-                                          : "border-orange-200 bg-orange-50 text-orange-600 shadow-sm"
-                                        : "border-muted-foreground/20 text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                                    )}
-                                  >
-                                    <span
-                                      className={cn(
-                                        "inline-flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-semibold",
-                                        isSelected
-                                          ? currentMode === 'advanced' && hasDifferentHours
-                                            ? "border-purple-200 bg-purple-500 text-white shadow-sm"
-                                            : "border-orange-200 bg-orange-500 text-white shadow-sm"
-                                          : "border-muted-foreground/20 text-muted-foreground"
-                                      )}
-                                    >
-                                      {isSelected ? <CheckIcon className="h-3 w-3" /> : restaurantHoursCopy.dayInitials[day]}
-                                    </span>
-                                    <span>{restaurantHoursCopy.dayLabels[day]}</span>
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          </div>
-                          <div className="hidden lg:block w-px bg-border self-stretch mx-6"></div>
-                          <Separator orientation="horizontal" className="block lg:hidden" />
-                          <div className="flex-1 space-y-3">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                              {restaurantHoursCopy.defaultHoursLabel}
-                            </p>
-                            <div className="grid gap-4 sm:grid-cols-2">
-                              <div className="space-y-1.5">
-                                <Label htmlFor="restaurant-hours-open" className="text-xs font-medium">
-                                  {restaurantHoursCopy.openLabel}
-                                </Label>
-                                <div className="relative">
-                                  <Clock className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                                  <CustomTimePicker
-                                    id="restaurant-hours-open"
-                                    value={openTime}
-                                    onChange={handleOpenTimeChange}
-                                    placeholder="Select time"
-                                  />
-                                </div>
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label htmlFor="restaurant-hours-close" className="text-xs font-medium">
-                                  {restaurantHoursCopy.closeLabel}
-                                </Label>
-                                <div className="relative">
-                                  <Clock className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                                  <CustomTimePicker
-                                    id="restaurant-hours-close"
-                                    value={closeTime}
-                                    onChange={handleCloseTimeChange}
-                                    placeholder="Select time"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Advance Settings Button */}
-                            <div className="pt-3 border-t border-gray-200 mt-4">
-                              <div className="pt-1">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className={cn(
-                                    "w-full text-xs transition-all duration-200",
-                                    currentMode === 'advanced'
-                                      ? "border border-purple-200 bg-purple-50 hover:bg-purple-100 hover:border-purple-300 text-purple-700"
-                                      : "border border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300"
-                                  )}
-                                  onClick={() => {
-                                    setShowCustomSchedule(true);
-                                  }}
-                                >
-                                  <Clock className="h-3 w-3 mr-1.5" />
-                                  {language === 'fr' ? 'Paramètres avancés' : 'Advance Settings'}
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+                  {/* Right Column - Restaurant Hours */}
+                  <RestaurantHoursCard
+                    migratedHours={migratedHours}
+                    currentMode={currentMode}
+                    restaurantClosed={restaurantClosed}
+                    selectedWorkingDays={selectedWorkingDays}
+                    openTime={openTime}
+                    closeTime={closeTime}
+                    showCustomSchedule={showCustomSchedule}
+                    language={language}
+                    translations={restaurantHoursCopy}
+                    onRestaurantClosedToggle={handleRestaurantClosedToggle}
+                    onWorkingDayToggle={handleWorkingDayToggle}
+                    onOpenTimeChange={handleOpenTimeChange}
+                    onCloseTimeChange={handleCloseTimeChange}
+                    onModeSwitch={handleModeSwitch}
+                    onShowCustomScheduleChange={setShowCustomSchedule}
+                    onUpdateSettings={updateSettings}
+                  />
                 </div>
 
                 {/* Delivery Zones Card - Full Width at Bottom */}
@@ -997,7 +867,7 @@ export default function BranchSettingsPage() {
               </div>
             </div>
           </div>
-          
+
           {/* Success Toast Notification */}
           {saved && (
             <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
@@ -1009,7 +879,7 @@ export default function BranchSettingsPage() {
                   <p className="text-sm font-medium text-green-900">{t.settingsBranch.settingsSaved}</p>
                   <p className="text-xs text-green-700 mt-1">{t.settingsBranch.settingsSavedDesc}</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setSaved(false)}
                   className="flex-shrink-0 text-green-600 hover:text-green-800 transition-colors"
                 >
@@ -1020,204 +890,6 @@ export default function BranchSettingsPage() {
               </div>
             </div>
           )}
-
-          {/* Custom Schedule Modal */}
-          <Dialog open={showCustomSchedule} onOpenChange={setShowCustomSchedule}>
-            <DialogContent
-              className="max-w-2xl max-h-[90vh] sm:max-h-[85vh] flex flex-col"
-              onPointerDownOutside={(e) => {
-                // Allow scroll in popovers
-                const target = e.target as Element
-                const isPopover = target?.closest('[data-radix-popper-content-wrapper]')
-                if (!isPopover) {
-                  setShowCustomSchedule(false)
-                }
-              }}
-            >
-              <DialogHeader className="flex-shrink-0">
-                <DialogTitle className="flex items-center gap-3">
-                  <div className="p-2 bg-gray-50 rounded-lg">
-                    <Clock className="h-5 w-5 text-gray-600" />
-                  </div>
-                  {language === 'fr' ? 'Paramètres avancés' : 'Advance Settings'}
-                </DialogTitle>
-              </DialogHeader>
-
-              <div className="space-y-4 flex-1 min-h-0 flex flex-col">
-                <div className="flex-1 overflow-y-auto">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-2">
-                    {workingDayOrder.map((day) => {
-                      const daySchedule = migratedHours?.advancedSchedule?.[day] || {
-                        enabled: selectedWorkingDays.includes(day),
-                        openTime: '09:00',
-                        closeTime: '22:00'
-                      };
-
-                      const handleDayToggle = () => {
-                        if (!migratedHours) return;
-                        const newSchedule = {
-                          ...migratedHours.advancedSchedule,
-                          [day]: {
-                            ...daySchedule,
-                            enabled: !daySchedule.enabled
-                          }
-                        };
-
-                        updateSettings({
-                          restaurantHours: {
-                            ...migratedHours,
-                            advancedSchedule: newSchedule
-                          }
-                        });
-                      };
-
-                      const handleDayOpenTimeChange = (newOpenTime: string) => {
-                        if (!migratedHours) return;
-                        const newSchedule = {
-                          ...migratedHours.advancedSchedule,
-                          [day]: {
-                            ...daySchedule,
-                            openTime: newOpenTime
-                          }
-                        };
-
-                        updateSettings({
-                          restaurantHours: {
-                            ...migratedHours,
-                            advancedSchedule: newSchedule
-                          }
-                        });
-                      };
-
-                      const handleDayCloseTimeChange = (newCloseTime: string) => {
-                        if (!migratedHours) return;
-                        const newSchedule = {
-                          ...migratedHours.advancedSchedule,
-                          [day]: {
-                            ...daySchedule,
-                            closeTime: newCloseTime
-                          }
-                        };
-
-                        updateSettings({
-                          restaurantHours: {
-                            ...migratedHours,
-                            advancedSchedule: newSchedule
-                          }
-                        });
-                      };
-
-                      return (
-                        <div key={day} className={cn(
-                          "border rounded-lg p-4 space-y-4 transition-colors",
-                          daySchedule.enabled
-                            ? "border-gray-200 bg-gray-50"
-                            : "border-gray-200 bg-gray-50"
-                        )}>
-                          {/* Day Header */}
-                          <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium">
-                              {restaurantHoursCopy.dayLabels[day]}
-                            </div>
-                            <Switch
-                              checked={daySchedule.enabled}
-                              onCheckedChange={handleDayToggle}
-                              className="scale-75"
-                            />
-                          </div>
-
-                          {/* Time Settings */}
-                          {daySchedule.enabled ? (
-                            <div className="space-y-3">
-                              {/* Time Pickers Row */}
-                              <div className="grid grid-cols-2 gap-2">
-                                {/* Open Time */}
-                                <div className="space-y-1.5">
-                                  <label className="text-xs font-medium text-muted-foreground">
-                                    {language === 'fr' ? 'Ouverture' : 'Open'}
-                                  </label>
-                                  <CustomTimePicker
-                                    id={`${day}-open`}
-                                    value={daySchedule.openTime}
-                                    onChange={handleDayOpenTimeChange}
-                                    placeholder="09:00"
-                                  />
-                                </div>
-
-                                {/* Close Time */}
-                                <div className="space-y-1.5">
-                                  <label className="text-xs font-medium text-muted-foreground">
-                                    {language === 'fr' ? 'Fermeture' : 'Close'}
-                                  </label>
-                                  <CustomTimePicker
-                                    id={`${day}-close`}
-                                    value={daySchedule.closeTime}
-                                    onChange={handleDayCloseTimeChange}
-                                    placeholder="22:00"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center pt-4 text-muted-foreground">
-                              <div className="text-center">
-                                <Lock className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                                <div className="text-xs">
-                                  {language === 'fr' ? 'Fermé' : 'Closed'}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="pt-4 border-t mt-6 flex-shrink-0">
-                <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border border-gray-200 hover:bg-gray-50 sm:order-1"
-                    onClick={() => {
-                      handleModeSwitch(); // Switch back to simple
-                      setShowCustomSchedule(false);
-                    }}
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    {language === 'fr' ? 'Retour au mode simple' : 'Back to Simple Mode'}
-                  </Button>
-
-                  <div className="flex gap-2 sm:order-2 flex-1 sm:flex-none">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowCustomSchedule(false)}
-                      className="flex-1 sm:flex-none"
-                    >
-                      {language === 'fr' ? 'Annuler' : 'Cancel'}
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        if (currentMode === 'simple') {
-                          handleModeSwitch();
-                        }
-                        setShowCustomSchedule(false);
-                      }}
-                      className="flex-1 sm:flex-none"
-                    >
-                      {currentMode === 'simple'
-                        ? (language === 'fr' ? 'Activer le mode avancé' : 'Enable Advanced Mode')
-                        : (language === 'fr' ? 'Appliquer les modifications' : 'Apply Changes')
-                      }
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
 
           {/* Uber Direct Modal */}
           <Dialog open={isUberDirectModalOpen} onOpenChange={(open) => {
