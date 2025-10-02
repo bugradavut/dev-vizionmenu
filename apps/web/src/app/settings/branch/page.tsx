@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { useRouter } from "next/navigation"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
@@ -17,7 +18,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, DollarSign, Bike, CalendarDays, Check as CheckIcon, Lock, ChevronLeft, X } from "lucide-react"
+import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, DollarSign, Bike, CalendarDays, Check as CheckIcon, Lock, ChevronLeft, X, Truck, ArrowRight } from "lucide-react"
 import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
@@ -25,7 +26,6 @@ import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/translations"
 import { cn } from "@/lib/utils"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { DeliveryZonesCard } from "@/components/delivery-zones"
 import { UberEatsIntegrationCard } from "@/components/uber-eats-integration-card"
 import { AutoReadyCard } from "@/components/branch-settings/auto-ready-card"
 import { PaymentMethodsCard } from "@/components/branch-settings/payment-methods-card"
@@ -235,6 +235,7 @@ const RESTAURANT_HOURS_FALLBACK: Record<keyof typeof translations, RestaurantHou
 }
 
 export default function BranchSettingsPage() {
+  const router = useRouter()
   const { branchId } = useEnhancedAuth()
   const {
     settings,
@@ -852,12 +853,33 @@ export default function BranchSettingsPage() {
                   />
                 </div>
 
-                {/* Delivery Zones Card - Full Width at Bottom */}
+                {/* Delivery Settings Navigation Card */}
                 <div className="grid grid-cols-1 gap-6">
-                  <DeliveryZonesCard
-                    value={settings.deliveryZones}
-                    onChange={(deliveryZones) => updateSettings({ deliveryZones })}
-                  />
+                  <Card
+                    className="cursor-pointer transition-all hover:shadow-lg hover:border-blue-300 group"
+                    onClick={() => router.push('/settings/branch/delivery')}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                            <Truck className="h-6 w-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                              {language === 'fr' ? 'Paramètres de Livraison' : 'Delivery Settings'}
+                            </h3>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {language === 'fr'
+                                ? 'Gérez les zones de livraison, les frais et les intégrations'
+                                : 'Manage delivery zones, fees, and delivery integrations'}
+                            </p>
+                          </div>
+                        </div>
+                        <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
 
                 {/* Uber Eats Integration Card */}
