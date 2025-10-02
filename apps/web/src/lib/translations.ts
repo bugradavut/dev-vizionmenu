@@ -484,15 +484,33 @@ export const translations = {
       
       // Delivery Settings
       deliveryFeeTitle: "Delivery Settings",
-      deliveryFeeDesc: "Set delivery fee for delivery orders", 
+      deliveryFeeDesc: "Set delivery fee for delivery orders",
+      standardDeliveryFee: "Standard Delivery Fee",
       noDeliveryFee: "No delivery fee set (free delivery)",
       deliveryFeeApplied: "{amount} will be added to delivery orders",
-      
+
       // Free Delivery Threshold
       freeDeliveryThreshold: "Free Delivery Threshold",
       freeDeliveryThresholdDesc: "Orders above this amount qualify for free delivery",
-      noFreeDelivery: "Free delivery is disabled", 
+      noFreeDelivery: "Free delivery is disabled",
       freeDeliveryEnabled: "Orders over {amount} qualify for free delivery",
+
+      // Delivery Zones
+      deliveryZones: "Delivery Zones",
+      deliveryZonesDesc: "Define available delivery zones",
+      zonesEnabled: "Zones enabled",
+      zonesDisabled: "Zones disabled",
+      configureZones: "Configure",
+      clickToDrawZones: "Click 'Configure' to draw zones.",
+
+      // Uber Direct
+      uberDirect: "Uber Direct",
+      uberDirectDesc: "Third-party delivery integration",
+      uberDirectEnabled: "Uber Direct enabled",
+      uberDirectDisabled: "Uber Direct disabled",
+      uberDirectEnabledDesc: "Orders can be delivered via Uber Direct delivery service.",
+      uberDirectDisabledDesc: "Enable to use Uber Direct for delivery. Requires configuration in settings.",
+      configureCredentials: "Configure Credentials",
       
       // Customer-facing free delivery messages
       freeDeliveryPromo: "Add {amount} more for FREE delivery!",
@@ -1731,14 +1749,32 @@ export const translations = {
       // Delivery Settings - Canadian French
       deliveryFeeTitle: "Paramètres de livraison",
       deliveryFeeDesc: "Définir les frais de livraison pour les commandes à livrer",
+      standardDeliveryFee: "Frais de livraison standard",
       noDeliveryFee: "Aucun frais de livraison défini (livraison gratuite)",
       deliveryFeeApplied: "{amount} sera ajouté aux commandes de livraison",
-      
+
       // Free Delivery Threshold - Canadian French
       freeDeliveryThreshold: "Seuil de livraison gratuite",
       freeDeliveryThresholdDesc: "Les commandes supérieures à ce montant bénéficient de la livraison gratuite",
       noFreeDelivery: "La livraison gratuite est désactivée",
       freeDeliveryEnabled: "Les commandes de plus de {amount} bénéficient de la livraison gratuite",
+
+      // Delivery Zones - Canadian French
+      deliveryZones: "Zones de livraison",
+      deliveryZonesDesc: "Définir les zones de livraison disponibles",
+      zonesEnabled: "Zones activées",
+      zonesDisabled: "Zones désactivées",
+      configureZones: "Configurer",
+      clickToDrawZones: "Cliquez sur 'Configurer' pour dessiner les zones.",
+
+      // Uber Direct - Canadian French
+      uberDirect: "Uber Direct",
+      uberDirectDesc: "Intégration de livraison tierce",
+      uberDirectEnabled: "Uber Direct activé",
+      uberDirectDisabled: "Uber Direct désactivé",
+      uberDirectEnabledDesc: "Les commandes peuvent être livrées via le service de livraison Uber Direct.",
+      uberDirectDisabledDesc: "Activez pour utiliser Uber Direct pour la livraison. Nécessite une configuration dans les paramètres.",
+      configureCredentials: "Configurer les identifiants",
       
       // Customer-facing free delivery messages - Canadian French
       freeDeliveryPromo: "Ajoutez {amount} de plus pour la livraison GRATUITE !",

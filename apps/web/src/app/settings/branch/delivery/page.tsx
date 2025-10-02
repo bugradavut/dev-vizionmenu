@@ -17,6 +17,8 @@ import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/translations"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { DeliveryZonesCardCompact } from "@/components/delivery-zones"
+import { DeliveryFeeCard } from "@/components/branch-settings/delivery-fee-card"
+import { UberDirectCardCompact } from "@/components/branch-settings/uber-direct-card-compact"
 import Link from "next/link"
 
 export default function BranchDeliverySettingsPage() {
@@ -37,6 +39,66 @@ export default function BranchDeliverySettingsPage() {
     clearError,
   } = useBranchSettings({ branchId: branchId || undefined })
 
+  // Local state for input fields
+  const [deliveryFeeInput, setDeliveryFeeInput] = React.useState(String(settings.deliveryFee || 0))
+  const [freeDeliveryThresholdInput, setFreeDeliveryThresholdInput] = React.useState(String(settings.freeDeliveryThreshold || 0))
+
+  // Uber Direct state
+  const [uberDirectEnabled, setUberDirectEnabled] = React.useState(false)
+  const [uberDirectCustomerId, setUberDirectCustomerId] = React.useState('')
+  const [uberDirectClientId, setUberDirectClientId] = React.useState('')
+  const [uberDirectHasCredentials, setUberDirectHasCredentials] = React.useState(false)
+  const [uberDirectLoading, setUberDirectLoading] = React.useState(true)
+
+  // Update input fields when settings load
+  React.useEffect(() => {
+    setDeliveryFeeInput(String(settings.deliveryFee || 0))
+    setFreeDeliveryThresholdInput(String(settings.freeDeliveryThreshold || 0))
+  }, [settings.deliveryFee, settings.freeDeliveryThreshold])
+
+  // Load Uber Direct settings
+  React.useEffect(() => {
+    const loadUberDirect = async () => {
+      if (!branchId) {
+        setUberDirectLoading(false)
+        return
+      }
+
+      try {
+        setUberDirectLoading(true)
+        const { supabase } = await import('@/lib/supabase')
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) {
+          setUberDirectLoading(false)
+          return
+        }
+
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+        const response = await fetch(`${apiUrl}/api/v1/uber-direct/branch-settings/${branchId}`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success) {
+            setUberDirectEnabled(data.branch.uber_direct_enabled || false)
+            setUberDirectCustomerId(data.branch.customer_id || '')
+            setUberDirectClientId(data.branch.client_id || '')
+            setUberDirectHasCredentials(data.branch.has_credentials || false)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load Uber Direct settings:', error)
+      } finally {
+        setUberDirectLoading(false)
+      }
+    }
+
+    loadUberDirect()
+  }, [branchId])
+
   // Handle save with settings
   const handleSave = async () => {
     const success = await saveSettings(settings)
@@ -45,8 +107,26 @@ export default function BranchDeliverySettingsPage() {
     }
   }
 
-  // Loading state
-  if (loading) {
+  // Handle delivery fee change
+  const handleDeliveryFeeChange = (value: string) => {
+    setDeliveryFeeInput(value)
+    const numValue = value === "" ? 0 : Number(value)
+    if (!isNaN(numValue) && numValue >= 0) {
+      updateSettings({ deliveryFee: numValue })
+    }
+  }
+
+  // Handle free delivery threshold change
+  const handleFreeDeliveryThresholdChange = (value: string) => {
+    setFreeDeliveryThresholdInput(value)
+    const numValue = value === "" ? 0 : Number(value)
+    if (!isNaN(numValue) && numValue >= 0) {
+      updateSettings({ freeDeliveryThreshold: numValue })
+    }
+  }
+
+  // Loading state - wait for both settings and uber direct
+  if (loading || uberDirectLoading) {
     return (
       <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
         <DashboardLayout>
@@ -167,6 +247,67 @@ export default function BranchDeliverySettingsPage() {
                   value={settings.deliveryZones}
                   onChange={(deliveryZones) => updateSettings({ deliveryZones })}
                 />
+
+                {/* Delivery Fee Card */}
+                <DeliveryFeeCard
+                  deliveryFee={settings.deliveryFee || 0}
+                  deliveryFeeInput={deliveryFeeInput}
+                  freeDeliveryThreshold={settings.freeDeliveryThreshold || 0}
+                  freeDeliveryThresholdInput={freeDeliveryThresholdInput}
+                  onDeliveryFeeChange={handleDeliveryFeeChange}
+                  onFreeDeliveryThresholdChange={handleFreeDeliveryThresholdChange}
+                  translations={{
+                    title: t.settingsBranch.deliveryFeeTitle,
+                    description: t.settingsBranch.deliveryFeeDesc,
+                    standardDeliveryFee: t.settingsBranch.standardDeliveryFee,
+                    noDeliveryFee: t.settingsBranch.noDeliveryFee,
+                    deliveryFeeApplied: t.settingsBranch.deliveryFeeApplied,
+                    freeDeliveryThreshold: t.settingsBranch.freeDeliveryThreshold,
+                    noFreeDelivery: t.settingsBranch.noFreeDelivery,
+                    freeDeliveryEnabled: t.settingsBranch.freeDeliveryEnabled
+                  }}
+                />
+
+                {/* Uber Direct Card */}
+                {branchId && (
+                  <UberDirectCardCompact
+                    branchId={branchId}
+                    isEnabled={uberDirectEnabled}
+                    customerId={uberDirectCustomerId}
+                    clientId={uberDirectClientId}
+                    hasCredentials={uberDirectHasCredentials}
+                    onUpdate={() => {
+                      // Reload Uber Direct settings after update
+                      const loadUberDirect = async () => {
+                        try {
+                          const { supabase } = await import('@/lib/supabase')
+                          const { data: { session } } = await supabase.auth.getSession()
+                          if (!session?.access_token) return
+
+                          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+                          const response = await fetch(`${apiUrl}/api/v1/uber-direct/branch-settings/${branchId}`, {
+                            headers: {
+                              'Authorization': `Bearer ${session.access_token}`,
+                            }
+                          })
+
+                          if (response.ok) {
+                            const data = await response.json()
+                            if (data.success) {
+                              setUberDirectEnabled(data.branch.uber_direct_enabled || false)
+                              setUberDirectCustomerId(data.branch.customer_id || '')
+                              setUberDirectClientId(data.branch.client_id || '')
+                              setUberDirectHasCredentials(data.branch.has_credentials || false)
+                            }
+                          }
+                        } catch (error) {
+                          console.error('Failed to reload Uber Direct settings:', error)
+                        }
+                      }
+                      loadUberDirect()
+                    }}
+                  />
+                )}
               </div>
             </div>
           </div>

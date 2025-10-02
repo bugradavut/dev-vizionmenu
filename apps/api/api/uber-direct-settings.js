@@ -20,27 +20,48 @@ async function saveBranchCredentials(req, res) {
     const { branchId } = req.params;
     const { enabled, customer_id, client_id, client_secret } = req.body;
 
+    // Get existing credentials to check if we need new secret
+    const { data: existingBranch } = await supabase
+      .from('branches')
+      .select('uber_direct_client_secret')
+      .eq('id', branchId)
+      .single();
+
     // Validate required fields
-    if (enabled && (!customer_id || !client_id || !client_secret)) {
+    if (enabled && (!customer_id || !client_id)) {
       return res.status(400).json({
         error: 'Missing required credentials',
-        message: 'Please fill in all three fields: Customer ID, Client ID, and Client Secret to enable Uber Direct'
+        message: 'Please fill in Customer ID and Client ID to enable Uber Direct'
+      });
+    }
+
+    // If enabling for first time and no existing secret, require client_secret
+    if (enabled && !client_secret && !existingBranch?.uber_direct_client_secret) {
+      return res.status(400).json({
+        error: 'Missing required credentials',
+        message: 'Please fill in Client Secret to enable Uber Direct'
       });
     }
 
     // TODO: Add encryption for client_secret
-    const encryptedClientSecret = client_secret; // Will encrypt later
+    const encryptedClientSecret = client_secret || existingBranch?.uber_direct_client_secret; // Keep existing if not provided
 
     // Update branch with credentials
+    const updateData = {
+      uber_direct_enabled: enabled,
+      uber_direct_customer_id: enabled ? customer_id : null,
+      uber_direct_client_id: enabled ? client_id : null,
+      updated_at: new Date().toISOString()
+    };
+
+    // Only update secret if provided
+    if (client_secret || !enabled) {
+      updateData.uber_direct_client_secret = enabled ? encryptedClientSecret : null;
+    }
+
     const { data, error } = await supabase
       .from('branches')
-      .update({
-        uber_direct_enabled: enabled,
-        uber_direct_customer_id: enabled ? customer_id : null,
-        uber_direct_client_id: enabled ? client_id : null,
-        uber_direct_client_secret: enabled ? encryptedClientSecret : null,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', branchId)
       .select()
       .single();

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { MapPin, Settings2, CheckCircle, AlertCircle } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
+import { translations } from "@/lib/translations"
 import { DeliveryZonesMap } from "./delivery-zones-map"
 import { MapErrorBoundary } from "./map-error-boundary"
 import type { DeliveryZone, DeliveryZonesData } from "@/services/branch-settings.service"
@@ -18,6 +19,7 @@ interface DeliveryZonesCardCompactProps {
 
 export function DeliveryZonesCardCompact({ value, onChange }: DeliveryZonesCardCompactProps) {
   const { language } = useLanguage()
+  const t = translations[language] || translations.en
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [mapKey, setMapKey] = useState(0)
   const [shouldRenderMap, setShouldRenderMap] = useState(false)
@@ -96,12 +98,10 @@ export function DeliveryZonesCardCompact({ value, onChange }: DeliveryZonesCardC
               </div>
               <div className="flex-1 min-w-0">
                 <CardTitle className="text-base">
-                  {language === 'fr' ? 'Zones de Livraison' : 'Delivery Zones'}
+                  {t.settingsBranch.deliveryZones}
                 </CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {language === 'fr'
-                    ? 'Définir les zones de livraison disponibles'
-                    : 'Define available delivery zones'}
+                  {t.settingsBranch.deliveryZonesDesc}
                 </p>
               </div>
             </div>
@@ -121,14 +121,12 @@ export function DeliveryZonesCardCompact({ value, onChange }: DeliveryZonesCardC
                 <div className="flex items-center gap-2 text-green-700 text-sm mb-2">
                   <CheckCircle className="h-4 w-4" />
                   <span className="font-medium">
-                    {language === 'fr' ? 'Zones activées' : 'Zones enabled'}
+                    {t.settingsBranch.zonesEnabled}
                   </span>
                 </div>
                 {zoneCount === 0 && (
                   <p className="text-xs text-green-600">
-                    {language === 'fr'
-                      ? 'Cliquez sur "Configurer" pour dessiner des zones.'
-                      : 'Click "Configure" to draw zones.'}
+                    {t.settingsBranch.clickToDrawZones}
                   </p>
                 )}
               </div>
@@ -139,7 +137,7 @@ export function DeliveryZonesCardCompact({ value, onChange }: DeliveryZonesCardC
                 className="w-full"
               >
                 <Settings2 className="h-4 w-4 mr-2" />
-                {language === 'fr' ? 'Configurer les zones' : 'Configure Zones'}
+                {t.settingsBranch.configureZones}
               </Button>
             </div>
           ) : (
@@ -147,7 +145,7 @@ export function DeliveryZonesCardCompact({ value, onChange }: DeliveryZonesCardC
               <div className="flex items-center gap-2 text-gray-600 text-sm mb-2">
                 <AlertCircle className="h-4 w-4" />
                 <span className="font-medium">
-                  {language === 'fr' ? 'Zones désactivées' : 'Zones disabled'}
+                  {t.settingsBranch.zonesDisabled}
                 </span>
               </div>
               <p className="text-xs text-gray-500">
@@ -165,7 +163,7 @@ export function DeliveryZonesCardCompact({ value, onChange }: DeliveryZonesCardC
         <DialogContent className="max-w-5xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>
-              {language === 'fr' ? 'Configurer les Zones de Livraison' : 'Configure Delivery Zones'}
+              {t.settingsBranch.configureZones}
             </DialogTitle>
           </DialogHeader>
           <div className="mt-4">

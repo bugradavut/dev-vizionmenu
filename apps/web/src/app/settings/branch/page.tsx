@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, DollarSign, Bike, CalendarDays, Check as CheckIcon, Lock, ChevronLeft, X, Truck, ArrowRight } from "lucide-react"
+import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, DollarSign, Bike, CalendarDays, Check as CheckIcon, Lock, ChevronLeft, X, Truck, ArrowRight, CarFront, Settings2, Blocks } from "lucide-react"
 import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
@@ -30,7 +30,6 @@ import { UberEatsIntegrationCard } from "@/components/uber-eats-integration-card
 import { AutoReadyCard } from "@/components/branch-settings/auto-ready-card"
 import { PaymentMethodsCard } from "@/components/branch-settings/payment-methods-card"
 import { MinimumOrderCard } from "@/components/branch-settings/minimum-order-card"
-import { DeliveryFeeCard } from "@/components/branch-settings/delivery-fee-card"
 import { TimingCardsGroup } from "@/components/branch-settings/timing-cards-group"
 import { RestaurantHoursCard } from "@/components/branch-settings/restaurant-hours-card"
 import { UberDirectModal } from "@/components/branch-settings/uber-direct-modal"
@@ -267,8 +266,6 @@ export default function BranchSettingsPage() {
   const [baseDelayInput, setBaseDelayInput] = useState("")
   const [deliveryDelayInput, setDeliveryDelayInput] = useState("")
   const [minimumOrderInput, setMinimumOrderInput] = useState("")
-  const [deliveryFeeInput, setDeliveryFeeInput] = useState("")
-  const [freeDeliveryThresholdInput, setFreeDeliveryThresholdInput] = useState("")
   // Migrate restaurant hours to new structure and get current state
   const migratedHours = React.useMemo(() => {
     if (!settings.restaurantHours) return null;
@@ -318,10 +315,8 @@ export default function BranchSettingsPage() {
     }
     if (settings && !loading) {
       setMinimumOrderInput(settings.minimumOrderAmount?.toString() || "")
-      setDeliveryFeeInput(settings.deliveryFee?.toString() || "")
-      setFreeDeliveryThresholdInput(settings.freeDeliveryThreshold?.toString() || "")
     }
-  }, [settings.timingSettings, settings.minimumOrderAmount, settings.deliveryFee, settings.freeDeliveryThreshold, loading])
+  }, [settings.timingSettings, settings.minimumOrderAmount, loading])
 
   // Load Uber Direct settings on page load
   React.useEffect(() => {
@@ -390,29 +385,6 @@ export default function BranchSettingsPage() {
     }
   }
 
-  // Handle delivery fee changes
-  const handleDeliveryFeeChange = (value: string) => {
-    setDeliveryFeeInput(value)
-    // Only update settings when value is valid or empty becomes 0
-    const numValue = value === "" ? 0 : Number(value)
-    if (!isNaN(numValue) && numValue >= 0) {
-      updateSettings({
-        deliveryFee: numValue
-      })
-    }
-  }
-
-  // Handle free delivery threshold changes
-  const handleFreeDeliveryThresholdChange = (value: string) => {
-    setFreeDeliveryThresholdInput(value)
-    // Only update settings when value is valid or empty becomes 0
-    const numValue = value === "" ? 0 : Number(value)
-    if (!isNaN(numValue) && numValue >= 0) {
-      updateSettings({
-        freeDeliveryThreshold: numValue
-      })
-    }
-  }
 
   // Handle Uber Direct settings save
   const handleSaveUberDirect = async () => {
@@ -767,7 +739,7 @@ export default function BranchSettingsPage() {
             <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6">
               <div className="space-y-6">
                 
-                {/* First Row: Auto-Ready & Payment Methods & Delivery Fee */}
+                {/* First Row: Auto-Ready & Payment Methods & Minimum Order & Delivery Settings */}
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                   {/* Auto-Ready System Card */}
                   <AutoReadyCard
@@ -794,26 +766,48 @@ export default function BranchSettingsPage() {
                     }}
                   />
 
-                  {/* Delivery Fee Card */}
-                  <DeliveryFeeCard
-                    deliveryFee={settings.deliveryFee || 0}
-                    deliveryFeeInput={deliveryFeeInput}
-                    freeDeliveryThreshold={settings.freeDeliveryThreshold || 0}
-                    freeDeliveryThresholdInput={freeDeliveryThresholdInput}
-                    isUberDirectEnabled={isUberDirectEnabled}
-                    onDeliveryFeeChange={handleDeliveryFeeChange}
-                    onFreeDeliveryThresholdChange={handleFreeDeliveryThresholdChange}
-                    onUberDirectClick={() => setIsUberDirectModalOpen(true)}
-                    translations={{
-                      title: t.settingsBranch.deliveryFeeTitle,
-                      description: t.settingsBranch.deliveryFeeDesc,
-                      noDeliveryFee: t.settingsBranch.noDeliveryFee,
-                      deliveryFeeApplied: t.settingsBranch.deliveryFeeApplied,
-                      freeDeliveryThreshold: t.settingsBranch.freeDeliveryThreshold,
-                      noFreeDelivery: t.settingsBranch.noFreeDelivery,
-                      freeDeliveryEnabled: t.settingsBranch.freeDeliveryEnabled
-                    }}
-                  />
+                  {/* Delivery Settings Navigation Card */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-50 rounded-lg">
+                          <Settings2 className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base">
+                            {language === 'fr' ? 'Paramètres de Livraison' : 'Delivery Settings'}
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {language === 'fr' ? 'Zones, frais et intégrations' : 'Zones, fees & integrations'}
+                          </p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
+                          <span>{language === 'fr' ? 'Zones de livraison' : 'Delivery zones'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
+                          <span>{language === 'fr' ? 'Frais de livraison' : 'Delivery fees'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
+                          <span>{language === 'fr' ? 'Intégration Uber Direct' : 'Uber Direct integration'}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 cursor-pointer group/button" onClick={() => router.push('/settings/branch/delivery')}>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg group-hover/button:border-purple-200 group-hover/button:bg-purple-50 transition-colors">
+                          <span className="text-sm text-gray-600 group-hover/button:text-purple-600 transition-colors">
+                            {language === 'fr' ? 'Cliquez pour configurer' : 'Click to configure'}
+                          </span>
+                          <ArrowRight className="h-4 w-4 text-gray-400 group-hover/button:text-purple-600 group-hover/button:translate-x-1 transition-all" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
 
                 {/* Second Row: Kitchen & Delivery Timing + Total Time */}
@@ -853,38 +847,49 @@ export default function BranchSettingsPage() {
                   />
                 </div>
 
-                {/* Delivery Settings Navigation Card */}
-                <div className="grid grid-cols-1 gap-6">
-                  <Card
-                    className="cursor-pointer transition-all hover:shadow-lg hover:border-blue-300 group"
-                    onClick={() => router.push('/settings/branch/delivery')}
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
-                            <Truck className="h-6 w-6 text-blue-600" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                              {language === 'fr' ? 'Paramètres de Livraison' : 'Delivery Settings'}
-                            </h3>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {language === 'fr'
-                                ? 'Gérez les zones de livraison, les frais et les intégrations'
-                                : 'Manage delivery zones, fees, and delivery integrations'}
-                            </p>
-                          </div>
+                {/* Integrations Navigation Card */}
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-50 rounded-lg">
+                          <Blocks className="h-5 w-5 text-purple-600" />
                         </div>
-                        <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                        <div>
+                          <CardTitle className="text-base">
+                            {language === 'fr' ? 'Intégrations' : 'Integrations'}
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {language === 'fr' ? 'Plateformes tierces' : 'Third-party platforms'}
+                          </p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
+                          <span>{language === 'fr' ? 'Uber Eats' : 'Uber Eats'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
+                          <span>{language === 'fr' ? 'DoorDash (bientôt)' : 'DoorDash (coming soon)'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
+                          <span>{language === 'fr' ? 'Skip The Dishes (bientôt)' : 'Skip The Dishes (coming soon)'}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 cursor-pointer group/button" onClick={() => router.push('/settings/branch/integrations')}>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg group-hover/button:border-purple-200 group-hover/button:bg-purple-50 transition-colors">
+                          <span className="text-sm text-gray-600 group-hover/button:text-purple-600 transition-colors">
+                            {language === 'fr' ? 'Cliquez pour configurer' : 'Click to configure'}
+                          </span>
+                          <ArrowRight className="h-4 w-4 text-gray-400 group-hover/button:text-purple-600 group-hover/button:translate-x-1 transition-all" />
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
-                </div>
-
-                {/* Uber Eats Integration Card */}
-                <div className="grid grid-cols-1 gap-6">
-                  <UberEatsIntegrationCard />
                 </div>
 
               </div>

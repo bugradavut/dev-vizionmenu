@@ -181,7 +181,7 @@ interface RestaurantHoursCardProps {
   onCloseTimeChange: (time: string) => void
   onModeSwitch: () => void
   onShowCustomScheduleChange: (show: boolean) => void
-  onUpdateSettings: (settings: any) => void
+  onUpdateSettings: (settings: Record<string, unknown>) => void
 }
 
 export function RestaurantHoursCard({
