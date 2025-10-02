@@ -31,6 +31,7 @@ import { AutoReadyCard } from "@/components/branch-settings/auto-ready-card"
 import { PaymentMethodsCard } from "@/components/branch-settings/payment-methods-card"
 import { MinimumOrderCard } from "@/components/branch-settings/minimum-order-card"
 import { DeliveryFeeCard } from "@/components/branch-settings/delivery-fee-card"
+import { TimingCardsGroup } from "@/components/branch-settings/timing-cards-group"
 
 type RestaurantHoursDay = keyof typeof translations.en.settingsBranch.restaurantHours.dayLabels
 
@@ -815,133 +816,18 @@ export default function BranchSettingsPage() {
                 {/* Second Row: Kitchen & Delivery Timing + Total Time */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Left Column - Timing Cards + Expected Total Time */}
-                  <div className="space-y-6">
-                    {/* Kitchen & Delivery Timing Cards Side by Side */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Kitchen Timing Card */}
-                      <Card>
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center gap-2">
-                            <div className="p-2 bg-purple-50 rounded-lg">
-                              <Clock className="h-4 w-4 text-purple-600" />
-                            </div>
-                            <div>
-                              <CardTitle className="text-sm">Kitchen Prep Time</CardTitle>
-                              <p className="text-xs text-muted-foreground">
-                                Time to prepare orders
-                              </p>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div className="space-y-2">
-                            <Label htmlFor="base-initial" className="text-xs font-medium">Base Time (min)</Label>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleBaseDelayAdjustment(-5)}
-                                className="h-8 w-8 p-0"
-                                >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                              <Input
-                                id="base-initial"
-                                type="number"
-                                value={baseDelayInput}
-                                onChange={(e) => handleBaseTimeChange(e.target.value)}
-                                className="h-8 flex-1 text-center"
-                                min="0"
-                                max="120"
-                              />
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleBaseDelayAdjustment(5)}
-                                className="h-8 w-8 p-0"
-                                >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Delivery Timing Card */}
-                      <Card>
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center gap-2">
-                            <div className="p-2 bg-purple-50 rounded-lg">
-                              <Timer className="h-4 w-4 text-purple-600" />
-                            </div>
-                            <div>
-                              <CardTitle className="text-sm">Delivery Time</CardTitle>
-                              <p className="text-xs text-muted-foreground">
-                                Time for pickup/delivery
-                              </p>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div className="space-y-2">
-                            <Label htmlFor="delivery-initial" className="text-xs font-medium">Base Time (min)</Label>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeliveryDelayAdjustment(-5)}
-                                className="h-8 w-8 p-0"
-                                >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                              <Input
-                                id="delivery-initial"
-                                type="number"
-                                value={deliveryDelayInput}
-                                onChange={(e) => handleDeliveryTimeChange(e.target.value)}
-                                className="h-8 flex-1 text-center"
-                                min="0"
-                                max="120"
-                              />
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeliveryDelayAdjustment(5)}
-                                className="h-8 w-8 p-0"
-                                >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    {/* Expected Total Time Card - Only covers left column */}
-                    <Card className="border-orange-200 bg-gradient-to-r from-orange-50 to-orange-100">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-orange-100 rounded-lg">
-                              <Clock className="h-5 w-5 text-orange-600" />
-                            </div>
-                            <div>
-                              <h3 className="text-base font-semibold text-orange-900">Expected Total Time</h3>
-                              <p className="text-xs text-orange-700">
-                                Total time customers will see for completion
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-2xl font-bold text-orange-600">
-                              {Math.max(0, settings.timingSettings.baseDelay + settings.timingSettings.temporaryBaseDelay + settings.timingSettings.deliveryDelay + settings.timingSettings.temporaryDeliveryDelay)}
-                            </p>
-                            <p className="text-xs font-medium text-orange-600">MINUTES</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+                  <TimingCardsGroup
+                    baseDelay={settings.timingSettings.baseDelay}
+                    baseDelayInput={baseDelayInput}
+                    deliveryDelay={settings.timingSettings.deliveryDelay}
+                    deliveryDelayInput={deliveryDelayInput}
+                    temporaryBaseDelay={settings.timingSettings.temporaryBaseDelay}
+                    temporaryDeliveryDelay={settings.timingSettings.temporaryDeliveryDelay}
+                    onBaseTimeChange={handleBaseTimeChange}
+                    onDeliveryTimeChange={handleDeliveryTimeChange}
+                    onBaseDelayAdjustment={handleBaseDelayAdjustment}
+                    onDeliveryDelayAdjustment={handleDeliveryDelayAdjustment}
+                  />
                   
                   {/* Right Column - Restaurant Hours Mock */}
                   <div className="h-full">
