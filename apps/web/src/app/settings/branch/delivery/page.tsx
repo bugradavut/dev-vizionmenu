@@ -22,7 +22,7 @@ import { UberDirectCardCompact } from "@/components/branch-settings/uber-direct-
 import Link from "next/link"
 
 export default function BranchDeliverySettingsPage() {
-  const { user, branchId } = useEnhancedAuth()
+  const { branchId } = useEnhancedAuth()
   const { language } = useLanguage()
   const t = translations[language] || translations.en
 

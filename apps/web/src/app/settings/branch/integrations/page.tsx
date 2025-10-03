@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { Suspense } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { AuthGuard } from "@/components/auth-guard"
@@ -17,8 +17,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { UberEatsIntegrationCard } from "@/components/uber-eats-integration-card"
 
-export default function BranchIntegrationsPage() {
-  const { language } = useLanguage()
+function IntegrationsContent() {
   const searchParams = useSearchParams()
   const [refreshKey, setRefreshKey] = React.useState(0)
 
@@ -37,6 +36,17 @@ export default function BranchIntegrationsPage() {
       window.history.replaceState({}, '', url.toString())
     }
   }, [searchParams])
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {/* Uber Eats Integration Card */}
+      <UberEatsIntegrationCard key={refreshKey} />
+    </div>
+  )
+}
+
+export default function BranchIntegrationsPage() {
+  const { language } = useLanguage()
 
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
@@ -79,10 +89,9 @@ export default function BranchIntegrationsPage() {
 
             {/* Main Content */}
             <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6">
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                {/* Uber Eats Integration Card */}
-                <UberEatsIntegrationCard key={refreshKey} />
-              </div>
+              <Suspense fallback={<div className="grid grid-cols-1 lg:grid-cols-4 gap-6"><div>Loading...</div></div>}>
+                <IntegrationsContent />
+              </Suspense>
             </div>
           </div>
         </SidebarInset>

@@ -6,27 +6,20 @@ import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
 import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { CheckCircle, Settings, Clock, Timer, Plus, Minus, AlertCircle, RefreshCw, DollarSign, Bike, CalendarDays, Check as CheckIcon, Lock, ChevronLeft, X, Truck, ArrowRight, CarFront, Settings2, Blocks } from "lucide-react"
-import { VisuallyHidden } from "@/components/ui/visually-hidden"
+import { CheckCircle, AlertCircle, RefreshCw, ArrowRight, Settings2, Blocks } from "lucide-react"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
 import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/translations"
 import { cn } from "@/lib/utils"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { UberEatsIntegrationCard } from "@/components/uber-eats-integration-card"
 import { AutoReadyCard } from "@/components/branch-settings/auto-ready-card"
 import { PaymentMethodsCard } from "@/components/branch-settings/payment-methods-card"
 import { MinimumOrderCard } from "@/components/branch-settings/minimum-order-card"
@@ -60,6 +53,8 @@ interface CustomTimePickerProps {
   placeholder?: string
 }
 
+// TODO: Remove if not used, or uncomment when needed
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
   id,
   value,
@@ -303,9 +298,8 @@ export default function BranchSettingsPage() {
   const { openTime, closeTime } = currentMode === 'advanced'
     ? { openTime: '09:00', closeTime: '22:00' } // Will be shown per-day in modal
     : migratedHours?.simpleSchedule?.defaultHours || { openTime: '09:00', closeTime: '22:00' };
-  const workingDayOrder: RestaurantHoursDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
-  
+
   // Update local inputs when settings change from API
   React.useEffect(() => {
     if (settings.timingSettings && !loading) {
