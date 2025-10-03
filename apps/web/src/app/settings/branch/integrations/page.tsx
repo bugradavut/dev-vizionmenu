@@ -2,6 +2,7 @@
 
 import React from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
@@ -18,6 +19,24 @@ import { UberEatsIntegrationCard } from "@/components/uber-eats-integration-card
 
 export default function BranchIntegrationsPage() {
   const { language } = useLanguage()
+  const searchParams = useSearchParams()
+  const [refreshKey, setRefreshKey] = React.useState(0)
+
+  // Check for OAuth callback params and refresh card
+  React.useEffect(() => {
+    const uberEatsStatus = searchParams.get('uber_eats')
+    if (uberEatsStatus === 'connected' || uberEatsStatus === 'error') {
+      // Refresh the Uber Eats card
+      setRefreshKey(prev => prev + 1)
+
+      // Clean up URL params
+      const url = new URL(window.location.href)
+      url.searchParams.delete('uber_eats')
+      url.searchParams.delete('store_id')
+      url.searchParams.delete('message')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [searchParams])
 
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
@@ -60,9 +79,9 @@ export default function BranchIntegrationsPage() {
 
             {/* Main Content */}
             <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6">
-              <div className="grid grid-cols-1 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 {/* Uber Eats Integration Card */}
-                <UberEatsIntegrationCard />
+                <UberEatsIntegrationCard key={refreshKey} />
               </div>
             </div>
           </div>

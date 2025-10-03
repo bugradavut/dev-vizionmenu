@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Loader2, CheckCircle, XCircle, AlertCircle } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Loader2, CheckCircle, AlertCircle, Settings } from "lucide-react"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
+import { useLanguage } from "@/contexts/language-context"
 
 interface UberEatsStatus {
   connected: boolean
@@ -16,9 +18,11 @@ interface UberEatsStatus {
 
 export function UberEatsIntegrationCard() {
   const { branchId } = useEnhancedAuth()
+  const { language } = useLanguage()
   const [status, setStatus] = useState<UberEatsStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isDisconnecting, setIsDisconnecting] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Check OAuth status on mount
   useEffect(() => {
@@ -89,150 +93,224 @@ export function UberEatsIntegrationCard() {
     }
   }
 
-  const getStatusBadge = () => {
-    if (isLoading) {
-      return (
-        <Badge variant="outline" className="border-gray-300 text-gray-600">
-          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-          Checking...
-        </Badge>
-      )
-    }
-
-    if (!status?.connected) {
-      return (
-        <Badge variant="outline" className="border-gray-300 text-gray-600">
-          <XCircle className="h-3 w-3 mr-1" />
-          Not Connected
-        </Badge>
-      )
-    }
-
-    if (status.token_expired) {
-      return (
-        <Badge variant="outline" className="border-yellow-300 text-yellow-700 bg-yellow-50">
-          <AlertCircle className="h-3 w-3 mr-1" />
-          Token Expired
-        </Badge>
-      )
-    }
-
-    return (
-      <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50">
-        <CheckCircle className="h-3 w-3 mr-1" />
-        Connected
-      </Badge>
-    )
-  }
-
   return (
-    <Card className="border border-gray-200 shadow-sm max-w-3xl">
-      <CardHeader className="pb-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <div className="rounded-lg bg-green-50 p-2">
-              <img
-                src="https://d3i4yxtzktqr9n.cloudfront.net/web-eats-v2/97c43f8974e6c876.svg"
-                alt="Uber Eats"
-                className="h-5 w-5"
-              />
+    <>
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className=" bg-green-50 rounded-lg">
+                <img
+                  src="/uber-eats-card.jpg"
+                  alt="Uber Eats"
+                  className="h-10 w-10 object-cover rounded"
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-base">
+                  {language === 'fr' ? 'Uber Eats' : 'Uber Eats'}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {language === 'fr'
+                    ? 'Recevez et gérez les commandes Uber Eats'
+                    : 'Receive and manage Uber Eats orders'}
+                </p>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-sm">Uber Eats Integration</CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">
-                Receive and manage Uber Eats orders
-              </p>
+            <div className="flex-shrink-0 pt-1">
+              {isLoading ? (
+                <div className="w-11 h-6 bg-gray-200 rounded-full animate-pulse" />
+              ) : (
+                <Switch
+                  checked={status?.connected || false}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      handleConnect()
+                    } else {
+                      handleDisconnect()
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="data-[state=checked]:bg-primary"
+                />
+              )}
             </div>
           </div>
-          {getStatusBadge()}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {/* Connected State */}
-          {status?.connected && (
-            <div className="border border-green-200 rounded-lg p-4 bg-green-50/50">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-green-900">Store ID</p>
-                    <p className="text-xs text-green-700 mt-0.5 font-mono">{status.store_id}</p>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-3">
+              <div className="h-20 bg-gray-100 rounded-lg animate-pulse" />
+              <div className="h-9 bg-gray-100 rounded animate-pulse" />
+            </div>
+          ) : status?.connected ? (
+            <div className="space-y-3">
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 text-green-700 text-sm mb-2">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="font-medium">
+                    {language === 'fr' ? 'Connecté' : 'Connected'}
+                  </span>
+                </div>
+                {status.store_id && (
+                  <p className="text-xs text-green-600">
+                    Store ID: <span className="font-mono">{status.store_id}</span>
+                  </p>
+                )}
+              </div>
+
+              {status.token_expired && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-yellow-700 text-sm mb-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="font-medium">
+                      {language === 'fr' ? 'Jeton expiré' : 'Token Expired'}
+                    </span>
                   </div>
+                  <p className="text-xs text-yellow-600">
+                    {language === 'fr'
+                      ? 'Veuillez vous reconnecter pour continuer à recevoir les commandes.'
+                      : 'Please reconnect to continue receiving orders.'}
+                  </p>
+                </div>
+              )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setIsModalOpen(true)}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                {language === 'fr' ? 'Gérer la connexion' : 'Manage Connection'}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <div className="flex items-center gap-2 text-gray-600 text-sm mb-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="font-medium">
+                    {language === 'fr' ? 'Non connecté' : 'Not Connected'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  {language === 'fr'
+                    ? 'Activez le switch pour connecter votre compte Uber Eats.'
+                    : 'Enable the switch to connect your Uber Eats account.'}
+                </p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Connection Management Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'fr' ? 'Gérer Uber Eats' : 'Manage Uber Eats'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {status?.connected && (
+              <>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Store ID</p>
+                  <p className="text-sm font-mono bg-gray-50 p-2 rounded border">
+                    {status.store_id}
+                  </p>
                 </div>
 
                 {status.token_expired && (
-                  <div className="flex items-start gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-                    <AlertCircle className="h-4 w-4 mt-0.5" />
-                    <span>Your access token has expired. Please reconnect to continue receiving orders.</span>
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                      <div className="text-sm text-yellow-800">
+                        <p className="font-medium">
+                          {language === 'fr' ? 'Jeton expiré' : 'Token Expired'}
+                        </p>
+                        <p className="text-xs mt-1">
+                          {language === 'fr'
+                            ? 'Veuillez vous reconnecter pour continuer à recevoir les commandes.'
+                            : 'Please reconnect to continue receiving orders.'}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-2">
                   {status.token_expired && (
                     <Button
-                      size="sm"
                       onClick={handleConnect}
-                      className="text-xs"
+                      className="flex-1"
                     >
-                      Reconnect
+                      <img
+                        src="/uber-eats-card.jpg"
+                        alt="Uber Eats"
+                        className="h-4 w-4 mr-2 object-cover rounded"
+                      />
+                      {language === 'fr' ? 'Reconnecter' : 'Reconnect'}
                     </Button>
                   )}
                   <Button
                     variant="outline"
-                    size="sm"
                     onClick={handleDisconnect}
                     disabled={isDisconnecting}
-                    className="text-xs"
+                    className={status.token_expired ? 'flex-1' : 'w-full'}
                   >
                     {isDisconnecting ? (
                       <>
-                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                        Disconnecting...
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {language === 'fr' ? 'Déconnexion...' : 'Disconnecting...'}
                       </>
                     ) : (
-                      'Disconnect'
+                      language === 'fr' ? 'Déconnecter' : 'Disconnect'
                     )}
                   </Button>
                 </div>
-              </div>
-            </div>
-          )}
+              </>
+            )}
 
-          {/* Not Connected State */}
-          {!status?.connected && !isLoading && (
-            <div className="border border-gray-200 rounded-lg p-4">
-              <div className="space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  Connect your Uber Eats restaurant account to start receiving orders directly in VizionMenu.
+            {!status?.connected && (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  {language === 'fr'
+                    ? 'Connectez votre compte restaurant Uber Eats pour commencer à recevoir des commandes directement dans VizionMenu.'
+                    : 'Connect your Uber Eats restaurant account to start receiving orders directly in VizionMenu.'}
                 </p>
 
-                <Button
-                  size="sm"
-                  onClick={handleConnect}
-                  className="text-xs w-full sm:w-auto"
-                >
+                <Button onClick={handleConnect} className="w-full">
                   <img
-                    src="https://d3i4yxtzktqr9n.cloudfront.net/web-eats-v2/97c43f8974e6c876.svg"
+                    src="/uber-eats-card.jpg"
                     alt="Uber Eats"
-                    className="h-4 w-4 mr-2"
+                    className="h-4 w-4 mr-2 object-cover rounded"
                   />
-                  Connect Uber Eats Account
+                  {language === 'fr' ? 'Connecter Uber Eats' : 'Connect Uber Eats'}
                 </Button>
 
-                <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
-                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium">One-click OAuth integration</p>
-                    <p className="text-blue-700 mt-0.5">
-                      You&apos;ll be redirected to Uber to authorize VizionMenu. No manual credentials needed.
-                    </p>
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium">
+                        {language === 'fr' ? 'Intégration OAuth en un clic' : 'One-click OAuth integration'}
+                      </p>
+                      <p className="text-xs text-blue-700 mt-1">
+                        {language === 'fr'
+                          ? "Vous serez redirigé vers Uber pour autoriser VizionMenu. Aucune information d'identification manuelle nécessaire."
+                          : "You'll be redirected to Uber to authorize VizionMenu. No manual credentials needed."}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

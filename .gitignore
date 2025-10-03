@@ -51,3 +51,6 @@ logs/
 # documentation and assets
 Docs/
 photos/
+
+# Claude Code local settings
+.claude/settings.local.json
