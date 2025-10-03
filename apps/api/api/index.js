@@ -69,6 +69,7 @@ const waiterCallsRoutes = require('./routes/waiter-calls.routes');
 const chainTemplatesRoutes = require('./routes/chain-templates.routes');
 const uberDirectSettingsRoutes = require('./uber-direct-settings');
 const uberEatsAuthRoutes = require('./routes/uber-eats-auth.routes');
+const uberEatsWebhooksRoutes = require('./routes/uber-eats-webhooks.routes');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -185,6 +186,10 @@ app.post('/api/v1/uber-direct/branch-settings/:branchId/test', requireAuthWithBr
 // 🔐 UBER EATS OAUTH ROUTES - For restaurant owner OAuth flow
 // NO AUTH required - public endpoints for OAuth flow
 app.use('/api/v1/uber-eats/auth', uberEatsAuthRoutes);
+
+// 🔔 UBER EATS WEBHOOKS - Receives order notifications from Uber
+// NO AUTH required - Uber will send HMAC signature for verification
+app.use('/api/v1/uber-eats/webhooks', uberEatsWebhooksRoutes);
 
 // Use admin chain routes (platform admin only)
 app.use('/api/v1/admin/chains', adminChainRoutes);
