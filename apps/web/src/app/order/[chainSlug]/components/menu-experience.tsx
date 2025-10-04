@@ -56,7 +56,7 @@ interface MenuExperienceProps {
 
 export function MenuExperience({
   chain,
-  branch, 
+  branch,
   customerMenu,
   orderContext,
   availableBranches = [],
@@ -69,6 +69,7 @@ export function MenuExperience({
   const [showRestaurantClosedModal, setShowRestaurantClosedModal] = useState(false)
   const [showPreOrderModal, setShowPreOrderModal] = useState(false)
   const [hasUserDismissedModal, setHasUserDismissedModal] = useState(false)
+  const [waiterButtonHidden, setWaiterButtonHidden] = useState(false)
 
   const { isMobile, isTablet, isDesktop } = useResponsive()
   const { clearCart, itemCount, isRestaurantOpen, setRestaurantHours, preOrder, setPreOrder } = useCart()
@@ -435,24 +436,24 @@ export function MenuExperience({
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 {/* Logo */}
                 {chain.logo_url && (
-                  <img 
-                    src={chain.logo_url} 
-                    alt={chain.name} 
+                  <img
+                    src={chain.logo_url}
+                    alt={chain.name}
                     className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                   />
                 )}
-                
+
                 {/* Restaurant Info */}
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <div className="min-w-0 flex-1">
                     <div className="font-bold text-base truncate">{chain.name}</div>
                     <BranchSwitcher className="text-sm" />
                   </div>
-                  
+
                   {/* Minimum Order Amount - Mobile */}
                   {orderContext.source === 'web' && (
                     <div className="flex-shrink-0">
-                      <OrderHeader 
+                      <OrderHeader
                         branchName={branch.name}
                         branchId={branch.id}
                         onSearch={() => {}}
@@ -470,9 +471,9 @@ export function MenuExperience({
                   <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
                     {/* Zone-based display logic - consistent with other pages */}
-                    {orderContext.zone === 'Screen' 
+                    {orderContext.zone === 'Screen'
                       ? 'Screen'
-                      : orderContext.zone 
+                      : orderContext.zone
                         ? `Table ${orderContext.tableNumber} - ${orderContext.zone}`
                         : `Table ${orderContext.tableNumber}`
                     }
@@ -480,10 +481,10 @@ export function MenuExperience({
                 </div>
               )}
             </div>
-            
+
             {/* Bottom Row: Search + Language + Schedule */}
             <div>
-              <OrderHeader 
+              <OrderHeader
                 branchName={branch.name}
                 branchId={branch.id}
                 branchAddress={typeof branch.address === 'string' ? branch.address : `${branch.address?.street || ''}, ${branch.address?.city || ''}`}
@@ -492,10 +493,10 @@ export function MenuExperience({
               />
             </div>
           </div>
-          
+
           {/* Category tabs */}
           <div className="bg-card border-b border-border px-4 py-3 flex-shrink-0">
-            <CategorySidebar 
+            <CategorySidebar
               selectedCategory={selectedCategory}
               onCategorySelect={setSelectedCategory}
               customerMenu={customerMenu}
@@ -503,7 +504,7 @@ export function MenuExperience({
               isMobile={true}
             />
           </div>
-          
+
           {/* Menu Grid */}
           <div className="flex-1 overflow-y-auto">
             <MenuGrid
@@ -515,17 +516,32 @@ export function MenuExperience({
           </div>
 
 
-          {/* Mobile Cart */}
-          <MobileCart />
+          {/* Mobile Cart with Waiter Button */}
+          <MobileCart
+            showWaiterButton={orderContext.isQROrder && !!orderContext.tableNumber && !waiterButtonHidden}
+            waiterButtonSlot={
+              orderContext.isQROrder && orderContext.tableNumber && !waiterButtonHidden ? (
+                <FloatingWaiterButton
+                  branchId={branch.id}
+                  tableNumber={orderContext.tableNumber}
+                  zone={orderContext.zone}
+                  isHidden={waiterButtonHidden}
+                  onWaiterCalled={() => setWaiterButtonHidden(true)}
+                />
+              ) : undefined
+            }
+          />
         </div>
       )}
 
-      {/* QR Floating Waiter Call Button - Mobile & Tablet Only */}
-      {orderContext.isQROrder && orderContext.tableNumber && !isDesktop && (
+      {/* QR Floating Waiter Call Button - Tablet Only */}
+      {orderContext.isQROrder && orderContext.tableNumber && isTablet && !waiterButtonHidden && (
         <FloatingWaiterButton
           branchId={branch.id}
           tableNumber={orderContext.tableNumber}
           zone={orderContext.zone}
+          isHidden={waiterButtonHidden}
+          onWaiterCalled={() => setWaiterButtonHidden(true)}
         />
       )}
 
