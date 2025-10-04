@@ -215,7 +215,7 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
                 </div>
                 
                 {/* Category Items Grid */}
-                <div className={`grid grid-cols-1 sm:grid-cols-2 ${responsiveClasses.grid.cols} ${responsiveClasses.grid.gap}`}>
+                <div className={`grid grid-cols-2 sm:grid-cols-2 ${responsiveClasses.grid.cols} ${responsiveClasses.grid.gap}`}>
                   {items.map((item) => {
                     const itemQuantity = getItemQuantity(item.id)
                     
@@ -300,7 +300,7 @@ export function MenuGrid({ selectedCategory, customerMenu, loading = false, sear
         </div>
       ) : (
         // Regular Grid View for Specific Categories
-        <div className={`grid grid-cols-1 sm:grid-cols-2 ${responsiveClasses.grid.cols} ${responsiveClasses.grid.gap}`}>
+        <div className={`grid grid-cols-2 sm:grid-cols-2 ${responsiveClasses.grid.cols} ${responsiveClasses.grid.gap}`}>
           {filteredItems.map((item) => {
             const itemQuantity = getItemQuantity(item.id)
             
