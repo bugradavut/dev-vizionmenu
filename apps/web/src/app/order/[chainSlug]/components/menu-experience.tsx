@@ -212,6 +212,7 @@ export function MenuExperience({
 
   // Create order context for existing components
   const legacyOrderContext = {
+    chainSlug: orderContext.chainSlug, // ✅ Pass chainSlug for checkout navigation
     source: orderContext.source,
     branchId: branch.id,
     tableNumber: orderContext.tableNumber,

@@ -114,52 +114,73 @@ export function CartSidebar() {
   }
 
   const handleOrderTypeConfirm = async () => {
-    // Set loading state
-    setIsNavigating(true)
-    setShowOrderTypeModal(false)
-    
-    // Small delay for better UX
-    await new Promise(resolve => setTimeout(resolve, 300))
-    
-    // Preserve URL parameters and add selected order type
-    const searchParams = new URLSearchParams()
-    if (source) searchParams.set('source', source)
-    if (branchId) searchParams.set('branch', branchId)
-    if (tableNumber) searchParams.set('table', tableNumber.toString())
-    if (zone) searchParams.set('zone', zone)
-    searchParams.set('orderType', selectedOrderType)
-    
-    // Find chainSlug - first try from context, then from localStorage
-    let effectiveChainSlug = chainSlug
-    
-    if (!effectiveChainSlug && branchId) {
-      // Try to find chainSlug from localStorage branch selections
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i)
-          if (key && key.startsWith('selected-branch-')) {
-            const branchData = JSON.parse(localStorage.getItem(key) || '{}')
-            if (branchData.id === branchId) {
-              effectiveChainSlug = key.replace('selected-branch-', '')
-              break
+    try {
+      // Set loading state
+      setIsNavigating(true)
+      setShowOrderTypeModal(false)
+
+      // Small delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 300))
+
+      // Preserve URL parameters and add selected order type
+      const searchParams = new URLSearchParams()
+      if (source) searchParams.set('source', source)
+      if (branchId) searchParams.set('branch', branchId)
+      if (tableNumber) searchParams.set('table', tableNumber.toString())
+      if (zone) searchParams.set('zone', zone)
+      searchParams.set('orderType', selectedOrderType)
+
+      // Find chainSlug - first try from context, then from localStorage
+      let effectiveChainSlug = chainSlug
+
+      if (!effectiveChainSlug && branchId) {
+        // Try to find chainSlug from localStorage branch selections
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i)
+            if (key && key.startsWith('selected-branch-')) {
+              const branchData = JSON.parse(localStorage.getItem(key) || '{}')
+              if (branchData.id === branchId) {
+                effectiveChainSlug = key.replace('selected-branch-', '')
+                break
+              }
             }
           }
+        } catch (error) {
+          console.error('Error finding chain slug from localStorage:', error)
         }
-      } catch (error) {
-        console.error('Error finding chain slug:', error)
       }
+
+      // Navigate with chainSlug (required for new architecture)
+      if (!effectiveChainSlug) {
+        console.error('Chain slug not found. Context chainSlug:', chainSlug, 'branchId:', branchId)
+        setIsNavigating(false)
+        setShowOrderTypeModal(true) // Reopen modal
+        alert(language === 'fr'
+          ? 'Erreur: Impossible de continuer. Veuillez réessayer.'
+          : 'Error: Unable to proceed. Please try again.'
+        )
+        return
+      }
+
+      const reviewUrl = `/order/${effectiveChainSlug}/review?${searchParams.toString()}`
+
+      // Safari-specific: Add small delay before navigation
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      router.push(reviewUrl)
+
+      // Reset loading state after navigation
+      setTimeout(() => setIsNavigating(false), 500)
+    } catch (error) {
+      console.error('Error during checkout:', error)
+      setIsNavigating(false)
+      setShowOrderTypeModal(true) // Reopen modal
+      alert(language === 'fr'
+        ? 'Erreur lors du passage à la caisse. Veuillez réessayer.'
+        : 'Error during checkout. Please try again.'
+      )
     }
-    
-    // Navigate with chainSlug (required for new architecture)
-    if (!effectiveChainSlug) {
-      throw new Error('Chain slug is required for review page')
-    }
-    
-    const reviewUrl = `/order/${effectiveChainSlug}/review?${searchParams.toString()}`
-    router.push(reviewUrl)
-    
-    // Reset loading state after navigation
-    setTimeout(() => setIsNavigating(false), 500)
   }
 
 
