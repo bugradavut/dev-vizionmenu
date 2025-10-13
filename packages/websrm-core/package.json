@@ -1,0 +1,43 @@
+{
+  "name": "@vizionmenu/websrm-core",
+  "version": "0.1.0",
+  "description": "Pure TypeScript core library for Québec WEB-SRM fiscal compliance",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "type-check": "tsc --noEmit",
+    "lint": "echo 'Lint: No linting configured yet'"
+  },
+  "keywords": [
+    "websrm",
+    "quebec",
+    "fiscal",
+    "compliance",
+    "pos",
+    "receipt"
+  ],
+  "author": "VizionMenu",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20",
+    "jest": "^30.0.4",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5"
+  },
+  "dependencies": {}
+}

@@ -54,3 +54,7 @@ photos/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# WEB-SRM outputs
+tmp/
+evidence/

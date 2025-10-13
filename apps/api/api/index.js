@@ -70,6 +70,7 @@ const chainTemplatesRoutes = require('./routes/chain-templates.routes');
 const uberDirectSettingsRoutes = require('./uber-direct-settings');
 const uberEatsAuthRoutes = require('./routes/uber-eats-auth.routes');
 const uberEatsWebhooksRoutes = require('./routes/uber-eats-webhooks.routes');
+const websrmAdminRoutes = require('./routes/websrm-admin.routes');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -196,6 +197,9 @@ app.use('/api/v1/admin/chains', adminChainRoutes);
 
 // Use admin branch routes (platform admin only)
 app.use('/api/v1/admin/branches', adminBranchRoutes);
+
+// Use WEB-SRM admin routes (platform admin only, DEV/ESSAI only)
+app.use('/api/v1/admin/websrm', websrmAdminRoutes);
 
 // Use chain users routes (unified chain employee management)
 app.use('/api/v1/users/chain', chainUsersRoutes);

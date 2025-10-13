@@ -19,17 +19,38 @@
     "clean": "turbo clean",
     "dev:web": "turbo dev --filter=web",
     "dev:api": "turbo dev --filter=api",
-    "dev:worker": "turbo dev --filter=worker"
+    "dev:worker": "turbo dev --filter=worker",
+    "websrm:dryrun": "tsx scripts/websrm-dryrun.ts",
+    "websrm:selftest": "tsx scripts/websrm-adapter-selftest.ts",
+    "websrm:smoke:enr": "tsx scripts/websrm-smoke-enr.ts",
+    "websrm:smoke:dup": "tsx scripts/websrm-smoke-dup.ts",
+    "websrm:smoke:ann": "tsx scripts/websrm-smoke-ann.ts",
+    "websrm:smoke:mod": "tsx scripts/websrm-smoke-mod.ts",
+    "websrm:smoke:errors": "tsx scripts/websrm-smoke-errors.ts",
+    "websrm:export": "tsx scripts/websrm-export-evidence.ts",
+    "websrm:monitor": "tsx scripts/websrm-essai-monitor.ts",
+    "websrm:check-env": "tsx scripts/websrm-essai-check-env.ts",
+    "websrm:essai:offline": "tsx scripts/websrm-essai-smoke-offline.ts",
+    "websrm:enrolment": "tsx scripts/websrm-enrolment.ts",
+    "websrm:enrolment:mock": "tsx scripts/websrm-enrolment-mock.ts"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^2.1.4",
+    "@types/archiver": "^6.0.3",
     "@types/minimatch": "^6.0.0",
+    "@types/qrcode": "^1.5.5",
     "prettier": "^3.6.2",
+    "selfsigned": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.20.3",
     "turbo": "^2.5.4",
     "typescript": "^5"
   },
   "dependencies": {
-    "minimatch": "^10.0.3"
+    "@peculiar/webcrypto": "^1.5.0",
+    "@peculiar/x509": "^1.14.0",
+    "archiver": "^7.0.1",
+    "minimatch": "^10.0.3",
+    "qrcode": "^1.5.4"
   }
 }

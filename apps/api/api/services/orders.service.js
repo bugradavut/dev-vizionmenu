@@ -719,6 +719,61 @@ async function createOrder(orderData, branchId) {
     }
   }
 
+  // WEB-SRM Dry-Run Integration (Phase 3)
+  // Only runs in DEV when flag is enabled, does NOT affect production
+  try {
+    const { isWebSrmDryRunEnabled } = require('../../utils/featureFlags');
+    if (isWebSrmDryRunEnabled()) {
+      const { emitWebsrmDryRun } = require('../../services/websrm-adapter/dryrun-adapter');
+
+      // Attach items to order for dry-run adapter
+      const orderWithItems = { ...createdOrder, items: orderItems };
+
+      // Emit dry-run output asynchronously (don't block order creation)
+      emitWebsrmDryRun(orderWithItems)
+        .then((result) => {
+          if (result.hash !== 'skipped-no-items') {
+            console.info('[WEB-SRM DRYRUN]', createdOrder.id, 'hash:', result.hash, 'files:', result.files.length);
+          }
+        })
+        .catch((error) => {
+          console.warn('[WEB-SRM DRYRUN] failed:', createdOrder.id, error.message);
+        });
+    }
+  } catch (error) {
+    // Silently fail if WEB-SRM adapter is not available
+    // This ensures backward compatibility and doesn't break existing functionality
+    console.debug('[WEB-SRM DRYRUN] adapter not available:', error.message);
+  }
+
+  // WEB-SRM Runtime Integration (Phase 6 - Refactored)
+  // Profile-based configuration, production-blocked, local persist only (NO network)
+  try {
+    const enabled = process.env.WEBSRM_ENABLED === 'true' && process.env.NODE_ENV !== 'production';
+    if (enabled) {
+      const { handleOrderForWebSrm } = require('../../services/websrm-adapter/runtime-adapter');
+      const { resolveProfile } = require('../../services/websrm-adapter/profile-resolver');
+
+      const orderWithItems = Array.isArray(createdOrder.items)
+        ? createdOrder
+        : { ...createdOrder, items: orderItems || [] };
+
+      // Resolve profile for tenant/branch/device
+      resolveProfile(
+        createdOrder.tenant_id,
+        createdOrder.branch_id,
+        createdOrder.device_id // If stored in order
+      )
+        .then((profile) => handleOrderForWebSrm(orderWithItems, profile, {
+          persist: process.env.WEBSRM_PERSIST || 'files',
+        }))
+        .then(() => console.info('[WEB-SRM] persisted', createdOrder.id))
+        .catch((e) => console.warn('[WEB-SRM] persist failed', createdOrder.id, e.message));
+    }
+  } catch (error) {
+    console.debug('[WEB-SRM] runtime adapter not available:', error.message);
+  }
+
   return {
     order: {
       id: createdOrder.id,
@@ -963,6 +1018,61 @@ async function checkOrderTimers(branchId) {
           adjustment: individualAdjustment,
           totalTime: totalKitchenPrepTime
         });
+
+        // WEB-SRM Dry-Run Integration (Phase 3)
+        // Emit dry-run output when order is auto-completed
+        try {
+          const { isWebSrmDryRunEnabled } = require('../../utils/featureFlags');
+          if (isWebSrmDryRunEnabled()) {
+            const { emitWebsrmDryRun } = require('../../services/websrm-adapter/dryrun-adapter');
+
+            // Items yoksa dry-run'ı atla (adapter zaten 'skipped-no-items' döner)
+            // NO DB ACCESS: updatedOrder zaten items içermiyorsa skip edilir
+            const orderWithItems = Array.isArray(updatedOrder.items)
+              ? updatedOrder
+              : { ...updatedOrder, items: [] };
+
+            emitWebsrmDryRun(orderWithItems)
+              .then((result) => {
+                if (result.hash !== 'skipped-no-items') {
+                  console.info('[WEB-SRM DRYRUN]', updatedOrder.id, 'hash:', result.hash, 'files:', result.files.length);
+                }
+              })
+              .catch((error) => {
+                console.warn('[WEB-SRM DRYRUN] failed:', updatedOrder.id, error.message);
+              });
+          }
+        } catch (error) {
+          console.debug('[WEB-SRM DRYRUN] adapter not available:', error.message);
+        }
+
+        // WEB-SRM Runtime Integration (Phase 6 - Refactored)
+        // Profile-based configuration, production-blocked, local persist only (NO network)
+        try {
+          const enabled = process.env.WEBSRM_ENABLED === 'true' && process.env.NODE_ENV !== 'production';
+          if (enabled) {
+            const { handleOrderForWebSrm } = require('../../services/websrm-adapter/runtime-adapter');
+            const { resolveProfile } = require('../../services/websrm-adapter/profile-resolver');
+
+            const orderWithItems = Array.isArray(updatedOrder.items)
+              ? updatedOrder
+              : { ...updatedOrder, items: [] };
+
+            // Resolve profile for tenant/branch/device
+            resolveProfile(
+              updatedOrder.tenant_id,
+              updatedOrder.branch_id,
+              updatedOrder.device_id // If stored in order
+            )
+              .then((profile) => handleOrderForWebSrm(orderWithItems, profile, {
+                persist: process.env.WEBSRM_PERSIST || 'files',
+              }))
+              .then(() => console.info('[WEB-SRM] persisted (auto-complete)', updatedOrder.id))
+              .catch((e) => console.warn('[WEB-SRM] persist failed (auto-complete)', updatedOrder.id, e.message));
+          }
+        } catch (error) {
+          console.debug('[WEB-SRM] runtime adapter not available:', error.message);
+        }
       }
     } else {
       processedOrders.push({
