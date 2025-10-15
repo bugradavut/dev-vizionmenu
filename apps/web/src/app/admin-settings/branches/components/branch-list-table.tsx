@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { 
+import {
   Plus,
   Search,
   MoreHorizontal,
@@ -44,8 +44,10 @@ import {
   Ban,
   CheckCircle,
   Phone,
-  Mail
+  Mail,
+  Palette
 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Branch } from '@/services/branches.service'
 import { Chain } from '@/services/chains.service'
 
@@ -273,6 +275,9 @@ export function BranchListTable({
                   <TableHead>
                     {language === 'fr' ? 'Statut' : 'Status'}
                   </TableHead>
+                  <TableHead>
+                    {language === 'fr' ? 'Thème' : 'Theme'}
+                  </TableHead>
                   <TableHead className="w-[70px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -344,6 +349,18 @@ export function BranchListTable({
                           </div>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={branch.theme_config?.layout === 'template-1' ? 'default' : 'secondary'}
+                        className="inline-flex items-center gap-1.5"
+                      >
+                        <Palette className="h-3 w-3" />
+                        {branch.theme_config?.layout === 'template-1'
+                          ? (language === 'fr' ? 'Modèle 1' : 'Template 1')
+                          : (language === 'fr' ? 'Défaut' : 'Default')
+                        }
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

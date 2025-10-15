@@ -5,10 +5,11 @@ import { notFound } from 'next/navigation'
 import { customerChainsService } from '@/services/customer-chains.service'
 import { customerMenuService, type CustomerMenu } from '@/services/customer-menu.service'
 import { SmartBranchSelectionModal } from './components/smart-branch-selection-modal'
-import { MenuExperience } from './components/menu-experience'
+import { getThemeLayout } from './themes/theme-registry'
 import { OrderContext } from './types/order-flow.types'
 import { Chain, Branch } from '@/services/customer-chains.service'
 import { useLanguage } from '@/contexts/language-context'
+import type { ThemeConfig } from './themes/theme.types'
 
 interface ChainOrderPageProps {
   params: Promise<{ chainSlug: string }>
@@ -213,17 +214,20 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
 
   // Menu Experience: Show when branch and menu are loaded
   if (selectedBranch && customerMenu) {
+    // Get theme configuration from branch (or default to 'default' theme)
+    const branchWithTheme = selectedBranch as Branch & { theme_config?: ThemeConfig }
+    const themeConfig: ThemeConfig = branchWithTheme.theme_config || { layout: 'default' }
+    const ThemeLayout = getThemeLayout(themeConfig.layout)
+
     return (
-      <>
-        <MenuExperience 
-          chain={chain}
-          branch={selectedBranch}
-          customerMenu={customerMenu}
-          orderContext={orderContext}
-          availableBranches={branches}
-          onBranchChange={handleBranchChange}
-        />
-      </>
+      <ThemeLayout
+        chain={chain}
+        branch={selectedBranch}
+        customerMenu={customerMenu}
+        orderContext={orderContext}
+        availableBranches={branches}
+        onBranchChange={handleBranchChange}
+      />
     )
   }
 

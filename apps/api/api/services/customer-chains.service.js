@@ -49,7 +49,8 @@ async function getChainBranches(chainId, includeDeliveryZones = false) {
       location,
       phone,
       email,
-      settings
+      settings,
+      theme_config
     `)
     .eq('chain_id', chainId)
     .eq('is_active', true)
@@ -81,6 +82,7 @@ async function getChainBranches(chainId, includeDeliveryZones = false) {
       location: branch.location,
       phone: branch.phone,
       email: branch.email,
+      theme_config: branch.theme_config,
       restaurantHours: restaurantHours
     };
 

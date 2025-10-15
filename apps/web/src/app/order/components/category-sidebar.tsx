@@ -116,7 +116,7 @@ export function CategorySidebar({
                 <div className="flex items-center gap-3">
                   {/* Category Icon with Background */}
                   <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center shrink-0">
-                    <Icon className={cn("w-8 h-8", isSelected ? "text-orange-500 dark:text-white" : "text-orange-500")} />
+                    <Icon className="w-8 h-8 text-primary" />
                   </div>
                   
                   {/* Category Info */}

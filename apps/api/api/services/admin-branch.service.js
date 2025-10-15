@@ -72,6 +72,7 @@ async function createBranch(branchData, adminUserId) {
       phone: branchData.phone?.trim() || null,
       email: branchData.email?.trim() || null,
       settings: branchData.settings || {},
+      theme_config: branchData.theme_config || { layout: 'default' },
       is_active: branchData.is_active !== false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -127,6 +128,7 @@ async function getAllBranches(filters = {}) {
       phone,
       email,
       settings,
+      theme_config,
       location,
       is_active,
       created_at,
@@ -171,6 +173,7 @@ async function getAllBranches(filters = {}) {
     phone: branch.phone,
     email: branch.email,
     settings: branch.settings,
+    theme_config: branch.theme_config,
     is_active: branch.is_active,
     created_at: branch.created_at,
     updated_at: branch.updated_at,
@@ -204,6 +207,7 @@ async function getBranchById(branchId) {
       phone,
       email,
       settings,
+      theme_config,
       location,
       is_active,
       created_at,
@@ -283,6 +287,7 @@ async function updateBranch(branchId, updateData, adminUserId) {
   if (updateData.phone !== undefined) branchUpdateData.phone = updateData.phone?.trim() || null;
   if (updateData.email !== undefined) branchUpdateData.email = updateData.email?.trim() || null;
   if (updateData.settings !== undefined) branchUpdateData.settings = updateData.settings;
+  if (updateData.theme_config !== undefined) branchUpdateData.theme_config = updateData.theme_config;
   if (updateData.is_active !== undefined) branchUpdateData.is_active = updateData.is_active;
 
   // Update coordinates if provided

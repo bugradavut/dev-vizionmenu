@@ -24,6 +24,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useLanguage } from "@/contexts/language-context"
 import { Loader2, MapPin, Building2 } from "lucide-react"
 import { branchesService, Branch } from "@/services/branches.service"
@@ -41,6 +48,8 @@ const editBranchSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email("Invalid email format").optional().or(z.literal("")),
   is_active: z.boolean(),
+  theme_layout: z.enum(['default', 'template-1']),
+  primary_color: z.string().optional(),
 })
 
 type EditBranchFormData = z.infer<typeof editBranchSchema>
@@ -69,6 +78,8 @@ export function EditBranchModal({ open, onOpenChange, branch, chains, onSuccess 
       phone: "",
       email: "",
       is_active: true,
+      theme_layout: "default",
+      primary_color: "",
     },
   })
 
@@ -79,13 +90,15 @@ export function EditBranchModal({ open, onOpenChange, branch, chains, onSuccess 
         name: branch.name,
         slug: branch.slug,
         description: branch.description || "",
-        address: typeof branch.address === 'string' ? branch.address : 
-                typeof branch.address === 'object' && branch.address ? 
-                `${branch.address.street || ''} ${branch.address.city || ''} ${branch.address.province || ''}`.trim() : 
+        address: typeof branch.address === 'string' ? branch.address :
+                typeof branch.address === 'object' && branch.address ?
+                `${branch.address.street || ''} ${branch.address.city || ''} ${branch.address.province || ''}`.trim() :
                 '',
         phone: branch.phone || "",
         email: branch.email || "",
         is_active: branch.is_active,
+        theme_layout: branch.theme_config?.layout || 'default',
+        primary_color: branch.theme_config?.colors?.primary || '',
       })
       setSelectedCoordinates(null)
     }
@@ -102,18 +115,24 @@ export function EditBranchModal({ open, onOpenChange, branch, chains, onSuccess 
 
     try {
       setLoading(true)
-      
+
+      const { theme_layout, primary_color, ...restData } = data
+
       const updateData = {
-        ...data,
-        coordinates: selectedCoordinates || undefined
+        ...restData,
+        coordinates: selectedCoordinates || undefined,
+        theme_config: {
+          layout: theme_layout,
+          colors: primary_color ? { primary: primary_color } : undefined
+        }
       }
-      
+
       await branchesService.updateBranch(branch.id, updateData)
 
       // Close modal and refresh
       onOpenChange(false)
       onSuccess?.()
-      
+
     } catch (error) {
       console.error('Error updating branch:', error)
       alert(language === 'fr' ? 'Erreur lors de la mise à jour de la succursale' : 'Error updating branch')
@@ -298,6 +317,71 @@ export function EditBranchModal({ open, onOpenChange, branch, chains, onSuccess 
                         placeholder="branch@example.com"
                         type="email"
                       />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Theme Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="theme_layout"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {language === 'fr' ? 'Thème Visuel' : 'Visual Theme'}
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={language === 'fr' ? 'Sélectionner un thème' : 'Select a theme'} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="default">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                            <span>{language === 'fr' ? 'Défaut' : 'Default'}</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="template-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                            <span>{language === 'fr' ? 'Modèle 1' : 'Template 1'}</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="primary_color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {language === 'fr' ? 'Couleur Principale' : 'Primary Color'}
+                    </FormLabel>
+                    <FormControl>
+                      <div className="flex gap-2">
+                        <Input
+                          {...field}
+                          type="color"
+                          className="w-16 h-10 p-1 cursor-pointer"
+                        />
+                        <Input
+                          {...field}
+                          type="text"
+                          placeholder={language === 'fr' ? 'ex: #FF6B35' : 'e.g. #FF6B35'}
+                          className="flex-1"
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

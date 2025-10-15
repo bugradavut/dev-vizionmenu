@@ -20,6 +20,14 @@ export interface Branch {
   phone?: string;
   email?: string;
   settings?: Record<string, unknown>;
+  theme_config?: {
+    layout: 'default' | 'template-1';
+    colors?: {
+      primary?: string;
+      secondary?: string;
+      accent?: string;
+    };
+  };
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -56,6 +64,14 @@ export interface UpdateBranchData {
   phone?: string;
   email?: string;
   settings?: Record<string, unknown>;
+  theme_config?: {
+    layout: 'default' | 'template-1';
+    colors?: {
+      primary?: string;
+      secondary?: string;
+      accent?: string;
+    };
+  };
   is_active?: boolean;
   coordinates?: {
     lat: number;

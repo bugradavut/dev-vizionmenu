@@ -25,6 +25,14 @@ export interface Branch {
   };
   phone?: string;
   email?: string;
+  theme_config?: {
+    layout: 'default' | 'template-1';
+    colors?: {
+      primary?: string;
+      secondary?: string;
+      accent?: string;
+    };
+  };
   restaurantHours?: {
     isOpen: boolean;
     mode?: 'simple' | 'advanced';
