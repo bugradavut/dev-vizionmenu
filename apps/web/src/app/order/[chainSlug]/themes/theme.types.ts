@@ -9,7 +9,7 @@ import type { CustomerMenu } from '@/services/customer-menu.service'
 /**
  * Available theme layouts
  */
-export type ThemeLayout = 'default'
+export type ThemeLayout = 'default' | 'template-1'
 
 /**
  * Theme color configuration

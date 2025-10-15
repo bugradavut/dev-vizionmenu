@@ -18,11 +18,20 @@ const DefaultLayout = dynamic(() => import('./default/default-layout'), {
   )
 })
 
+const Template1Layout = dynamic(() => import('./template-1/template-1-layout'), {
+  loading: () => (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    </div>
+  )
+})
+
 /**
  * Theme registry mapping
  */
 const THEME_REGISTRY = {
-  'default': DefaultLayout
+  'default': DefaultLayout,
+  'template-1': Template1Layout
 } as const
 
 /**
@@ -51,7 +60,12 @@ export function getAvailableThemes(): Array<{ id: ThemeLayout; name: string; des
     {
       id: 'default',
       name: 'Default',
-      description: 'Clean and minimalist design with excellent mobile experience'
+      description: 'Clean and minimalist design with side categories'
+    },
+    {
+      id: 'template-1',
+      name: 'Template 1',
+      description: 'Restaurant-style with hero banner and horizontal category bar'
     }
   ]
 }
