@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { MapPin, ChevronDown, Store, ShoppingCart, Plus, ShoppingBag, ChevronRight } from 'lucide-react'
+import { MapPin, ChevronDown, Store, ShoppingCart, Plus, ShoppingBag, ChevronRight, ChevronLeft } from 'lucide-react'
 import { OrderHeader } from '@/app/order/components/order-header'
 import { CartSidebar } from '@/app/order/components/cart-sidebar'
 import { MobileCart } from '@/app/order/components/mobile-cart'
@@ -46,6 +46,10 @@ export default function Template1Layout(props: ThemeLayoutProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCartExpanded, setIsCartExpanded] = useState(false) // Start collapsed
 
+  // Category carousel state - for desktop only
+  const [categoryStartIndex, setCategoryStartIndex] = useState(0)
+  const MAX_VISIBLE_CATEGORIES = 8
+
   // Use shared business logic
   const logic = useMenuLogic({
     branch,
@@ -75,6 +79,20 @@ export default function Template1Layout(props: ThemeLayoutProps) {
 
   // Get categories
   const categories = customerMenuService.getCategoriesWithCounts(customerMenu)
+
+  // Category navigation handlers
+  const SCROLL_STEP = 3 // Scroll 3 categories at a time
+  const hasMoreCategories = categories.length > MAX_VISIBLE_CATEGORIES
+  const canScrollLeft = categoryStartIndex > 0
+  const canScrollRight = hasMoreCategories && categoryStartIndex < categories.length - MAX_VISIBLE_CATEGORIES
+
+  const scrollCategoriesLeft = () => {
+    setCategoryStartIndex(Math.max(0, categoryStartIndex - SCROLL_STEP))
+  }
+
+  const scrollCategoriesRight = () => {
+    setCategoryStartIndex(Math.min(categories.length - MAX_VISIBLE_CATEGORIES, categoryStartIndex + SCROLL_STEP))
+  }
 
   // Get menu items for selected category
   const menuItems = customerMenuService.getItemsByCategory(customerMenu, logic.selectedCategory)
@@ -218,51 +236,85 @@ export default function Template1Layout(props: ThemeLayoutProps) {
                   )}
                 </div>
 
-                {/* Category Bar - Sticky */}
+                {/* Category Bar - Sticky with Navigation */}
                 <div className="sticky top-0 z-20 bg-primary shadow-lg">
-                  <div className="flex items-center justify-center py-2">
-                    {categories.map((category, index) => {
-                      const Icon = getIconComponent(category.icon || 'Grid3X3')
-                      const isSelected = logic.selectedCategory === category.id
-                      return (
-                        <div key={category.id} className="flex items-center relative">
-                          <button
-                            onClick={() => logic.setSelectedCategory(category.id)}
-                            className={cn(
-                              "flex flex-col items-center justify-center px-6 py-2 min-w-[100px] transition-all",
-                              isSelected
-                                ? "text-white"
-                                : "text-white/40 hover:text-white/60"
-                            )}
-                          >
-                            <Icon className="w-7 h-7 mb-1" />
-                            <span className={cn(
-                              "text-sm transition-all",
-                              isSelected ? "font-bold" : "font-normal"
-                            )}>{category.name}</span>
-                          </button>
-                          {/* Triangle arrow below selected category */}
-                          {isSelected && (
-                            <svg
-                              className="absolute left-1/2 -translate-x-1/2 pointer-events-none text-primary"
-                              style={{ bottom: '-20px' }}
-                              width="24"
-                              height="14"
-                              viewBox="0 0 24 14"
-                              fill="none"
-                            >
-                              <path
-                                d="M0 0H24L14.5 11C13.5 12.5 10.5 12.5 9.5 11L0 0Z"
-                                fill="currentColor"
-                              />
-                            </svg>
-                          )}
-                          {index < categories.length - 1 && (
-                            <div className="h-12 w-px bg-white/20" />
-                          )}
-                        </div>
-                      )
-                    })}
+                  <div className="relative py-2 flex items-center justify-center">
+                    {/* Left Navigation Arrow - Fixed position */}
+                    {canScrollLeft && (
+                      <button
+                        onClick={scrollCategoriesLeft}
+                        className="absolute left-1/2 -translate-x-[540px] top-1/2 -translate-y-1/2 z-30 bg-white hover:bg-white/90 text-primary rounded-full p-2 shadow-lg hover:scale-110 transition-all"
+                        aria-label="Previous categories"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                    )}
+
+                    {/* Categories Container with Max Width - 8 categories max visible */}
+                    <div className="overflow-hidden max-w-[920px]">
+                      <div
+                        className="flex items-center transition-transform duration-500 ease-in-out"
+                        style={{
+                          transform: hasMoreCategories
+                            ? `translateX(-${categoryStartIndex * 115}px)`
+                            : 'translateX(0)'
+                        }}
+                      >
+                        {categories.map((category, index) => {
+                          const Icon = getIconComponent(category.icon || 'Grid3X3')
+                          const isSelected = logic.selectedCategory === category.id
+                          return (
+                            <div key={category.id} className="flex items-center relative flex-shrink-0">
+                              <button
+                                onClick={() => logic.setSelectedCategory(category.id)}
+                                className={cn(
+                                  "flex flex-col items-center justify-center px-6 py-2 min-w-[100px] transition-all",
+                                  isSelected
+                                    ? "text-white"
+                                    : "text-white/40 hover:text-white/60"
+                                )}
+                              >
+                                <Icon className="w-7 h-7 mb-1" />
+                                <span className={cn(
+                                  "text-sm transition-all",
+                                  isSelected ? "font-bold" : "font-normal"
+                                )}>{category.name}</span>
+                              </button>
+                              {/* Triangle arrow below selected category */}
+                              {isSelected && (
+                                <svg
+                                  className="absolute left-1/2 -translate-x-1/2 pointer-events-none text-primary"
+                                  style={{ bottom: '-20px' }}
+                                  width="24"
+                                  height="14"
+                                  viewBox="0 0 24 14"
+                                  fill="none"
+                                >
+                                  <path
+                                    d="M0 0H24L14.5 11C13.5 12.5 10.5 12.5 9.5 11L0 0Z"
+                                    fill="currentColor"
+                                  />
+                                </svg>
+                              )}
+                              {index < categories.length - 1 && (
+                                <div className="h-12 w-px bg-white/20" />
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Right Navigation Arrow - Fixed position */}
+                    {canScrollRight && (
+                      <button
+                        onClick={scrollCategoriesRight}
+                        className="absolute left-1/2 translate-x-[500px] top-1/2 -translate-y-1/2 z-30 bg-white hover:bg-white/90 text-primary rounded-full p-2 shadow-lg hover:scale-110 transition-all"
+                        aria-label="Next categories"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
