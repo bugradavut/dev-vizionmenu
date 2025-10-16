@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { MapPin, ChevronDown, Store, ShoppingCart, Plus } from 'lucide-react'
+import { MapPin, ChevronDown, Store, ShoppingCart, Plus, ShoppingBag } from 'lucide-react'
 import { OrderHeader } from '@/app/order/components/order-header'
 import { CartSidebar } from '@/app/order/components/cart-sidebar'
 import { MobileCart } from '@/app/order/components/mobile-cart'
@@ -39,8 +39,9 @@ export default function Template1Layout(props: ThemeLayoutProps) {
   const { chain, branch, customerMenu, orderContext, availableBranches = [], onBranchChange } = props
 
   const { isMobile, isTablet, isDesktop } = useResponsive()
-  const { addItem } = useCart()
+  const { addItem, items } = useCart()
   const [selectedItem, setSelectedItem] = useState<any>(null)
+  const [isCartExpanded, setIsCartExpanded] = useState(true)
 
   // Use shared business logic
   const logic = useMenuLogic({
@@ -117,11 +118,12 @@ export default function Template1Layout(props: ThemeLayoutProps) {
     addItem({
       id: item.id,
       name: item.name,
+      description: item.description || '',
       price: item.price,
-      quantity: 1,
       image_url: item.image_url,
+      category_id: item.category_id || '',
       notes: '',
-      selectedOptions: []
+      customizations: []
     })
   }
 
@@ -169,56 +171,78 @@ export default function Template1Layout(props: ThemeLayoutProps) {
             </div>
           </div>
 
-          {/* Hero Section */}
-          <div className="flex-shrink-0 relative bg-gradient-to-r from-amber-50 via-orange-50 to-red-50 overflow-hidden" style={{ height: '300px' }}>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center z-10">
-                <div className="inline-block bg-primary text-white px-6 py-2 rounded-full font-bold text-3xl mb-4 shadow-lg">
-                  Special Offer
-                </div>
-                <h2 className="text-5xl font-bold text-gray-800 mb-2">{chain.name}</h2>
-                <p className="text-2xl text-gray-600">Discover Our Menu</p>
-              </div>
-            </div>
-            {/* Background pattern */}
-            <div className="absolute inset-0 opacity-5" style={{
-              backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)',
-              backgroundSize: '30px 30px'
-            }} />
-          </div>
-
-          {/* Category Bar - Pizzaro Style */}
-          <div className="flex-shrink-0 bg-primary shadow-lg">
-            <div className="max-w-screen-2xl mx-auto">
-              <div className="flex items-center justify-center gap-1 py-2 overflow-x-auto">
-                {categories.map((category) => {
-                  const Icon = getIconComponent(category.icon || 'Grid3X3')
-                  const isSelected = logic.selectedCategory === category.id
-                  return (
-                    <button
-                      key={category.id}
-                      onClick={() => logic.setSelectedCategory(category.id)}
-                      className={cn(
-                        "flex flex-col items-center justify-center px-6 py-3 min-w-[100px] transition-all",
-                        isSelected
-                          ? "bg-white/20 text-white"
-                          : "text-white/80 hover:bg-white/10 hover:text-white"
-                      )}
-                    >
-                      <Icon className="w-6 h-6 mb-1" />
-                      <span className="text-sm font-medium">{category.name}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content */}
+          {/* Main Content with Sticky Category Bar */}
           <div className="flex flex-1 min-h-0">
             {/* Products Area */}
             <div className="flex-1 overflow-hidden">
               <ScrollArea className="h-full">
+                {/* Hero Section - Scrollable */}
+                <div className="relative bg-gradient-to-r from-amber-50 via-orange-50 to-red-50 overflow-hidden" style={{ height: '300px' }}>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center z-10">
+                      <div className="inline-block bg-primary text-white px-6 py-2 rounded-full font-bold text-3xl mb-4 shadow-lg">
+                        Special Offer
+                      </div>
+                      <h2 className="text-5xl font-bold text-gray-800 mb-2">{chain.name}</h2>
+                      <p className="text-2xl text-gray-600">Discover Our Menu</p>
+                    </div>
+                  </div>
+                  {/* Background pattern */}
+                  <div className="absolute inset-0 opacity-5" style={{
+                    backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)',
+                    backgroundSize: '30px 30px'
+                  }} />
+                </div>
+
+                {/* Category Bar - Sticky */}
+                <div className="sticky top-0 z-20 bg-primary shadow-lg">
+                  <div className="flex items-center justify-center py-2">
+                    {categories.map((category, index) => {
+                      const Icon = getIconComponent(category.icon || 'Grid3X3')
+                      const isSelected = logic.selectedCategory === category.id
+                      return (
+                        <div key={category.id} className="flex items-center relative">
+                          <button
+                            onClick={() => logic.setSelectedCategory(category.id)}
+                            className={cn(
+                              "flex flex-col items-center justify-center px-6 py-2 min-w-[100px] transition-all",
+                              isSelected
+                                ? "text-white"
+                                : "text-white/40 hover:text-white/60"
+                            )}
+                          >
+                            <Icon className="w-7 h-7 mb-1" />
+                            <span className={cn(
+                              "text-sm transition-all",
+                              isSelected ? "font-bold" : "font-normal"
+                            )}>{category.name}</span>
+                          </button>
+                          {/* Triangle arrow below selected category */}
+                          {isSelected && (
+                            <svg
+                              className="absolute left-1/2 -translate-x-1/2 pointer-events-none text-primary"
+                              style={{ bottom: '-20px' }}
+                              width="24"
+                              height="14"
+                              viewBox="0 0 24 14"
+                              fill="none"
+                            >
+                              <path
+                                d="M0 0H24L14.5 11C13.5 12.5 10.5 12.5 9.5 11L0 0Z"
+                                fill="currentColor"
+                              />
+                            </svg>
+                          )}
+                          {index < categories.length - 1 && (
+                            <div className="h-12 w-px bg-white/20" />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Products Grid - Scrollable */}
                 <div className="max-w-screen-2xl mx-auto px-6 py-8">
                   <div className="grid grid-cols-4 gap-6">
                     {menuItems.map((item) => (
@@ -276,11 +300,56 @@ export default function Template1Layout(props: ThemeLayoutProps) {
               </ScrollArea>
             </div>
 
-            {/* Cart Sidebar */}
-            <div className="w-96 bg-white border-l shadow-lg">
-              <ScrollArea className="h-full">
-                <CartSidebar />
-              </ScrollArea>
+            {/* Collapsible Cart Sidebar */}
+            <div
+              className={cn(
+                "bg-white border-l shadow-lg transition-all duration-300 ease-in-out relative",
+                isCartExpanded ? "w-96" : "w-16"
+              )}
+            >
+              {/* Toggle Button */}
+              <button
+                onClick={() => setIsCartExpanded(!isCartExpanded)}
+                className="absolute top-4 -left-3 z-10 bg-primary text-white rounded-full p-1.5 shadow-lg hover:scale-110 transition-transform"
+              >
+                {isCartExpanded ? (
+                  <ChevronDown className="w-4 h-4 rotate-90" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 -rotate-90" />
+                )}
+              </button>
+
+              {isCartExpanded ? (
+                <ScrollArea className="h-full">
+                  <CartSidebar />
+                </ScrollArea>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center gap-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setIsCartExpanded(true)}>
+                  {/* Shopping Bag with Badge */}
+                  <div className="relative">
+                    <ShoppingBag className="w-8 h-8 text-gray-700" strokeWidth={1.5} />
+                    {items.length > 0 && (
+                      <div className="absolute -top-2 -right-2 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-md">
+                        {items.length}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Divider */}
+                  <div className="w-8 h-px bg-gray-200" />
+
+                  {/* Price */}
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] text-gray-400 uppercase tracking-wider">Total</span>
+                    <div className="flex flex-col items-center">
+                      <span className="text-sm font-bold text-gray-800 leading-tight">
+                        {items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}
+                      </span>
+                      <span className="text-xs text-gray-500">$</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -302,54 +371,178 @@ export default function Template1Layout(props: ThemeLayoutProps) {
             </div>
           </div>
 
-          <div className="flex-shrink-0 bg-primary">
-            <div className="flex gap-1 py-2 px-4 overflow-x-auto">
-              {categories.map((category) => {
-                const Icon = getIconComponent(category.icon || 'Grid3X3')
-                const isSelected = logic.selectedCategory === category.id
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => logic.setSelectedCategory(category.id)}
-                    className={cn(
-                      "flex flex-col items-center px-4 py-2 min-w-[80px] transition-all whitespace-nowrap",
-                      isSelected ? "bg-white/20 text-white" : "text-white/80"
-                    )}
-                  >
-                    <Icon className="w-5 h-5 mb-1" />
-                    <span className="text-xs">{category.name}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
           <div className="flex flex-1 min-h-0">
             <div className="flex-1 overflow-hidden">
               <ScrollArea className="h-full">
+                {/* Hero Section - Scrollable */}
+                <div className="relative bg-gradient-to-r from-amber-50 via-orange-50 to-red-50 overflow-hidden" style={{ height: '200px' }}>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center z-10">
+                      <div className="inline-block bg-primary text-white px-4 py-1.5 rounded-full font-bold text-xl mb-3 shadow-lg">
+                        Special Offer
+                      </div>
+                      <h2 className="text-3xl font-bold text-gray-800 mb-1">{chain.name}</h2>
+                      <p className="text-lg text-gray-600">Discover Our Menu</p>
+                    </div>
+                  </div>
+                  {/* Background pattern */}
+                  <div className="absolute inset-0 opacity-5" style={{
+                    backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)',
+                    backgroundSize: '30px 30px'
+                  }} />
+                </div>
+
+                {/* Category Bar - Sticky */}
+                <div className="sticky top-0 z-20 bg-primary shadow-lg">
+                  <div className="flex items-center justify-center py-2">
+                    {categories.map((category, index) => {
+                      const Icon = getIconComponent(category.icon || 'Grid3X3')
+                      const isSelected = logic.selectedCategory === category.id
+                      return (
+                        <div key={category.id} className="flex items-center relative">
+                          <button
+                            onClick={() => logic.setSelectedCategory(category.id)}
+                            className={cn(
+                              "flex flex-col items-center justify-center px-4 py-2 min-w-[80px] transition-all",
+                              isSelected
+                                ? "text-white"
+                                : "text-white/40 hover:text-white/60"
+                            )}
+                          >
+                            <Icon className="w-6 h-6 mb-1" />
+                            <span className={cn(
+                              "text-xs transition-all",
+                              isSelected ? "font-bold" : "font-normal"
+                            )}>{category.name}</span>
+                          </button>
+                          {/* Triangle arrow below selected category */}
+                          {isSelected && (
+                            <svg
+                              className="absolute left-1/2 -translate-x-1/2 pointer-events-none text-primary"
+                              style={{ bottom: '-16px' }}
+                              width="20"
+                              height="12"
+                              viewBox="0 0 20 12"
+                              fill="none"
+                            >
+                              <path
+                                d="M0 0H20L12 9C11 10.5 9 10.5 8 9L0 0Z"
+                                fill="currentColor"
+                              />
+                            </svg>
+                          )}
+                          {index < categories.length - 1 && (
+                            <div className="h-10 w-px bg-white/20" />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Products Grid - Scrollable */}
                 <div className="p-4 grid grid-cols-3 gap-4">
                   {menuItems.map((item) => (
-                    <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                      <div className="aspect-square bg-gray-100">
-                        {item.image_url && <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />}
+                    <div
+                      key={item.id}
+                      className="group bg-white rounded-lg shadow-md hover:shadow-xl transition-all overflow-hidden cursor-pointer"
+                      onClick={() => setSelectedItem(item)}
+                    >
+                      <div className="aspect-square bg-gray-100 overflow-hidden">
+                        {item.image_url ? (
+                          <img
+                            src={item.image_url}
+                            alt={item.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            No Image
+                          </div>
+                        )}
                       </div>
                       <div className="p-3 text-center">
                         <h3 className="font-semibold mb-1 line-clamp-1">{item.name}</h3>
-                        <p className="text-sm text-gray-500 mb-2 line-clamp-1">{item.description}</p>
+                        {item.description && (
+                          <p className="text-sm text-gray-500 mb-2 line-clamp-1">{item.description}</p>
+                        )}
                         <div className="flex items-center justify-center gap-2">
                           <span className="font-bold text-primary">${item.price.toFixed(2)}</span>
-                          <Button size="sm" onClick={() => handleQuickAdd(item)}>Add</Button>
+                          <Button
+                            size="sm"
+                            className="bg-primary hover:bg-primary/90"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleQuickAdd(item)
+                            }}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add
+                          </Button>
                         </div>
                       </div>
                     </div>
                   ))}
+
+                  {menuItems.length === 0 && (
+                    <div className="text-center py-12 col-span-3">
+                      <p className="text-gray-500">No items found</p>
+                    </div>
+                  )}
                 </div>
               </ScrollArea>
             </div>
-            <div className="w-80 bg-white border-l">
-              <ScrollArea className="h-full">
-                <CartSidebar />
-              </ScrollArea>
+
+            {/* Collapsible Cart Sidebar - Tablet */}
+            <div
+              className={cn(
+                "bg-white border-l shadow-lg transition-all duration-300 ease-in-out relative",
+                isCartExpanded ? "w-80" : "w-16"
+              )}
+            >
+              {/* Toggle Button */}
+              <button
+                onClick={() => setIsCartExpanded(!isCartExpanded)}
+                className="absolute top-4 -left-3 z-10 bg-primary text-white rounded-full p-1.5 shadow-lg hover:scale-110 transition-transform"
+              >
+                {isCartExpanded ? (
+                  <ChevronDown className="w-4 h-4 rotate-90" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 -rotate-90" />
+                )}
+              </button>
+
+              {isCartExpanded ? (
+                <ScrollArea className="h-full">
+                  <CartSidebar />
+                </ScrollArea>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center gap-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setIsCartExpanded(true)}>
+                  {/* Shopping Bag with Badge */}
+                  <div className="relative">
+                    <ShoppingBag className="w-8 h-8 text-gray-700" strokeWidth={1.5} />
+                    {items.length > 0 && (
+                      <div className="absolute -top-2 -right-2 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-md">
+                        {items.length}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Divider */}
+                  <div className="w-8 h-px bg-gray-200" />
+
+                  {/* Price */}
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] text-gray-400 uppercase tracking-wider">Total</span>
+                    <div className="flex flex-col items-center">
+                      <span className="text-sm font-bold text-gray-800 leading-tight">
+                        {items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}
+                      </span>
+                      <span className="text-xs text-gray-500">$</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -371,8 +564,27 @@ export default function Template1Layout(props: ThemeLayoutProps) {
             <OrderHeader branchName={branch.name} branchId={branch.id} onSearch={logic.setSearchQuery} hideTitle={true} />
           </div>
 
-          <div className="bg-primary">
-            <div className="flex gap-1 py-2 px-4 overflow-x-auto">
+          {/* Hero Section - Scrollable */}
+          <div className="relative bg-gradient-to-r from-amber-50 via-orange-50 to-red-50 overflow-hidden" style={{ height: '150px' }}>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center z-10">
+                <div className="inline-block bg-primary text-white px-3 py-1 rounded-full font-bold text-sm mb-2 shadow-lg">
+                  Special Offer
+                </div>
+                <h2 className="text-xl font-bold text-gray-800">{chain.name}</h2>
+                <p className="text-sm text-gray-600">Discover Our Menu</p>
+              </div>
+            </div>
+            {/* Background pattern */}
+            <div className="absolute inset-0 opacity-5" style={{
+              backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)',
+              backgroundSize: '30px 30px'
+            }} />
+          </div>
+
+          {/* Category Bar - Sticky */}
+          <div className="sticky top-0 z-20 bg-primary shadow-lg">
+            <div className="flex items-center justify-center gap-2 py-2 px-4 overflow-x-auto scrollbar-hide">
               {categories.map((category) => {
                 const Icon = getIconComponent(category.icon || 'Grid3X3')
                 const isSelected = logic.selectedCategory === category.id
@@ -381,12 +593,17 @@ export default function Template1Layout(props: ThemeLayoutProps) {
                     key={category.id}
                     onClick={() => logic.setSelectedCategory(category.id)}
                     className={cn(
-                      "flex flex-col items-center px-3 py-2 min-w-[70px] whitespace-nowrap",
-                      isSelected ? "bg-white/20 text-white" : "text-white/80"
+                      "flex flex-col items-center justify-center px-3 py-2 min-w-[70px] transition-all rounded-lg flex-shrink-0",
+                      isSelected
+                        ? "bg-white/20 text-white"
+                        : "text-white/40 hover:text-white/60"
                     )}
                   >
                     <Icon className="w-5 h-5 mb-1" />
-                    <span className="text-xs">{category.name}</span>
+                    <span className={cn(
+                      "text-xs transition-all whitespace-nowrap",
+                      isSelected ? "font-bold" : "font-normal"
+                    )}>{category.name}</span>
                   </button>
                 )
               })}
@@ -396,17 +613,47 @@ export default function Template1Layout(props: ThemeLayoutProps) {
           <div className="flex-1 overflow-y-auto p-4">
             <div className="grid grid-cols-2 gap-3">
               {menuItems.map((item) => (
-                <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                  <div className="aspect-square bg-gray-100">
-                    {item.image_url && <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />}
+                <div
+                  key={item.id}
+                  className="group bg-white rounded-lg shadow-md hover:shadow-lg transition-all overflow-hidden"
+                  onClick={() => setSelectedItem(item)}
+                >
+                  <div className="aspect-square bg-gray-100 overflow-hidden">
+                    {item.image_url ? (
+                      <img
+                        src={item.image_url}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        No Image
+                      </div>
+                    )}
                   </div>
                   <div className="p-3 text-center">
                     <h3 className="font-semibold text-sm mb-1 line-clamp-1">{item.name}</h3>
                     <span className="font-bold text-primary text-sm">${item.price.toFixed(2)}</span>
-                    <Button size="sm" className="w-full mt-2" onClick={() => handleQuickAdd(item)}>Add</Button>
+                    <Button
+                      size="sm"
+                      className="w-full mt-2 bg-primary hover:bg-primary/90"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleQuickAdd(item)
+                      }}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add
+                    </Button>
                   </div>
                 </div>
               ))}
+
+              {menuItems.length === 0 && (
+                <div className="text-center py-8 col-span-2">
+                  <p className="text-gray-500">No items found</p>
+                </div>
+              )}
             </div>
           </div>
 
