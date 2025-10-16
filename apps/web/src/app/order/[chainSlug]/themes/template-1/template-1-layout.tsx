@@ -1,12 +1,14 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { MapPin, ChevronDown, Store, ShoppingCart, Plus, ShoppingBag } from 'lucide-react'
+import { MapPin, ChevronDown, Store, ShoppingCart, Plus, ShoppingBag, ChevronRight } from 'lucide-react'
 import { OrderHeader } from '@/app/order/components/order-header'
 import { CartSidebar } from '@/app/order/components/cart-sidebar'
 import { MobileCart } from '@/app/order/components/mobile-cart'
+import { ItemModal } from '@/app/order/components/item-modal'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { FloatingWaiterButton } from '@/components/floating-waiter-button'
 import { cn } from '@/lib/utils'
 import { getIconComponent } from '@/lib/category-icons'
@@ -39,9 +41,10 @@ export default function Template1Layout(props: ThemeLayoutProps) {
   const { chain, branch, customerMenu, orderContext, availableBranches = [], onBranchChange } = props
 
   const { isMobile, isTablet, isDesktop } = useResponsive()
-  const { addItem, items } = useCart()
+  const { addItem, items, getItemQuantity } = useCart()
   const [selectedItem, setSelectedItem] = useState<any>(null)
-  const [isCartExpanded, setIsCartExpanded] = useState(true)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isCartExpanded, setIsCartExpanded] = useState(false) // Start collapsed
 
   // Use shared business logic
   const logic = useMenuLogic({
@@ -62,6 +65,13 @@ export default function Template1Layout(props: ThemeLayoutProps) {
       document.documentElement.style.removeProperty('--primary')
     }
   }, [primaryColor])
+
+  // Auto-expand cart when first item is added
+  useEffect(() => {
+    if (items.length > 0 && !isCartExpanded) {
+      setIsCartExpanded(true)
+    }
+  }, [items.length])
 
   // Get categories
   const categories = customerMenuService.getCategoriesWithCounts(customerMenu)
@@ -113,18 +123,16 @@ export default function Template1Layout(props: ThemeLayoutProps) {
     )
   }
 
-  // Quick add to cart handler
-  const handleQuickAdd = (item: any) => {
-    addItem({
-      id: item.id,
-      name: item.name,
-      description: item.description || '',
-      price: item.price,
-      image_url: item.image_url,
-      category_id: item.category_id || '',
-      notes: '',
-      customizations: []
-    })
+  // Handle item click to open modal
+  const handleItemClick = (item: any) => {
+    setSelectedItem(item)
+    setIsModalOpen(true)
+  }
+
+  // Handle modal close
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedItem(null)
   }
 
   const legacyOrderContext = {
@@ -152,7 +160,7 @@ export default function Template1Layout(props: ThemeLayoutProps) {
           />
           {/* Top Navigation */}
           <div className="flex-shrink-0 bg-white border-b shadow-sm relative z-10">
-            <div className="max-w-screen-2xl mx-auto px-6 py-3 flex items-center justify-between">
+            <div className="px-6 py-3 flex items-center justify-between">
               <div className="flex items-center gap-6">
                 {chain.logo_url && (
                   <img src={chain.logo_url} alt={chain.name} className="h-12 w-auto object-contain" />
@@ -258,53 +266,62 @@ export default function Template1Layout(props: ThemeLayoutProps) {
                   </div>
                 </div>
 
-                {/* Products Grid - Scrollable */}
+                {/* Products Grid - Restaurant Style Horizontal Cards */}
                 <div className="max-w-screen-2xl mx-auto px-6 py-8">
-                  <div className="grid grid-cols-4 gap-6">
-                    {menuItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer"
-                        onClick={() => setSelectedItem(item)}
-                      >
-                        {/* Image */}
-                        <div className="relative aspect-square bg-gray-100 overflow-hidden">
-                          {item.image_url ? (
-                            <img
-                              src={item.image_url}
-                              alt={item.name}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400">
-                              No Image
+                  <div className="grid grid-cols-3 gap-4">
+                    {menuItems.map((item) => {
+                      const itemQuantity = getItemQuantity(item.id)
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="group bg-white rounded-lg overflow-hidden shadow-sm transition-all duration-200 cursor-pointer border border-gray-200 hover:border-primary/40 flex relative"
+                          onClick={() => handleItemClick(item)}
+                        >
+                          {/* Quantity Badge - Card Top Right */}
+                          {itemQuantity > 0 && (
+                            <div className="absolute top-2 right-2 z-10">
+                              <div className="bg-primary text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-md">
+                                {itemQuantity}
+                              </div>
                             </div>
                           )}
-                        </div>
 
-                        {/* Content */}
-                        <div className="p-4 text-center">
-                          <h3 className="font-bold text-lg mb-2 line-clamp-1">{item.name}</h3>
-                          {item.description && (
-                            <p className="text-sm text-gray-500 mb-3 line-clamp-2 min-h-[40px]">{item.description}</p>
-                          )}
-                          <div className="flex items-center justify-center gap-3">
-                            <span className="text-xl font-bold text-primary">${item.price.toFixed(2)}</span>
-                            <Button
-                              size="sm"
-                              className="bg-primary hover:bg-primary/90"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleQuickAdd(item)
-                              }}
-                            >
-                              <Plus className="w-4 h-4 mr-1" />
-                              Add
-                            </Button>
+                          {/* Image - Left Side */}
+                          <div className="relative w-32 h-32 flex-shrink-0 bg-gray-100 overflow-hidden">
+                            {item.image_url ? (
+                              <img
+                                src={item.image_url}
+                                alt={item.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gradient-to-br from-gray-50 to-gray-100">
+                                <ShoppingBag className="w-12 h-12" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Content - Right Side */}
+                          <div className="flex-1 p-4 flex flex-col justify-between min-w-0">
+                            <div className="flex-1 min-h-0">
+                              <h3 className="font-semibold text-base mb-1 line-clamp-1 text-gray-900">{item.name}</h3>
+                              {item.description && (
+                                <p className="text-sm text-gray-500 line-clamp-2">{item.description}</p>
+                              )}
+                            </div>
+
+                            {/* Price & Arrow */}
+                            <div className="flex items-center justify-between mt-2">
+                              <span className="text-xl font-bold text-primary">${item.price.toFixed(2)}</span>
+                              <div className="w-8 h-8 rounded-full bg-primary/10 group-hover:bg-primary flex items-center justify-center transition-colors">
+                                <ChevronRight className="w-5 h-5 text-primary group-hover:text-white transition-colors" />
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
 
                   {menuItems.length === 0 && (
@@ -326,7 +343,7 @@ export default function Template1Layout(props: ThemeLayoutProps) {
               {/* Toggle Button */}
               <button
                 onClick={() => setIsCartExpanded(!isCartExpanded)}
-                className="absolute top-4 -left-3 z-10 bg-primary text-white rounded-full p-1.5 shadow-lg hover:scale-110 transition-transform"
+                className="absolute top-8 -left-3 z-10 bg-black hover:bg-gray-900 text-white rounded-full p-1.5 shadow-lg hover:scale-110 transition-transform"
               >
                 {isCartExpanded ? (
                   <ChevronDown className="w-4 h-4 rotate-90" />
@@ -472,49 +489,61 @@ export default function Template1Layout(props: ThemeLayoutProps) {
                   </div>
                 </div>
 
-                {/* Products Grid - Scrollable */}
-                <div className="p-4 grid grid-cols-3 gap-4">
-                  {menuItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="group bg-white rounded-lg shadow-md hover:shadow-xl transition-all overflow-hidden cursor-pointer"
-                      onClick={() => setSelectedItem(item)}
-                    >
-                      <div className="aspect-square bg-gray-100 overflow-hidden">
-                        {item.image_url ? (
-                          <img
-                            src={item.image_url}
-                            alt={item.name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            No Image
+                {/* Products Grid - Restaurant Style 1 Column */}
+                <div className="p-4 space-y-3">
+                  {menuItems.map((item) => {
+                    const itemQuantity = getItemQuantity(item.id)
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="group bg-white rounded-lg overflow-hidden shadow-sm transition-all duration-200 cursor-pointer border border-gray-200 hover:border-primary/40 flex relative"
+                        onClick={() => handleItemClick(item)}
+                      >
+                        {/* Quantity Badge - Card Top Right */}
+                        {itemQuantity > 0 && (
+                          <div className="absolute top-2 right-2 z-10">
+                            <div className="bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-md">
+                              {itemQuantity}
+                            </div>
                           </div>
                         )}
-                      </div>
-                      <div className="p-3 text-center">
-                        <h3 className="font-semibold mb-1 line-clamp-1">{item.name}</h3>
-                        {item.description && (
-                          <p className="text-sm text-gray-500 mb-2 line-clamp-1">{item.description}</p>
-                        )}
-                        <div className="flex items-center justify-center gap-2">
-                          <span className="font-bold text-primary">${item.price.toFixed(2)}</span>
-                          <Button
-                            size="sm"
-                            className="bg-primary hover:bg-primary/90"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleQuickAdd(item)
-                            }}
-                          >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Add
-                          </Button>
+
+                        {/* Image - Left Side */}
+                        <div className="relative w-24 h-24 flex-shrink-0 bg-gray-100 overflow-hidden">
+                          {item.image_url ? (
+                            <img
+                              src={item.image_url}
+                              alt={item.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gradient-to-br from-gray-50 to-gray-100">
+                              <ShoppingBag className="w-10 h-10" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Content - Right Side */}
+                        <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
+                          <div className="flex-1 min-h-0">
+                            <h3 className="font-semibold text-sm mb-1 line-clamp-1 text-gray-900">{item.name}</h3>
+                            {item.description && (
+                              <p className="text-xs text-gray-500 line-clamp-2">{item.description}</p>
+                            )}
+                          </div>
+
+                          {/* Price & Arrow */}
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-lg font-bold text-primary">${item.price.toFixed(2)}</span>
+                            <div className="w-7 h-7 rounded-full bg-primary/10 group-hover:bg-primary flex items-center justify-center transition-colors">
+                              <ChevronRight className="w-4 h-4 text-primary group-hover:text-white transition-colors" />
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
 
                   {menuItems.length === 0 && (
                     <div className="text-center py-12 col-span-3">
@@ -535,7 +564,7 @@ export default function Template1Layout(props: ThemeLayoutProps) {
               {/* Toggle Button */}
               <button
                 onClick={() => setIsCartExpanded(!isCartExpanded)}
-                className="absolute top-4 -left-3 z-10 bg-primary text-white rounded-full p-1.5 shadow-lg hover:scale-110 transition-transform"
+                className="absolute top-4 -left-3 z-10 bg-black hover:bg-gray-900 text-white rounded-full p-1.5 shadow-lg hover:scale-110 transition-transform"
               >
                 {isCartExpanded ? (
                   <ChevronDown className="w-4 h-4 rotate-90" />
@@ -658,44 +687,61 @@ export default function Template1Layout(props: ThemeLayoutProps) {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 relative z-10">
-            <div className="grid grid-cols-2 gap-3">
-              {menuItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="group bg-white rounded-lg shadow-md hover:shadow-lg transition-all overflow-hidden"
-                  onClick={() => setSelectedItem(item)}
-                >
-                  <div className="aspect-square bg-gray-100 overflow-hidden">
-                    {item.image_url ? (
-                      <img
-                        src={item.image_url}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        No Image
+          <div className="flex-1 overflow-y-auto p-3 pb-32 relative z-10">
+            <div className="space-y-2">
+              {menuItems.map((item) => {
+                const itemQuantity = getItemQuantity(item.id)
+
+                return (
+                  <div
+                    key={item.id}
+                    className="group bg-white rounded-lg overflow-hidden shadow-sm transition-all cursor-pointer border border-gray-200 active:border-primary/40 flex relative"
+                    onClick={() => handleItemClick(item)}
+                  >
+                    {/* Quantity Badge - Card Top Right */}
+                    {itemQuantity > 0 && (
+                      <div className="absolute top-1 right-1 z-10">
+                        <div className="bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-md">
+                          {itemQuantity}
+                        </div>
                       </div>
                     )}
+
+                    {/* Image - Left Side */}
+                    <div className="relative w-20 h-20 flex-shrink-0 bg-gray-100 overflow-hidden">
+                      {item.image_url ? (
+                        <img
+                          src={item.image_url}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gradient-to-br from-gray-50 to-gray-100">
+                          <ShoppingBag className="w-8 h-8" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content - Right Side */}
+                    <div className="flex-1 p-2 flex flex-col justify-between min-w-0">
+                      <div className="flex-1 min-h-0">
+                        <h3 className="font-semibold text-sm mb-0.5 line-clamp-1 text-gray-900">{item.name}</h3>
+                        {item.description && (
+                          <p className="text-xs text-gray-500 line-clamp-1">{item.description}</p>
+                        )}
+                      </div>
+
+                      {/* Price & Arrow */}
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-base font-bold text-primary">${item.price.toFixed(2)}</span>
+                        <div className="w-6 h-6 rounded-full bg-primary/10 active:bg-primary flex items-center justify-center transition-colors">
+                          <ChevronRight className="w-4 h-4 text-primary group-active:text-white transition-colors" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-3 text-center">
-                    <h3 className="font-semibold text-sm mb-1 line-clamp-1">{item.name}</h3>
-                    <span className="font-bold text-primary text-sm">${item.price.toFixed(2)}</span>
-                    <Button
-                      size="sm"
-                      className="w-full mt-2 bg-primary hover:bg-primary/90"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleQuickAdd(item)
-                      }}
-                    >
-                      <Plus className="w-3 h-3 mr-1" />
-                      Add
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
 
               {menuItems.length === 0 && (
                 <div className="text-center py-8 col-span-2">
@@ -738,6 +784,13 @@ export default function Template1Layout(props: ThemeLayoutProps) {
       <RestaurantClosedModal isOpen={logic.showRestaurantClosedModal} onClose={logic.handleRestaurantClosedModalClose} onScheduleOrder={logic.allowSchedulingWhenClosed ? logic.handleScheduleOrder : undefined} restaurantHours={logic.settings.restaurantHours ? logic.migrateRestaurantHours(logic.settings.restaurantHours as any) : undefined} isBusy={logic.settings.restaurantHours ? logic.isRestaurantMarkedAsBusy(logic.settings.restaurantHours as any) : false} />
 
       <PreOrderModal isOpen={logic.showPreOrderModal} onClose={logic.handlePreOrderClose} onConfirm={logic.handlePreOrderConfirm} currentSchedule={logic.preOrder.isPreOrder ? { date: logic.preOrder.scheduledDate || '', time: logic.preOrder.scheduledTime || '' } : undefined} />
+
+      {/* Item Detail Modal */}
+      <ItemModal
+        item={selectedItem}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </OrderContextProvider>
   )
 }
