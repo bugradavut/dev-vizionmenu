@@ -343,7 +343,7 @@ export default function Template1Layout(props: ThemeLayoutProps) {
               {/* Toggle Button */}
               <button
                 onClick={() => setIsCartExpanded(!isCartExpanded)}
-                className="absolute top-8 -left-3 z-10 bg-black hover:bg-gray-900 text-white rounded-full p-1.5 shadow-lg hover:scale-110 transition-transform"
+                className="absolute top-8 -left-3 z-20 bg-black hover:bg-gray-900 text-white rounded-full p-1.5 shadow-lg hover:scale-110 transition-transform"
               >
                 {isCartExpanded ? (
                   <ChevronDown className="w-4 h-4 -rotate-90" />
@@ -414,83 +414,63 @@ export default function Template1Layout(props: ThemeLayoutProps) {
           </div>
 
           <div className="flex flex-1 min-h-0 relative z-10">
-            <div className="flex-1 overflow-hidden">
-              <ScrollArea className="h-full">
-                {/* Hero Banner Section - 30vh for tablet */}
-                <div
-                  className="relative w-full overflow-hidden"
-                  style={{
-                    height: '35vh',
-                    background: 'linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url("/food_bg_icon.png")',
-                    backgroundSize: 'cover'
-                  }}
-                >
-                  {branch.theme_config?.bannerImage ? (
-                    <img
-                      src={branch.theme_config.bannerImage}
-                      alt="Special Offer Banner"
-                      className="w-full h-full object-contain"
-                    />
-                  ) : (
-                    // Default banner - example image
-                    <img
-                      src="https://img.pikbest.com/templates/20240602/food-burger-restaurant-special-offer-web-banner-layout_10587350.jpg!w700wp"
-                      alt="Special Offer Banner"
-                      className="w-full h-full object-contain"
-                    />
-                  )}
-                </div>
+            <div className="flex-1 overflow-y-auto">
+              {/* Hero Banner Section - 30vh for tablet */}
+              <div
+                className="relative w-full overflow-hidden"
+                style={{
+                  height: '35vh',
+                  background: 'linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url("/food_bg_icon.png")',
+                  backgroundSize: 'cover'
+                }}
+              >
+                {branch.theme_config?.bannerImage ? (
+                  <img
+                    src={branch.theme_config.bannerImage}
+                    alt="Special Offer Banner"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  // Default banner - example image
+                  <img
+                    src="https://img.pikbest.com/templates/20240602/food-burger-restaurant-special-offer-web-banner-layout_10587350.jpg!w700wp"
+                    alt="Special Offer Banner"
+                    className="w-full h-full object-contain"
+                  />
+                )}
+              </div>
 
-                {/* Category Bar - Sticky */}
-                <div className="sticky top-0 z-20 bg-primary shadow-lg">
-                  <div className="flex items-center justify-center py-2">
-                    {categories.map((category, index) => {
-                      const Icon = getIconComponent(category.icon || 'Grid3X3')
-                      const isSelected = logic.selectedCategory === category.id
-                      return (
-                        <div key={category.id} className="flex items-center relative">
-                          <button
-                            onClick={() => logic.setSelectedCategory(category.id)}
-                            className={cn(
-                              "flex flex-col items-center justify-center px-4 py-2 min-w-[80px] transition-all",
-                              isSelected
-                                ? "text-white"
-                                : "text-white/40 hover:text-white/60"
-                            )}
-                          >
-                            <Icon className="w-6 h-6 mb-1" />
-                            <span className={cn(
-                              "text-xs transition-all",
-                              isSelected ? "font-bold" : "font-normal"
-                            )}>{category.name}</span>
-                          </button>
-                          {/* Triangle arrow below selected category */}
-                          {isSelected && (
-                            <svg
-                              className="absolute left-1/2 -translate-x-1/2 pointer-events-none text-primary"
-                              style={{ bottom: '-16px' }}
-                              width="20"
-                              height="12"
-                              viewBox="0 0 20 12"
-                              fill="none"
-                            >
-                              <path
-                                d="M0 0H20L12 9C11 10.5 9 10.5 8 9L0 0Z"
-                                fill="currentColor"
-                              />
-                            </svg>
-                          )}
-                          {index < categories.length - 1 && (
-                            <div className="h-10 w-px bg-white/20" />
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
+              {/* Category Bar - Sticky */}
+              <div className="sticky top-0 z-20 bg-primary shadow-lg">
+                <div className="flex items-center gap-2 py-2 px-4 overflow-x-auto scrollbar-hide">
+                  {categories.map((category) => {
+                    const Icon = getIconComponent(category.icon || 'Grid3X3')
+                    const isSelected = logic.selectedCategory === category.id
+                    return (
+                      <button
+                        key={category.id}
+                        onClick={() => logic.setSelectedCategory(category.id)}
+                        className={cn(
+                          "flex flex-col items-center justify-center px-3 py-2 min-w-[70px] transition-all rounded-lg flex-shrink-0",
+                          isSelected
+                            ? "bg-white/20 text-white"
+                            : "text-white/40 hover:text-white/60"
+                        )}
+                      >
+                        <Icon className="w-5 h-5 mb-1" />
+                        <span className={cn(
+                          "text-xs transition-all whitespace-nowrap",
+                          isSelected ? "font-bold" : "font-normal"
+                        )}>{category.name}</span>
+                      </button>
+                    )
+                  })}
                 </div>
+              </div>
 
-                {/* Products Grid - Restaurant Style 1 Column */}
-                <div className="p-4 pb-32 space-y-3">
+              {/* Products List - Native Scroll */}
+              <div className="p-4 pb-32">
+                <div className="space-y-3">
                   {menuItems.map((item) => {
                     const itemQuantity = getItemQuantity(item.id)
 
@@ -546,12 +526,12 @@ export default function Template1Layout(props: ThemeLayoutProps) {
                   })}
 
                   {menuItems.length === 0 && (
-                    <div className="text-center py-12 col-span-3">
+                    <div className="text-center py-12">
                       <p className="text-gray-500">No items found</p>
                     </div>
                   )}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
 
             {/* Collapsible Cart Sidebar - Tablet */}
@@ -564,7 +544,7 @@ export default function Template1Layout(props: ThemeLayoutProps) {
               {/* Toggle Button */}
               <button
                 onClick={() => setIsCartExpanded(!isCartExpanded)}
-                className="absolute top-4 -left-3 z-10 bg-black hover:bg-gray-900 text-white rounded-full p-1.5 shadow-lg hover:scale-110 transition-transform"
+                className="absolute top-8 -left-3 z-20 bg-black hover:bg-gray-900 text-white rounded-full p-1.5 shadow-lg hover:scale-110 transition-transform"
               >
                 {isCartExpanded ? (
                   <ChevronDown className="w-4 h-4 -rotate-90" />
