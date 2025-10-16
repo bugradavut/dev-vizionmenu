@@ -267,7 +267,7 @@ export default function Template1Layout(props: ThemeLayoutProps) {
                 </div>
 
                 {/* Products Grid - Restaurant Style Horizontal Cards */}
-                <div className="max-w-screen-2xl mx-auto px-6 py-8">
+                <div className="max-w-screen-2xl mx-auto px-6 py-8 pb-32">
                   <div className="grid grid-cols-3 gap-4">
                     {menuItems.map((item) => {
                       const itemQuantity = getItemQuantity(item.id)
@@ -346,9 +346,9 @@ export default function Template1Layout(props: ThemeLayoutProps) {
                 className="absolute top-8 -left-3 z-10 bg-black hover:bg-gray-900 text-white rounded-full p-1.5 shadow-lg hover:scale-110 transition-transform"
               >
                 {isCartExpanded ? (
-                  <ChevronDown className="w-4 h-4 rotate-90" />
-                ) : (
                   <ChevronDown className="w-4 h-4 -rotate-90" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 rotate-90" />
                 )}
               </button>
 
@@ -490,7 +490,7 @@ export default function Template1Layout(props: ThemeLayoutProps) {
                 </div>
 
                 {/* Products Grid - Restaurant Style 1 Column */}
-                <div className="p-4 space-y-3">
+                <div className="p-4 pb-32 space-y-3">
                   {menuItems.map((item) => {
                     const itemQuantity = getItemQuantity(item.id)
 
@@ -567,9 +567,9 @@ export default function Template1Layout(props: ThemeLayoutProps) {
                 className="absolute top-4 -left-3 z-10 bg-black hover:bg-gray-900 text-white rounded-full p-1.5 shadow-lg hover:scale-110 transition-transform"
               >
                 {isCartExpanded ? (
-                  <ChevronDown className="w-4 h-4 rotate-90" />
-                ) : (
                   <ChevronDown className="w-4 h-4 -rotate-90" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 rotate-90" />
                 )}
               </button>
 
@@ -661,7 +661,7 @@ export default function Template1Layout(props: ThemeLayoutProps) {
 
           {/* Category Bar - Sticky */}
           <div className="sticky top-0 z-20 bg-primary shadow-lg">
-            <div className="flex items-center justify-center gap-2 py-2 px-4 overflow-x-auto scrollbar-hide">
+            <div className="flex items-center gap-2 py-2 px-4 overflow-x-auto scrollbar-hide">
               {categories.map((category) => {
                 const Icon = getIconComponent(category.icon || 'Grid3X3')
                 const isSelected = logic.selectedCategory === category.id
