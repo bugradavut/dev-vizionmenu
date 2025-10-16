@@ -32,6 +32,7 @@ export interface Branch {
       secondary?: string;
       accent?: string;
     };
+    bannerImage?: string;
   };
   restaurantHours?: {
     isOpen: boolean;

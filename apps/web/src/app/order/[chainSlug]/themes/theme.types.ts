@@ -29,6 +29,7 @@ export interface ThemeColors {
 export interface ThemeConfig {
   layout: ThemeLayout
   colors?: ThemeColors
+  bannerImage?: string
   customizations?: Record<string, unknown>
 }
 

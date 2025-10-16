@@ -140,9 +140,18 @@ export default function Template1Layout(props: ThemeLayoutProps) {
     <OrderContextProvider value={legacyOrderContext}>
       {/* Desktop Layout - Pizzaro Style */}
       {isDesktop && (
-        <div className="h-screen bg-[#f5f5f5] flex flex-col overflow-hidden">
+        <div className="h-screen bg-[#f5f5f5] flex flex-col overflow-hidden relative">
+          {/* Background Pattern */}
+          <div
+            className="fixed inset-0 z-0 opacity-5"
+            style={{
+              backgroundImage: 'url(/Food Bg.png)',
+              backgroundRepeat: 'repeat',
+              backgroundSize: '400px 400px',
+            }}
+          />
           {/* Top Navigation */}
-          <div className="flex-shrink-0 bg-white border-b shadow-sm">
+          <div className="flex-shrink-0 bg-white border-b shadow-sm relative z-10">
             <div className="max-w-screen-2xl mx-auto px-6 py-3 flex items-center justify-between">
               <div className="flex items-center gap-6">
                 {chain.logo_url && (
@@ -172,26 +181,33 @@ export default function Template1Layout(props: ThemeLayoutProps) {
           </div>
 
           {/* Main Content with Sticky Category Bar */}
-          <div className="flex flex-1 min-h-0">
+          <div className="flex flex-1 min-h-0 relative z-10">
             {/* Products Area */}
             <div className="flex-1 overflow-hidden">
               <ScrollArea className="h-full">
-                {/* Hero Section - Scrollable */}
-                <div className="relative bg-gradient-to-r from-amber-50 via-orange-50 to-red-50 overflow-hidden" style={{ height: '300px' }}>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center z-10">
-                      <div className="inline-block bg-primary text-white px-6 py-2 rounded-full font-bold text-3xl mb-4 shadow-lg">
-                        Special Offer
-                      </div>
-                      <h2 className="text-5xl font-bold text-gray-800 mb-2">{chain.name}</h2>
-                      <p className="text-2xl text-gray-600">Discover Our Menu</p>
-                    </div>
-                  </div>
-                  {/* Background pattern */}
-                  <div className="absolute inset-0 opacity-5" style={{
-                    backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)',
-                    backgroundSize: '30px 30px'
-                  }} />
+                {/* Hero Banner Section - 80% of viewport height */}
+                <div
+                  className="relative w-full overflow-hidden"
+                  style={{
+                    height: '65vh',
+                    background: 'linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url("/food_bg_icon.png")',
+                    backgroundSize: 'cover'
+                  }}
+                >
+                  {branch.theme_config?.bannerImage ? (
+                    <img
+                      src={branch.theme_config.bannerImage}
+                      alt="Special Offer Banner"
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    // Default banner - example image
+                    <img
+                      src="https://img.pikbest.com/templates/20240602/food-burger-restaurant-special-offer-web-banner-layout_10587350.jpg!w700wp"
+                      alt="Special Offer Banner"
+                      className="w-full h-full object-contain"
+                    />
+                  )}
                 </div>
 
                 {/* Category Bar - Sticky */}
@@ -357,8 +373,17 @@ export default function Template1Layout(props: ThemeLayoutProps) {
 
       {/* Tablet Layout */}
       {isTablet && (
-        <div className="h-screen bg-[#f5f5f5] flex flex-col overflow-hidden">
-          <div className="flex-shrink-0 bg-white border-b px-4 py-3">
+        <div className="h-screen bg-[#f5f5f5] flex flex-col overflow-hidden relative">
+          {/* Background Pattern */}
+          <div
+            className="fixed inset-0 z-0 opacity-20"
+            style={{
+              backgroundImage: 'url(/Food Bg.png)',
+              backgroundRepeat: 'repeat',
+              backgroundSize: '300px 300px',
+            }}
+          />
+          <div className="flex-shrink-0 bg-white border-b px-4 py-3 relative z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {chain.logo_url && <img src={chain.logo_url} alt={chain.name} className="h-10 w-auto" />}
@@ -371,25 +396,32 @@ export default function Template1Layout(props: ThemeLayoutProps) {
             </div>
           </div>
 
-          <div className="flex flex-1 min-h-0">
+          <div className="flex flex-1 min-h-0 relative z-10">
             <div className="flex-1 overflow-hidden">
               <ScrollArea className="h-full">
-                {/* Hero Section - Scrollable */}
-                <div className="relative bg-gradient-to-r from-amber-50 via-orange-50 to-red-50 overflow-hidden" style={{ height: '200px' }}>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center z-10">
-                      <div className="inline-block bg-primary text-white px-4 py-1.5 rounded-full font-bold text-xl mb-3 shadow-lg">
-                        Special Offer
-                      </div>
-                      <h2 className="text-3xl font-bold text-gray-800 mb-1">{chain.name}</h2>
-                      <p className="text-lg text-gray-600">Discover Our Menu</p>
-                    </div>
-                  </div>
-                  {/* Background pattern */}
-                  <div className="absolute inset-0 opacity-5" style={{
-                    backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)',
-                    backgroundSize: '30px 30px'
-                  }} />
+                {/* Hero Banner Section - 30vh for tablet */}
+                <div
+                  className="relative w-full overflow-hidden"
+                  style={{
+                    height: '35vh',
+                    background: 'linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url("/food_bg_icon.png")',
+                    backgroundSize: 'cover'
+                  }}
+                >
+                  {branch.theme_config?.bannerImage ? (
+                    <img
+                      src={branch.theme_config.bannerImage}
+                      alt="Special Offer Banner"
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    // Default banner - example image
+                    <img
+                      src="https://img.pikbest.com/templates/20240602/food-burger-restaurant-special-offer-web-banner-layout_10587350.jpg!w700wp"
+                      alt="Special Offer Banner"
+                      className="w-full h-full object-contain"
+                    />
+                  )}
                 </div>
 
                 {/* Category Bar - Sticky */}
@@ -550,8 +582,17 @@ export default function Template1Layout(props: ThemeLayoutProps) {
 
       {/* Mobile Layout */}
       {isMobile && (
-        <div className="min-h-screen bg-[#f5f5f5] flex flex-col">
-          <div className="bg-white border-b p-4">
+        <div className="min-h-screen bg-[#f5f5f5] flex flex-col relative">
+          {/* Background Pattern */}
+          <div
+            className="fixed inset-0 z-0 opacity-20"
+            style={{
+              backgroundImage: 'url(/Food Bg.png)',
+              backgroundRepeat: 'repeat',
+              backgroundSize: '200px 200px',
+            }}
+          />
+          <div className="bg-white border-b p-4 relative z-10">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 {chain.logo_url && <img src={chain.logo_url} alt={chain.name} className="h-8 w-auto" />}
@@ -564,22 +605,29 @@ export default function Template1Layout(props: ThemeLayoutProps) {
             <OrderHeader branchName={branch.name} branchId={branch.id} onSearch={logic.setSearchQuery} hideTitle={true} />
           </div>
 
-          {/* Hero Section - Scrollable */}
-          <div className="relative bg-gradient-to-r from-amber-50 via-orange-50 to-red-50 overflow-hidden" style={{ height: '150px' }}>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center z-10">
-                <div className="inline-block bg-primary text-white px-3 py-1 rounded-full font-bold text-sm mb-2 shadow-lg">
-                  Special Offer
-                </div>
-                <h2 className="text-xl font-bold text-gray-800">{chain.name}</h2>
-                <p className="text-sm text-gray-600">Discover Our Menu</p>
-              </div>
-            </div>
-            {/* Background pattern */}
-            <div className="absolute inset-0 opacity-5" style={{
-              backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)',
-              backgroundSize: '30px 30px'
-            }} />
+          {/* Hero Banner Section - 30vh for mobile */}
+          <div
+            className="relative w-full overflow-hidden z-10"
+            style={{
+              height: '35vh',
+              background: 'linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url("/food_bg_icon.png")',
+              backgroundSize: 'cover'
+            }}
+          >
+            {branch.theme_config?.bannerImage ? (
+              <img
+                src={branch.theme_config.bannerImage}
+                alt="Special Offer Banner"
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              // Default banner - example image
+              <img
+                src="https://img.pikbest.com/templates/20240602/food-burger-restaurant-special-offer-web-banner-layout_10587350.jpg!w700wp"
+                alt="Special Offer Banner"
+                className="w-full h-full object-contain"
+              />
+            )}
           </div>
 
           {/* Category Bar - Sticky */}
@@ -610,7 +658,7 @@ export default function Template1Layout(props: ThemeLayoutProps) {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4 relative z-10">
             <div className="grid grid-cols-2 gap-3">
               {menuItems.map((item) => (
                 <div
@@ -657,14 +705,16 @@ export default function Template1Layout(props: ThemeLayoutProps) {
             </div>
           </div>
 
-          <MobileCart
-            showWaiterButton={orderContext.isQROrder && !!orderContext.tableNumber && !logic.waiterButtonHidden}
-            waiterButtonSlot={
-              orderContext.isQROrder && orderContext.tableNumber && !logic.waiterButtonHidden ? (
-                <FloatingWaiterButton branchId={branch.id} tableNumber={orderContext.tableNumber} zone={orderContext.zone} isHidden={logic.waiterButtonHidden} onWaiterCalled={() => logic.setWaiterButtonHidden(true)} />
-              ) : undefined
-            }
-          />
+          <div className="relative z-10">
+            <MobileCart
+              showWaiterButton={orderContext.isQROrder && !!orderContext.tableNumber && !logic.waiterButtonHidden}
+              waiterButtonSlot={
+                orderContext.isQROrder && orderContext.tableNumber && !logic.waiterButtonHidden ? (
+                  <FloatingWaiterButton branchId={branch.id} tableNumber={orderContext.tableNumber} zone={orderContext.zone} isHidden={logic.waiterButtonHidden} onWaiterCalled={() => logic.setWaiterButtonHidden(true)} />
+                ) : undefined
+              }
+            />
+          </div>
         </div>
       )}
 
