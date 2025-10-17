@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -27,33 +27,15 @@ import {
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 import { useEnhancedAuth } from '@/hooks/use-enhanced-auth'
-import { branchesService, type Branch } from '@/services/branches.service'
 import { CategoriesTab, ItemsTab, PresetsTab, BannerTab } from '@/components/menu'
-import { cn } from '@/lib/utils'
 
 export default function MenuManagementPage() {
   const { language } = useLanguage()
   const t = translations[language] || translations.en
-  const { branchId } = useEnhancedAuth()
-  const [currentBranch, setCurrentBranch] = useState<Branch | null>(null)
-
-  // Fetch current branch data
-  useEffect(() => {
-    const fetchBranch = async () => {
-      if (!branchId) return
-      try {
-        const branch = await branchesService.getBranchById(branchId)
-        setCurrentBranch(branch)
-      } catch (error) {
-        console.error('Failed to fetch branch:', error)
-      }
-    }
-    fetchBranch()
-  }, [branchId])
+  const { user } = useEnhancedAuth()
 
   // Only show Banner tab if branch uses template-1
-  const isTemplate1 = currentBranch?.theme_config?.layout === 'template-1'
-  const tabCount = isTemplate1 ? 4 : 3
+  const isTemplate1 = user?.branch_theme_config?.layout === 'template-1'
 
   return (
     <AuthGuard>
@@ -93,7 +75,7 @@ export default function MenuManagementPage() {
 
             {/* Tabs Container */}
             <Tabs defaultValue="categories" className="w-full">
-              <TabsList className={cn("grid w-max", `grid-cols-${tabCount}`)}>
+              <TabsList className={isTemplate1 ? "grid w-max grid-cols-4" : "grid w-max grid-cols-3"}>
                 <TabsTrigger value="categories" className="flex items-center gap-2">
                   <UtensilsCrossed className="h-4 w-4" />
                   <span className="hidden sm:inline">{t.navigation.categories}</span>

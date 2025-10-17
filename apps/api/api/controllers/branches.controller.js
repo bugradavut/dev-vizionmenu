@@ -174,6 +174,63 @@ const updateBranchSettings = async (req, res) => {
 };
 
 /**
+ * PUT /api/v1/branches/:branchId/theme-config
+ * Update branch theme config (for branch managers/staff)
+ */
+const updateBranchThemeConfig = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+    const { theme_config } = req.body;
+    const currentUserId = req.currentUserId;
+
+    // Validation
+    if (!branchId) {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Branch ID is required' }
+      });
+    }
+
+    if (!theme_config) {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'theme_config is required' }
+      });
+    }
+
+    // Get user authentication context
+    const userBranch = await getUserBranchContext(req, res);
+    if (!userBranch) return; // Response already sent by getUserBranchContext
+
+    // Authorization: Check if user has access to this branch
+    if (userBranch.branch_id !== branchId) {
+      return res.status(403).json({
+        error: { code: 'FORBIDDEN', message: 'Access denied to this branch' }
+      });
+    }
+
+    // Update theme_config
+    const result = await branchesService.updateBranchThemeConfig(branchId, theme_config);
+
+    res.json({
+      data: result,
+      message: 'Theme config updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Update theme config endpoint error:', error);
+
+    if (error.message === 'Branch not found') {
+      return res.status(404).json({
+        error: { code: 'BRANCH_NOT_FOUND', message: 'Branch not found' }
+      });
+    }
+
+    res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to update theme config' }
+    });
+  }
+};
+
+/**
  * GET /api/v1/branches/by-chain/:chainId
  * Get all branches belonging to a specific chain
  * Used for hierarchical user management (chain owners creating users)
@@ -182,7 +239,7 @@ const getBranchesByChain = async (req, res) => {
   try {
     const { chainId } = req.params;
     const currentUserId = req.currentUserId;
-    
+
     if (!chainId) {
       return res.status(400).json({
         error: { code: 'VALIDATION_ERROR', message: 'Chain ID is required' }
@@ -191,7 +248,7 @@ const getBranchesByChain = async (req, res) => {
 
     const branches = await branchesService.getBranchesByChain(chainId, currentUserId);
     res.json({ data: branches });
-    
+
   } catch (error) {
     handleControllerError(error, 'get branches by chain', res);
   }
@@ -200,5 +257,6 @@ const getBranchesByChain = async (req, res) => {
 module.exports = {
   getBranchSettings,
   updateBranchSettings,
+  updateBranchThemeConfig,
   getBranchesByChain
 };

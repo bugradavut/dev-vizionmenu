@@ -393,6 +393,43 @@ async function getBranchById(branchId) {
 }
 
 /**
+ * Update branch theme config
+ * @param {string} branchId - Branch ID
+ * @param {Object} theme_config - Theme configuration to update
+ * @returns {Object} Updated branch theme config
+ */
+async function updateBranchThemeConfig(branchId, theme_config) {
+  // Verify branch exists
+  const { data: branchData, error: branchFetchError } = await supabase
+    .from('branches')
+    .select('id, theme_config')
+    .eq('id', branchId)
+    .single();
+
+  if (branchFetchError || !branchData) {
+    throw new Error('Branch not found');
+  }
+
+  // Update theme_config in database using service role key (bypasses RLS)
+  const { data: updatedBranch, error: updateError } = await supabase
+    .from('branches')
+    .update({ theme_config })
+    .eq('id', branchId)
+    .select('id, theme_config')
+    .single();
+
+  if (updateError) {
+    console.error('Failed to update theme config:', updateError);
+    throw new Error('Failed to update theme config');
+  }
+
+  return {
+    branchId: updatedBranch.id,
+    theme_config: updatedBranch.theme_config
+  };
+}
+
+/**
  * Get all branches belonging to a specific chain
  * Used for hierarchical user management
  * @param {string} chainId - Chain ID
@@ -464,6 +501,7 @@ async function getBranchesByChain(chainId, currentUserId) {
 module.exports = {
   getBranchSettings,
   updateBranchSettings,
+  updateBranchThemeConfig,
   getBranchById,
   getBranchesByChain
 };

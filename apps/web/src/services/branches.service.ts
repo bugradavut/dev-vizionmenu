@@ -172,14 +172,22 @@ class BranchesService {
       const result = await this.getBranchesByChain(chainId);
       return result.branches;
     }
-    
+
     if (currentUserRole === 'chain_owner' && chainId) {
       const result = await this.getBranchesByChain(chainId);
       return result.branches;
     }
-    
+
     // Branch manager cannot select branches - they can only create users in their own branch
     return [];
+  }
+
+  /**
+   * Update branch theme config (for branch managers/staff)
+   * Uses branch-specific endpoint (not admin)
+   */
+  async updateBranchThemeConfig(branchId: string, theme_config: UpdateBranchData['theme_config']): Promise<void> {
+    await apiClient.put(`/api/v1/branches/${branchId}/theme-config`, { theme_config });
   }
 }
 

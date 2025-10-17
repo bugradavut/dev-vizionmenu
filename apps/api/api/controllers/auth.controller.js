@@ -132,10 +132,10 @@ const getProfile = async (req, res) => {
       });
     }
 
-    // Get branch info
+    // Get branch info including theme_config
     const { data: branchInfo, error: branchInfoError } = await supabase
       .from('branches')
-      .select('id, name, chain_id, restaurant_chains(id, name)')
+      .select('id, name, chain_id, theme_config, restaurant_chains(id, name)')
       .eq('id', branchUser.branch_id)
       .single();
     
@@ -149,6 +149,7 @@ const getProfile = async (req, res) => {
       chain_id: branchInfo?.restaurant_chains?.id || null,
       branch_id: branchUser.branch_id,
       branch_name: branchInfo?.name || 'Unknown branch',
+      branch_theme_config: branchInfo?.theme_config || null,
       role: branchUser.role,
       permissions: branchUser.permissions,
       is_active: branchUser.is_active,

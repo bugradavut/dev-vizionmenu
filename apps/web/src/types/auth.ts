@@ -14,6 +14,15 @@ export interface User {
   chain_id?: string;
   branch_id?: string;
   branch_name?: string;
+  branch_theme_config?: {
+    layout: 'default' | 'template-1';
+    colors?: {
+      primary?: string;
+      secondary?: string;
+      accent?: string;
+    };
+    bannerImage?: string;
+  };
   role?: BranchRole;
   permissions?: string[];
   banned_until?: string;

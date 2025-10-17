@@ -15,6 +15,9 @@ router.get('/:branchId/settings', requireAuth, branchesController.getBranchSetti
 // Update branch settings
 router.put('/:branchId/settings', requireAuth, branchesController.updateBranchSettings);
 
+// Update branch theme config (for branch managers/staff)
+router.put('/:branchId/theme-config', requireAuth, branchesController.updateBranchThemeConfig);
+
 // Get branches by chain (for hierarchical user management)
 router.get('/by-chain/:chainId', requireAuth, branchesController.getBranchesByChain);
 

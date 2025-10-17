@@ -351,16 +351,21 @@ export function BranchListTable({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={branch.theme_config?.layout === 'template-1' ? 'default' : 'secondary'}
-                        className="inline-flex items-center gap-1.5"
-                      >
-                        <Palette className="h-3 w-3" />
-                        {branch.theme_config?.layout === 'template-1'
-                          ? (language === 'fr' ? 'Modèle 1' : 'Template 1')
-                          : (language === 'fr' ? 'Défaut' : 'Default')
-                        }
-                      </Badge>
+                      {branch.theme_config?.layout === 'template-1' ? (
+                        <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-orange-50 border border-orange-200 dark:bg-orange-900/20 dark:border-orange-800">
+                          <Palette className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+                          <span className="text-xs font-medium text-orange-700 dark:text-orange-300">
+                            {language === 'fr' ? 'Modèle 1' : 'Template 1'}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gray-50 border border-gray-200 dark:bg-gray-900/20 dark:border-gray-700">
+                          <Palette className="h-3 w-3 text-gray-600 dark:text-gray-400" />
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                            {language === 'fr' ? 'Défaut' : 'Default'}
+                          </span>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

@@ -147,7 +147,7 @@ export default function PlatformAdminsPage() {
                     loading={loading}
                     onAddAdmin={handleAddAdmin}
                     onRemoveAdmin={handleRemoveAdmin}
-                    currentUserId={(user as Record<string, unknown>)?.user_id as string || (user as Record<string, unknown>)?.id as string}
+                    currentUserId={user?.id || ''}
                   />
                 </div>
               </div>

@@ -8,11 +8,11 @@ import { useAuth } from '@/contexts/auth-context';
 import { useAuthApi } from './use-auth';
 import { supabase } from '@/lib/supabase';
 import { decodeJWT, isTokenExpired as checkTokenExpired, isTokenExpiringWithin, extractUserFromToken } from '@/utils/jwt';
-import type { BranchRole, AuthTokenPayload } from '@repo/types/auth';
+import type { BranchRole, AuthTokenPayload, User } from '@repo/types/auth';
 
 interface EnhancedAuthState {
   // Combined user data
-  user: unknown | null;
+  user: User | null;
   session: unknown | null;
   loading: boolean;
   
@@ -191,16 +191,16 @@ export function useEnhancedAuth(): EnhancedAuthState {
   }, [supabaseAuth.session, isTokenExpiring, refreshToken]);
 
   return {
-    // Combined auth state
-    user: supabaseAuth.user || apiAuth.user,
+    // Combined auth state - prioritize apiAuth.user for branch_theme_config
+    user: (apiAuth.user || supabaseAuth.user) as User | null,
     session: supabaseAuth.session,
     loading: supabaseAuth.loading || apiAuth.loginLoading,
-    
+
     // JWT-specific data
     jwtPayload,
     tokenExpiry,
     isTokenExpired,
-    
+
     // Enhanced user context
     userId: userContext.userId,
     email: userContext.email,
@@ -210,7 +210,7 @@ export function useEnhancedAuth(): EnhancedAuthState {
     role: userContext.role,
     permissions: safePermissions,
     isPlatformAdmin: userContext.isPlatformAdmin,
-    
+
     // Permission utilities
     hasPermission,
     hasRole,
@@ -219,7 +219,7 @@ export function useEnhancedAuth(): EnhancedAuthState {
     isBranchManager: hasRole('branch_manager'),
     isBranchStaff: hasRole('branch_staff'),
     isBranchCashier: hasRole('branch_cashier'),
-    
+
     // Token management
     refreshToken,
     isTokenExpiring,

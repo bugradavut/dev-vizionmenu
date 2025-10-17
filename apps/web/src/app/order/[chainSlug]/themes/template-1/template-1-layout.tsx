@@ -216,7 +216,7 @@ export default function Template1Layout(props: ThemeLayoutProps) {
                   <div
                     className="relative w-full overflow-hidden"
                     style={{
-                      height: '65vh',
+                      height: '60vh',
                       background: 'linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url("/food_bg_icon.png")',
                       backgroundSize: 'cover'
                     }}
