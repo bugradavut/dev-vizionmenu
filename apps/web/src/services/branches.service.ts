@@ -27,6 +27,7 @@ export interface Branch {
       secondary?: string;
       accent?: string;
     };
+    bannerImage?: string;
   };
   is_active: boolean;
   created_at: string;
@@ -71,6 +72,7 @@ export interface UpdateBranchData {
       secondary?: string;
       accent?: string;
     };
+    bannerImage?: string;
   };
   is_active?: boolean;
   coordinates?: {

@@ -305,14 +305,90 @@ export async function checkStorageAccess(): Promise<{ accessible: boolean; error
 }
 
 /**
+ * Upload branch banner image
+ * Optimized for hero banners (1920x1080)
+ */
+export async function uploadBranchBanner(
+  file: File,
+  branchId: string,
+  onProgress?: (progress: UploadProgress) => void
+): Promise<UploadResult> {
+  try {
+    // Generate file path (always webp after optimization)
+    const fileName = `banner_${Date.now()}.webp`;
+    const filePath = `branch-banners/${branchId}/${fileName}`;
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('menu-images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true // Replace existing banner
+      });
+
+    if (error) {
+      console.error('Banner upload error:', error);
+      throw new Error(`Upload failed: ${error.message}`);
+    }
+
+    if (!data?.path) {
+      throw new Error('Upload completed but no path returned');
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('menu-images')
+      .getPublicUrl(data.path);
+
+    if (!urlData?.publicUrl) {
+      throw new Error('Failed to generate public URL');
+    }
+
+    // Progress feedback
+    if (onProgress) {
+      onProgress({ loaded: file.size, total: file.size, percentage: 100 });
+    }
+
+    return {
+      url: urlData.publicUrl,
+      path: data.path,
+      size: file.size
+    };
+
+  } catch (error) {
+    console.error('Branch banner upload failed:', error);
+    throw error instanceof Error ? error : new Error('Upload failed');
+  }
+}
+
+/**
+ * Delete branch banner image
+ */
+export async function deleteBranchBanner(path: string): Promise<void> {
+  try {
+    const { error } = await supabase.storage
+      .from('menu-images')
+      .remove([path]);
+
+    if (error) {
+      console.error('Banner deletion failed:', error);
+      throw new Error(`Delete failed: ${error.message}`);
+    }
+  } catch (error) {
+    console.error('Banner deletion error:', error);
+    throw error instanceof Error ? error : new Error('Delete failed');
+  }
+}
+
+/**
  * Format file size for display
  */
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 KB';
-  
+
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }

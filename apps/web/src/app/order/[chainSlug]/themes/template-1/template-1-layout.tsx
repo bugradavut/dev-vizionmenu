@@ -211,30 +211,23 @@ export default function Template1Layout(props: ThemeLayoutProps) {
             {/* Products Area */}
             <div className="flex-1 overflow-hidden">
               <ScrollArea className="h-full">
-                {/* Hero Banner Section - 80% of viewport height */}
-                <div
-                  className="relative w-full overflow-hidden"
-                  style={{
-                    height: '65vh',
-                    background: 'linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url("/food_bg_icon.png")',
-                    backgroundSize: 'cover'
-                  }}
-                >
-                  {branch.theme_config?.bannerImage ? (
+                {/* Hero Banner Section - Only show if banner exists */}
+                {branch.theme_config?.bannerImage && (
+                  <div
+                    className="relative w-full overflow-hidden"
+                    style={{
+                      height: '65vh',
+                      background: 'linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url("/food_bg_icon.png")',
+                      backgroundSize: 'cover'
+                    }}
+                  >
                     <img
                       src={branch.theme_config.bannerImage}
-                      alt="Special Offer Banner"
+                      alt="Menu Banner"
                       className="w-full h-full object-contain"
                     />
-                  ) : (
-                    // Default banner - example image
-                    <img
-                      src="https://img.pikbest.com/templates/20240602/food-burger-restaurant-special-offer-web-banner-layout_10587350.jpg!w700wp"
-                      alt="Special Offer Banner"
-                      className="w-full h-full object-contain"
-                    />
-                  )}
-                </div>
+                  </div>
+                )}
 
                 {/* Category Bar - Sticky with Navigation */}
                 <div className="sticky top-0 z-20 bg-primary shadow-lg">
@@ -467,30 +460,23 @@ export default function Template1Layout(props: ThemeLayoutProps) {
 
           <div className="flex flex-1 min-h-0 relative z-10">
             <div className="flex-1 overflow-y-auto">
-              {/* Hero Banner Section - 30vh for tablet */}
-              <div
-                className="relative w-full overflow-hidden"
-                style={{
-                  height: '35vh',
-                  background: 'linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url("/food_bg_icon.png")',
-                  backgroundSize: 'cover'
-                }}
-              >
-                {branch.theme_config?.bannerImage ? (
+              {/* Hero Banner Section - Only show if banner exists */}
+              {branch.theme_config?.bannerImage && (
+                <div
+                  className="relative w-full overflow-hidden"
+                  style={{
+                    height: '35vh',
+                    background: 'linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url("/food_bg_icon.png")',
+                    backgroundSize: 'cover'
+                  }}
+                >
                   <img
                     src={branch.theme_config.bannerImage}
-                    alt="Special Offer Banner"
+                    alt="Menu Banner"
                     className="w-full h-full object-contain"
                   />
-                ) : (
-                  // Default banner - example image
-                  <img
-                    src="https://img.pikbest.com/templates/20240602/food-burger-restaurant-special-offer-web-banner-layout_10587350.jpg!w700wp"
-                    alt="Special Offer Banner"
-                    className="w-full h-full object-contain"
-                  />
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Category Bar - Sticky */}
               <div className="sticky top-0 z-20 bg-primary shadow-lg">
@@ -666,30 +652,23 @@ export default function Template1Layout(props: ThemeLayoutProps) {
             <OrderHeader branchName={branch.name} branchId={branch.id} onSearch={logic.setSearchQuery} hideTitle={true} />
           </div>
 
-          {/* Hero Banner Section - 30vh for mobile */}
-          <div
-            className="relative w-full overflow-hidden z-10"
-            style={{
-              height: '35vh',
-              background: 'linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url("/food_bg_icon.png")',
-              backgroundSize: 'cover'
-            }}
-          >
-            {branch.theme_config?.bannerImage ? (
+          {/* Hero Banner Section - Only show if banner exists */}
+          {branch.theme_config?.bannerImage && (
+            <div
+              className="relative w-full overflow-hidden z-10"
+              style={{
+                height: '35vh',
+                background: 'linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url("/food_bg_icon.png")',
+                backgroundSize: 'cover'
+              }}
+            >
               <img
                 src={branch.theme_config.bannerImage}
-                alt="Special Offer Banner"
+                alt="Menu Banner"
                 className="w-full h-full object-contain"
               />
-            ) : (
-              // Default banner - example image
-              <img
-                src="https://img.pikbest.com/templates/20240602/food-burger-restaurant-special-offer-web-banner-layout_10587350.jpg!w700wp"
-                alt="Special Offer Banner"
-                className="w-full h-full object-contain"
-              />
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Category Bar - Sticky */}
           <div className="sticky top-0 z-20 bg-primary shadow-lg">

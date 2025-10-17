@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -18,18 +18,42 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  UtensilsCrossed, 
-  ChefHat, 
-  Calendar
+import {
+  UtensilsCrossed,
+  ChefHat,
+  Calendar,
+  Image as ImageIcon
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
-import { CategoriesTab, ItemsTab, PresetsTab } from '@/components/menu'
+import { useEnhancedAuth } from '@/hooks/use-enhanced-auth'
+import { branchesService, type Branch } from '@/services/branches.service'
+import { CategoriesTab, ItemsTab, PresetsTab, BannerTab } from '@/components/menu'
+import { cn } from '@/lib/utils'
 
 export default function MenuManagementPage() {
   const { language } = useLanguage()
   const t = translations[language] || translations.en
+  const { branchId } = useEnhancedAuth()
+  const [currentBranch, setCurrentBranch] = useState<Branch | null>(null)
+
+  // Fetch current branch data
+  useEffect(() => {
+    const fetchBranch = async () => {
+      if (!branchId) return
+      try {
+        const branch = await branchesService.getBranchById(branchId)
+        setCurrentBranch(branch)
+      } catch (error) {
+        console.error('Failed to fetch branch:', error)
+      }
+    }
+    fetchBranch()
+  }, [branchId])
+
+  // Only show Banner tab if branch uses template-1
+  const isTemplate1 = currentBranch?.theme_config?.layout === 'template-1'
+  const tabCount = isTemplate1 ? 4 : 3
 
   return (
     <AuthGuard>
@@ -69,7 +93,7 @@ export default function MenuManagementPage() {
 
             {/* Tabs Container */}
             <Tabs defaultValue="categories" className="w-full">
-              <TabsList className="grid w-max grid-cols-3">
+              <TabsList className={cn("grid w-max", `grid-cols-${tabCount}`)}>
                 <TabsTrigger value="categories" className="flex items-center gap-2">
                   <UtensilsCrossed className="h-4 w-4" />
                   <span className="hidden sm:inline">{t.navigation.categories}</span>
@@ -85,6 +109,13 @@ export default function MenuManagementPage() {
                   <span className="hidden sm:inline">{t.menuManagement.presets}</span>
                   <span className="sm:hidden">{language === 'fr' ? 'Pré.' : 'Pre.'}</span>
                 </TabsTrigger>
+                {isTemplate1 && (
+                  <TabsTrigger value="banner" className="flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4" />
+                    <span className="hidden sm:inline">{language === 'fr' ? 'Bannière' : 'Banner'}</span>
+                    <span className="sm:hidden">{language === 'fr' ? 'Ban.' : 'Ban.'}</span>
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               <TabsContent value="categories" className="mt-6">
@@ -98,6 +129,12 @@ export default function MenuManagementPage() {
               <TabsContent value="presets" className="mt-6">
                 <PresetsTab />
               </TabsContent>
+
+              {isTemplate1 && (
+                <TabsContent value="banner" className="mt-6">
+                  <BannerTab />
+                </TabsContent>
+              )}
             </Tabs>
           </div>
         </SidebarInset>
