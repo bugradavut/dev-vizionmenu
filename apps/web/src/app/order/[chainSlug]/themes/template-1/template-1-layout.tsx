@@ -178,17 +178,17 @@ export default function Template1Layout(props: ThemeLayoutProps) {
           />
           {/* Top Navigation */}
           <div className="flex-shrink-0 bg-white border-b shadow-sm relative z-10">
-            <div className="px-6 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-6">
+            <div className="px-6 py-3 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4 min-w-0 flex-shrink-0">
                 {chain.logo_url && (
-                  <img src={chain.logo_url} alt={chain.name} className="h-12 w-auto object-contain" />
+                  <img src={chain.logo_url} alt={chain.name} className="h-12 w-auto object-contain flex-shrink-0" />
                 )}
-                <div>
-                  <h1 className="text-xl font-bold">{chain.name}</h1>
+                <div className="min-w-0">
+                  <h1 className="text-xl font-bold whitespace-nowrap">{chain.name}</h1>
                   <BranchSwitcher />
                 </div>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-shrink-0">
                 <OrderHeader
                   branchName={branch.name}
                   branchId={branch.id}
@@ -197,7 +197,7 @@ export default function Template1Layout(props: ThemeLayoutProps) {
                   hideTitle={true}
                 />
                 {orderContext.isQROrder && orderContext.tableNumber && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 flex items-center gap-2">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 flex items-center gap-2 whitespace-nowrap">
                     <MapPin className="h-4 w-4 text-blue-600" />
                     <span className="text-sm font-medium text-blue-900">Table {orderContext.tableNumber}</span>
                   </div>
@@ -446,15 +446,23 @@ export default function Template1Layout(props: ThemeLayoutProps) {
             }}
           />
           <div className="flex-shrink-0 bg-white border-b px-4 py-3 relative z-10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {chain.logo_url && <img src={chain.logo_url} alt={chain.name} className="h-10 w-auto" />}
-                <div>
-                  <div className="font-bold">{chain.name}</div>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
+                {chain.logo_url && <img src={chain.logo_url} alt={chain.name} className="h-10 w-auto flex-shrink-0" />}
+                <div className="min-w-0">
+                  <div className="font-bold whitespace-nowrap">{chain.name}</div>
                   <BranchSwitcher />
                 </div>
               </div>
-              <OrderHeader branchName={branch.name} branchId={branch.id} onSearch={logic.setSearchQuery} hideTitle={true} />
+              <div className="flex-shrink-0">
+                <OrderHeader branchName={branch.name} branchId={branch.id} onSearch={logic.setSearchQuery} hideTitle={true} />
+              </div>
+              {orderContext.isQROrder && orderContext.tableNumber && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 flex items-center gap-2 whitespace-nowrap flex-shrink-0">
+                  <MapPin className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-900">Table {orderContext.tableNumber}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -640,14 +648,20 @@ export default function Template1Layout(props: ThemeLayoutProps) {
             }}
           />
           <div className="bg-white border-b p-4 relative z-10">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                {chain.logo_url && <img src={chain.logo_url} alt={chain.name} className="h-8 w-auto" />}
-                <div>
-                  <div className="font-bold text-sm">{chain.name}</div>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+                {chain.logo_url && <img src={chain.logo_url} alt={chain.name} className="h-8 w-auto flex-shrink-0" />}
+                <div className="min-w-0">
+                  <div className="font-bold text-sm whitespace-nowrap">{chain.name}</div>
                   <BranchSwitcher />
                 </div>
               </div>
+              {orderContext.isQROrder && orderContext.tableNumber && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-2 py-1.5 flex items-center gap-1.5 whitespace-nowrap flex-shrink-0">
+                  <MapPin className="h-3.5 w-3.5 text-blue-600" />
+                  <span className="text-xs font-medium text-blue-900">Table {orderContext.tableNumber}</span>
+                </div>
+              )}
             </div>
             <OrderHeader branchName={branch.name} branchId={branch.id} onSearch={logic.setSearchQuery} hideTitle={true} />
           </div>
