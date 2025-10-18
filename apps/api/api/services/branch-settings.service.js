@@ -55,8 +55,8 @@ async function getBranchSettings(branchId) {
         defaultPaymentMethod: settings.paymentSettings?.defaultPaymentMethod || 'online',
       },
       notificationSettings: {
-        orderSound: settings.notificationSettings?.orderSound || 'notification-bell.mp3',
-        waiterCallSound: settings.notificationSettings?.waiterCallSound || 'notification-bell.mp3',
+        orderSound: settings.notificationSettings?.orderSound || 'Notification-1.mp3',
+        waiterCallSound: settings.notificationSettings?.waiterCallSound || 'Notification-1.mp3',
         soundEnabled: settings.notificationSettings?.soundEnabled ?? true,
       },
       restaurantHours: buildRestaurantHours(settings.restaurantHours),
@@ -153,8 +153,8 @@ async function updateBranchSettings(branchId, settingsData) {
         defaultPaymentMethod: paymentSettings?.defaultPaymentMethod || 'online',
       },
       notificationSettings: notificationSettings ? sanitizeNotificationSettings(notificationSettings) : {
-        orderSound: 'notification-bell.mp3',
-        waiterCallSound: 'notification-bell.mp3',
+        orderSound: 'Notification-1.mp3',
+        waiterCallSound: 'Notification-1.mp3',
         soundEnabled: true,
       },
       restaurantHours: restaurantHours ? sanitizeRestaurantHours(restaurantHours) : undefined,
@@ -202,8 +202,8 @@ async function updateBranchSettings(branchId, settingsData) {
         freeDeliveryThreshold: updatedBranch.settings?.freeDeliveryThreshold || 0,
         deliveryZones: updatedBranch.settings?.deliveryZones || { enabled: false, zones: [] },
         notificationSettings: updatedBranch.settings?.notificationSettings || {
-          orderSound: 'notification-bell.mp3',
-          waiterCallSound: 'notification-bell.mp3',
+          orderSound: 'Notification-1.mp3',
+          waiterCallSound: 'Notification-1.mp3',
           soundEnabled: true,
         },
       },
@@ -711,15 +711,15 @@ function validateNotificationSettings(notificationSettings) {
 function sanitizeNotificationSettings(notificationSettings) {
   if (!notificationSettings) {
     return {
-      orderSound: 'notification-bell.mp3',
-      waiterCallSound: 'notification-bell.mp3',
+      orderSound: 'Notification-1.mp3',
+      waiterCallSound: 'Notification-1.mp3',
       soundEnabled: true,
     };
   }
 
   return {
-    orderSound: String(notificationSettings.orderSound || 'notification-bell.mp3'),
-    waiterCallSound: String(notificationSettings.waiterCallSound || 'notification-bell.mp3'),
+    orderSound: String(notificationSettings.orderSound || 'Notification-1.mp3'),
+    waiterCallSound: String(notificationSettings.waiterCallSound || 'Notification-1.mp3'),
     soundEnabled: Boolean(notificationSettings.soundEnabled ?? true),
   };
 }

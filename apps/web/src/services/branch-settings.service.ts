@@ -204,8 +204,8 @@ export const getDefaultSettings = (): BranchSettings => ({
     },
   } as RestaurantHours,
   notificationSettings: {
-    orderSound: 'notification-bell.mp3',
-    waiterCallSound: 'notification-bell.mp3',
+    orderSound: 'Notification-1.mp3',
+    waiterCallSound: 'Notification-1.mp3',
     soundEnabled: true,
   },
   minimumOrderAmount: 0, // Default: no minimum order amount

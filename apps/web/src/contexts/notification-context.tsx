@@ -52,8 +52,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     waiterCallSound: string;
     soundEnabled: boolean;
   }>({
-    orderSound: 'notification-bell.mp3',
-    waiterCallSound: 'notification-bell.mp3',
+    orderSound: 'Notification-1.mp3',
+    waiterCallSound: 'Notification-1.mp3',
     soundEnabled: true
   });
 
@@ -66,8 +66,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         const response = await getBranchSettings(branchId);
         if (response.settings.notificationSettings) {
           setNotificationSettings({
-            orderSound: response.settings.notificationSettings.orderSound || 'notification-bell.mp3',
-            waiterCallSound: response.settings.notificationSettings.waiterCallSound || 'notification-bell.mp3',
+            orderSound: response.settings.notificationSettings.orderSound || 'Notification-1.mp3',
+            waiterCallSound: response.settings.notificationSettings.waiterCallSound || 'Notification-1.mp3',
             soundEnabled: response.settings.notificationSettings.soundEnabled ?? true
           });
         }

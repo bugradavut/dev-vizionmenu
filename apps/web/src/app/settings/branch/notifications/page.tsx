@@ -52,7 +52,7 @@ export default function BranchNotificationSettingsPage() {
       notificationSettings: {
         ...settings.notificationSettings,
         orderSound: sound,
-        waiterCallSound: settings.notificationSettings?.waiterCallSound || 'notification-bell.mp3',
+        waiterCallSound: settings.notificationSettings?.waiterCallSound || 'Notification-1.mp3',
         soundEnabled: settings.notificationSettings?.soundEnabled ?? true
       }
     })
@@ -62,7 +62,7 @@ export default function BranchNotificationSettingsPage() {
     updateSettings({
       notificationSettings: {
         ...settings.notificationSettings,
-        orderSound: settings.notificationSettings?.orderSound || 'notification-bell.mp3',
+        orderSound: settings.notificationSettings?.orderSound || 'Notification-1.mp3',
         waiterCallSound: sound,
         soundEnabled: settings.notificationSettings?.soundEnabled ?? true
       }
@@ -188,13 +188,13 @@ export default function BranchNotificationSettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Order Notification Sound Card */}
                 <OrderNotificationSoundCard
-                  orderSound={settings.notificationSettings?.orderSound || 'notification-bell.mp3'}
+                  orderSound={settings.notificationSettings?.orderSound || 'Notification-1.mp3'}
                   onOrderSoundChange={handleOrderSoundChange}
                 />
 
                 {/* Waiter Call Notification Sound Card */}
                 <WaiterCallNotificationSoundCard
-                  waiterCallSound={settings.notificationSettings?.waiterCallSound || 'notification-bell.mp3'}
+                  waiterCallSound={settings.notificationSettings?.waiterCallSound || 'Notification-1.mp3'}
                   onWaiterCallSoundChange={handleWaiterCallSoundChange}
                 />
               </div>
