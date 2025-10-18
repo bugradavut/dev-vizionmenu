@@ -18,12 +18,14 @@ import { translations } from "@/lib/translations"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { OrderNotificationSoundCard } from "@/components/branch-settings/order-notification-sound-card"
 import { WaiterCallNotificationSoundCard } from "@/components/branch-settings/waiter-call-notification-sound-card"
+import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 
 export default function BranchNotificationSettingsPage() {
   const { branchId } = useEnhancedAuth()
   const { language } = useLanguage()
   const t = translations[language] || translations.en
+  const { toast } = useToast()
 
   const {
     settings,
@@ -38,11 +40,21 @@ export default function BranchNotificationSettingsPage() {
     clearError,
   } = useBranchSettings({ branchId: branchId || undefined })
 
-  // Handle save
+  // Handle save with auto-refresh
   const handleSave = async () => {
     const success = await saveSettings(settings)
     if (success) {
-      console.log('✅ Notification settings saved successfully')
+      // Show toast notification
+      toast({
+        title: language === 'fr' ? 'Changements appliqués' : 'Changes Applied',
+        description: language === 'fr' ? 'Actualisation de la page...' : 'Refreshing page...',
+        duration: 1500,
+      })
+
+      // Refresh page after a short delay to apply notification settings
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
     }
   }
 
