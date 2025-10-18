@@ -548,6 +548,24 @@ export const translations = {
           sat: "S",
           sun: "S"
         }
+      },
+
+      // Notification Sounds
+      notificationSounds: {
+        title: "Notification Sounds",
+        subtitle: "Customize alert sounds for different notification types",
+        orderNotifications: "Order Notifications",
+        orderNotificationsDesc: "Sound played when a new order is received",
+        waiterCallNotifications: "Waiter Call Notifications",
+        waiterCallNotificationsDesc: "Sound played when a waiter is called to a table",
+        selectSound: "Select Sound",
+        testSound: "Test Sound",
+        currentSound: "Current:",
+        soundEnabled: "Sounds enabled",
+        soundDisabled: "Sounds disabled",
+        enabledDesc: "Notification sounds are active for this branch",
+        disabledDesc: "All notification sounds are muted for this branch",
+        saved: "Notification sounds updated successfully"
       }
     },
     
@@ -1812,6 +1830,24 @@ export const translations = {
           sat: "S",
           sun: "D"
         }
+      },
+
+      // Notification Sounds - Canadian French
+      notificationSounds: {
+        title: "Sons de notification",
+        subtitle: "Personnalisez les sons d'alerte pour différents types de notifications",
+        orderNotifications: "Notifications de commande",
+        orderNotificationsDesc: "Son joué lorsqu'une nouvelle commande est reçue",
+        waiterCallNotifications: "Notifications d'appel de serveur",
+        waiterCallNotificationsDesc: "Son joué lorsqu'un serveur est appelé à une table",
+        selectSound: "Sélectionner le son",
+        testSound: "Tester le son",
+        currentSound: "Actuel:",
+        soundEnabled: "Sons activés",
+        soundDisabled: "Sons désactivés",
+        enabledDesc: "Les sons de notification sont actifs pour cette succursale",
+        disabledDesc: "Tous les sons de notification sont en sourdine pour cette succursale",
+        saved: "Sons de notification mis à jour avec succès"
       }
     },
     

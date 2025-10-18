@@ -28,7 +28,7 @@ export interface NotificationSoundReturn {
 export const useNotificationSound = (options: NotificationSoundOptions = {}): NotificationSoundReturn => {
   const {
     soundUrl = '/sounds/notification-bell.mp3',
-    volume: initialVolume = 0.7,
+    volume: initialVolume = 0.8,
     enabled: initialEnabled = true,
     fallbackToBeep = true
   } = options;

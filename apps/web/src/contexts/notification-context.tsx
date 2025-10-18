@@ -10,6 +10,8 @@ import { Toaster } from 'react-hot-toast';
 import { useNotificationSound } from '@/hooks/use-notification-sound';
 import { useLanguage } from '@/contexts/language-context';
 import { translations } from '@/lib/translations';
+import { getBranchSettings } from '@/services/branch-settings.service';
+import { getSoundPath } from '@/lib/notification-sounds';
 import toast from 'react-hot-toast';
 
 interface NotificationContextType {
@@ -43,7 +45,40 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const t = translations[language] || translations.en;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [orders, setOrders] = useState<any[]>([]);
-  
+
+  // Load branch notification settings
+  const [notificationSettings, setNotificationSettings] = useState<{
+    orderSound: string;
+    waiterCallSound: string;
+    soundEnabled: boolean;
+  }>({
+    orderSound: 'notification-bell.mp3',
+    waiterCallSound: 'notification-bell.mp3',
+    soundEnabled: true
+  });
+
+  // Load notification settings from branch settings
+  useEffect(() => {
+    if (!branchId) return;
+
+    const loadNotificationSettings = async () => {
+      try {
+        const response = await getBranchSettings(branchId);
+        if (response.settings.notificationSettings) {
+          setNotificationSettings({
+            orderSound: response.settings.notificationSettings.orderSound || 'notification-bell.mp3',
+            waiterCallSound: response.settings.notificationSettings.waiterCallSound || 'notification-bell.mp3',
+            soundEnabled: response.settings.notificationSettings.soundEnabled ?? true
+          });
+        }
+      } catch (error) {
+        console.debug('Could not load notification settings, using defaults:', error);
+      }
+    };
+
+    loadNotificationSettings();
+  }, [branchId]);
+
 
   // Initialize notification tracking with status + timestamp hybrid system
   const [notificationData, setNotificationData] = useState<{
@@ -101,9 +136,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
   // Audio notification hook for cross-tab notifications
   const { playSound } = useNotificationSound({
-    enabled: true,
+    soundUrl: getSoundPath(notificationSettings.orderSound),
+    enabled: notificationSettings.soundEnabled,
     volume: 0.8,
-    fallbackToBeep: true
+    fallbackToBeep: false
   });
 
   // Format order message with bold formatting (removed - will use JSX instead)
@@ -217,7 +253,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     setTimeout(() => {
       handleDismiss(toastId);
     }, 10000);
-  }, [playSound, t, language]);
+  }, [playSound, t, language, notificationSettings]);
 
   // Cross-tab notification hook
   const { broadcastNewOrder } = useCrossTabNotifications({
@@ -396,14 +432,16 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   // Initialize notification hooks
   const notificationHooks = useOrderNotifications(orders, {
     enabled: true,
-    soundEnabled: true,
-    toastEnabled: true
+    soundEnabled: notificationSettings.soundEnabled,
+    toastEnabled: true,
+    soundUrl: getSoundPath(notificationSettings.orderSound)
   });
 
   // Initialize waiter call notifications
   useWaiterCallNotifications({
     enabled: true,
-    soundEnabled: true
+    soundEnabled: notificationSettings.soundEnabled,
+    soundUrl: getSoundPath(notificationSettings.waiterCallSound)
   });
 
 

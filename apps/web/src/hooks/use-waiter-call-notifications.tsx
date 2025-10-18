@@ -12,6 +12,7 @@ export interface WaiterCallNotificationOptions {
   enabled?: boolean
   soundEnabled?: boolean
   pollingInterval?: number
+  soundUrl?: string
 }
 
 /**
@@ -24,7 +25,8 @@ export const useWaiterCallNotifications = (
   const {
     enabled = true,
     soundEnabled = true,
-    pollingInterval = 15000 // 15 seconds - same as order notifications
+    pollingInterval = 15000, // 15 seconds - same as order notifications
+    soundUrl
   } = options
 
   const { branchId, user } = useEnhancedAuth()
@@ -32,9 +34,10 @@ export const useWaiterCallNotifications = (
 
   // Audio notification hook
   const { playSound } = useNotificationSound({
+    soundUrl,
     enabled: soundEnabled,
     volume: 1.0,
-    fallbackToBeep: true
+    fallbackToBeep: false  // Use actual sound file from settings
   })
 
   // Independent localStorage-based tracking (no context dependency)

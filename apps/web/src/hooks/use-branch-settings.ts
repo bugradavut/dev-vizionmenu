@@ -122,13 +122,17 @@ export const useBranchSettings = (options: UseBranchSettingsOptions = {}): UseBr
       ...current,
       ...updates,
       // Ensure timingSettings are properly merged
-      timingSettings: updates.timingSettings 
+      timingSettings: updates.timingSettings
         ? { ...current.timingSettings, ...updates.timingSettings }
         : current.timingSettings,
       // Ensure paymentSettings are properly merged
       paymentSettings: updates.paymentSettings
         ? { ...current.paymentSettings, ...updates.paymentSettings }
         : current.paymentSettings,
+      // Ensure notificationSettings are properly merged
+      notificationSettings: updates.notificationSettings
+        ? { ...current.notificationSettings, ...updates.notificationSettings }
+        : current.notificationSettings,
       // Ensure restaurantHours are properly merged
       restaurantHours: updates.restaurantHours
         ? {

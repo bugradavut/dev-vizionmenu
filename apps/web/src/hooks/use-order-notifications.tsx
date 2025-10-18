@@ -15,6 +15,7 @@ export interface OrderNotificationOptions {
   toastEnabled?: boolean;
   maxNotifications?: number;
   notificationTimeout?: number;
+  soundUrl?: string;
 }
 
 export interface OrderNotificationReturn {
@@ -40,7 +41,8 @@ export const useOrderNotifications = (
     soundEnabled: initialSoundEnabled = true,
     toastEnabled: initialToastEnabled = true,
     maxNotifications = 5,
-    notificationTimeout = 5000
+    notificationTimeout = 5000,
+    soundUrl
   } = options;
 
   // Language context for translations
@@ -51,7 +53,7 @@ export const useOrderNotifications = (
   const isEnabledRef = useRef(initialEnabled);
   const isSoundEnabledRef = useRef(initialSoundEnabled);
   const isToastEnabledRef = useRef(initialToastEnabled);
-  
+
   // Track previous orders with timestamp-based detection
   const previousOrdersRef = useRef<Set<string>>(new Set());
   const notificationCountRef = useRef(0);
@@ -61,9 +63,10 @@ export const useOrderNotifications = (
 
   // Audio notification hook
   const { playSound, testSound } = useNotificationSound({
+    soundUrl,
     enabled: isSoundEnabledRef.current,
     volume: 0.8,
-    fallbackToBeep: true
+    fallbackToBeep: false  // Use actual sound file from settings
   });
 
   // Format order message with bold formatting (removed - will use JSX instead)

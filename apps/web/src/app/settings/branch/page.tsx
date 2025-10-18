@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CheckCircle, AlertCircle, RefreshCw, ArrowRight, Settings2, Blocks } from "lucide-react"
+import { CheckCircle, AlertCircle, RefreshCw, ArrowRight, Settings2, Blocks, Bell } from "lucide-react"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
 import { useLanguage } from "@/contexts/language-context"
@@ -615,10 +615,10 @@ export default function BranchSettingsPage() {
   const handleDeliveryDelayAdjustment = (increment: number) => {
     const currentValue = Number(deliveryDelayInput) || 0
     const newValue = Math.max(0, currentValue + increment)
-    
+
     // Update local state first
     setDeliveryDelayInput(newValue.toString())
-    
+
     // Then update settings
     updateSettings({
       timingSettings: {
@@ -628,6 +628,7 @@ export default function BranchSettingsPage() {
       }
     })
   }
+
 
   // Loading state
   if (loading) {
@@ -841,8 +842,52 @@ export default function BranchSettingsPage() {
                   />
                 </div>
 
-                {/* Integrations Navigation Card */}
+                {/* Third Row: Notifications & Integrations Cards */}
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                  {/* Notifications Navigation Card */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-50 rounded-lg">
+                          <Bell className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base">
+                            {language === 'fr' ? 'Notifications' : 'Notifications'}
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {language === 'fr' ? 'Sons et préférences' : 'Sounds & preferences'}
+                          </p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
+                          <span>{language === 'fr' ? 'Sons de notification' : 'Notification sounds'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
+                          <span>{language === 'fr' ? 'Sons personnalisés par type' : 'Custom sounds per alert type'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
+                          <span>{language === 'fr' ? 'Préférences d\'alerte' : 'Alert preferences'}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 cursor-pointer group/button" onClick={() => router.push('/settings/branch/notifications')}>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg group-hover/button:border-purple-200 group-hover/button:bg-purple-50 transition-colors">
+                          <span className="text-sm text-gray-600 group-hover/button:text-purple-600 transition-colors">
+                            {language === 'fr' ? 'Cliquez pour configurer' : 'Click to configure'}
+                          </span>
+                          <ArrowRight className="h-4 w-4 text-gray-400 group-hover/button:text-purple-600 group-hover/button:translate-x-1 transition-all" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Integrations Navigation Card */}
                   <Card>
                     <CardHeader className="pb-3">
                       <div className="flex items-center gap-3">

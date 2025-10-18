@@ -34,6 +34,12 @@ export interface DeliveryZonesData {
   zones: DeliveryZone[];
 }
 
+export interface NotificationSettings {
+  orderSound: string;
+  waiterCallSound: string;
+  soundEnabled: boolean;
+}
+
 // Legacy interface for backward compatibility
 export interface LegacyRestaurantHours {
   isOpen: boolean;
@@ -48,6 +54,7 @@ export interface BranchSettings {
   orderFlow: 'standard' | 'simplified';
   timingSettings: TimingSettings;
   paymentSettings: PaymentSettings;
+  notificationSettings?: NotificationSettings;
   restaurantHours: RestaurantHours;
   minimumOrderAmount?: number;
   deliveryFee?: number;
@@ -128,6 +135,7 @@ export const updateBranchSettings = async (
       orderFlow: settings.orderFlow,
       timingSettings: settings.timingSettings,
       paymentSettings: settings.paymentSettings,
+      notificationSettings: settings.notificationSettings,
       restaurantHours: settings.restaurantHours,
       minimumOrderAmount: settings.minimumOrderAmount,
       deliveryFee: settings.deliveryFee,
@@ -195,6 +203,11 @@ export const getDefaultSettings = (): BranchSettings => ({
       closeTime: '22:00',
     },
   } as RestaurantHours,
+  notificationSettings: {
+    orderSound: 'notification-bell.mp3',
+    waiterCallSound: 'notification-bell.mp3',
+    soundEnabled: true,
+  },
   minimumOrderAmount: 0, // Default: no minimum order amount
   deliveryFee: 0, // Default: no delivery fee
   freeDeliveryThreshold: 0, // Default: no free delivery threshold

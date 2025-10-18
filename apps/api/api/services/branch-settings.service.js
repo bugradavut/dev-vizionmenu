@@ -54,6 +54,11 @@ async function getBranchSettings(branchId) {
         allowCounterPayment: settings.paymentSettings?.allowCounterPayment ?? false,
         defaultPaymentMethod: settings.paymentSettings?.defaultPaymentMethod || 'online',
       },
+      notificationSettings: {
+        orderSound: settings.notificationSettings?.orderSound || 'notification-bell.mp3',
+        waiterCallSound: settings.notificationSettings?.waiterCallSound || 'notification-bell.mp3',
+        soundEnabled: settings.notificationSettings?.soundEnabled ?? true,
+      },
       restaurantHours: buildRestaurantHours(settings.restaurantHours),
       minimumOrderAmount: settings.minimumOrderAmount || 0,
       deliveryFee: settings.deliveryFee || 0,
@@ -94,6 +99,7 @@ async function updateBranchSettings(branchId, settingsData) {
       orderFlow,
       timingSettings,
       paymentSettings,
+      notificationSettings,
       restaurantHours,
       minimumOrderAmount = 0,
       deliveryFee = 0,
@@ -126,6 +132,11 @@ async function updateBranchSettings(branchId, settingsData) {
       validateDeliveryZones(deliveryZones);
     }
 
+    // Validate notification settings if provided
+    if (notificationSettings) {
+      validateNotificationSettings(notificationSettings);
+    }
+
     // Prepare complete settings JSON (including all settings)
     const settingsJson = {
       orderFlow: orderFlow || 'standard',
@@ -140,6 +151,11 @@ async function updateBranchSettings(branchId, settingsData) {
         allowOnlinePayment: paymentSettings?.allowOnlinePayment ?? true,
         allowCounterPayment: paymentSettings?.allowCounterPayment ?? false,
         defaultPaymentMethod: paymentSettings?.defaultPaymentMethod || 'online',
+      },
+      notificationSettings: notificationSettings ? sanitizeNotificationSettings(notificationSettings) : {
+        orderSound: 'notification-bell.mp3',
+        waiterCallSound: 'notification-bell.mp3',
+        soundEnabled: true,
       },
       restaurantHours: restaurantHours ? sanitizeRestaurantHours(restaurantHours) : undefined,
       deliveryZones: deliveryZones ? sanitizeDeliveryZones(deliveryZones) : undefined,
@@ -185,6 +201,11 @@ async function updateBranchSettings(branchId, settingsData) {
         deliveryFee: updatedBranch.settings?.deliveryFee || 0,
         freeDeliveryThreshold: updatedBranch.settings?.freeDeliveryThreshold || 0,
         deliveryZones: updatedBranch.settings?.deliveryZones || { enabled: false, zones: [] },
+        notificationSettings: updatedBranch.settings?.notificationSettings || {
+          orderSound: 'notification-bell.mp3',
+          waiterCallSound: 'notification-bell.mp3',
+          soundEnabled: true,
+        },
       },
     };
   } catch (error) {
@@ -639,6 +660,68 @@ function sanitizeDeliveryZones(deliveryZones) {
   }
 
   return sanitized;
+}
+
+/**
+ * Validate notification settings structure
+ */
+function validateNotificationSettings(notificationSettings) {
+  if (!notificationSettings || typeof notificationSettings !== 'object') {
+    throw new Error('Notification settings must be an object');
+  }
+
+  const { orderSound, waiterCallSound, soundEnabled } = notificationSettings;
+
+  // Validate sound file names
+  if (orderSound && typeof orderSound !== 'string') {
+    throw new Error('Order sound must be a string');
+  }
+
+  if (waiterCallSound && typeof waiterCallSound !== 'string') {
+    throw new Error('Waiter call sound must be a string');
+  }
+
+  // Validate sound enabled flag
+  if (soundEnabled !== undefined && typeof soundEnabled !== 'boolean') {
+    throw new Error('Sound enabled flag must be a boolean');
+  }
+
+  // Validate sound file extensions (mp3 or wav only)
+  const validExtensions = ['.mp3', '.wav'];
+  if (orderSound) {
+    const hasValidExt = validExtensions.some(ext => orderSound.toLowerCase().endsWith(ext));
+    if (!hasValidExt) {
+      throw new Error('Order sound must be an MP3 or WAV file');
+    }
+  }
+
+  if (waiterCallSound) {
+    const hasValidExt = validExtensions.some(ext => waiterCallSound.toLowerCase().endsWith(ext));
+    if (!hasValidExt) {
+      throw new Error('Waiter call sound must be an MP3 or WAV file');
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Sanitize notification settings for database storage
+ */
+function sanitizeNotificationSettings(notificationSettings) {
+  if (!notificationSettings) {
+    return {
+      orderSound: 'notification-bell.mp3',
+      waiterCallSound: 'notification-bell.mp3',
+      soundEnabled: true,
+    };
+  }
+
+  return {
+    orderSound: String(notificationSettings.orderSound || 'notification-bell.mp3'),
+    waiterCallSound: String(notificationSettings.waiterCallSound || 'notification-bell.mp3'),
+    soundEnabled: Boolean(notificationSettings.soundEnabled ?? true),
+  };
 }
 
 module.exports = {
