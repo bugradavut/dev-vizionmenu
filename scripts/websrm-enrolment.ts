@@ -1,12 +1,12 @@
 /**
- * WEB-SRM ESSAI Enrolment
+ * WEB-SRM Enrolment (DEV/ESSAI)
  *
- * Purpose: Enrol device with Revenu Québec ESSAI environment
+ * Purpose: Enrol device with Revenu Québec (DEV or ESSAI environment)
  *
  * Process:
  *   1. Generate ECDSA P-256 keypair
  *   2. Build CSR (Certificate Signing Request)
- *   3. POST to /certificates/enrolment with AUTH_CODE
+ *   3. POST to /certificates/enrolment
  *   4. Receive certificate + real IDAPPRL
  *   5. Encrypt PEM keys (AES-256-GCM)
  *   6. Update profile with real credentials
@@ -20,6 +20,8 @@ import { generateKeyPairSync } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { Crypto } from '@peculiar/webcrypto';
 import * as x509 from '@peculiar/x509';
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 // Setup WebCrypto polyfill for Node.js
 const crypto = new Crypto();
@@ -43,35 +45,69 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-console.log('🚀 WEB-SRM ESSAI Enrolment\n');
+// Determine environment (DEV or ESSAI)
+const WEBSRM_ENV = process.env.WEBSRM_ENV || 'DEV';
 
-// FO-Framework Base URLs per SW-77-V
+console.log(`🚀 WEB-SRM ${WEBSRM_ENV} Enrolment\n`);
+
+// FO-Framework Base URLs
 const FO_FRAMEWORK_URLS = {
   DEV: 'https://cnfr.api.rq-fo.ca',
-  ENROLMENT: 'https://certificats.cnfr.api.rq-fo.ca/enrolement2', // SW-77-V spec
+  DEV_ENROLMENT: 'https://certificats.cnfr.api.rq-fo.ca/enrolement', // DEV: no "2" suffix
+  ESSAI_ENROLMENT: 'https://certificats.cnfr.api.rq-fo.ca/enrolement2', // ESSAI: with "2"
 };
 
-// ESSAI Configuration
-const ESSAI_CONFIG = {
-  authCode: process.env.WEBSRM_ESSAI_AUTH_CODE || 'W7V7-K8W9',
+// Build configuration based on environment
+interface EnrolmentConfig {
+  env: 'DEV' | 'ESSAI';
+  authCode: string;
+  partnerId: string;
+  certCode: string;
+  softwareId: string;
+  softwareVersion: string;
+  versi: string;
+  deviceId: string;
+  activitySector?: string; // RBC for DEV, FOB for ESSAI
+  enrolmentUrl: string;
+  baseUrl: string;
+}
+
+const CONFIG: EnrolmentConfig = WEBSRM_ENV === 'DEV' ? {
+  env: 'DEV',
+  authCode: process.env.WEBSRM_DEV_AUTH_CODE || 'X4T7-N595',
+  partnerId: process.env.WEBSRM_DEV_PARTNER_ID || '0000000000001FF2',
+  certCode: process.env.WEBSRM_DEV_CERT_CODE || 'FOB201999999',
+  softwareId: process.env.WEBSRM_DEV_IDSEV || '0000000000003973',
+  softwareVersion: process.env.WEBSRM_DEV_IDVERSI || '00000000000045D6',
+  versi: process.env.WEBSRM_DEV_VERSI || '0.1.0',
+  deviceId: process.env.WEBSRM_DEV_DEVICE_ID || '0000-0000-0000',
+  activitySector: process.env.WEBSRM_DEV_ACTIVITY_SECTOR || 'RBC',
+  enrolmentUrl: FO_FRAMEWORK_URLS.DEV_ENROLMENT,
+  baseUrl: FO_FRAMEWORK_URLS.DEV,
+} : {
+  env: 'ESSAI',
+  authCode: process.env.WEBSRM_ESSAI_AUTH_CODE || 'X4T7-N595',
   partnerId: process.env.WEBSRM_ESSAI_PARTNER_ID || '0000000000001FF2',
   certCode: process.env.WEBSRM_ESSAI_CERT_CODE || 'FOB201999999',
   softwareId: process.env.WEBSRM_ESSAI_IDSEV || '0000000000003973',
   softwareVersion: process.env.WEBSRM_ESSAI_IDVERSI || '00000000000045D6',
   versi: process.env.WEBSRM_ESSAI_VERSI || '0.1.0',
-  deviceId: process.env.WEBSRM_ESSAI_DEVICE_ID || '0000-0000-0000', // Temporary
-  enrolmentUrl: FO_FRAMEWORK_URLS.ENROLMENT,
+  deviceId: process.env.WEBSRM_ESSAI_DEVICE_ID || '0000-0000-0000',
+  activitySector: 'FOB',
+  enrolmentUrl: FO_FRAMEWORK_URLS.ESSAI_ENROLMENT,
   baseUrl: FO_FRAMEWORK_URLS.DEV,
 };
 
 console.log('📋 Configuration:');
-console.log(`  AUTH_CODE: ${ESSAI_CONFIG.authCode}`);
-console.log(`  IDPARTN: ${ESSAI_CONFIG.partnerId}`);
-console.log(`  CODCERTIF: ${ESSAI_CONFIG.certCode}`);
-console.log(`  IDSEV: ${ESSAI_CONFIG.softwareId}`);
-console.log(`  IDVERSI: ${ESSAI_CONFIG.softwareVersion}`);
-console.log(`  VERSI: ${ESSAI_CONFIG.versi}`);
-console.log(`  Temporary IDAPPRL: ${ESSAI_CONFIG.deviceId}\n`);
+console.log(`  ENV: ${CONFIG.env}`);
+console.log(`  Activity Sector: ${CONFIG.activitySector}`);
+console.log(`  AUTH_CODE: ${CONFIG.authCode}`);
+console.log(`  IDPARTN: ${CONFIG.partnerId}`);
+console.log(`  CODCERTIF: ${CONFIG.certCode}`);
+console.log(`  IDSEV: ${CONFIG.softwareId}`);
+console.log(`  IDVERSI: ${CONFIG.softwareVersion}`);
+console.log(`  VERSI: ${CONFIG.versi}`);
+console.log(`  Temporary IDAPPRL: ${CONFIG.deviceId}\n`);
 
 /**
  * Generate ECDSA P-256 keypair
@@ -106,31 +142,56 @@ async function generateKeyPairP256(): Promise<{ privateKeyPem: string; publicKey
 }
 
 /**
- * Build X.509 CSR (Certificate Signing Request) per SW-77-V
+ * Build X.509 CSR (Certificate Signing Request) per RQ specs
  *
  * Requirements:
  * - ECDSA P-256 + SHA-256
- * - Key Usage: digitalSignature + nonRepudiation
+ * - Key Usage: digitalSignature + nonRepudiation (critical)
  * - Extended Key Usage: 1.3.6.1.5.5.7.3.8 (Customer authentication)
- * - Subject per SW-77-V template:
- *   C="CA", S="QC", L=-05:00, SN="Certificat du serveur", O="FOB-...", CN="3601837200"
+ * - Subject format varies by environment:
+ *   DEV (RBC): C=CA, ST=QC, L=-05:00, O=RBC-{AUTH_CODE}, CN={NEQ}, OU={NEQ}TQ0001, GN=ER0001
+ *   ESSAI (FOB): C=CA, ST=QC, L=-05:00, O=FOB-{CODCERTIF}, CN={IDPARTN}, SN=Certificat du serveur
  */
 async function buildCSR(
   cryptoKey: CryptoKeyPair,
   subject: {
     commonName: string;
     organization: string;
-    serialNumber: string;
+    organizationalUnit?: string;
+    givenName?: string;
+    serialNumber?: string;
     country: string;
     state: string;
     locality: string;
   }
 ): Promise<string> {
-  console.log('📝 Building X.509 CSR per SW-77-V...');
+  console.log('📝 Building X.509 CSR per RQ specifications...');
 
-  // Build DN string per SW-77-V template
-  // Note: Using OID 2.5.4.5 for serialNumber since @peculiar/x509 doesn't support it by name
-  const dn = `CN=${subject.commonName}, O=${subject.organization}, 2.5.4.5=${subject.serialNumber}, C=${subject.country}, ST=${subject.state}, L=${subject.locality}`;
+  // Build DN string per RQ template
+  // Order: C, ST, L, SN, O, OU, GN, CN
+  let dnParts: string[] = [];
+  dnParts.push(`C=${subject.country}`);
+  dnParts.push(`ST=${subject.state}`);
+  dnParts.push(`L=${subject.locality}`);
+
+  // SN (serialNumber)
+  if (subject.serialNumber) {
+    dnParts.push(`2.5.4.5=${subject.serialNumber}`); // SN OID
+  }
+
+  dnParts.push(`O=${subject.organization}`);
+
+  // OU and GN BEFORE CN (per RQ template)
+  if (subject.organizationalUnit) {
+    dnParts.push(`OU=${subject.organizationalUnit}`);
+  }
+  if (subject.givenName) {
+    dnParts.push(`2.5.4.42=${subject.givenName}`); // GN OID
+  }
+
+  dnParts.push(`CN=${subject.commonName}`);
+
+  const dn = dnParts.join(', ');
 
   // Create X.509 CSR using @peculiar/x509
   const csr = await x509.Pkcs10CertificateRequestGenerator.create({
@@ -141,7 +202,7 @@ async function buildCSR(
       hash: 'SHA-256',
     },
     extensions: [
-      // Key Usage: digitalSignature + nonRepudiation per SW-77-V
+      // Key Usage: digitalSignature + nonRepudiation (critical)
       new x509.KeyUsagesExtension(
         x509.KeyUsageFlags.digitalSignature | x509.KeyUsageFlags.nonRepudiation,
         true // critical
@@ -156,12 +217,9 @@ async function buildCSR(
   // Export to PEM format
   const csrPem = csr.toString('pem');
 
-  console.log(`✅ X.509 CSR generated per SW-77-V`);
-  console.log(`   CN: ${subject.commonName}`);
-  console.log(`   O: ${subject.organization}`);
-  console.log(`   SN: ${subject.serialNumber}`);
-  console.log(`   C: ${subject.country}, ST: ${subject.state}, L: ${subject.locality}`);
-  console.log(`   Key Usage: digitalSignature + nonRepudiation`);
+  console.log(`✅ X.509 CSR generated`);
+  console.log(`   Subject: ${dn}`);
+  console.log(`   Key Usage: digitalSignature + nonRepudiation (critical)`);
   console.log(`   EKU: Customer authentication (1.3.6.1.5.5.7.3.8)`);
   console.log(`   Format: PKCS#10 PEM (${csrPem.length} bytes)\n`);
 
@@ -171,7 +229,7 @@ async function buildCSR(
 /**
  * Call Revenu Québec enrolment endpoint
  */
-async function callEnrolment(config: typeof ESSAI_CONFIG, csr: string): Promise<{
+async function callEnrolment(config: EnrolmentConfig, csr: string): Promise<{
   success: boolean;
   deviceId?: string;
   certificatePem?: string;
@@ -181,29 +239,38 @@ async function callEnrolment(config: typeof ESSAI_CONFIG, csr: string): Promise<
   console.log('🌐 Calling Revenu Québec enrolment endpoint...');
   console.log(`   URL: ${config.enrolmentUrl}\n`);
 
-  // Headers per SW-77-V(2025-02) - Server mode (500.001)
-  // NOTE: IDAPPRL NOT included for server mode enrolment
-  const headers = {
+  // Headers - different for DEV vs ESSAI
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'ENVIRN': 'ESSAI',
-    'CASESSAI': '500.001', // Server mode test case
-    'APPRLINIT': 'SRV', // Server mode (not SEV, not POS)
+    'ENVIRN': config.env,
+    'APPRLINIT': 'SRV', // Server mode for both DEV and ESSAI
     'IDSEV': config.softwareId,
     'IDVERSI': config.softwareVersion,
     'CODCERTIF': config.certCode,
     'IDPARTN': config.partnerId,
     'VERSI': config.versi,
-    'VERSIPARN': '1.0.0',
+    'VERSIPARN': config.env === 'DEV' ? '0' : '1.0.0', // DEV: 0, ESSAI: 1.0.0
   };
 
-  // Body per SW-77: Full PEM CSR with headers + AUTH_CODE
-  const body = {
+  // CASESSAI for both DEV and ESSAI
+  if (config.env === 'DEV') {
+    headers['CASESSAI'] = '000.000'; // DEV: general test case
+  } else {
+    headers['CASESSAI'] = '500.001'; // ESSAI: server mode test case
+  }
+
+  // Body - different for DEV vs ESSAI
+  const body: any = {
     reqCertif: {
       modif: 'AJO',
-      csr: csr, // Full PEM format (includes BEGIN/END headers and \n)
+      csr: csr, // Full PEM format
     },
-    codAutori: config.authCode, // AUTH_CODE (W7V7-K8W9)
   };
+
+  // codAutori only for ESSAI (not DEV)
+  if (config.env === 'ESSAI') {
+    body.codAutori = config.authCode;
+  }
 
   // Log request details
   console.log('📤 Request Details:');
@@ -213,6 +280,33 @@ async function callEnrolment(config: typeof ESSAI_CONFIG, csr: string): Promise<
   });
   console.log('   Body:');
   console.log(`     ${JSON.stringify(body, null, 2).split('\n').join('\n     ')}\n`);
+
+  // Write to log file
+  const logDir = join(process.cwd(), 'tmp', 'logs');
+  try {
+    mkdirSync(logDir, { recursive: true });
+  } catch (e) {
+    // Ignore if exists
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const logFile = join(logDir, `enrolment-${config.env.toLowerCase()}-${timestamp}.log`);
+
+  const logContent = [
+    `=== WEB-SRM ${config.env} Enrolment Request ===`,
+    `Timestamp: ${new Date().toISOString()}`,
+    ``,
+    `POST ${config.enrolmentUrl}`,
+    ``,
+    `Headers:`,
+    ...Object.entries(headers).map(([k, v]) => `  ${k}: ${v}`),
+    ``,
+    `Body (${JSON.stringify(body).length} bytes):`,
+    JSON.stringify(body, null, 2),
+    ``,
+    `---`,
+    ``,
+  ].join('\n');
 
   try {
     const controller = new AbortController();
@@ -229,6 +323,15 @@ async function callEnrolment(config: typeof ESSAI_CONFIG, csr: string): Promise<
 
     console.log(`📥 Response: ${response.status} ${response.statusText}\n`);
 
+    // Log response to file
+    let responseLog = [
+      `Response: ${response.status} ${response.statusText}`,
+      ``,
+      `Headers:`,
+      ...Array.from(response.headers.entries()).map(([k, v]) => `  ${k}: ${v}`),
+      ``,
+    ].join('\n');
+
     // Try to parse as JSON first
     const contentType = response.headers.get('content-type');
     let data: any;
@@ -239,6 +342,7 @@ async function callEnrolment(config: typeof ESSAI_CONFIG, csr: string): Promise<
 
       if (contentType?.includes('application/json')) {
         data = JSON.parse(responseText);
+        responseLog += `Body:\n${JSON.stringify(data, null, 2)}\n`;
       } else {
         // HTML or other non-JSON response
         console.log('⚠️  Non-JSON response received:');
@@ -246,10 +350,16 @@ async function callEnrolment(config: typeof ESSAI_CONFIG, csr: string): Promise<
         console.log('   Response Body (first 500 chars):');
         console.log(`   ${responseText.substring(0, 500)}\n`);
 
+        responseLog += `Body (first 500 chars):\n${responseText.substring(0, 500)}\n`;
+
+        // Write log and return
+        writeFileSync(logFile, logContent + responseLog);
+        console.log(`📝 Log written to: ${logFile}\n`);
+
         // Diagnostic for 403
         if (response.status === 403) {
           console.log('🔍 Diagnosis: HTTP 403 Forbidden');
-          console.log('   ✅ Request format is correct (per SW-73)');
+          console.log('   ✅ Request format is correct');
           console.log('   ❌ Access denied at network/gateway level');
           console.log('   Possible causes:');
           console.log('   - IP address not in RQ allowlist');
@@ -264,11 +374,20 @@ async function callEnrolment(config: typeof ESSAI_CONFIG, csr: string): Promise<
           error: `Non-JSON response (${response.status}): ${response.statusText}`,
         };
       }
+
+      // Write log with successful parse
+      writeFileSync(logFile, logContent + responseLog);
+      console.log(`📝 Log written to: ${logFile}\n`);
+
     } catch (parseError: any) {
       console.error('❌ Failed to parse response:');
       console.error(`   Error: ${parseError.message}`);
       console.error(`   Raw response (first 500 chars):`);
       console.error(`   ${responseText.substring(0, 500)}\n`);
+
+      responseLog += `Parse Error: ${parseError.message}\n`;
+      responseLog += `Raw Body (first 500 chars):\n${responseText.substring(0, 500)}\n`;
+      writeFileSync(logFile, logContent + responseLog);
 
       return {
         success: false,
@@ -350,19 +469,22 @@ function encryptPEM(pem: string): string {
  * Update profile with real credentials
  */
 async function updateProfile(
+  config: EnrolmentConfig,
   deviceId: string,
   privateKeyPemEncrypted: string,
   certPemEncrypted: string,
   certPsiPemEncrypted?: string
 ): Promise<void> {
-  console.log('💾 Updating ESSAI profile in database...');
+  console.log(`💾 Updating ${config.env} profile in database...`);
+
+  const tenantId = config.env === 'DEV' ? 'dev-tenant' : 'essai-tenant';
 
   // Check if profile exists
   const { data: existingProfile } = await supabase
     .from('websrm_profiles')
     .select('*')
-    .eq('env', 'ESSAI')
-    .eq('tenant_id', 'essai-tenant')
+    .eq('env', config.env)
+    .eq('tenant_id', tenantId)
     .single();
 
   const updateData: any = {
@@ -392,16 +514,16 @@ async function updateProfile(
   } else {
     // Create new profile
     const insertData = {
-      tenant_id: 'essai-tenant',
-      env: 'ESSAI',
+      tenant_id: tenantId,
+      env: config.env,
       device_id: deviceId,
-      partner_id: ESSAI_CONFIG.partnerId,
-      cert_code: ESSAI_CONFIG.certCode,
-      software_id: ESSAI_CONFIG.softwareId,
-      software_version: ESSAI_CONFIG.softwareVersion,
-      versi: ESSAI_CONFIG.versi,
-      versi_parn: '1.0.0',
-      cas_essai: '500.001',
+      partner_id: config.partnerId,
+      cert_code: config.certCode,
+      software_id: config.softwareId,
+      software_version: config.softwareVersion,
+      versi: config.versi,
+      versi_parn: config.env === 'DEV' ? '0' : '1.0.0',
+      cas_essai: config.env === 'ESSAI' ? '500.001' : null,
       private_key_pem_encrypted: privateKeyPemEncrypted,
       cert_pem_encrypted: certPemEncrypted,
       cert_psi_pem_encrypted: certPsiPemEncrypted || null,
@@ -434,20 +556,39 @@ async function runEnrolment() {
     // Step 1: Generate keypair
     const { privateKeyPem, publicKeyPem, cryptoKey } = await generateKeyPairP256();
 
-    // Step 2: Build X.509 CSR per SW-77-V template
-    // SW-77-V example: C="CA", S="QC", L=-05:00, SN="Certificat du serveur",
-    //                  O="FOB-...", CN="3601837200"
-    const csr = await buildCSR(cryptoKey, {
-      commonName: ESSAI_CONFIG.partnerId, // CN: Use IDPARTN (example shows numeric ID)
-      organization: `FOB-${ESSAI_CONFIG.certCode}`, // O: FOB-{CODCERTIF}
-      serialNumber: 'Certificat du serveur', // SN: Per SW-77-V template
-      country: 'CA', // C
-      state: 'QC', // ST (or S in SW-77-V notation)
-      locality: '-05:00', // L: Timezone (EST)
-    });
+    // Step 2: Build X.509 CSR per RQ specifications
+    // DEV (RBC): C=CA, ST=QC, L=-05:00, O=RBC-{AUTH_CODE}, CN={NEQ}, OU={NEQ}TQ0001, GN=ER0001
+    // ESSAI (FOB): C=CA, ST=QC, L=-05:00, O=FOB-{CODCERTIF}, CN={IDPARTN}, SN=Certificat du serveur
+    const organization = CONFIG.env === 'DEV'
+      ? `${CONFIG.activitySector}-${CONFIG.authCode}` // RBC-X4T7-N595
+      : `${CONFIG.activitySector}-${CONFIG.certCode}`; // FOB-FOB201999999
+
+    // CSR Subject: Match RQ template exactly
+    // DEV (RBC - Michel Untel): C=CA, ST=QC, L=-05:00, O=RBC-D8T8-W8W8, OU=5678912340TQ0001, GN=ER0001, CN=5678912340
+    // NO SN for DEV!
+    // ESSAI: C=CA, ST=QC, L=-05:00, SN=Certificat du serveur, O=FOB-FOB201999999, CN=IDPARTN (no OU/GN)
+    const csrSubject = CONFIG.env === 'DEV' ? {
+      commonName: process.env.WEBSRM_DEV_CSR_CN || '5678912340',
+      organizationalUnit: process.env.WEBSRM_DEV_CSR_OU || '5678912340TQ0001',
+      givenName: process.env.WEBSRM_DEV_CSR_GN || 'ER0001',
+      organization,
+      // NO serialNumber for DEV (RBC - Michel Untel)
+      country: 'CA',
+      state: 'QC',
+      locality: '-05:00',
+    } : {
+      commonName: CONFIG.partnerId,
+      organization,
+      serialNumber: 'Certificat du serveur',
+      country: 'CA',
+      state: 'QC',
+      locality: '-05:00',
+    };
+
+    const csr = await buildCSR(cryptoKey, csrSubject);
 
     // Step 3: Call enrolment endpoint
-    const result = await callEnrolment(ESSAI_CONFIG, csr);
+    const result = await callEnrolment(CONFIG, csr);
 
     if (!result.success) {
       console.error('❌ Enrolment failed');
@@ -474,8 +615,8 @@ async function runEnrolment() {
     }
 
     // Step 5: Update profile
-    const deviceId = result.deviceId || ESSAI_CONFIG.deviceId;
-    await updateProfile(deviceId, privateKeyPemEncrypted, certPemEncrypted, certPsiPemEncrypted);
+    const deviceId = result.deviceId || CONFIG.deviceId;
+    await updateProfile(CONFIG, deviceId, privateKeyPemEncrypted, certPemEncrypted, certPsiPemEncrypted);
 
     // Success summary
     console.log('═══════════════════════════════════════════════════════════════════');
@@ -496,14 +637,19 @@ async function runEnrolment() {
     console.log(`  ${fingerprint}\n`);
 
     console.log('🚀 Next Steps:');
-    console.log('  1. Set ENV variable: $env:WEBSRM_ESSAI_DEVICE_ID="' + result.deviceId + '"');
-    console.log('  2. Run ENV validation: pnpm websrm:check-env');
-    console.log('  3. Run ESSAI smoke tests:');
-    console.log('     pnpm websrm:smoke:enr  # ENR test');
-    console.log('     pnpm websrm:smoke:dup  # DUP test');
-    console.log('     pnpm websrm:smoke:ann  # ANN test');
-    console.log('     pnpm websrm:smoke:mod  # MOD test');
-    console.log('  4. Generate evidence: pnpm websrm:export <orderId> ./evidence');
+    if (CONFIG.env === 'DEV') {
+      console.log('  1. Set ENV variable: $env:WEBSRM_DEV_DEVICE_ID="' + result.deviceId + '"');
+      console.log('  2. Run DEV test cases: pnpm websrm:test:dev');
+      console.log('  3. After ALL tests PASS, switch to ESSAI');
+    } else {
+      console.log('  1. Set ENV variable: $env:WEBSRM_ESSAI_DEVICE_ID="' + result.deviceId + '"');
+      console.log('  2. Run ESSAI smoke tests:');
+      console.log('     pnpm websrm:smoke:enr  # ENR test');
+      console.log('     pnpm websrm:smoke:dup  # DUP test');
+      console.log('     pnpm websrm:smoke:ann  # ANN test');
+      console.log('     pnpm websrm:smoke:mod  # MOD test');
+      console.log('  3. Generate evidence: pnpm websrm:export <orderId> ./evidence');
+    }
     console.log('');
 
     process.exit(0);
