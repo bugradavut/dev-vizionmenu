@@ -1190,26 +1190,28 @@ async function updateOrderTiming(orderId, adjustmentMinutes, userBranch) {
  * Enhanced version of createOrder with commission fields
  */
 async function createOrderWithCommission(orderData, branchId) {
-  const { 
-    customer, 
-    items, 
-    orderType, 
-    source, 
-    tableNumber, 
-    zone, 
-    notes, 
-    specialInstructions, 
-    deliveryAddress, 
-    preOrder, 
-    pricing, 
-    campaign, 
+  const {
+    customer,
+    items,
+    orderType,
+    source,
+    tableNumber,
+    zone,
+    notes,
+    specialInstructions,
+    deliveryAddress,
+    preOrder,
+    pricing,
+    campaign,
     tip,
     // Commission fields
     order_source,
     commission_rate,
     commission_amount,
     net_amount,
-    commission_status
+    commission_status,
+    // Payment tracking
+    paymentIntentId
   } = orderData;
   
   // Use comprehensive pricing if provided, otherwise calculate basic totals
@@ -1291,7 +1293,11 @@ async function createOrderWithCommission(orderData, branchId) {
       commission_rate: commission_rate,
       commission_amount: commission_amount,
       net_amount: net_amount,
-      commission_status: commission_status || 'pending'
+      commission_status: commission_status || 'pending',
+      // Payment tracking - Link to Stripe payment
+      payment_intent_id: paymentIntentId || null,
+      payment_status: paymentIntentId ? 'succeeded' : 'pending',
+      paid_at: paymentIntentId ? new Date().toISOString() : null
     })
     .select()
     .single();
