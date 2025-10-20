@@ -840,24 +840,52 @@ class StripeService {
    */
   async _handleRefundUpdated(event) {
     const refund = event.data.object;
-    
+
     console.log(`🔄 Refund updated: ${refund.id} - Status: ${refund.status}`);
-    
-    const { error } = await supabase
+
+    // Update refund record
+    const { data: refundRecord, error } = await supabase
       .from('stripe_refunds')
       .update({
         status: refund.status,
         failure_reason: refund.failure_reason || null,
         updated_at: new Date().toISOString()
       })
-      .eq('refund_id', refund.id);
+      .eq('refund_id', refund.id)
+      .select('order_id, amount')
+      .single();
 
     if (error) {
       console.error('Error updating refund:', error);
       return { error: error.message };
     }
 
-    return { refundId: refund.id, status: refund.status };
+    // If refund succeeded and we have order_id, update order totals
+    if (refund.status === 'succeeded' && refundRecord?.order_id) {
+      const { data: order } = await supabase
+        .from('orders')
+        .select('total_refunded, refund_count')
+        .eq('id', refundRecord.order_id)
+        .single();
+
+      if (order) {
+        const newTotalRefunded = (order.total_refunded || 0) + refundRecord.amount;
+        const newRefundCount = (order.refund_count || 0) + 1;
+
+        await supabase
+          .from('orders')
+          .update({
+            total_refunded: newTotalRefunded,
+            refund_count: newRefundCount,
+            last_refund_at: new Date().toISOString()
+          })
+          .eq('id', refundRecord.order_id);
+
+        console.log(`✅ Order ${refundRecord.order_id} totals updated: $${newTotalRefunded} refunded (${newRefundCount} refunds)`);
+      }
+    }
+
+    return { refundId: refund.id, status: refund.status, orderId: refundRecord?.order_id };
   }
 
   // ============================================

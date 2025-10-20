@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const refundsController = require('../controllers/refunds.controller');
-const { requireAuth } = require('../middleware/auth.middleware');
+const { requireAuthWithBranch } = require('../middleware/auth.middleware');
 
 // Apply authentication middleware to all refund routes
-router.use(requireAuth);
+router.use(requireAuthWithBranch);
 
 // Get all refund-eligible orders (last 7 days) for current branch
 router.get('/eligible', refundsController.getEligibleOrders);

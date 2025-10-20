@@ -1,14 +1,38 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 class RefundsService {
-  private apiUrl = '/api/v1/refunds';
+  private apiUrl: string;
+
+  constructor() {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    this.apiUrl = `${baseUrl}/api/v1/refunds`;
+  }
+
+  private async getAuthToken(): Promise<string | null> {
+    if (typeof window === 'undefined') return null;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      return session?.access_token || null;
+    } catch (error) {
+      console.error('Failed to get auth token:', error);
+      return null;
+    }
+  }
 
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
-    const token = localStorage.getItem('token');
-    
+    const token = await this.getAuthToken();
+
     const response = await fetch(`${this.apiUrl}${endpoint}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         ...options.headers,
       },
     });

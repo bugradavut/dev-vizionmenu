@@ -59,7 +59,8 @@ const createCustomerOrder = async (req, res) => {
       pricing,
       campaign,
       tip,
-      commission
+      commission,
+      paymentIntentId
     } = req.body;
 
     if (!branchId) {
@@ -159,7 +160,7 @@ const createCustomerOrder = async (req, res) => {
         deliveryInstructions: deliveryAddress.deliveryInstructions || '',
         addressType: deliveryAddress.addressType || 'home'
       } : null,
-      
+
       // Pre-order data
       preOrder: {
         isPreOrder: Boolean(isPreOrder),
@@ -167,7 +168,7 @@ const createCustomerOrder = async (req, res) => {
         scheduledTime: scheduledTime || null,
         scheduledDateTime: parsedScheduledDateTime
       },
-      
+
       // NEW: Comprehensive pricing breakdown (Phase 1)
       pricing: pricing ? {
         itemsTotal: pricing.itemsTotal || 0,
@@ -178,7 +179,7 @@ const createCustomerOrder = async (req, res) => {
         tipAmount: pricing.tipAmount || 0,
         finalTotal: pricing.finalTotal || 0
       } : undefined,
-      
+
       // Campaign/discount details
       campaign: campaign ? {
         id: campaign.id || undefined,
@@ -187,25 +188,27 @@ const createCustomerOrder = async (req, res) => {
         campaignType: campaign.campaignType,
         campaignValue: campaign.campaignValue || 0
       } : undefined,
-      
+
       // Tip details
       tip: tip ? {
         amount: tip.amount || 0,
         type: tip.type,
         value: tip.value || 0
       } : undefined,
-      
-      // Commission data
-      commission: commission ? {
-        orderSource: commission.orderSource,
-        commissionRate: commission.commissionRate,
-        commissionAmount: commission.commissionAmount,
-        netAmount: commission.netAmount
-      } : undefined
+
+      // Commission data - flatten for createOrderWithCommission
+      order_source: commission?.orderSource,
+      commission_rate: commission?.commissionRate,
+      commission_amount: commission?.commissionAmount,
+      net_amount: commission?.netAmount,
+      commission_status: 'pending',
+
+      // Payment tracking - Stripe payment intent
+      paymentIntentId: paymentIntentId || null
     };
 
-    // Create order using existing orders service
-    const createResult = await ordersService.createOrder(orderData, branchId);
+    // Create order using commission service (supports payment tracking)
+    const createResult = await ordersService.createOrderWithCommission(orderData, branchId);
 
     // Get branch timing settings for estimated time calculation
     let estimatedTime = '20 minutes'; // Default fallback

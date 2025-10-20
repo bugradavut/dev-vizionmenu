@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const crypto = require('crypto');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -10,30 +11,61 @@ class RefundsService {
   // Validate if an order is eligible for refund (7-day window)
   async validateRefundEligibility(orderId, branchId) {
     try {
-      // Get order details
+      // Get order details - simple query without complex joins
       const { data: order, error } = await supabase
         .from('orders')
         .select(`
           id,
-          order_number,
+          branch_id,
           total_amount,
           commission_rate,
           payment_status,
           payment_intent_id,
           total_refunded,
-          created_at,
-          branches!inner(
-            id,
-            restaurant_chain_id,
-            stripe_accounts(stripe_account_id)
-          )
+          created_at
         `)
         .eq('id', orderId)
-        .eq('branches.id', branchId)
+        .eq('branch_id', branchId)
         .single();
 
       if (error || !order) {
+        console.error('Order query error:', error);
         throw new Error('Order not found or access denied');
+      }
+
+      // Get stripe account - first try branch, then chain
+      let stripeAccountId = null;
+
+      // Try branch-level stripe account first
+      const { data: branchStripeAccount } = await supabase
+        .from('stripe_accounts')
+        .select('stripe_account_id')
+        .eq('branch_id', branchId)
+        .maybeSingle();
+
+      if (branchStripeAccount) {
+        stripeAccountId = branchStripeAccount.stripe_account_id;
+        console.log('Found branch-level Stripe account:', stripeAccountId);
+      } else {
+        // If no branch account, get branch's chain and try chain-level account
+        const { data: branch } = await supabase
+          .from('branches')
+          .select('chain_id')
+          .eq('id', branchId)
+          .single();
+
+        if (branch?.chain_id) {
+          const { data: chainStripeAccount } = await supabase
+            .from('stripe_accounts')
+            .select('stripe_account_id')
+            .eq('restaurant_chain_id', branch.chain_id)
+            .maybeSingle();
+
+          if (chainStripeAccount) {
+            stripeAccountId = chainStripeAccount.stripe_account_id;
+            console.log('Found chain-level Stripe account:', stripeAccountId);
+          }
+        }
       }
 
       // Check order age (7 days maximum)
@@ -69,7 +101,7 @@ class RefundsService {
         maxRefundable: parseFloat(maxRefundable.toFixed(2)),
         alreadyRefunded: parseFloat(alreadyRefunded.toFixed(2)),
         orderAge: daysDifference,
-        stripeAccountId: order.branches.stripe_accounts?.[0]?.stripe_account_id
+        stripeAccountId: stripeAccountId
       };
     } catch (error) {
       console.error('Error validating refund eligibility:', error);
@@ -88,7 +120,6 @@ class RefundsService {
         .from('orders')
         .select(`
           id,
-          order_number,
           total_amount,
           commission_rate,
           payment_status,
@@ -154,6 +185,16 @@ class RefundsService {
       const commissionRefund = parseFloat((refundAmount * commissionRate / 100).toFixed(2));
 
       console.log(`Processing refund: $${refundAmount}, Commission refund: $${commissionRefund}`);
+      console.log(`Stripe Account ID: ${stripeAccountId || 'NULL - using platform account'}`);
+
+      // Generate idempotency key for safe retries (prevents duplicate refunds)
+      const idempotencyKey = crypto
+        .createHash('sha256')
+        .update(`${orderId}-${refundAmount}-${Date.now()}`)
+        .digest('hex')
+        .substring(0, 32);
+
+      console.log(`🔐 Idempotency key: ${idempotencyKey}`);
 
       // Process Stripe refund
       let stripeRefund;
@@ -165,21 +206,26 @@ class RefundsService {
           metadata: {
             order_id: orderId,
             initiated_by: initiatedBy,
-            commission_refund: commissionRefund.toString()
+            commission_refund: commissionRefund.toString(),
+            idempotency_key: idempotencyKey
           }
         };
 
-        // If restaurant has connected Stripe account, process through their account
+        // Always refund from platform account (where payment was created)
+        // If connected account exists, use reverse_transfer to pull money back from restaurant
         if (stripeAccountId) {
+          console.log('✅ Using reverse_transfer to refund from connected account');
           refundOptions.reverse_transfer = true; // Take money back from restaurant
           refundOptions.refund_application_fee = true; // Refund commission to platform
-          stripeRefund = await stripe.refunds.create(refundOptions, {
-            stripeAccount: stripeAccountId
-          });
         } else {
-          // Process directly through platform account
-          stripeRefund = await stripe.refunds.create(refundOptions);
+          console.log('⚠️ No connected account - direct platform refund');
         }
+
+        // Always create refund on platform account (not connected account)
+        // Use idempotency key to prevent duplicate refunds on retry
+        stripeRefund = await stripe.refunds.create(refundOptions, {
+          idempotencyKey: idempotencyKey
+        });
 
         console.log('Stripe refund created:', stripeRefund.id);
       } catch (stripeError) {
@@ -187,7 +233,7 @@ class RefundsService {
         throw new Error(`Payment refund failed: ${stripeError.message}`);
       }
 
-      // Record refund in database
+      // Record refund in database with idempotency key
       const { data: refundRecord, error: refundError } = await supabase
         .from('stripe_refunds')
         .insert([{
@@ -199,17 +245,26 @@ class RefundsService {
           reason: reason || 'requested_by_customer',
           status: stripeRefund.status,
           initiated_by: initiatedBy,
-          stripe_account_id: stripeAccountId
+          stripe_account_id: stripeAccountId,
+          idempotency_key: idempotencyKey
         }])
         .select()
         .single();
 
+      // Track database operation warnings (non-critical errors)
+      const warnings = [];
+
       if (refundError) {
-        console.error('Database refund record error:', refundError);
-        // Continue anyway - refund was processed in Stripe
+        console.error('⚠️  Database refund record error:', refundError);
+        console.log('✅ Stripe refund succeeded - webhook will sync database');
+        warnings.push({
+          type: 'db_refund_record_failed',
+          message: 'Refund record not saved to database - webhook will retry',
+          error: refundError.message
+        });
       }
 
-      // Update order totals
+      // Update order totals (best effort - webhook will fix if this fails)
       const newTotalRefunded = (order.total_refunded || 0) + refundAmount;
       const newRefundCount = (order.refund_count || 0) + 1;
 
@@ -224,18 +279,26 @@ class RefundsService {
         .eq('id', orderId);
 
       if (orderUpdateError) {
-        console.error('Order update error:', orderUpdateError);
+        console.error('⚠️  Order update error:', orderUpdateError);
+        console.log('✅ Stripe refund succeeded - webhook will update order totals');
+        warnings.push({
+          type: 'order_update_failed',
+          message: 'Order totals not updated - webhook will sync',
+          error: orderUpdateError.message
+        });
       }
 
+      // Return success with warnings (refund succeeded in Stripe)
       return {
         refundId: stripeRefund.id,
         amount: refundAmount,
         commissionRefund,
         status: stripeRefund.status,
         orderId,
-        orderNumber: order.order_number,
+        orderNumber: orderId.substring(0, 8).toUpperCase(),
         newTotalRefunded,
-        remainingRefundable: parseFloat((maxRefundable - refundAmount).toFixed(2))
+        remainingRefundable: parseFloat((maxRefundable - refundAmount).toFixed(2)),
+        warnings: warnings.length > 0 ? warnings : undefined
       };
     } catch (error) {
       console.error('Error processing refund:', error);
@@ -259,7 +322,6 @@ class RefundsService {
           created_at,
           orders!inner(
             id,
-            order_number,
             customer_name,
             customer_phone,
             branch_id

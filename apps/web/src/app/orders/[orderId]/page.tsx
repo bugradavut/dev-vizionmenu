@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle, Timer, ClockPlus, TicketPercent } from "lucide-react"
 import { ordersService } from "@/services/orders.service"
+import { refundsService } from "@/services/refunds.service"
 import { getSourceIcon } from "@/assets/images"
 import Image from "next/image"
 import Link from "next/link"
@@ -135,11 +136,49 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
 
   // Handle order status updates
   const handleStatusUpdate = async (newStatus: 'preparing' | 'ready' | 'completed' | 'cancelled' | 'rejected') => {
+    console.log('🚀 handleStatusUpdate called with status:', newStatus);
+    console.log('📦 Order data:', {
+      payment_method: order?.payment_method,
+      payment_status: order?.payment_status,
+      payment_intent_id: order?.payment_intent_id,
+      total_amount: order?.total_amount
+    });
+
     setUpdatingStatus(newStatus)
     try {
       const success = await updateStatus({ status: newStatus });
+      console.log('✅ Status update result:', success);
+
       if (success) {
-        // Optionally show success message
+        // Auto-refund if rejected + online payment
+        if (newStatus === 'rejected' &&
+            order?.payment_method === 'online' &&
+            order?.payment_status === 'succeeded' &&
+            order?.total_amount) {
+
+          console.log('🔴 Order rejected - Processing full refund...');
+
+          try {
+            await refundsService.processRefund(
+              order.id,  // Use full UUID from order object, not URL param
+              order.total_amount,
+              'requested_by_customer'  // Stripe-valid reason
+            );
+            console.log('✅ Full refund processed successfully');
+          } catch (refundError) {
+            console.error('❌ Refund failed:', refundError);
+            // Don't fail the status update - order is still rejected
+          }
+        } else {
+          console.log('⚠️ Refund skipped. Reason:', {
+            isRejected: newStatus === 'rejected',
+            isOnline: order?.payment_method === 'online',
+            isSucceeded: order?.payment_status === 'succeeded'
+          });
+        }
+
+        // Refresh order data
+        await refetch();
       }
     } catch (error) {
       console.error('Failed to update order status:', error);

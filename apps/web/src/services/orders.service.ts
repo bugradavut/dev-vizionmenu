@@ -65,6 +65,11 @@ export interface Order {
   tableNumber?: number;  // For QR orders
   zone?: string;        // For QR orders (Screen, Main, etc)
   payment_method?: string;
+  payment_status?: string;
+  payment_intent_id?: string;
+  total_amount?: number;
+  total_refunded?: number;
+  refund_count?: number;
   pricing: OrderPricing;
   notes?: string;
   special_instructions?: string;

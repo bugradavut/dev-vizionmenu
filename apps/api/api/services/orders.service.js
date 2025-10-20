@@ -302,6 +302,13 @@ async function getOrderDetail(orderId, userBranch) {
     // Use zone field from database (NEW: Direct zone field support)
     zone: existingOrder.zone || null,
     payment_method: existingOrder.payment_method,
+    payment_status: existingOrder.payment_status,
+    payment_intent_id: existingOrder.payment_intent_id,
+    total_amount: parseFloat(existingOrder.total_amount || 0),
+    total_refunded: parseFloat(existingOrder.total_refunded || 0),
+    refund_count: existingOrder.refund_count || 0,
+    paid_at: existingOrder.paid_at,
+    last_refund_at: existingOrder.last_refund_at,
     pricing: {
       // Legacy fields (backward compatibility)
       subtotal: parseFloat(existingOrder.subtotal || 0),
@@ -1194,6 +1201,7 @@ async function createOrderWithCommission(orderData, branchId) {
     customer,
     items,
     orderType,
+    paymentMethod,
     source,
     tableNumber,
     zone,
@@ -1255,8 +1263,50 @@ async function createOrderWithCommission(orderData, branchId) {
     finalTotal = itemsSubtotal + tipAmount;
   }
 
-  // Generate unique order number
-  const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`;
+  // Handle pre-order data (same as createOrder function)
+  const isPreOrder = preOrder?.isPreOrder || false;
+  let scheduledDateTime = null;
+  if (preOrder?.scheduledDateTime) {
+    try {
+      const dateValue = typeof preOrder.scheduledDateTime === 'string'
+        ? new Date(preOrder.scheduledDateTime)
+        : preOrder.scheduledDateTime;
+      if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
+        scheduledDateTime = dateValue.toISOString();
+      }
+    } catch (error) {
+      console.warn('Failed to parse scheduledDateTime:', error);
+      scheduledDateTime = null;
+    }
+  }
+
+  const scheduledDate = preOrder?.scheduledDate || null;
+  let scheduledTime = null;
+  if (preOrder?.scheduledTime) {
+    try {
+      const timeMatch = preOrder.scheduledTime.match(/(\d+):(\d+)\s*(a\.m\.|p\.m\.|AM|PM)/i);
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1]);
+        const minutes = timeMatch[2];
+        const meridiem = timeMatch[3].toLowerCase();
+        if (meridiem.includes('p') && hours !== 12) {
+          hours += 12;
+        } else if (meridiem.includes('a') && hours === 12) {
+          hours = 0;
+        }
+        scheduledTime = `${hours.toString().padStart(2, '0')}:${minutes}:00`;
+      }
+    } catch (error) {
+      console.warn('Failed to parse scheduledTime:', error);
+      scheduledTime = null;
+    }
+  }
+
+  // Determine initial status
+  let initialStatus = 'preparing';
+  if (isPreOrder) {
+    initialStatus = 'scheduled';
+  }
 
   // Create order with commission data
   const { data: order, error: orderError } = await supabase
@@ -1267,14 +1317,13 @@ async function createOrderWithCommission(orderData, branchId) {
       customer_phone: customer.phone,
       customer_email: customer.email || null,
       order_type: orderType,
+      payment_method: paymentMethod || 'counter',
       table_number: tableNumber || null,
       zone: zone || null,
       notes: notes || null,
       special_instructions: specialInstructions || null,
       delivery_address: deliveryAddress || null,
-      order_number: orderNumber,
-      order_source: source,
-      order_status: 'pending',
+      order_status: initialStatus,
       items_subtotal: itemsSubtotal,
       discount_amount: discountAmount,
       delivery_fee: deliveryFee,
@@ -1283,11 +1332,14 @@ async function createOrderWithCommission(orderData, branchId) {
       tip_amount: tipAmount,
       tip_type: tipType,
       tip_value: tipValue,
-      total: finalTotal,
+      total_amount: finalTotal,
       coupon_code: couponCode,
       coupon_id: couponId,
-      is_pre_order: preOrder?.isPreOrder || false,
-      scheduled_for: preOrder?.scheduledTime || null,
+      // Pre-order fields
+      is_pre_order: isPreOrder,
+      scheduled_datetime: scheduledDateTime,
+      scheduled_date: scheduledDate,
+      scheduled_time: scheduledTime,
       // Commission fields
       order_source: order_source,
       commission_rate: commission_rate,
@@ -1307,15 +1359,14 @@ async function createOrderWithCommission(orderData, branchId) {
     throw new Error(`Failed to create order: ${orderError.message}`);
   }
 
-  // Create order items
+  // Create order items (same format as createOrder)
   const orderItems = items.map(item => ({
     order_id: order.id,
-    menu_item_id: item.menuItemId,
+    menu_item_name: item.name,
+    menu_item_price: item.price,
     quantity: item.quantity,
-    unit_price: parseFloat(item.price),
-    item_total: parseFloat(item.price) * parseInt(item.quantity),
-    variations: item.variations || null,
-    special_instructions: item.specialInstructions || null
+    item_total: item.price * item.quantity,
+    special_instructions: item.notes || null
   }));
 
   const { data: createdItems, error: itemsError } = await supabase
@@ -1330,21 +1381,27 @@ async function createOrderWithCommission(orderData, branchId) {
     throw new Error(`Failed to create order items: ${itemsError.message}`);
   }
 
-  console.log(`✅ Order created successfully with commission: ${orderNumber} (${order.id}) - Commission: ${commission_rate}% = $${commission_amount}`);
+  console.log(`✅ Order created successfully with commission: ${order.id.substring(0, 8).toUpperCase()} - Commission: ${commission_rate}% = $${commission_amount}`);
 
   return {
     order: {
       id: order.id,
-      orderNumber: order.order_number,
+      order_number: `${order.id.substring(0, 8).toUpperCase()}`,
       status: order.order_status,
       total: order.total,
+      total_amount: order.total_amount,
       commission: {
         source: order_source,
         rate: commission_rate,
         amount: commission_amount,
         netAmount: net_amount
       },
-      createdAt: order.created_at
+      createdAt: order.created_at,
+      // Pre-order information
+      is_pre_order: order.is_pre_order,
+      scheduled_datetime: order.scheduled_datetime,
+      scheduled_date: order.scheduled_date,
+      scheduled_time: order.scheduled_time
     },
     items: createdItems
   };
