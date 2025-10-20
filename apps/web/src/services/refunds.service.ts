@@ -51,12 +51,18 @@ class RefundsService {
   }
 
   // Process a refund for a specific order
-  async processRefund(orderId: string, amount: number, reason?: string) {
+  async processRefund(
+    orderId: string,
+    amount: number,
+    reason?: string,
+    refundedItems?: Array<{ itemId: string; quantity: number; amount: number }>
+  ) {
     return this.makeRequest(`/orders/${orderId}/refund`, {
       method: 'POST',
       body: JSON.stringify({
         amount,
-        reason: reason || 'requested_by_customer'
+        reason: reason || 'requested_by_customer',
+        refundedItems: refundedItems || []
       }),
     });
   }

@@ -166,7 +166,7 @@ class RefundsService {
   }
 
   // Process restaurant refund with automatic commission adjustment
-  async processRefund(orderId, refundAmount, reason, initiatedBy, branchId) {
+  async processRefund(orderId, refundAmount, reason, initiatedBy, branchId, refundedItems = []) {
     try {
       // Validate refund eligibility
       const validation = await this.validateRefundEligibility(orderId, branchId);
@@ -244,7 +244,7 @@ class RefundsService {
           commission_refund: commissionRefund,
           reason: reason || 'requested_by_customer',
           status: stripeRefund.status,
-          initiated_by: initiatedBy,
+          initiated_by: 'restaurant', // Valid values: 'restaurant', 'platform', 'customer'
           stripe_account_id: stripeAccountId,
           idempotency_key: idempotencyKey
         }])
@@ -286,6 +286,33 @@ class RefundsService {
           message: 'Order totals not updated - webhook will sync',
           error: orderUpdateError.message
         });
+      }
+
+      // Update order_items to track which items were refunded (best practice for granular tracking)
+      if (refundedItems && refundedItems.length > 0) {
+        console.log(`📦 Updating ${refundedItems.length} refunded items...`);
+
+        for (const item of refundedItems) {
+          const { error: itemUpdateError } = await supabase
+            .from('order_items')
+            .update({
+              refunded_quantity: item.quantity,
+              refund_amount: item.amount
+            })
+            .eq('id', item.itemId)
+            .eq('order_id', orderId); // Extra safety: ensure item belongs to this order
+
+          if (itemUpdateError) {
+            console.error(`⚠️  Failed to update item ${item.itemId}:`, itemUpdateError);
+            warnings.push({
+              type: 'item_update_failed',
+              message: `Failed to update refunded item ${item.itemId}`,
+              error: itemUpdateError.message
+            });
+          } else {
+            console.log(`✅ Item ${item.itemId} marked as refunded (qty: ${item.quantity}, amount: $${item.amount})`);
+          }
+        }
       }
 
       // Return success with warnings (refund succeeded in Stripe)

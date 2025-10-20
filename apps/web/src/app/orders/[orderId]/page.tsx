@@ -80,6 +80,8 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
   const [refundSuccess, setRefundSuccess] = useState(false)
   const [showRefundDialog, setShowRefundDialog] = useState(false)
+  const [refundLoading, setRefundLoading] = useState(false)
+  const [refundError, setRefundError] = useState<string | null>(null)
   
   // Reject confirmation state
   const [showRejectDialog, setShowRejectDialog] = useState(false)
@@ -122,16 +124,60 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
     setShowRefundDialog(true)
   }
 
-  const handleConfirmRefund = () => {
-    // Mock refund action
-    setRefundSuccess(true)
-    setSelectedItems(new Set())
-    setShowRefundDialog(false)
-    
-    // Hide success message after 3 seconds
-    setTimeout(() => {
-      setRefundSuccess(false)
-    }, 3000)
+  const handleConfirmRefund = async () => {
+    if (!order?.id || !order?.items) return;
+
+    const refundAmount = getSelectedAmount();
+    if (refundAmount <= 0) return;
+
+    setRefundLoading(true);
+    setRefundError(null);
+
+    try {
+      // Prepare refunded items data for backend
+      const refundedItems = order.items
+        .filter(item => selectedItems.has(item.id))
+        .map(item => ({
+          itemId: item.id,
+          quantity: item.quantity,
+          amount: item.price * item.quantity
+        }));
+
+      console.log('🔄 Processing partial refund:', {
+        orderId: order.id,
+        amount: refundAmount,
+        refundedItems
+      });
+
+      // Call refunds service to process partial refund with item details
+      await refundsService.processRefund(
+        order.id,
+        refundAmount,
+        'requested_by_customer',
+        refundedItems
+      );
+
+      console.log('✅ Partial refund processed successfully');
+
+      // Show success message
+      setRefundSuccess(true);
+      setSelectedItems(new Set());
+      setShowRefundDialog(false);
+
+      // Refresh order data to show updated totals
+      await refetch();
+
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        setRefundSuccess(false);
+      }, 3000);
+
+    } catch (error) {
+      console.error('❌ Partial refund failed:', error);
+      setRefundError(error instanceof Error ? error.message : 'Failed to process refund');
+    } finally {
+      setRefundLoading(false);
+    }
   }
 
   // Handle order status updates
@@ -671,20 +717,42 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                                   ))}
                                               </div>
                                             </div>
+
+                                            {/* Error Message */}
+                                            {refundError && (
+                                              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
+                                                <div className="flex items-center gap-2">
+                                                  <XCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                                                  <p className="text-sm text-red-700">{refundError}</p>
+                                                </div>
+                                              </div>
+                                            )}
                                           </div>
 
                                           <DialogFooter>
-                                            <Button 
-                                              variant="outline" 
-                                              onClick={() => setShowRefundDialog(false)}
+                                            <Button
+                                              variant="outline"
+                                              onClick={() => {
+                                                setShowRefundDialog(false)
+                                                setRefundError(null)
+                                              }}
+                                              disabled={refundLoading}
                                             >
                                               {t.orderDetail.cancel}
                                             </Button>
-                                            <Button 
+                                            <Button
                                               onClick={handleConfirmRefund}
-                                              className="bg-red-600 hover:bg-red-700"
+                                              disabled={refundLoading}
+                                              className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
                                             >
-                                              {t.orderDetail.confirmRefund} ${getSelectedAmount().toFixed(2)}
+                                              {refundLoading ? (
+                                                <div className="flex items-center gap-2">
+                                                  <RefreshCw className="h-4 w-4 animate-spin" />
+                                                  Processing...
+                                                </div>
+                                              ) : (
+                                                `${t.orderDetail.confirmRefund} $${getSelectedAmount().toFixed(2)}`
+                                              )}
                                             </Button>
                                           </DialogFooter>
                                         </DialogContent>
@@ -710,8 +778,9 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                             <div className="space-y-3">
                               {order.items?.map((item) => (
                                 <div key={item.id} className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 bg-white">
-                                  {/* Checkbox for refund selection */}
-                                  {(order.status === 'completed' || order.status === 'cancelled') && (
+                                  {/* Checkbox for refund selection - only show if item not already refunded */}
+                                  {(order.status === 'completed' || order.status === 'cancelled') &&
+                                   (item.refunded_quantity ?? 0) === 0 && (
                                     <div className="pt-1">
                                       <Checkbox
                                         id={`item-${item.id}`}
@@ -725,8 +794,19 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                   <div className="flex-1 space-y-2">
                                     {/* Item Name and Quantity - Kitchen Display format */}
                                     <div className="flex items-center justify-between">
-                                      <div className="font-medium text-gray-900">
-                                        {item.quantity}x {item.name}
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-gray-900">
+                                          {item.quantity}x {item.name}
+                                        </span>
+                                        {/* Refunded Badge */}
+                                        {(item.refunded_quantity ?? 0) > 0 && (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs border-primary text-primary bg-primary/10"
+                                          >
+                                            Refunded
+                                          </Badge>
+                                        )}
                                       </div>
                                       <span className="font-medium text-gray-900">${(item.price * item.quantity).toFixed(2)}</span>
                                     </div>
@@ -758,7 +838,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                   </div>
                                 </div>
                               ))}
-                              
+
                               {/* Notes and Special Instructions for Order */}
                               {(order.notes || order.special_instructions) && (
                                 <div className="mt-4 pt-4 border-t border-gray-200">

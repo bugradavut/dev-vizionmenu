@@ -369,6 +369,8 @@ async function getOrderDetail(orderId, userBranch) {
       quantity: item.quantity || 1,
       total: parseFloat(item.item_total || 0),
       special_instructions: item.special_instructions,
+      refunded_quantity: item.refunded_quantity || 0,
+      refund_amount: parseFloat(item.refund_amount || 0),
       variants: (item.order_item_variants || []).map(variant => ({
         name: variant.variant_name,
         price: parseFloat(variant.variant_price || 0)

@@ -21,6 +21,8 @@ export interface OrderItem {
   quantity: number;
   total: number;
   special_instructions?: string;
+  refunded_quantity?: number;
+  refund_amount?: number;
   variants?: Array<{
     name: string;
     price: number;

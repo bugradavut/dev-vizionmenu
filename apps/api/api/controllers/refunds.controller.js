@@ -33,7 +33,7 @@ const getEligibleOrders = async (req, res) => {
 const processRefund = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { amount, reason } = req.body;
+    const { amount, reason, refundedItems } = req.body;
     const branchId = req.userBranch?.branch_id;
     const userId = req.currentUserId;
 
@@ -56,14 +56,17 @@ const processRefund = async (req, res) => {
       });
     }
 
-    console.log(`Processing refund request: Order ${orderId}, Amount: $${amount}, User: ${userId}`);
+    console.log(`Processing refund request: Order ${orderId}, Amount: $${amount}, User: ${userId}`, {
+      refundedItemsCount: refundedItems?.length || 0
+    });
 
     const refund = await refundsService.processRefund(
       orderId,
       parseFloat(amount),
       reason || 'requested_by_customer',
       userId,  // Just userId, no prefix
-      branchId
+      branchId,
+      refundedItems || [] // Pass refunded items array to service
     );
 
     const response = {
