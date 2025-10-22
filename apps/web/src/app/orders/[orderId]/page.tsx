@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useState, useEffect, useCallback, useRef } from "react"
+import { use, useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -14,15 +14,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle, Timer, ClockPlus, TicketPercent } from "lucide-react"
+import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle, Timer, ClockPlus, TicketPercent, Minus, Plus } from "lucide-react"
 import { ordersService } from "@/services/orders.service"
 import { refundsService } from "@/services/refunds.service"
 import { getSourceIcon } from "@/assets/images"
 import Image from "next/image"
 import Link from "next/link"
 import { useOrderDetail } from "@/hooks/use-orders"
-import type { Order } from "@/services/orders.service"
+import type { Order, OrderItem } from "@/services/orders.service"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
 import { useOrderTimer } from "@/hooks/use-order-timer"
@@ -77,7 +78,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   const [isAutoCompleting, setIsAutoCompleting] = useState(false)
   
   // Partial refund state
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
+  const [selectedItems, setSelectedItems] = useState<Record<string, number>>({})
   const [refundSuccess, setRefundSuccess] = useState(false)
   const [showRefundDialog, setShowRefundDialog] = useState(false)
   const [refundLoading, setRefundLoading] = useState(false)
@@ -94,31 +95,134 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   
 
   // Partial refund handlers
-  const handleItemSelect = (itemId: string, checked: boolean) => {
-    const newSelected = new Set(selectedItems)
-    if (checked) {
-      newSelected.add(itemId)
-    } else {
-      newSelected.delete(itemId)
-    }
-    setSelectedItems(newSelected)
-  }
+  const getRefundableQuantity = useCallback((item: OrderItem) => {
+    const totalQuantity = Number(item.quantity ?? 0);
+    const refundedQuantity = Number(item.refunded_quantity ?? 0);
+    return Math.max(0, totalQuantity - refundedQuantity);
+  }, []);
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked && order?.items) {
-      const allItemIds = new Set(order.items.map(item => item.id))
-      setSelectedItems(allItemIds)
+  const eligibleItems = useMemo(() => {
+    if (!order?.items) return [];
+    return order.items.filter(item => getRefundableQuantity(item) > 0);
+  }, [order?.items, getRefundableQuantity]);
+
+  const handleItemSelect = (item: OrderItem, checked: boolean) => {
+    const refundableQty = getRefundableQuantity(item);
+
+    setSelectedItems(prev => {
+      if (!checked || refundableQty <= 0) {
+        if (!(item.id in prev)) return prev;
+        const { [item.id]: _removed, ...rest } = prev;
+        return rest;
+      }
+
+      const desiredQuantity = Math.min(refundableQty, Math.max(prev[item.id] ?? refundableQty, 1));
+      if (prev[item.id] === desiredQuantity) return prev;
+
+      return { ...prev, [item.id]: desiredQuantity };
+    });
+  };
+
+  const handleQuantityChange = (itemId: string, value: string, maxQuantity: number) => {
+    const numericValue = Number(value);
+    if (Number.isNaN(numericValue)) return;
+
+    const clampedValue = Math.min(Math.max(Math.floor(numericValue), 1), Math.max(maxQuantity, 1));
+
+    setSelectedItems(prev => {
+      if (!(itemId in prev)) return prev;
+      if (prev[itemId] === clampedValue) return prev;
+      return { ...prev, [itemId]: clampedValue };
+    });
+  };
+
+  const handleQuantityStep = (itemId: string, delta: number, maxQuantity: number) => {
+    setSelectedItems(prev => {
+      if (!(itemId in prev)) return prev;
+      const current = prev[itemId];
+      const nextValue = Math.min(
+        Math.max(current + delta, 1),
+        Math.max(maxQuantity, 1)
+      );
+
+      if (nextValue === current) return prev;
+      return { ...prev, [itemId]: nextValue };
+    });
+  };
+
+  const handleSelectAll = (checked: boolean | "indeterminate") => {
+    if (checked === true) {
+      const selections: Record<string, number> = {};
+      eligibleItems.forEach(item => {
+        const refundableQty = getRefundableQuantity(item);
+        if (refundableQty > 0) {
+          selections[item.id] = refundableQty;
+        }
+      });
+      setSelectedItems(selections);
     } else {
-      setSelectedItems(new Set())
+      setSelectedItems({});
     }
-  }
+  };
 
   const getSelectedAmount = () => {
     if (!order?.items) return 0;
-    return order.items
-      .filter(item => selectedItems.has(item.id))
-      .reduce((total, item) => total + (item.price * item.quantity), 0)
-  }
+
+    return Object.entries(selectedItems).reduce((total, [itemId, quantity]) => {
+      const item = order.items?.find(orderItem => orderItem.id === itemId);
+      if (!item) return total;
+      return total + item.price * quantity;
+    }, 0);
+  };
+
+  const selectedItemEntries = useMemo(() => Object.entries(selectedItems), [selectedItems]);
+  const selectedCount = selectedItemEntries.length;
+  const totalSelectedUnits = useMemo(
+    () => selectedItemEntries.reduce((sum, [, qty]) => sum + qty, 0),
+    [selectedItemEntries]
+  );
+  const selectAllChecked =
+    eligibleItems.length > 0 &&
+    eligibleItems.every(item => (selectedItems[item.id] ?? 0) > 0);
+
+  useEffect(() => {
+    if (!order?.items || order.items.length === 0) {
+      setSelectedItems(prev => (Object.keys(prev).length === 0 ? prev : {}));
+      return;
+    }
+
+    setSelectedItems(prev => {
+      const itemsMap = new Map(order.items?.map(item => [item.id, item]));
+      const next: Record<string, number> = {};
+      let changed = false;
+
+      Object.entries(prev).forEach(([itemId, quantity]) => {
+        const item = itemsMap.get(itemId);
+        if (!item) {
+          changed = true;
+          return;
+        }
+
+        const refundableQty = getRefundableQuantity(item);
+        if (refundableQty <= 0) {
+          changed = true;
+          return;
+        }
+
+        const normalizedQty = Math.min(Math.max(Math.floor(quantity), 1), refundableQty);
+        if (normalizedQty !== quantity) {
+          changed = true;
+        }
+        next[itemId] = normalizedQty;
+      });
+
+      if (Object.keys(next).length !== Object.keys(prev).length) {
+        changed = true;
+      }
+
+      return changed ? next : prev;
+    });
+  }, [order?.items, getRefundableQuantity]);
 
   const handleRefundClick = () => {
     setShowRefundDialog(true)
@@ -134,22 +238,28 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
     setRefundError(null);
 
     try {
-      // Prepare refunded items data for backend
-      const refundedItems = order.items
-        .filter(item => selectedItems.has(item.id))
-        .map(item => ({
-          itemId: item.id,
-          quantity: item.quantity,
-          amount: item.price * item.quantity
-        }));
+      const refundedItems = selectedItemEntries
+        .map(([itemId, quantity]) => {
+          const item = order.items?.find(orderItem => orderItem.id === itemId);
+          if (!item) return null;
 
-      console.log('🔄 Processing partial refund:', {
-        orderId: order.id,
-        amount: refundAmount,
-        refundedItems
-      });
+          const refundableQty = getRefundableQuantity(item);
+          const safeQuantity = Math.min(quantity, refundableQty);
+          if (safeQuantity <= 0) return null;
 
-      // Call refunds service to process partial refund with item details
+          return {
+            itemId: item.id,
+            quantity: safeQuantity,
+            amount: item.price * safeQuantity
+          };
+        })
+        .filter(Boolean) as Array<{ itemId: string; quantity: number; amount: number }>;
+
+      if (refundedItems.length === 0) {
+        setRefundLoading(false);
+        return;
+      }
+
       await refundsService.processRefund(
         order.id,
         refundAmount,
@@ -157,23 +267,17 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
         refundedItems
       );
 
-      console.log('✅ Partial refund processed successfully');
-
-      // Show success message
       setRefundSuccess(true);
-      setSelectedItems(new Set());
+      setSelectedItems({});
       setShowRefundDialog(false);
 
-      // Refresh order data to show updated totals
       await refetch();
 
-      // Hide success message after 3 seconds
       setTimeout(() => {
         setRefundSuccess(false);
       }, 3000);
-
     } catch (error) {
-      console.error('❌ Partial refund failed:', error);
+      console.error('Partial refund failed:', error);
       setRefundError(error instanceof Error ? error.message : 'Failed to process refund');
     } finally {
       setRefundLoading(false);
@@ -664,28 +768,40 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                   <div className="flex items-center gap-2">
                                     <Checkbox
                                       id="select-all"
-                                      checked={selectedItems.size > 0 && selectedItems.size === (order.items?.length || 0)}
+                                      checked={selectAllChecked}
+                                      disabled={eligibleItems.length === 0}
                                       onCheckedChange={handleSelectAll}
                                     />
-                                    <label htmlFor="select-all" className="text-xs text-gray-600 cursor-pointer">
+                                    <label
+                                      htmlFor="select-all"
+                                      className={`text-xs ${eligibleItems.length === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 cursor-pointer'}`}
+                                    >
                                       {t.orderDetail.selectAll}
                                     </label>
                                   </div>
                                 </div>
                                 
                                 {/* Show selected items summary */}
-                                {selectedItems.size > 0 && (
+                                {selectedCount > 0 && (
                                   <div className="mt-3 pt-3 border-t border-gray-300">
                                     <div className="flex items-center justify-between">
-                                      <span className="text-sm text-blue-700">
-                                        {selectedItems.size} {t.orderDetail.itemsSelected}
-                                      </span>
+                                      <div className="text-sm text-blue-700">
+                                        <span>
+                                          {selectedCount} {t.orderDetail.itemsSelected}
+                                        </span>
+                                        {totalSelectedUnits > selectedCount && (
+                                          <span className="ml-2 text-xs text-blue-600/80">
+                                            ({t.orderDetail.unitsSelected.replace("{count}", totalSelectedUnits.toString())})
+                                          </span>
+                                        )}
+                                      </div>
                                       <Dialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>
                                         <DialogTrigger asChild>
                                           <Button 
                                             size="sm" 
                                             onClick={handleRefundClick}
                                             className="bg-blue-600 hover:bg-blue-700"
+                                            disabled={refundLoading}
                                           >
                                             {t.orderDetail.refund} ${getSelectedAmount().toFixed(2)}
                                           </Button>
@@ -698,7 +814,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                               {t.orderDetail.confirmPartialRefund}
                                             </DialogTitle>
                                             <DialogDescription>
-                                              {t.orderDetail.refundDescription} {selectedItems.size} {t.orderDetail.refundDescriptionItems} ${getSelectedAmount().toFixed(2)}.
+                                              {t.orderDetail.refundDescription} {selectedCount} {t.orderDetail.refundDescriptionItems} ${getSelectedAmount().toFixed(2)}.
                                               {t.orderDetail.refundCannotUndo}
                                             </DialogDescription>
                                           </DialogHeader>
@@ -708,13 +824,16 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                               <h4 className="font-medium text-sm">{t.orderDetail.itemsToRefund}</h4>
                                               <div className="space-y-1 max-h-40 overflow-y-auto border rounded-md p-2 bg-gray-50">
                                                 {order.items
-                                                  ?.filter(item => selectedItems.has(item.id))
-                                                  .map(item => (
-                                                    <div key={item.id} className="flex justify-between text-sm bg-white p-2 rounded border">
-                                                      <span>{item.name} x{item.quantity}</span>
-                                                      <span className="font-medium">${(item.price * item.quantity).toFixed(2)}</span>
-                                                    </div>
-                                                  ))}
+                                                  ?.filter(item => (selectedItems[item.id] ?? 0) > 0)
+                                                  .map(item => {
+                                                    const selectedQuantity = selectedItems[item.id] ?? 0;
+                                                    return (
+                                                      <div key={item.id} className="flex justify-between text-sm bg-white p-2 rounded border">
+                                                        <span>{item.name} x{selectedQuantity}</span>
+                                                        <span className="font-medium">${(item.price * selectedQuantity).toFixed(2)}</span>
+                                                      </div>
+                                                    );
+                                                  })}
                                               </div>
                                             </div>
 
@@ -760,6 +879,11 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                     </div>
                                   </div>
                                 )}
+                                {eligibleItems.length === 0 && (
+                                  <div className="mt-3 text-xs text-gray-500">
+                                    {t.orderDetail.noItemsEligible}
+                                  </div>
+                                )}
                               </div>
                             )}
 
@@ -776,68 +900,122 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                             )}
 
                             <div className="space-y-3">
-                              {order.items?.map((item) => (
-                                <div key={item.id} className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 bg-white">
-                                  {/* Checkbox for refund selection - only show if item not already refunded */}
-                                  {(order.status === 'completed' || order.status === 'cancelled') &&
-                                   (item.refunded_quantity ?? 0) === 0 && (
-                                    <div className="pt-1">
-                                      <Checkbox
-                                        id={`item-${item.id}`}
-                                        checked={selectedItems.has(item.id)}
-                                        onCheckedChange={(checked) => handleItemSelect(item.id, checked as boolean)}
-                                      />
-                                    </div>
-                                  )}
-                                  
-                                  {/* Item Details */}
-                                  <div className="flex-1 space-y-2">
-                                    {/* Item Name and Quantity - Kitchen Display format */}
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium text-gray-900">
-                                          {item.quantity}x {item.name}
-                                        </span>
-                                        {/* Refunded Badge */}
-                                        {(item.refunded_quantity ?? 0) > 0 && (
-                                          <Badge
-                                            variant="outline"
-                                            className="text-xs border-primary text-primary bg-primary/10"
-                                          >
-                                            Refunded
-                                          </Badge>
-                                        )}
+                              {order.items?.map((item) => {
+                                const refundableQty = getRefundableQuantity(item);
+                                const isRefundable =
+                                  (order.status === 'completed' || order.status === 'cancelled') && refundableQty > 0;
+                                const selectedQty = selectedItems[item.id] ?? 0;
+                                const isSelected = selectedQty > 0;
+                                const refundedQty = Number(item.refunded_quantity ?? 0);
+
+                                return (
+                                  <div key={item.id} className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 bg-white">
+                                    {isRefundable && (
+                                      <div className="pt-1">
+                                        <Checkbox
+                                          id={`item-${item.id}`}
+                                          checked={isSelected}
+                                          onCheckedChange={(checked) => handleItemSelect(item, checked === true)}
+                                        />
                                       </div>
-                                      <span className="font-medium text-gray-900">${(item.price * item.quantity).toFixed(2)}</span>
-                                    </div>
+                                    )}
                                     
-                                    {/* Variants - Show as badges only if they exist */}
-                                    {item.variants && item.variants.length > 0 && (
-                                      <div className="flex gap-2 flex-wrap">
-                                        {item.variants?.map((variant, idx) => (
-                                          <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-md">
-                                            {typeof variant === 'string' ? variant : variant.name}
+                                    <div className="flex-1 space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium text-gray-900">
+                                            {item.quantity}x {item.name}
                                           </span>
-                                        ))}
+                                          {refundedQty > 0 && (
+                                            <Badge
+                                              variant="outline"
+                                              className="text-xs border-primary text-primary bg-primary/10"
+                                            >
+                                              {t.orderDetail.refundedBadge}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <span className="font-medium text-gray-900">${(item.price * item.quantity).toFixed(2)}</span>
                                       </div>
-                                    )}
-                                    
-                                    {/* Special Instructions - Kitchen Display format */}
-                                    {item.special_instructions && (
-                                      <div className="text-sm text-primary italic">
-                                        {item.special_instructions}
-                                      </div>
-                                    )}
-                                    
-                                    {/* Show unit price if quantity > 1 */}
-                                    {item.quantity > 1 && (
-                                      <div className="text-xs text-gray-500">
-                                        ${item.price.toFixed(2)} {t.orderDetail.each}
-                                      </div>
-                                    )}
+                                      
+                                      {item.variants && item.variants.length > 0 && (
+                                        <div className="flex gap-2 flex-wrap">
+                                          {item.variants?.map((variant, idx) => (
+                                            <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-md">
+                                              {typeof variant === 'string' ? variant : variant.name}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                      
+                                      {item.special_instructions && (
+                                        <div className="text-sm text-primary italic">
+                                          {item.special_instructions}
+                                        </div>
+                                      )}
+                                      
+                                      {item.quantity > 1 && (
+                                        <div className="text-xs text-gray-500">
+                                          ${item.price.toFixed(2)} {t.orderDetail.each}
+                                        </div>
+                                      )}
+
+                                      {item.quantity > 1 && refundedQty > 0 && refundableQty > 0 && (
+                                        <div className="text-xs text-gray-500">
+                                          {t.orderDetail.refundRemainingInfo
+                                            .replace("{refunded}", refundedQty.toString())
+                                            .replace("{total}", item.quantity.toString())
+                                            .replace("{remaining}", refundableQty.toString())}
+                                        </div>
+                                      )}
+
+                                      {isRefundable && isSelected && refundableQty > 1 && (
+                                        <div className="flex flex-col gap-2 pt-3 sm:flex-row sm:items-center sm:gap-3">
+                                          <span className="text-xs font-medium text-gray-600">
+                                            {t.orderDetail.quantityToRefund}
+                                          </span>
+                                          <div className="inline-flex items-center gap-2">
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              size="icon"
+                                              onClick={() => handleQuantityStep(item.id, -1, refundableQty)}
+                                              disabled={selectedQty <= 1}
+                                              aria-label={t.orderDetail.decreaseQuantity}
+                                            >
+                                              <Minus className="h-4 w-4" />
+                                            </Button>
+                                            <Input
+                                              id={`refund-qty-${item.id}`}
+                                              type="number"
+                                              min={1}
+                                              max={refundableQty}
+                                              value={selectedQty}
+                                              onChange={(event) =>
+                                                handleQuantityChange(item.id, event.target.value, refundableQty)
+                                              }
+                                              className="h-9 w-16 text-center text-sm font-medium [appearance:textfield] [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                            />
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              size="icon"
+                                              onClick={() => handleQuantityStep(item.id, 1, refundableQty)}
+                                              disabled={selectedQty >= refundableQty}
+                                              aria-label={t.orderDetail.increaseQuantity}
+                                            >
+                                              <Plus className="h-4 w-4" />
+                                            </Button>
+                                            <span className="text-xs text-gray-500">
+                                              {t.orderDetail.maxRefundable.replace("{max}", refundableQty.toString())}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                );
+                              })}
 
                               {/* Notes and Special Instructions for Order */}
                               {(order.notes || order.special_instructions) && (

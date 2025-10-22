@@ -137,6 +137,8 @@ export const translations = {
       selectItemsRefund: "Select items below to refund",
       selectAll: "Select All",
       itemsSelected: "item(s) selected",
+      unitsSelected: "{count} unit(s)",
+      noItemsEligible: "All items that can be refunded have already been processed.",
       refund: "Refund",
       confirmPartialRefund: "Confirm Partial Refund",
       refundDescription: "You are about to refund",
@@ -147,6 +149,12 @@ export const translations = {
       confirmRefund: "Confirm Refund",
       refundSuccess: "Refund processed successfully! Funds will be returned within 3-5 business days.",
       each: "each",
+      quantityToRefund: "Quantity to refund",
+      maxRefundable: "Max {max}",
+      decreaseQuantity: "Decrease quantity",
+      increaseQuantity: "Increase quantity",
+      refundRemainingInfo: "Already refunded {refunded} of {total}. {remaining} remaining.",
+      refundedBadge: "Refunded",
       
       // Order Notes
       orderNotes: "Order Notes & Instructions",
@@ -1419,6 +1427,8 @@ export const translations = {
       selectItemsRefund: "Sélectionnez les articles ci-dessous pour remboursement",
       selectAll: "Tout sélectionner",
       itemsSelected: "article(s) sélectionné(s)",
+      unitsSelected: "{count} unite(s)",
+      noItemsEligible: "Tous les articles remboursables ont deja ete traites.",
       refund: "Rembourser",
       confirmPartialRefund: "Confirmer le remboursement partiel",
       refundDescription: "Vous êtes sur le point de rembourser",
@@ -1429,6 +1439,12 @@ export const translations = {
       confirmRefund: "Confirmer le remboursement",
       refundSuccess: "Remboursement traité avec succès! Les fonds seront retournés sous 3-5 jours ouvrables.",
       each: "chacun",
+      quantityToRefund: "Quantite a rembourser",
+      maxRefundable: "Maximum {max}",
+      decreaseQuantity: "Diminuer la quantite",
+      increaseQuantity: "Augmenter la quantite",
+      refundRemainingInfo: "Deja rembourse {refunded} sur {total}. {remaining} restant.",
+      refundedBadge: "Rembourse",
       
       // Order Notes
       orderNotes: "Notes et instructions de commande",

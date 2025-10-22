@@ -23,6 +23,7 @@ export interface OrderItem {
   special_instructions?: string;
   refunded_quantity?: number;
   refund_amount?: number;
+  refundable_quantity?: number;
   variants?: Array<{
     name: string;
     price: number;
@@ -347,19 +348,31 @@ class OrdersService {
       deliveryInfo: apiOrder.deliveryInfo || null,
       
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      items: apiOrder.items?.map((item: any) => ({
-        id: item.id,
-        name: item.name, // API already sends 'name' field
-        price: parseFloat(item.price || '0'),
-        quantity: item.quantity || 1,
-        total: parseFloat(item.total || '0'),
-        special_instructions: item.special_instructions || undefined,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        variants: item.variants?.map((variant: any) => ({
-          name: variant.name, // API already sends 'name' field
-          price: parseFloat(variant.price || '0'),
-        })) || [],
-      })) || [],
+      items: apiOrder.items?.map((item: any) => {
+        const quantity = Number(item.quantity ?? 1) || 1;
+        const refundedQuantity =
+          Number(item.refunded_quantity ?? item.refundedQuantity ?? 0) || 0;
+        const refundAmount =
+          Number(item.refund_amount ?? item.refundAmount ?? 0) || 0;
+        const refundableQuantity = Math.max(0, quantity - refundedQuantity);
+
+        return {
+          id: item.id,
+          name: item.name, // API already sends 'name' field
+          price: parseFloat(item.price || '0'),
+          quantity,
+          total: parseFloat(item.total || '0'),
+          special_instructions: item.special_instructions || undefined,
+          refunded_quantity: refundedQuantity,
+          refund_amount: refundAmount,
+          refundable_quantity: refundableQuantity,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          variants: item.variants?.map((variant: any) => ({
+            name: variant.name, // API already sends 'name' field
+            price: parseFloat(variant.price || '0'),
+          })) || [],
+        };
+      }) || [],
     };
   }
 
