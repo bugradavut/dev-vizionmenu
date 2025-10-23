@@ -102,9 +102,18 @@ function OrderEmail(props) {
       </h2>
 
       <!-- Message -->
-      <p style="font-size: 16px; color: #6b6b6b; line-height: 1.6; margin: 0 0 40px 0;">
+      <p style="font-size: 16px; color: #6b6b6b; line-height: 1.6; margin: 0 0 24px 0;">
         Hi ${customerName}, ${message}
       </p>
+
+      <!-- Uber Tracking Button (if available) - Above order details -->
+      ${uberTrackingUrl ? `
+      <div style="text-align: center; margin-bottom: 40px;">
+        <a href="${uberTrackingUrl}" style="display: inline-block; background-color: #1a1a1a; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: 600; font-size: 15px;">
+          Track Your Delivery →
+        </a>
+      </div>
+      ` : ''}
 
       <!-- Order Details Table -->
       <div style="margin-bottom: 40px;">
@@ -273,16 +282,14 @@ function OrderEmail(props) {
         ` : ''}
       </div>
 
-    </div>
+      <!-- Next Steps Message -->
+      <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #e8e4df;">
+        <p style="font-size: 15px; color: #6b6b6b; line-height: 1.6; margin: 0; text-align: center;">
+          ${nextStepsMessage}
+        </p>
+      </div>
 
-    <!-- Uber Tracking Button (if available) -->
-    ${uberTrackingUrl ? `
-    <div style="background-color: #ffffff; border: 1px solid #e8e4df; border-radius: 16px; padding: 24px; margin-bottom: 40px; text-align: center;">
-      <a href="${uberTrackingUrl}" style="display: inline-block; background-color: #1a1a1a; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: 600; font-size: 15px;">
-        Track Your Delivery →
-      </a>
     </div>
-    ` : ''}
 
     <!-- Footer -->
     <div style="text-align: center; padding-top: 24px;">

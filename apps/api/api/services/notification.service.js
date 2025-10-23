@@ -128,9 +128,13 @@ function mapOrderToEmailProps(order, options = {}) {
         : `Please bring your order number: ${baseProps.orderNumber}`,
     },
     order_delivered: {
-      title: "Your order has been completed!",
-      message: "Thank you for ordering with us. We hope you enjoy your meal!",
-      nextStepsMessage: "We'd love to hear your feedback. Please rate your experience.",
+      title: baseProps.uberTrackingUrl ? "Your order is on the way!" : "Your order has been completed!",
+      message: baseProps.uberTrackingUrl
+        ? "Your order has been handed to the courier and is on its way to you. Track your delivery in real-time using the button below."
+        : "Thank you for ordering with us. We hope you enjoy your meal!",
+      nextStepsMessage: baseProps.uberTrackingUrl
+        ? "Click the 'Track Your Delivery' button above to see your order's live location."
+        : "We'd love to hear your feedback. Please rate your experience.",
     },
   };
 
@@ -385,10 +389,15 @@ async function sendOrderDeliveredEmail(order) {
     const emailProps = mapOrderToEmailProps(order, { emailType: 'order_delivered' });
     const emailHtml = OrderEmail(emailProps);
 
+    // Dynamic subject line based on Uber tracking availability
+    const emailSubject = order.uber_tracking_url
+      ? `Order On The Way - ${emailProps.orderNumber}`
+      : `Order Completed - ${emailProps.orderNumber}`;
+
     const { data, error } = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
       to: order.customer_email,
-      subject: `Order Completed - ${emailProps.orderNumber}`,
+      subject: emailSubject,
       html: emailHtml,
     });
 
