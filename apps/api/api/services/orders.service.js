@@ -471,9 +471,11 @@ async function updateOrderStatus(orderId, updateData, userBranch) {
   console.log(`✅ Order status updated: ${orderId} - ${existingOrder.order_status} → ${status}`);
 
   // ✉️ Send status change email notification (async, non-blocking)
-  if (status === 'completed') {
+  // For pre-orders: send email when status changes to 'preparing'
+  // For all orders: send email when status changes to 'completed'
+  if (status === 'preparing' || status === 'completed') {
     try {
-      console.log('📧 [EMAIL] Order completed, preparing to send notification email...');
+      console.log(`📧 [EMAIL] Order status changed to '${status}', preparing to send notification email...`);
       console.log('📧 [EMAIL] Order ID:', actualOrderId);
 
       // Fetch complete order data for email
@@ -525,35 +527,53 @@ async function updateOrderStatus(orderId, updateData, userBranch) {
           } : null,
         };
 
-        // Determine which email to send based on order type
-        const { sendOrderReadyEmail, sendOrderDeliveredEmail } = require('./notification.service');
+        // Determine which email to send based on status and order type
+        const { sendOrderPreparingEmail, sendOrderReadyEmail, sendOrderDeliveredEmail } = require('./notification.service');
 
-        if (orderForEmail.order_type === 'delivery') {
-          console.log('📧 [EMAIL] Sending delivery completed email...');
-          sendOrderDeliveredEmail(completeOrderData)
+        // For pre-orders: send "preparing" email when status changes to 'preparing'
+        if (status === 'preparing' && orderForEmail.is_pre_order) {
+          console.log('📧 [EMAIL] Pre-order status changed to preparing, sending notification...');
+          sendOrderPreparingEmail(completeOrderData)
             .then((result) => {
               if (result.success) {
-                console.log(`✅ [EMAIL] Order delivered email sent: ${result.data.messageId}`);
+                console.log(`✅ [EMAIL] Pre-order preparing email sent: ${result.data.messageId}`);
               } else {
-                console.warn(`⚠️ [EMAIL] Order delivered email failed: ${result.error}`);
+                console.warn(`⚠️ [EMAIL] Pre-order preparing email failed: ${result.error}`);
               }
             })
             .catch((error) => {
-              console.error('❌ [EMAIL] Error sending order delivered email:', error.message);
+              console.error('❌ [EMAIL] Error sending pre-order preparing email:', error.message);
             });
-        } else {
-          console.log('📧 [EMAIL] Sending order ready email (takeaway/dine-in)...');
-          sendOrderReadyEmail(completeOrderData)
-            .then((result) => {
-              if (result.success) {
-                console.log(`✅ [EMAIL] Order ready email sent: ${result.data.messageId}`);
-              } else {
-                console.warn(`⚠️ [EMAIL] Order ready email failed: ${result.error}`);
-              }
-            })
-            .catch((error) => {
-              console.error('❌ [EMAIL] Error sending order ready email:', error.message);
-            });
+        }
+        // For all orders: send "completed" email when status changes to 'completed'
+        else if (status === 'completed') {
+          if (orderForEmail.order_type === 'delivery') {
+            console.log('📧 [EMAIL] Sending delivery completed email...');
+            sendOrderDeliveredEmail(completeOrderData)
+              .then((result) => {
+                if (result.success) {
+                  console.log(`✅ [EMAIL] Order delivered email sent: ${result.data.messageId}`);
+                } else {
+                  console.warn(`⚠️ [EMAIL] Order delivered email failed: ${result.error}`);
+                }
+              })
+              .catch((error) => {
+                console.error('❌ [EMAIL] Error sending order delivered email:', error.message);
+              });
+          } else {
+            console.log('📧 [EMAIL] Sending order ready email (takeaway/dine-in)...');
+            sendOrderReadyEmail(completeOrderData)
+              .then((result) => {
+                if (result.success) {
+                  console.log(`✅ [EMAIL] Order ready email sent: ${result.data.messageId}`);
+                } else {
+                  console.warn(`⚠️ [EMAIL] Order ready email failed: ${result.error}`);
+                }
+              })
+              .catch((error) => {
+                console.error('❌ [EMAIL] Error sending order ready email:', error.message);
+              });
+          }
         }
       }
     } catch (error) {

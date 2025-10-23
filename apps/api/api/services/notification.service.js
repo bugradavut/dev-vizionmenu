@@ -103,10 +103,17 @@ function mapOrderToEmailProps(order, options = {}) {
   // Email type specific messages
   const emailMessages = {
     order_received: {
-      title: "We're preparing your order.",
+      title: order.is_pre_order ? "Order Scheduled!" : "We're preparing your order.",
       message: order.is_pre_order
-        ? `Your order is scheduled for ${baseProps.scheduledDateTime}. We'll start preparing it 15 minutes before.`
+        ? `Your order is scheduled for ${baseProps.scheduledDateTime}. We'll notify you when we start preparing your order.`
         : "We've received your order and our kitchen is getting started.",
+      nextStepsMessage: order.order_type === 'delivery'
+        ? "You'll receive a notification when your order is out for delivery."
+        : "You'll receive a notification when your order is ready for pickup.",
+    },
+    order_preparing: {
+      title: "We're starting to prepare your order!",
+      message: `Your scheduled order is now being prepared by our kitchen. It will be ready for ${order.order_type === 'delivery' ? 'delivery' : 'pickup'} at your scheduled time.`,
       nextStepsMessage: order.order_type === 'delivery'
         ? "You'll receive a notification when your order is out for delivery."
         : "You'll receive a notification when your order is ready for pickup.",
@@ -326,6 +333,45 @@ async function sendOrderReadyEmail(order) {
 }
 
 /**
+ * Send Order Preparing Email (for pre-orders)
+ * @param {Object} order - Order object from database
+ * @returns {Promise<Object>} { success: boolean, data?: object, error?: string }
+ */
+async function sendOrderPreparingEmail(order) {
+  try {
+    if (!order.customer_email) {
+      return { success: false, error: 'Customer email not provided' };
+    }
+
+    const emailProps = mapOrderToEmailProps(order, { emailType: 'order_preparing' });
+    const emailHtml = OrderEmail(emailProps);
+
+    const { data, error } = await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+      to: order.customer_email,
+      subject: `We're Preparing Your Order - ${emailProps.orderNumber}`,
+      html: emailHtml,
+    });
+
+    if (error) {
+      console.error('Resend API error:', error);
+      return { success: false, error: error.message || 'Failed to send email' };
+    }
+
+    console.log(`✅ Order preparing email sent: ${data.id} → ${order.customer_email}`);
+
+    return {
+      success: true,
+      data: { messageId: data.id, to: order.customer_email }
+    };
+
+  } catch (error) {
+    console.error('Error sending order preparing email:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Send Order Delivered Email
  * @param {Object} order - Order object from database
  * @returns {Promise<Object>} { success: boolean, data?: object, error?: string }
@@ -366,6 +412,7 @@ async function sendOrderDeliveredEmail(order) {
 
 module.exports = {
   sendOrderReceivedEmail,
+  sendOrderPreparingEmail,
   sendOrderReadyEmail,
   sendOrderDeliveredEmail,
 };
