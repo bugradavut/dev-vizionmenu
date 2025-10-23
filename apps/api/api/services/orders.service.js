@@ -468,6 +468,100 @@ async function updateOrderStatus(orderId, updateData, userBranch) {
     throw new Error(`Failed to update order: ${updateError.message}`);
   }
 
+  console.log(`✅ Order status updated: ${orderId} - ${existingOrder.order_status} → ${status}`);
+
+  // ✉️ Send status change email notification (async, non-blocking)
+  if (status === 'completed') {
+    try {
+      console.log('📧 [EMAIL] Order completed, preparing to send notification email...');
+      console.log('📧 [EMAIL] Order ID:', actualOrderId);
+
+      // Fetch complete order data for email
+      const { data: orderForEmail, error: fetchError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', actualOrderId)
+        .single();
+
+      if (fetchError) {
+        console.warn('⚠️ [EMAIL] Failed to fetch order for email:', fetchError.message);
+      } else {
+        console.log('📧 [EMAIL] Order fetched, customer email:', orderForEmail.customer_email);
+
+        // Fetch order items
+        const { data: orderItems, error: itemsError } = await supabase
+          .from('order_items')
+          .select('*')
+          .eq('order_id', actualOrderId);
+
+        if (itemsError) {
+          console.warn('⚠️ [EMAIL] Failed to fetch order items:', itemsError.message);
+        }
+
+        // Fetch branch information
+        const { data: branchData, error: branchError } = await supabase
+          .from('branches')
+          .select('id, name, phone, address')
+          .eq('id', orderForEmail.branch_id)
+          .single();
+
+        if (branchError) {
+          console.warn('⚠️ [EMAIL] Branch fetch error:', branchError.message);
+        }
+
+        // Prepare complete order object for email
+        const completeOrderData = {
+          ...orderForEmail,
+          items: (orderItems || []).map(item => ({
+            name: item.menu_item_name,
+            quantity: item.quantity,
+            price: item.menu_item_price,
+          })),
+          branch: branchData ? {
+            id: branchData.id,
+            name: branchData.name,
+            phone: branchData.phone,
+            address: branchData.address,
+          } : null,
+        };
+
+        // Determine which email to send based on order type
+        const { sendOrderReadyEmail, sendOrderDeliveredEmail } = require('./notification.service');
+
+        if (orderForEmail.order_type === 'delivery') {
+          console.log('📧 [EMAIL] Sending delivery completed email...');
+          sendOrderDeliveredEmail(completeOrderData)
+            .then((result) => {
+              if (result.success) {
+                console.log(`✅ [EMAIL] Order delivered email sent: ${result.data.messageId}`);
+              } else {
+                console.warn(`⚠️ [EMAIL] Order delivered email failed: ${result.error}`);
+              }
+            })
+            .catch((error) => {
+              console.error('❌ [EMAIL] Error sending order delivered email:', error.message);
+            });
+        } else {
+          console.log('📧 [EMAIL] Sending order ready email (takeaway/dine-in)...');
+          sendOrderReadyEmail(completeOrderData)
+            .then((result) => {
+              if (result.success) {
+                console.log(`✅ [EMAIL] Order ready email sent: ${result.data.messageId}`);
+              } else {
+                console.warn(`⚠️ [EMAIL] Order ready email failed: ${result.error}`);
+              }
+            })
+            .catch((error) => {
+              console.error('❌ [EMAIL] Error sending order ready email:', error.message);
+            });
+        }
+      }
+    } catch (error) {
+      console.error('❌ [EMAIL] Email service error:', error);
+      console.warn('⚠️ [EMAIL] Email service unavailable:', error.message);
+    }
+  }
+
   return {
     success: true,
     message: 'Order status updated successfully',
@@ -1079,11 +1173,11 @@ async function createOrderWithCommission(orderData, branchId) {
 
     const { sendOrderReceivedEmail } = require('./notification.service');
 
-    // Fetch branch information for email
+    // Fetch branch information for email (including settings)
     console.log('📧 [EMAIL] Fetching branch info for:', branchId);
     const { data: branchData, error: branchError } = await supabase
       .from('branches')
-      .select('id, name, phone, address')
+      .select('id, name, phone, address, settings')
       .eq('id', branchId)
       .single();
 
@@ -1093,19 +1187,9 @@ async function createOrderWithCommission(orderData, branchId) {
       console.log('📧 [EMAIL] Branch fetched:', branchData?.name);
     }
 
-    // Fetch branch settings to determine free delivery status
-    console.log('📧 [EMAIL] Fetching branch settings...');
-    const { data: branchSettings, error: settingsError } = await supabase
-      .from('branch_settings')
-      .select('free_delivery_threshold, delivery_fee')
-      .eq('branch_id', branchId)
-      .single();
-
-    if (settingsError) {
-      console.warn('⚠️ [EMAIL] Branch settings fetch error:', settingsError.message);
-    } else {
-      console.log('📧 [EMAIL] Branch settings fetched');
-    }
+    // Extract settings from branch data
+    const branchSettings = branchData?.settings || {};
+    console.log('📧 [EMAIL] Branch settings:', branchSettings);
 
     // Determine if free delivery was applied
     const itemsSubtotal = parseFloat(order.items_subtotal || 0);

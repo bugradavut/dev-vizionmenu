@@ -42,7 +42,7 @@ function mapOrderToEmailProps(order, options = {}) {
     orderNotes: order.notes || '',
 
     // Timing
-    estimatedTime: order.estimated_time || '20-30 minutes',
+    estimatedTime: formatEstimatedReadyTime(order.estimated_ready_time, order.created_at),
     isPreOrder: order.is_pre_order || false,
     scheduledDateTime: order.scheduled_datetime
       ? formatScheduledDateTime(order.scheduled_date, order.scheduled_time)
@@ -87,7 +87,7 @@ function mapOrderToEmailProps(order, options = {}) {
 
     // Delivery Address
     deliveryAddress: order.delivery_address ? {
-      streetAddress: order.delivery_address.streetAddress,
+      streetAddress: order.delivery_address.street || order.delivery_address.streetAddress,
       unitNumber: order.delivery_address.unitNumber,
       city: order.delivery_address.city,
       province: order.delivery_address.province,
@@ -121,7 +121,7 @@ function mapOrderToEmailProps(order, options = {}) {
         : `Please bring your order number: ${baseProps.orderNumber}`,
     },
     order_delivered: {
-      title: "Your order has been delivered!",
+      title: "Your order has been completed!",
       message: "Thank you for ordering with us. We hope you enjoy your meal!",
       nextStepsMessage: "We'd love to hear your feedback. Please rate your experience.",
     },
@@ -177,6 +177,49 @@ function formatScheduledDateTime(date, time) {
   } catch (error) {
     console.error('Error formatting scheduled date/time:', error);
     return null;
+  }
+}
+
+/**
+ * Calculate and format estimated ready time
+ */
+function formatEstimatedReadyTime(estimatedTimeString, createdAt) {
+  if (!estimatedTimeString && !createdAt) {
+    return '20-30 minutes'; // Fallback
+  }
+
+  try {
+    // Default to 30 minutes if no estimated time provided
+    let minutes = 30;
+
+    if (estimatedTimeString) {
+      // Extract minutes from estimated time string (e.g., "20 minutes" -> 20)
+      const minutesMatch = estimatedTimeString.match(/(\d+)\s*minutes?/i);
+      if (minutesMatch) {
+        minutes = parseInt(minutesMatch[1], 10);
+      }
+    }
+
+    if (!createdAt) {
+      return `${minutes} minutes`;
+    }
+
+    // Calculate completion time
+    const orderTime = new Date(createdAt);
+    const completionTime = new Date(orderTime.getTime() + minutes * 60 * 1000);
+
+    // Format completion time
+    const timeString = completionTime.toLocaleTimeString('en-CA', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'America/Toronto'
+    });
+
+    return `${timeString} (${minutes} Minutes)`;
+  } catch (error) {
+    console.error('Error formatting estimated ready time:', error);
+    return '20-30 minutes';
   }
 }
 
@@ -299,7 +342,7 @@ async function sendOrderDeliveredEmail(order) {
     const { data, error } = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
       to: order.customer_email,
-      subject: `Order Delivered - ${emailProps.orderNumber}`,
+      subject: `Order Completed - ${emailProps.orderNumber}`,
       html: emailHtml,
     });
 
