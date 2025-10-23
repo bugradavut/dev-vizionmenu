@@ -487,319 +487,6 @@ async function updateOrderStatus(orderId, updateData, userBranch) {
 }
 
 /**
- * Create new order
- * @param {Object} orderData - Order creation data
- * @param {string} branchId - Branch ID
- * @returns {Object} Created order data
- */
-async function createOrder(orderData, branchId) {
-  const { customer, items, orderType, paymentMethod, source, tableNumber, zone, notes, specialInstructions, deliveryAddress, preOrder, pricing, campaign, tip, commission } = orderData;
-  
-  // Only allow internal orders for now (third-party will be added in 2 weeks)
-  if (!['qr_code', 'web'].includes(source)) {
-    throw new Error('Only qr_code and web orders are supported currently');
-  }
-
-  // Use comprehensive pricing if provided, otherwise calculate basic totals
-  let itemsSubtotal, discountAmount, deliveryFee, gstAmount, qstAmount, tipAmount, finalTotal;
-  let couponCode = null, couponId = null, tipType = null, tipValue = null;
-  
-  if (pricing) {
-    // Use provided comprehensive pricing breakdown
-    itemsSubtotal = parseFloat(pricing.itemsTotal || 0);
-    discountAmount = parseFloat(pricing.discountAmount || 0);
-    deliveryFee = parseFloat(pricing.deliveryFee || 0);
-    gstAmount = parseFloat(pricing.gst || 0);
-    qstAmount = parseFloat(pricing.qst || 0);
-    tipAmount = parseFloat(pricing.tipAmount || 0);
-    finalTotal = parseFloat(pricing.finalTotal || 0);
-    
-    // Campaign/coupon details
-    if (campaign) {
-      couponCode = campaign.code;
-      couponId = campaign.id || null;
-    }
-    
-    // Tip details
-    if (tip) {
-      tipAmount = parseFloat(tip.amount || 0);
-      tipType = tip.type; // 'percentage' or 'fixed'
-      tipValue = parseFloat(tip.value || 0);
-    }
-  } else {
-    // Fallback to basic calculation for backward compatibility
-    itemsSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    discountAmount = 0;
-    deliveryFee = 0;
-    tipAmount = 0;
-    
-    // ✅ NEW CANADA TAX RULES: Calculate Quebec tax structure with tip before taxes
-    const subtotalWithDelivery = itemsSubtotal - discountAmount + deliveryFee;
-    const subtotalWithDeliveryAndTip = subtotalWithDelivery + tipAmount;
-    gstAmount = subtotalWithDeliveryAndTip * 0.05; // 5% GST on subtotal + tip
-    qstAmount = subtotalWithDeliveryAndTip * 0.09975; // 9.975% QST on subtotal + tip
-    finalTotal = subtotalWithDeliveryAndTip + gstAmount + qstAmount;
-  }
-  
-  // Legacy compatibility values
-  const subtotal = itemsSubtotal - discountAmount; // After discount for legacy field
-  const taxAmount = gstAmount + qstAmount; // Combined tax for legacy field
-  const total = finalTotal;
-
-  // Handle pre-order data
-  const isPreOrder = preOrder?.isPreOrder || false;
-  
-  
-  // Parse scheduledDateTime properly to avoid timezone issues
-  let scheduledDateTime = null;
-  if (preOrder?.scheduledDateTime) {
-    try {
-      // If it's a string, parse it. If it's already a Date, use it
-      const dateValue = typeof preOrder.scheduledDateTime === 'string' 
-        ? new Date(preOrder.scheduledDateTime) 
-        : preOrder.scheduledDateTime;
-      
-      // Convert to ISO string for PostgreSQL
-      if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
-        scheduledDateTime = dateValue.toISOString();
-      }
-    } catch (error) {
-      console.warn('Failed to parse scheduledDateTime:', error);
-      scheduledDateTime = null;
-    }
-  }
-  
-  const scheduledDate = preOrder?.scheduledDate || null;
-  
-  // Parse scheduledTime to remove AM/PM and convert to 24-hour format for PostgreSQL
-  let scheduledTime = null;
-  if (preOrder?.scheduledTime) {
-    try {
-      // Parse the time string (e.g., "11:30 a.m." or "2:30 p.m.")
-      const timeMatch = preOrder.scheduledTime.match(/(\d+):(\d+)\s*(a\.m\.|p\.m\.|AM|PM)/i);
-      if (timeMatch) {
-        let hours = parseInt(timeMatch[1]);
-        const minutes = timeMatch[2];
-        const meridiem = timeMatch[3].toLowerCase();
-        
-        // Convert to 24-hour format
-        if (meridiem.includes('p') && hours !== 12) {
-          hours += 12;
-        } else if (meridiem.includes('a') && hours === 12) {
-          hours = 0;
-        }
-        
-        // Format as HH:MM:SS for PostgreSQL TIME type
-        scheduledTime = `${hours.toString().padStart(2, '0')}:${minutes}:00`;
-      } else {
-        console.warn('Could not parse time format:', preOrder.scheduledTime);
-        scheduledTime = null;
-      }
-    } catch (error) {
-      console.warn('Failed to parse scheduledTime:', error);
-      scheduledTime = null;
-    }
-  }
-  
-
-  // Determine initial status based on order type
-  let initialStatus = 'preparing'; // Default for immediate orders
-  if (isPreOrder) {
-    initialStatus = 'scheduled'; // Pre-orders start as scheduled
-  }
-
-  // Create order in database
-  const orderDataObj = {
-    branch_id: branchId,
-    customer_name: customer.name,
-    customer_phone: customer.phone,
-    customer_email: customer.email || null,
-    order_type: orderType,
-    table_number: tableNumber || null,
-    zone: zone || null,
-    delivery_address: deliveryAddress || null,
-    order_status: initialStatus, // Dynamic status based on pre-order
-    payment_status: 'pending',
-    payment_method: paymentMethod || 'counter',
-    
-    // Legacy pricing fields (maintained for backward compatibility)
-    subtotal: subtotal,
-    tax_amount: taxAmount,
-    total_amount: total,
-    
-    // NEW: Comprehensive pricing breakdown
-    items_subtotal: itemsSubtotal,
-    discount_amount: discountAmount,
-    coupon_code: couponCode,
-    coupon_id: couponId,
-    delivery_fee: deliveryFee,
-    gst_amount: gstAmount,
-    qst_amount: qstAmount,
-    tip_amount: tipAmount,
-    tip_type: tipType,
-    tip_value: tipValue,
-    
-    notes: notes || null,
-    special_instructions: specialInstructions || null,
-    third_party_platform: ['qr_code', 'web'].includes(source) ? null : source, // Internal orders don't set platform
-    // Pre-order fields
-    is_pre_order: isPreOrder,
-    scheduled_datetime: scheduledDateTime,
-    scheduled_date: scheduledDate,
-    scheduled_time: scheduledTime,
-    
-    // Commission fields
-    order_source: commission?.orderSource || null,
-    commission_rate: commission?.commissionRate || 0,
-    commission_amount: commission?.commissionAmount || 0,
-    net_amount: commission?.netAmount || total,
-    commission_status: 'pending',
-    
-    created_at: new Date().toISOString()
-  };
-
-
-  const { data: createdOrder, error: createError } = await supabase
-    .from('orders')
-    .insert(orderDataObj)
-    .select()
-    .single();
-
-  if (createError) {
-    console.error('Order creation error:', createError);
-    throw new Error('Failed to create order');
-  }
-
-  // Create order items
-  const orderItems = items.map(item => ({
-    order_id: createdOrder.id,
-    menu_item_name: item.name,
-    menu_item_price: item.price,
-    quantity: item.quantity,
-    item_total: item.price * item.quantity,
-    special_instructions: item.special_instructions || null
-  }));
-
-  const { error: itemsError } = await supabase
-    .from('order_items')
-    .insert(orderItems);
-
-  if (itemsError) {
-    console.error('Order items creation error:', itemsError);
-    // Rollback order creation
-    await supabase.from('orders').delete().eq('id', createdOrder.id);
-    throw new Error('Failed to create order items');
-  }
-
-  // Record coupon usage if coupon was applied (with multi-tenant security)
-  if (couponId && discountAmount > 0) {
-    
-    // SECURITY: Verify coupon belongs to the same branch as the order
-    const { data: couponBranch, error: couponError } = await supabase
-      .from('coupons')
-      .select('branch_id')
-      .eq('id', couponId)
-      .single();
-
-    if (couponError || !couponBranch || couponBranch.branch_id !== branchId) {
-      console.error('Multi-tenant security violation: Coupon does not belong to order branch', {
-        couponId,
-        orderId: createdOrder.id,
-        orderBranch: branchId,
-        couponBranch: couponBranch?.branch_id
-      });
-      // Don't record usage for security violation
-    } else {
-      // Safe to record usage - coupon and order are from same branch
-      const { error: usageError } = await supabase
-        .from('coupon_usages')
-        .insert({
-          coupon_id: couponId,
-          order_id: createdOrder.id,
-          discount_amount: discountAmount
-        });
-
-      if (usageError) {
-        console.error('Coupon usage recording error:', usageError);
-        // Don't rollback order - coupon usage is supplementary data
-      } else {
-        console.log('Coupon usage recorded successfully');
-      }
-    }
-  }
-
-  // WEB-SRM Dry-Run Integration (Phase 3)
-  // Only runs in DEV when flag is enabled, does NOT affect production
-  try {
-    const { isWebSrmDryRunEnabled } = require('../../utils/featureFlags');
-    if (isWebSrmDryRunEnabled()) {
-      const { emitWebsrmDryRun } = require('../../services/websrm-adapter/dryrun-adapter');
-
-      // Attach items to order for dry-run adapter
-      const orderWithItems = { ...createdOrder, items: orderItems };
-
-      // Emit dry-run output asynchronously (don't block order creation)
-      emitWebsrmDryRun(orderWithItems)
-        .then((result) => {
-          if (result.hash !== 'skipped-no-items') {
-            console.info('[WEB-SRM DRYRUN]', createdOrder.id, 'hash:', result.hash, 'files:', result.files.length);
-          }
-        })
-        .catch((error) => {
-          console.warn('[WEB-SRM DRYRUN] failed:', createdOrder.id, error.message);
-        });
-    }
-  } catch (error) {
-    // Silently fail if WEB-SRM adapter is not available
-    // This ensures backward compatibility and doesn't break existing functionality
-    console.debug('[WEB-SRM DRYRUN] adapter not available:', error.message);
-  }
-
-  // WEB-SRM Runtime Integration (Phase 6 - Refactored)
-  // Profile-based configuration, production-blocked, local persist only (NO network)
-  try {
-    const enabled = process.env.WEBSRM_ENABLED === 'true' && process.env.NODE_ENV !== 'production';
-    if (enabled) {
-      const { handleOrderForWebSrm } = require('../../services/websrm-adapter/runtime-adapter');
-      const { resolveProfile } = require('../../services/websrm-adapter/profile-resolver');
-
-      const orderWithItems = Array.isArray(createdOrder.items)
-        ? createdOrder
-        : { ...createdOrder, items: orderItems || [] };
-
-      // Resolve profile for tenant/branch/device
-      resolveProfile(
-        createdOrder.tenant_id,
-        createdOrder.branch_id,
-        createdOrder.device_id // If stored in order
-      )
-        .then((profile) => handleOrderForWebSrm(orderWithItems, profile, {
-          persist: process.env.WEBSRM_PERSIST || 'files',
-        }))
-        .then(() => console.info('[WEB-SRM] persisted', createdOrder.id))
-        .catch((e) => console.warn('[WEB-SRM] persist failed', createdOrder.id, e.message));
-    }
-  } catch (error) {
-    console.debug('[WEB-SRM] runtime adapter not available:', error.message);
-  }
-
-  return {
-    order: {
-      id: createdOrder.id,
-      order_number: `${createdOrder.id.substring(0, 8).toUpperCase()}`,
-      status: createdOrder.order_status,
-      total: total,
-      createdAt: createdOrder.created_at,
-      // NEW: Pre-order information
-      is_pre_order: createdOrder.is_pre_order,
-      scheduled_datetime: createdOrder.scheduled_datetime,
-      scheduled_date: createdOrder.scheduled_date,
-      scheduled_time: createdOrder.scheduled_time
-    }
-  };
-}
-
-/**
  * Check if order should be auto-accepted based on branch settings
  * @param {string} orderId - Order ID
  * @param {string} branchId - Branch ID
@@ -1385,6 +1072,109 @@ async function createOrderWithCommission(orderData, branchId) {
 
   console.log(`✅ Order created successfully with commission: ${order.id.substring(0, 8).toUpperCase()} - Commission: ${commission_rate}% = $${commission_amount}`);
 
+  // ✉️ Send Order Received Email (async, non-blocking)
+  try {
+    console.log('📧 [EMAIL] Starting email send process for order:', order.id);
+    console.log('📧 [EMAIL] Customer email:', order.customer_email);
+
+    const { sendOrderReceivedEmail } = require('./notification.service');
+
+    // Fetch branch information for email
+    console.log('📧 [EMAIL] Fetching branch info for:', branchId);
+    const { data: branchData, error: branchError } = await supabase
+      .from('branches')
+      .select('id, name, phone, address')
+      .eq('id', branchId)
+      .single();
+
+    if (branchError) {
+      console.warn('⚠️ [EMAIL] Branch fetch error:', branchError.message);
+    } else {
+      console.log('📧 [EMAIL] Branch fetched:', branchData?.name);
+    }
+
+    // Fetch branch settings to determine free delivery status
+    console.log('📧 [EMAIL] Fetching branch settings...');
+    const { data: branchSettings, error: settingsError } = await supabase
+      .from('branch_settings')
+      .select('free_delivery_threshold, delivery_fee')
+      .eq('branch_id', branchId)
+      .single();
+
+    if (settingsError) {
+      console.warn('⚠️ [EMAIL] Branch settings fetch error:', settingsError.message);
+    } else {
+      console.log('📧 [EMAIL] Branch settings fetched');
+    }
+
+    // Determine if free delivery was applied
+    const itemsSubtotal = parseFloat(order.items_subtotal || 0);
+    const discountAmount = parseFloat(order.discount_amount || 0);
+    const deliveryFee = parseFloat(order.delivery_fee || 0);
+    const subtotalAfterDiscount = itemsSubtotal - discountAmount;
+    const freeDeliveryThreshold = branchSettings?.free_delivery_threshold || 0;
+    const baseFee = branchSettings?.delivery_fee || 0;
+    const isFreeDelivery = deliveryFee === 0 && subtotalAfterDiscount >= freeDeliveryThreshold && freeDeliveryThreshold > 0;
+
+    // Prepare order data with all details for email
+    const orderForEmail = {
+      ...order,
+      order_number: order.id.substring(0, 8).toUpperCase(),
+      items: createdItems.map(item => ({
+        name: item.menu_item_name,
+        quantity: item.quantity,
+        price: item.menu_item_price,
+      })),
+      // Pricing breakdown
+      campaign_discount: order.coupon_code ? {
+        code: order.coupon_code,
+        discount_amount: discountAmount,
+        campaign_type: 'percentage',
+        campaign_value: 0,
+      } : null,
+      tip_details: order.tip_amount > 0 ? {
+        amount: parseFloat(order.tip_amount),
+        type: order.tip_type || 'percentage',
+        value: parseFloat(order.tip_value || 0),
+      } : null,
+      delivery_info: (deliveryFee > 0 || isFreeDelivery) ? {
+        is_free: isFreeDelivery,
+        base_fee: baseFee,
+        applied_fee: deliveryFee,
+        threshold: freeDeliveryThreshold,
+        savings: isFreeDelivery ? baseFee : 0,
+      } : null,
+      gst: parseFloat(order.gst_amount || 0),
+      qst: parseFloat(order.qst_amount || 0),
+      // Branch info
+      branch: branchData ? {
+        id: branchData.id,
+        name: branchData.name,
+        phone: branchData.phone,
+        address: branchData.address,
+      } : null,
+    };
+
+    console.log('📧 [EMAIL] Order data prepared, sending email...');
+
+    // Send email asynchronously (don't block order creation)
+    sendOrderReceivedEmail(orderForEmail)
+      .then((result) => {
+        if (result.success) {
+          console.log(`✅ [EMAIL] Order confirmation email sent: ${result.data.messageId}`);
+        } else {
+          console.warn(`⚠️ [EMAIL] Order confirmation email failed: ${result.error}`);
+        }
+      })
+      .catch((error) => {
+        console.error('❌ [EMAIL] Error sending order confirmation email:', error.message);
+      });
+  } catch (error) {
+    // Email service not critical - don't fail order creation
+    console.error('❌ [EMAIL] Email service error:', error);
+    console.warn('⚠️ [EMAIL] Email service unavailable:', error.message);
+  }
+
   return {
     order: {
       id: order.id,
@@ -1413,7 +1203,6 @@ module.exports = {
   getOrders,
   getOrderDetail,
   updateOrderStatus,
-  createOrder,
   createOrderWithCommission,
   checkAutoAccept,
   checkOrderTimers,
