@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { useInactivityTimeout } from '@/hooks/use-inactivity-timeout'
 
 interface SignUpMetadata {
   [key: string]: string | number | boolean
@@ -31,6 +32,9 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<ResetPasswordResult>
   isRemembered: boolean
   hasRecentLogin: boolean
+  inactivityWarning: boolean
+  inactivityRemainingTime: number
+  resetInactivityTimer: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -194,6 +198,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { data, error }
   }
 
+  // Inactivity timeout - auto logout after inactivity
+  // For SW-78 FO-103 compliance (sleep mode requirement)
+  // TODO: Make this configurable by platform admin
+  const {
+    showWarning: inactivityWarning,
+    remainingTime: inactivityRemainingTime,
+    resetTimer: resetInactivityTimer,
+  } = useInactivityTimeout({
+    timeout: 1 * 60 * 1000, // 1 minute (FOR TESTING - will be changed to 15 minutes)
+    warningTime: 30 * 1000, // 30 seconds warning
+    enabled: !!user && !loading, // Only active when user is logged in
+    onTimeout: async () => {
+      // Auto logout on inactivity
+      await signOut();
+    },
+    onWarning: () => {
+      // Warning will be handled by UI component
+      console.log('[Auth] Inactivity warning: session will expire soon');
+    },
+  });
+
   const value = {
     user,
     session,
@@ -204,6 +229,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resetPassword,
     isRemembered,
     hasRecentLogin,
+    inactivityWarning,
+    inactivityRemainingTime,
+    resetInactivityTimer,
   }
 
   return (

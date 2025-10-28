@@ -4,6 +4,7 @@ import { AuthProvider } from "@/contexts/auth-context";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { LanguageProvider } from "@/contexts/language-context";
 import { Toaster } from "@/components/ui/toaster";
+import { InactivityWarningDialog } from "@/components/inactivity-warning-dialog";
 
 export const metadata: Metadata = {
   title: "Vizion Menu",
@@ -65,6 +66,7 @@ export default function RootLayout({
           <LanguageProvider>
             <AuthProvider>
               {children}
+              <InactivityWarningDialog />
             </AuthProvider>
           </LanguageProvider>
           <Toaster />
