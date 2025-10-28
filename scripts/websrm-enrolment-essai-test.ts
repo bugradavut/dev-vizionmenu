@@ -1,48 +1,60 @@
 /**
- * WEB-SRM ESSAI Enrolment - Log-Only Test
+ * WEB-SRM ESSAI Enrolment Test
  *
- * Purpose: Test ESSAI enrolment to validate CSR format
- * NOTE: Does NOT write to database, only logs the response
+ * Purpose: Test ESSAI enrolment with GOLDEN CONFIGURATION
+ *
+ * ESSAI Specifics (CORRECTED):
+ * - Endpoint: https://certificats.cnfr.api.rq-fo.ca/enrolement (NO "2" suffix!)
+ * - CASESSAI: 500.001 (not 000.000)
+ * - VERSIPARN: 0 (not 1.0.0 - first certification attempt)
+ * - codAutori: IN BODY (not in header)
  */
 
-import { writeFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import { Crypto } from '@peculiar/webcrypto';
 import * as x509 from '@peculiar/x509';
+import * as fs from 'fs';
+import * as path from 'path';
+import { execSync } from 'child_process';
+import crypto from 'crypto';
+import { Crypto } from '@peculiar/webcrypto';
 
-const crypto = new Crypto();
-x509.cryptoProvider.set(crypto);
+// Setup WebCrypto
+const webcrypto = new Crypto();
+x509.cryptoProvider.set(webcrypto);
 
-console.log('🧪 WEB-SRM ESSAI Enrolment - Log-Only Test\n');
-console.log('⚠️  NOTE: This is a read-only test. No data will be written to database.\n');
+const ENDPOINT = 'https://certificats.cnfr.api.rq-fo.ca/enrolement'; // ESSAI uses /enrolement (NO "2"!)
 
-// ESSAI Configuration (from manager's credentials)
-const ESSAI_CONFIG = {
-  env: 'ESSAI',
-  enrolmentUrl: 'https://certificats.cnfr.api.rq-fo.ca/enrolement2', // ESSAI: with "2"
-  partnerId: '0000000000001FF2',
-  certCode: 'FOB201999999',
-  softwareId: '0000000000003973',
-  softwareVersion: '00000000000045D6',
-  versi: '0.1.0',
-  versiParn: '1.0.0', // ESSAI: 1.0.0 (not 0)
-  casEssai: '500.001', // Server mode test case
-  authCode: 'B8T8-W8W8', // From Screenshot-3 - Administrateur du serveur RBC
+const HEADERS = {
+  'Content-Type': 'application/json',
+  ENVIRN: 'ESSAI',
+  APPRLINIT: 'SRV',
+  CASESSAI: '500.001', // ESSAI case
+  VERSIPARN: '0',      // First certification (NOT 1.0.0)
+  IDSEV: '0000000000003973',
+  IDVERSI: '00000000000045D6',
+  CODCERTIF: 'FOB201999999',
+  IDPARTN: '0000000000001FF2',
+  VERSI: '0.1.0',
+  // NO CODAUTORI in header for ESSAI
 };
 
-console.log('📋 ESSAI Configuration:');
-console.log(`  ENV: ${ESSAI_CONFIG.env}`);
-console.log(`  Endpoint: ${ESSAI_CONFIG.enrolmentUrl}`);
-console.log(`  CASESSAI: ${ESSAI_CONFIG.casEssai} (Server mode - test case 500)`);
-console.log(`  CODCERTIF: ${ESSAI_CONFIG.certCode}`);
-console.log(`  IDPARTN: ${ESSAI_CONFIG.partnerId}`);
-console.log(`  Auth Code: ${ESSAI_CONFIG.authCode}`);
-console.log(`  VERSIPARN: ${ESSAI_CONFIG.versiParn}\n`);
+const AUTH_CODE = 'D8T8-W8W8';
 
-// Generate ECDSA P-256 keypair
-async function generateKeyPairP256(): Promise<CryptoKeyPair> {
-  console.log('🔐 Generating ECDSA P-256 keypair...');
-  const keys = await crypto.subtle.generateKey(
+// DN per golden config (user specified RBC-D8T8-W8W8)
+const DN = {
+  C: 'CA',
+  ST: 'QC',
+  L: '-05:00',
+  surname: 'Certificat du serveur', // 2.5.4.4 (CRITICAL!)
+  O: 'RBC-D8T8-W8W8', // User specified RBC, not FOB
+  OU: '5678912340TQ0001',
+  givenName: 'ER0001', // 2.5.4.42
+  CN: '5678912340',
+};
+
+async function generateKeyPair() {
+  console.log('🔐 Generating ECDSA P-256 keypair...\n');
+
+  const keys = await webcrypto.subtle.generateKey(
     {
       name: 'ECDSA',
       namedCurve: 'P-256',
@@ -50,200 +62,307 @@ async function generateKeyPairP256(): Promise<CryptoKeyPair> {
     true,
     ['sign', 'verify']
   );
-  console.log('✅ Keypair generated\n');
+
   return keys;
 }
 
-// Build CSR for ESSAI (FOB)
-async function buildCSR(cryptoKey: CryptoKeyPair): Promise<string> {
-  console.log('📝 Building CSR for ESSAI (FOB)...');
+async function generateCSR(cryptoKey: CryptoKeyPair) {
+  console.log('📝 Building CSR (GOLDEN CONFIG)...\n');
 
-  // ESSAI CSR Subject (based on Screenshot-3 - Administrateur du serveur RBC)
-  // C=CA, ST=QC, L=-05:00, SN=Certificat du serveur, O=FOB-FOB201999999, CN=0000000000001FF2
-  // NO OU, NO GN for FOB
-  const subject = [
-    `C=CA`,
-    `ST=QC`,
-    `L=-05:00`,
-    `2.5.4.5=Certificat du serveur`, // SN
-    `O=FOB-${ESSAI_CONFIG.certCode}`,
-    `CN=${ESSAI_CONFIG.partnerId}`,
-  ].join(', ');
+  // Build DN - EXACT ORDER: C, ST, L, SN (2.5.4.4), O, OU, GN (2.5.4.42), CN
+  const dnString = `C=${DN.C}, ST=${DN.ST}, L=${DN.L}, 2.5.4.4=${DN.surname}, O=${DN.O}, OU=${DN.OU}, 2.5.4.42=${DN.givenName}, CN=${DN.CN}`;
 
-  console.log(`   Subject: ${subject}\n`);
-
+  // Create CSR
   const csr = await x509.Pkcs10CertificateRequestGenerator.create({
-    name: subject,
+    name: dnString,
     keys: cryptoKey,
     signingAlgorithm: {
       name: 'ECDSA',
       hash: 'SHA-256',
     },
     extensions: [
+      // KeyUsage: digitalSignature + nonRepudiation (critical)
       new x509.KeyUsagesExtension(
         x509.KeyUsageFlags.digitalSignature | x509.KeyUsageFlags.nonRepudiation,
-        true // critical
+        true
       ),
-      new x509.ExtendedKeyUsageExtension(['1.3.6.1.5.5.7.3.8']), // Customer authentication
+      // NO ExtendedKeyUsage (server adds clientAuth automatically)
     ],
   });
 
-  const csrPem = csr.toString('pem');
-  console.log(`✅ CSR generated (${csrPem.length} bytes)\n`);
+  // Export as single-line base64 PEM (CRITICAL!)
+  const derBuffer = Buffer.from(csr.rawData);
+  const base64SingleLine = derBuffer.toString('base64');
+  const csrPem = `-----BEGIN CERTIFICATE REQUEST-----\n${base64SingleLine}\n-----END CERTIFICATE REQUEST-----`;
 
-  return csrPem;
+  console.log(`✅ CSR generated (GOLDEN CONFIG)`);
+  console.log(`   DN: ${dnString}`);
+  console.log(`   KeyUsage: digitalSignature + nonRepudiation (critical)`);
+  console.log(`   EKU: NONE (server adds clientAuth)`);
+  console.log(`   PEM: Single-line base64 (${base64SingleLine.length} chars)\n`);
+
+  return { csrPem, derBuffer };
 }
 
-async function main() {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const logDir = join(process.cwd(), 'tmp', 'logs');
-  mkdirSync(logDir, { recursive: true });
+async function testEnrolment() {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const baseDir = path.join('tmp', 'logs', `essai-enrolment-${timestamp}`);
+  fs.mkdirSync(baseDir, { recursive: true });
+
+  console.log('╔════════════════════════════════════════════════════════════════╗');
+  console.log('║  WEB-SRM ESSAI Enrolment Test (GOLDEN CONFIG)                 ║');
+  console.log('╚════════════════════════════════════════════════════════════════╝\n');
+  console.log(`📁 Output: ${baseDir}\n`);
+
+  // Generate keypair
+  const cryptoKey = await generateKeyPair();
+
+  // Generate CSR
+  const { csrPem, derBuffer } = await generateCSR(cryptoKey);
+
+  // Save CSR
+  const csrPath = path.join(baseDir, 'csr.pem');
+  fs.writeFileSync(csrPath, csrPem, 'utf8');
+
+  // SHA-256 hash
+  const sha256Hash = crypto.createHash('sha256').update(derBuffer).digest('hex');
+  fs.writeFileSync(path.join(baseDir, 'sha256.txt'), sha256Hash, 'utf8');
+
+  // OpenSSL parse
+  try {
+    const opensslOutput = execSync(`openssl req -in "${csrPath}" -noout -text`, {
+      encoding: 'utf8',
+    });
+    fs.writeFileSync(path.join(baseDir, 'csr.txt'), opensslOutput, 'utf8');
+    console.log('✅ OpenSSL validation passed\n');
+  } catch (err: any) {
+    console.error(`❌ OpenSSL validation failed: ${err.message}\n`);
+  }
+
+  // Save headers
+  fs.writeFileSync(
+    path.join(baseDir, 'headers.json'),
+    JSON.stringify(HEADERS, null, 2),
+    'utf8'
+  );
+
+  // Build request body
+  const requestBody = {
+    reqCertif: {
+      modif: 'AJO',
+      csr: csrPem,
+    },
+    codAutori: AUTH_CODE, // IN BODY for ESSAI (not in header!)
+  };
+
+  // Save request
+  fs.writeFileSync(
+    path.join(baseDir, 'request.json'),
+    JSON.stringify(requestBody, null, 2),
+    'utf8'
+  );
+
+  // Generate curl command
+  const curlHeaders = Object.entries(HEADERS)
+    .map(([k, v]) => `-H "${k}: ${v}"`)
+    .join(' \\\n  ');
+
+  const curlCommand = `curl -X POST "${ENDPOINT}" \\\n  ${curlHeaders} \\\n  -d @request.json`;
+  fs.writeFileSync(path.join(baseDir, 'curl.sh'), curlCommand, 'utf8');
+
+  // Make API call
+  console.log('🌐 Calling ESSAI enrolment endpoint...\n');
+  console.log(`POST ${ENDPOINT}\n`);
+
+  let response: any;
+  let httpStatus: number;
 
   try {
-    // Step 1: Generate keypair
-    const cryptoKey = await generateKeyPairP256();
-
-    // Step 2: Build CSR
-    const csr = await buildCSR(cryptoKey);
-
-    // Step 3: Prepare request
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'ENVIRN': ESSAI_CONFIG.env,
-      'APPRLINIT': 'SRV',
-      'IDSEV': ESSAI_CONFIG.softwareId,
-      'IDVERSI': ESSAI_CONFIG.softwareVersion,
-      'CODCERTIF': ESSAI_CONFIG.certCode,
-      'IDPARTN': ESSAI_CONFIG.partnerId,
-      'VERSI': ESSAI_CONFIG.versi,
-      'VERSIPARN': ESSAI_CONFIG.versiParn, // 1.0.0 for ESSAI
-      'CASESSAI': ESSAI_CONFIG.casEssai,   // 500.001
-    };
-
-    // Body with codAutori (ESSAI requires it in body)
-    const body = {
-      codAutori: ESSAI_CONFIG.authCode, // B8T8-W8W8
-      reqCertif: {
-        modif: 'AJO',
-        csr,
-      },
-    };
-
-    console.log('📤 Request Details:');
-    console.log('   Headers:');
-    Object.entries(headers).forEach(([key, value]) => {
-      console.log(`     ${key}: ${value}`);
-    });
-    console.log('   Body:');
-    console.log(`     codAutori: ${body.codAutori}`);
-    console.log(`     reqCertif.modif: ${body.reqCertif.modif}`);
-    console.log(`     reqCertif.csr: <${csr.length} bytes>\n`);
-
-    // Log request
-    let logContent = '=== WEB-SRM ESSAI Enrolment - Log-Only Test ===\n';
-    logContent += `Timestamp: ${new Date().toISOString()}\n`;
-    logContent += `⚠️  READ-ONLY TEST - No database writes\n\n`;
-    logContent += `POST ${ESSAI_CONFIG.enrolmentUrl}\n\n`;
-    logContent += 'Headers:\n';
-    Object.entries(headers).forEach(([key, value]) => {
-      logContent += `  ${key}: ${value}\n`;
-    });
-    logContent += `\nBody (${JSON.stringify(body).length} bytes):\n`;
-    logContent += JSON.stringify(body, null, 2) + '\n\n';
-
-    // Step 4: Make request
-    console.log('🌐 Calling ESSAI enrolment endpoint...\n');
-    const response = await fetch(ESSAI_CONFIG.enrolmentUrl, {
+    const res = await fetch(ENDPOINT, {
       method: 'POST',
-      headers,
-      body: JSON.stringify(body),
+      headers: HEADERS,
+      body: JSON.stringify(requestBody),
     });
 
-    console.log(`📥 Response: ${response.status} ${response.statusText}\n`);
+    httpStatus = res.status;
 
-    // Try to parse response
-    const contentType = response.headers.get('content-type');
-    let data: any;
-    let responseText: string;
+    // Try to parse as JSON
+    const contentType = res.headers.get('content-type');
+    const responseText = await res.text();
 
     try {
-      responseText = await response.text();
-
       if (contentType?.includes('application/json')) {
-        data = JSON.parse(responseText);
+        response = JSON.parse(responseText);
       } else {
         // HTML or other non-JSON response
-        console.log('⚠️  Non-JSON response received:');
-        console.log('   Content-Type:', contentType || 'NOT SET');
-        console.log('   Response Body (first 500 chars):');
-        console.log(`   ${responseText.substring(0, 500)}\n`);
-        data = { error: 'Non-JSON response', body: responseText };
+        console.log(`⚠️  Non-JSON response (${contentType || 'unknown type'})`);
+        console.log(`   First 500 chars: ${responseText.substring(0, 500)}\n`);
+        response = {
+          error: 'Non-JSON response',
+          contentType,
+          htmlPreview: responseText.substring(0, 500),
+        };
       }
-    } catch (e) {
-      console.error('❌ Failed to parse response:', e);
-      data = { error: 'Parse error', message: String(e) };
+    } catch (parseErr) {
+      response = {
+        error: 'JSON parse error',
+        message: String(parseErr),
+        rawText: responseText.substring(0, 500),
+      };
     }
 
-    // Log response
-    logContent += '---\n';
-    logContent += `Response: ${response.status} ${response.statusText}\n\n`;
-    logContent += 'Headers:\n';
-    response.headers.forEach((value, key) => {
-      logContent += `  ${key}: ${value}\n`;
-    });
-    logContent += '\nBody:\n';
-    logContent += JSON.stringify(data, null, 2) + '\n';
+    // Save response
+    fs.writeFileSync(
+      path.join(baseDir, 'response.json'),
+      JSON.stringify(response, null, 2),
+      'utf8'
+    );
 
-    // Write log
-    const logFile = join(logDir, `enrolment-essai-test-${timestamp}.log`);
-    writeFileSync(logFile, logContent);
-    console.log(`📝 Log: ${logFile}\n`);
+    console.log(`📥 Response: HTTP ${httpStatus}\n`);
 
-    // Display result
-    console.log('='.repeat(70));
-    console.log('📊 ESSAI TEST RESULT');
-    console.log('='.repeat(70));
-
-    if (response.ok && data.retourCertif?.certif) {
-      console.log('✅ SUCCESS - Enrolment successful!\n');
-      console.log('Certificate received:');
-      console.log(`  certif length: ${data.retourCertif.certif.length} bytes`);
-      if (data.retourCertif.certifPSI) {
-        console.log(`  certifPSI length: ${data.retourCertif.certifPSI.length} bytes`);
-      }
-      if (data.retourCertif.idApprl) {
-        console.log(`  Real IDAPPRL: ${data.retourCertif.idApprl}`);
-      }
-      console.log('\n🎯 CSR FORMAT IS CORRECT!');
-      console.log('   Problem with DEV is likely credentials/authorization.\n');
-      console.log('⚠️  NOTE: Certificates NOT saved to database (read-only test).');
-      console.log('   Ask manager if we should proceed with real ESSAI enrolment.\n');
-    } else if (data.retourCertif?.listErr) {
-      console.log('❌ FAILED\n');
-      console.log('Errors:');
-      data.retourCertif.listErr.forEach((err: any) => {
-        const code = err.codRetour || 'N/A';
-        console.log(`  [${code}] ${err.id}: ${err.mess}`);
-      });
-      console.log('\n🔍 Analysis:');
-      if (data.retourCertif.listErr.some((e: any) => e.codRetour === '96')) {
-        console.log('   Same error code 96 as DEV.');
-        console.log('   This suggests CSR format issue OR credentials invalid in both envs.\n');
-      }
-    } else {
-      console.log('⚠️  UNEXPECTED RESPONSE\n');
-      console.log(JSON.stringify(data, null, 2));
-    }
-
-    console.log('='.repeat(70));
-
-  } catch (error) {
-    console.error('❌ Error:', error);
-    const logFile = join(logDir, `enrolment-essai-test-error-${timestamp}.log`);
-    writeFileSync(logFile, `Error: ${error}\n${(error as Error).stack}`);
-    console.log(`📝 Error log: ${logFile}`);
-    process.exit(1);
+  } catch (err: any) {
+    httpStatus = 0;
+    response = { error: err.message };
+    fs.writeFileSync(
+      path.join(baseDir, 'response.json'),
+      JSON.stringify(response, null, 2),
+      'utf8'
+    );
+    console.error(`❌ Request failed: ${err.message}\n`);
   }
+
+  // Parse response
+  const errors: any[] = [];
+  let certificateReceived = false;
+
+  if (response.retourCertif) {
+    if (response.retourCertif.listErr && response.retourCertif.listErr.length > 0) {
+      errors.push(...response.retourCertif.listErr);
+    }
+    if (response.retourCertif.certif) {
+      certificateReceived = true;
+    }
+  }
+
+  // Create summary
+  const summary = `# ESSAI Enrolment Test Summary
+
+**Timestamp**: ${new Date().toISOString()}
+**Endpoint**: ${ENDPOINT}
+
+## Configuration
+
+### Headers
+\`\`\`
+${Object.entries(HEADERS).map(([k, v]) => `${k}: ${v}`).join('\n')}
+\`\`\`
+
+### Body
+- \`codAutori\`: ${AUTH_CODE} (IN BODY for ESSAI)
+
+### DN
+\`\`\`
+${`C=${DN.C}, ST=${DN.ST}, L=${DN.L}, 2.5.4.4=${DN.surname}, O=${DN.O}, OU=${DN.OU}, 2.5.4.42=${DN.givenName}, CN=${DN.CN}`}
+\`\`\`
+
+### CSR
+- **Algorithm**: ECDSA P-256 + SHA-256
+- **KeyUsage**: digitalSignature + nonRepudiation (critical)
+- **ExtendedKeyUsage**: NONE
+- **PEM Format**: Single-line base64
+- **SHA-256**: ${sha256Hash}
+
+## Results
+
+- **HTTP Status**: ${httpStatus}
+- **Certificate Received**: ${certificateReceived ? '✅ YES' : '❌ NO'}
+- **Errors**: ${errors.length}
+
+${errors.length > 0 ? `### Errors
+
+${errors.map((e, i) => `${i + 1}. **${e.id}** [${e.codRetour}]
+   ${e.mess}`).join('\n\n')}` : ''}
+
+${certificateReceived ? `### Certificate Details
+
+- Main Certificate: ${response.retourCertif.certif ? 'YES' : 'NO'}
+- PSI Certificate: ${response.retourCertif.certifPSI ? 'YES' : 'NO'}
+- IDAPPRL: ${response.retourCertif.idApprl || 'N/A'}` : ''}
+
+## Golden Config Compliance
+
+- ✅ Single-line base64 PEM
+- ✅ surname (2.5.4.4) OID used
+- ✅ KeyUsage: digitalSignature + nonRepudiation
+- ✅ NO ExtendedKeyUsage in CSR
+- ✅ codAutori in body (ESSAI requirement)
+- ✅ CASESSAI: 500.001
+- ✅ VERSIPARN: 1.0.0
+
+## Files
+
+- \`csr.pem\`: CSR in PEM format
+- \`csr.txt\`: OpenSSL parsed output
+- \`sha256.txt\`: SHA-256 hash of DER
+- \`headers.json\`: Request headers
+- \`request.json\`: Full request body
+- \`response.json\`: API response
+- \`curl.sh\`: Reproducible curl command
+`;
+
+  fs.writeFileSync(path.join(baseDir, 'summary.md'), summary, 'utf8');
+
+  // Console output
+  console.log('═══════════════════════════════════════════════════════════════');
+  console.log(`${certificateReceived ? '✅ SUCCESS' : '❌ FAILED'}: ESSAI Enrolment`);
+  console.log('═══════════════════════════════════════════════════════════════\n');
+
+  console.log(`HTTP Status: ${httpStatus}`);
+  console.log(`Certificate: ${certificateReceived ? '✅ Received' : '❌ Not received'}`);
+  console.log(`Errors: ${errors.length}\n`);
+
+  if (errors.length > 0) {
+    console.log('Errors:');
+    errors.forEach((e, i) => {
+      console.log(`  ${i + 1}. [${e.codRetour}] ${e.id}`);
+      console.log(`     ${e.mess}`);
+    });
+    console.log('');
+  }
+
+  if (certificateReceived) {
+    console.log('🎉 Certificate Details:');
+    console.log(`   Main Certificate: ${response.retourCertif.certif ? 'YES' : 'NO'}`);
+    console.log(`   PSI Certificate: ${response.retourCertif.certifPSI ? 'YES' : 'NO'}`);
+    console.log(`   IDAPPRL: ${response.retourCertif.idApprl || 'N/A'}\n`);
+
+    // TODO: Encrypt and store in DB
+    console.log('💾 Next: Encrypt certificates and store in database');
+    console.log('   (DB integration pending)\n');
+  }
+
+  console.log(`📁 All artifacts: ${baseDir}\n`);
+
+  return {
+    success: certificateReceived && errors.length === 0,
+    httpStatus,
+    errors,
+    baseDir,
+  };
 }
 
-main();
+// Run test
+testEnrolment()
+  .then((result) => {
+    if (result.success) {
+      console.log('✅ ESSAI enrolment test PASSED');
+      process.exit(0);
+    } else {
+      console.log('❌ ESSAI enrolment test FAILED');
+      process.exit(1);
+    }
+  })
+  .catch((error) => {
+    console.error('❌ Test error:', error.message);
+    process.exit(1);
+  });

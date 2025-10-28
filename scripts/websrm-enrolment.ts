@@ -144,13 +144,19 @@ async function generateKeyPairP256(): Promise<{ privateKeyPem: string; publicKey
 /**
  * Build X.509 CSR (Certificate Signing Request) per RQ specs
  *
+ * ⚠️ GOLDEN CONFIGURATION - DO NOT MODIFY WITHOUT TESTING
+ * Successfully validated: 2025-10-24 (see docs/WEBSRM_GOLDEN_CONFIG.md)
+ *
  * Requirements:
  * - ECDSA P-256 + SHA-256
  * - Key Usage: digitalSignature + nonRepudiation (critical)
- * - Extended Key Usage: 1.3.6.1.5.5.7.3.8 (Customer authentication)
- * - Subject format varies by environment:
- *   DEV (RBC): C=CA, ST=QC, L=-05:00, O=RBC-{AUTH_CODE}, CN={NEQ}, OU={NEQ}TQ0001, GN=ER0001
- *   ESSAI (FOB): C=CA, ST=QC, L=-05:00, O=FOB-{CODCERTIF}, CN={IDPARTN}, SN=Certificat du serveur
+ * - Extended Key Usage: NONE (server adds clientAuth automatically)
+ * - PEM Format: Single-line base64 (no wrapping)
+ * - Subject format:
+ *   DEV (RBC): C=CA, ST=QC, L=-05:00, 2.5.4.4=Certificat du serveur, O=RBC-{AUTH_CODE}, OU={NEQ}TQ0001, 2.5.4.42=ER0001, CN={NEQ}
+ *   ESSAI (FOB): C=CA, ST=QC, L=-05:00, 2.5.4.4=Certificat du serveur, O=FOB-{CODCERTIF}, CN={IDPARTN}
+ *
+ * CRITICAL: Use 2.5.4.4 (surname) NOT 2.5.4.5 (serialNumber) - this was key to success!
  */
 async function buildCSR(
   cryptoKey: CryptoKeyPair,
@@ -159,24 +165,25 @@ async function buildCSR(
     organization: string;
     organizationalUnit?: string;
     givenName?: string;
-    serialNumber?: string;
+    surname?: string; // 2.5.4.4 (NOT serialNumber 2.5.4.5!)
     country: string;
     state: string;
     locality: string;
   }
 ): Promise<string> {
-  console.log('📝 Building X.509 CSR per RQ specifications...');
+  console.log('📝 Building X.509 CSR per RQ GOLDEN CONFIGURATION...');
 
-  // Build DN string per RQ template
-  // Order: C, ST, L, SN, O, OU, GN, CN
+  // Build DN string per RQ template (EXACT ORDER CRITICAL)
+  // Order: C, ST, L, SN (2.5.4.4 surname!), O, OU, GN, CN
   let dnParts: string[] = [];
   dnParts.push(`C=${subject.country}`);
   dnParts.push(`ST=${subject.state}`);
   dnParts.push(`L=${subject.locality}`);
 
-  // SN (serialNumber)
-  if (subject.serialNumber) {
-    dnParts.push(`2.5.4.5=${subject.serialNumber}`); // SN OID
+  // SN: Use 2.5.4.4 (surname) NOT 2.5.4.5 (serialNumber)
+  // This was the critical fix that made enrolment work!
+  if (subject.surname) {
+    dnParts.push(`2.5.4.4=${subject.surname}`); // surname OID (CRITICAL!)
   }
 
   dnParts.push(`O=${subject.organization}`);
@@ -186,7 +193,7 @@ async function buildCSR(
     dnParts.push(`OU=${subject.organizationalUnit}`);
   }
   if (subject.givenName) {
-    dnParts.push(`2.5.4.42=${subject.givenName}`); // GN OID
+    dnParts.push(`2.5.4.42=${subject.givenName}`); // givenName OID
   }
 
   dnParts.push(`CN=${subject.commonName}`);
@@ -203,25 +210,28 @@ async function buildCSR(
     },
     extensions: [
       // Key Usage: digitalSignature + nonRepudiation (critical)
+      // BOTH bits required - server rejects CSRs with only digitalSignature
       new x509.KeyUsagesExtension(
         x509.KeyUsageFlags.digitalSignature | x509.KeyUsageFlags.nonRepudiation,
-        true // critical
+        true // critical (can be true or false, both work)
       ),
-      // Extended Key Usage: Customer authentication (1.3.6.1.5.5.7.3.8)
-      new x509.ExtendedKeyUsageExtension([
-        '1.3.6.1.5.5.7.3.8', // Customer authentication OID
-      ]),
+      // DO NOT add ExtendedKeyUsage - server adds clientAuth automatically
     ],
   });
 
-  // Export to PEM format
-  const csrPem = csr.toString('pem');
+  // Export as DER first, then convert to single-line base64 PEM
+  const derBuffer = Buffer.from(csr.rawData);
+  const base64SingleLine = derBuffer.toString('base64');
 
-  console.log(`✅ X.509 CSR generated`);
+  // Create PEM with single-line base64 (CRITICAL: no line wrapping!)
+  // Format: BEGIN\n<single_line_base64>\nEND
+  const csrPem = `-----BEGIN CERTIFICATE REQUEST-----\n${base64SingleLine}\n-----END CERTIFICATE REQUEST-----`;
+
+  console.log(`✅ X.509 CSR generated (GOLDEN CONFIG)`);
   console.log(`   Subject: ${dn}`);
   console.log(`   Key Usage: digitalSignature + nonRepudiation (critical)`);
-  console.log(`   EKU: Customer authentication (1.3.6.1.5.5.7.3.8)`);
-  console.log(`   Format: PKCS#10 PEM (${csrPem.length} bytes)\n`);
+  console.log(`   EKU: NONE (server adds clientAuth)`);
+  console.log(`   Format: PKCS#10 PEM, single-line base64 (${base64SingleLine.length} chars)\n`);
 
   return csrPem;
 }
@@ -239,7 +249,7 @@ async function callEnrolment(config: EnrolmentConfig, csr: string): Promise<{
   console.log('🌐 Calling Revenu Québec enrolment endpoint...');
   console.log(`   URL: ${config.enrolmentUrl}\n`);
 
-  // Headers - different for DEV vs ESSAI
+  // Headers - ALL 10 REQUIRED (GOLDEN CONFIG)
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'ENVIRN': config.env,
@@ -259,17 +269,23 @@ async function callEnrolment(config: EnrolmentConfig, csr: string): Promise<{
     headers['CASESSAI'] = '500.001'; // ESSAI: server mode test case
   }
 
-  // Body - different for DEV vs ESSAI
+  // CODAUTORI: CRITICAL - must be in header for DEV (not in body!)
+  // This was another key fix that made DEV enrolment work
+  if (config.env === 'DEV') {
+    headers['CODAUTORI'] = config.authCode; // DEV: in header only
+  }
+
+  // Body - CRITICAL: codAutori placement differs by environment
   const body: any = {
     reqCertif: {
       modif: 'AJO',
-      csr: csr, // Full PEM format
+      csr: csr, // Single-line base64 PEM format
     },
   };
 
-  // codAutori only for ESSAI (not DEV)
+  // codAutori in body ONLY for ESSAI (NOT for DEV!)
   if (config.env === 'ESSAI') {
-    body.codAutori = config.authCode;
+    body.codAutori = config.authCode; // ESSAI: in body
   }
 
   // Log request details
@@ -556,30 +572,29 @@ async function runEnrolment() {
     // Step 1: Generate keypair
     const { privateKeyPem, publicKeyPem, cryptoKey } = await generateKeyPairP256();
 
-    // Step 2: Build X.509 CSR per RQ specifications
-    // DEV (RBC): C=CA, ST=QC, L=-05:00, O=RBC-{AUTH_CODE}, CN={NEQ}, OU={NEQ}TQ0001, GN=ER0001
-    // ESSAI (FOB): C=CA, ST=QC, L=-05:00, O=FOB-{CODCERTIF}, CN={IDPARTN}, SN=Certificat du serveur
+    // Step 2: Build X.509 CSR per RQ GOLDEN CONFIGURATION
+    // CRITICAL: Use surname (2.5.4.4) NOT serialNumber (2.5.4.5)!
+    // DEV (RBC): C=CA, ST=QC, L=-05:00, 2.5.4.4=Certificat du serveur, O=RBC-{AUTH_CODE}, OU={NEQ}TQ0001, 2.5.4.42=ER0001, CN={NEQ}
+    // ESSAI (FOB): C=CA, ST=QC, L=-05:00, 2.5.4.4=Certificat du serveur, O=FOB-{CODCERTIF}, CN={IDPARTN}
     const organization = CONFIG.env === 'DEV'
-      ? `${CONFIG.activitySector}-${CONFIG.authCode}` // RBC-X4T7-N595
+      ? `${CONFIG.activitySector}-${CONFIG.authCode}` // RBC-D8T8-W8W8
       : `${CONFIG.activitySector}-${CONFIG.certCode}`; // FOB-FOB201999999
 
-    // CSR Subject: Match RQ template exactly
-    // DEV (RBC - Michel Untel): C=CA, ST=QC, L=-05:00, O=RBC-D8T8-W8W8, OU=5678912340TQ0001, GN=ER0001, CN=5678912340
-    // NO SN for DEV!
-    // ESSAI: C=CA, ST=QC, L=-05:00, SN=Certificat du serveur, O=FOB-FOB201999999, CN=IDPARTN (no OU/GN)
+    // CSR Subject: Match GOLDEN CONFIG exactly
+    // CRITICAL: Both DEV and ESSAI use surname (2.5.4.4) = "Certificat du serveur"
     const csrSubject = CONFIG.env === 'DEV' ? {
       commonName: process.env.WEBSRM_DEV_CSR_CN || '5678912340',
       organizationalUnit: process.env.WEBSRM_DEV_CSR_OU || '5678912340TQ0001',
       givenName: process.env.WEBSRM_DEV_CSR_GN || 'ER0001',
       organization,
-      // NO serialNumber for DEV (RBC - Michel Untel)
+      surname: 'Certificat du serveur', // 2.5.4.4 (CRITICAL!)
       country: 'CA',
       state: 'QC',
       locality: '-05:00',
     } : {
       commonName: CONFIG.partnerId,
       organization,
-      serialNumber: 'Certificat du serveur',
+      surname: 'Certificat du serveur', // 2.5.4.4 (CRITICAL - NOT serialNumber!)
       country: 'CA',
       state: 'QC',
       locality: '-05:00',

@@ -32,7 +32,25 @@
     "websrm:check-env": "tsx scripts/websrm-essai-check-env.ts",
     "websrm:essai:offline": "tsx scripts/websrm-essai-smoke-offline.ts",
     "websrm:enrolment": "tsx scripts/websrm-enrolment.ts",
-    "websrm:enrolment:mock": "tsx scripts/websrm-enrolment-mock.ts"
+    "websrm:enrolment:mock": "tsx scripts/websrm-enrolment-mock.ts",
+    "websrm:essai:enrol-annul-reenrol": "tsx scripts/websrm-essai-parametric-runner.ts",
+    "websrm:essai:fob": "tsx scripts/websrm-essai-fob-single.ts",
+    "websrm:essai:full": "tsx scripts/websrm-essai-full-sequence.ts",
+    "websrm:sw78:evidence": "tsx scripts/sw78-build-evidence.ts",
+    "websrm:sw78:evidence:dev": "tsx scripts/sw78-build-evidence-dev.ts",
+    "websrm:sw78:screenshots": "tsx scripts/sw78-capture-screenshots.ts",
+    "websrm:sw78:screenshots:dev": "tsx scripts/sw78-capture-screenshots.ts docs/sw78-evidence-dev/pages tmp/logs/SW78-SCREENSHOTS-DEV",
+    "websrm:sw78:submission": "tsx scripts/sw78-create-submission.ts",
+    "websrm:sw78:submission:dev": "tsx scripts/sw78-create-submission.ts dev",
+    "websrm:validate": "tsx scripts/websrm-validate-config.ts",
+    "websrm:sw77": "tsx scripts/websrm-dev-sw77-runner.ts",
+    "websrm:utilisateur": "tsx scripts/websrm-utilisateur-test.ts",
+    "websrm:utilisateur:mtls": "tsx scripts/websrm-utilisateur-mtls-test.ts",
+    "websrm:utilisateur:complete": "tsx scripts/websrm-utilisateur-complete.ts",
+    "websrm:transaction:smoke": "tsx scripts/websrm-transaction-smoke.ts",
+    "websrm:transaction:complete": "tsx scripts/websrm-transaction-production.ts",
+    "websrm:document:smoke": "tsx scripts/websrm-document-smoke.ts",
+    "websrm:document:complete": "tsx scripts/websrm-document-complete.ts"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^2.1.4",
@@ -40,6 +58,7 @@
     "@types/minimatch": "^6.0.0",
     "@types/qrcode": "^1.5.5",
     "prettier": "^3.6.2",
+    "puppeteer": "^24.26.1",
     "selfsigned": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.20.3",
@@ -49,6 +68,7 @@
   "dependencies": {
     "@peculiar/webcrypto": "^1.5.0",
     "@peculiar/x509": "^1.14.0",
+    "adm-zip": "^0.5.16",
     "archiver": "^7.0.1",
     "minimatch": "^10.0.3",
     "qrcode": "^1.5.4"
