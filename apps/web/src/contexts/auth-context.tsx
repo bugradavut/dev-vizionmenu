@@ -206,7 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     remainingTime: inactivityRemainingTime,
     resetTimer: resetInactivityTimer,
   } = useInactivityTimeout({
-    timeout: 1 * 60 * 1000, // 1 minute (FOR TESTING - will be changed to 15 minutes)
+    timeout: 30 * 60 * 1000, // 30 minutes inactivity threshold (SW-78 default)
     warningTime: 30 * 1000, // 30 seconds warning
     enabled: !!user && !loading, // Only active when user is logged in
     onTimeout: async () => {
@@ -215,7 +215,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     onWarning: () => {
       // Warning will be handled by UI component
-      console.log('[Auth] Inactivity warning: session will expire soon');
     },
   });
 

@@ -58,9 +58,17 @@ export function useInactivityTimeout({
   const warningRef = useRef<NodeJS.Timeout | null>(null);
   const remainingTimeRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
+  const onTimeoutRef = useRef(onTimeout);
+  const onWarningRef = useRef(onWarning);
+
+  // Keep refs up to date
+  useEffect(() => {
+    onTimeoutRef.current = onTimeout;
+    onWarningRef.current = onWarning;
+  }, [onTimeout, onWarning]);
 
   /**
-   * Clear all timers
+   * Clear all timers (stable - no dependencies)
    */
   const clearTimers = useCallback(() => {
     if (timeoutRef.current) {
@@ -92,15 +100,15 @@ export function useInactivityTimeout({
     // Set warning timer
     warningRef.current = setTimeout(() => {
       setShowWarning(true);
-      if (onWarning) {
-        onWarning();
+      if (onWarningRef.current) {
+        onWarningRef.current();
       }
     }, timeout - warningTime);
 
     // Set timeout timer
     timeoutRef.current = setTimeout(() => {
       setIsActive(false);
-      onTimeout();
+      onTimeoutRef.current();
     }, timeout);
 
     // Update remaining time every second
@@ -113,15 +121,15 @@ export function useInactivityTimeout({
         clearTimers();
       }
     }, 1000);
-  }, [enabled, timeout, warningTime, onTimeout, onWarning, clearTimers]);
+  }, [enabled, timeout, warningTime, clearTimers]);
 
   /**
    * Handle user activity
    */
   const handleActivity = useCallback(() => {
-    if (!enabled || !isActive) return;
+    if (!enabled) return;
     resetTimer();
-  }, [enabled, isActive, resetTimer]);
+  }, [enabled, resetTimer]);
 
   /**
    * Pause the inactivity timer
@@ -137,15 +145,25 @@ export function useInactivityTimeout({
     resetTimer();
   }, [resetTimer]);
 
-  // Set up event listeners
+  // Set up timer on mount or when enabled/timeout changes
   useEffect(() => {
     if (!enabled) {
       clearTimers();
       return;
     }
 
-    // Initial timer setup
     resetTimer();
+
+    return () => {
+      clearTimers();
+    };
+    // Only re-run when enabled or timeout changes, not when resetTimer changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, timeout]);
+
+  // Set up event listeners
+  useEffect(() => {
+    if (!enabled) return;
 
     // Add event listeners
     events.forEach((event) => {
@@ -154,12 +172,11 @@ export function useInactivityTimeout({
 
     // Cleanup
     return () => {
-      clearTimers();
       events.forEach((event) => {
         window.removeEventListener(event, handleActivity);
       });
     };
-  }, [enabled, events, handleActivity, resetTimer, clearTimers]);
+  }, [enabled, events, handleActivity]);
 
   return {
     isActive,

@@ -1,63 +1,53 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { Clock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { CheckCircle } from "lucide-react";
 
 /**
- * Inactivity warning dialog component
+ * Inactivity warning toast component
  * Shows warning 30 seconds before auto-logout
+ * Shows success message when user becomes active again
  * Implements SW-78 FO-103 sleep mode requirement
  */
 export function InactivityWarningDialog() {
-  const { inactivityWarning, inactivityRemainingTime, resetInactivityTimer } = useAuth();
-  const [open, setOpen] = useState(false);
+  const { inactivityWarning } = useAuth();
+  const { toast } = useToast();
+  const warningToastDismissRef = useRef<{ dismiss: () => void } | null>(null);
+  const wasWarningRef = useRef(false);
 
   useEffect(() => {
-    setOpen(inactivityWarning);
-  }, [inactivityWarning]);
+    if (inactivityWarning && !warningToastDismissRef.current) {
+      // Show warning toast (red)
+      const toastResult = toast({
+        variant: "destructive",
+        title: "⏰ Session Expiring Soon",
+        description: "Your session will expire in 30 seconds due to inactivity.",
+        duration: 30000, // Keep toast visible for 30 seconds
+      });
+      warningToastDismissRef.current = toastResult;
+      wasWarningRef.current = true;
+    } else if (!inactivityWarning && wasWarningRef.current && warningToastDismissRef.current) {
+      // User became active - dismiss warning and show success
+      warningToastDismissRef.current.dismiss();
+      warningToastDismissRef.current = null;
+      wasWarningRef.current = false;
 
-  const handleContinue = () => {
-    resetInactivityTimer();
-    setOpen(false);
-  };
+      // Show success toast (green) with CheckCircle icon
+      toast({
+        variant: "success" as any,
+        title: (
+          <span className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" />
+            Session Renewed
+          </span>
+        ) as any,
+        description: "Your session has been extended.",
+        duration: 2000, // Show for 2 seconds
+      });
+    }
+  }, [inactivityWarning, toast]);
 
-  const secondsRemaining = Math.ceil(inactivityRemainingTime / 1000);
-
-  return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogContent className="max-w-md">
-        <AlertDialogHeader>
-          <div className="flex items-center gap-2 mb-2">
-            <Clock className="h-5 w-5 text-orange-500" />
-            <AlertDialogTitle>Session Expiring Soon</AlertDialogTitle>
-          </div>
-          <AlertDialogDescription className="text-base">
-            Your session will expire in{" "}
-            <span className="font-bold text-orange-600">
-              {secondsRemaining} second{secondsRemaining !== 1 ? "s" : ""}
-            </span>{" "}
-            due to inactivity.
-            <br />
-            <br />
-            Click &quot;Continue Session&quot; to remain logged in.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogAction onClick={handleContinue} className="w-full">
-            Continue Session
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
+  return null;
 }
