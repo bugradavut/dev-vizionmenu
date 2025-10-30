@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/contexts/theme-context";
 import { LanguageProvider } from "@/contexts/language-context";
 import { Toaster } from "@/components/ui/toaster";
 import { InactivityWarningDialog } from "@/components/inactivity-warning-dialog";
+import { OfflineIndicator } from "@/components/offline-indicator";
 
 export const metadata: Metadata = {
   title: "Vizion Menu",
@@ -67,6 +68,7 @@ export default function RootLayout({
             <AuthProvider>
               {children}
               <InactivityWarningDialog />
+              <OfflineIndicator />
             </AuthProvider>
           </LanguageProvider>
           <Toaster />

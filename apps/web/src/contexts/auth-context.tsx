@@ -182,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
-    
+
     // Clear all auth data
     localStorage.removeItem(REMEMBER_ME_KEY)
     localStorage.removeItem(USER_CREDENTIALS_KEY)

@@ -108,6 +108,8 @@ interface OrderSession {
   scheduled_datetime?: string;
   scheduled_date?: string;
   scheduled_time?: string;
+  // SW-78 FO-104: Offline order flag
+  isOfflineOrder?: boolean;
 }
 
 interface OrderConfirmationPageProps {
@@ -193,13 +195,13 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  
+
   const searchParams = useSearchParams();
   const router = useRouter();
   const { language } = useLanguage();
   const { items, clearCart, clearPreOrder } = useCart();
   const t = translations[language] || translations.en;
-  
+
   const orderId = searchParams.get('orderId');
 
   // UPDATED: handleBackToMenu now uses chainSlug from props
@@ -241,7 +243,7 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
       if (stored) {
         try {
           const data = JSON.parse(stored);
-          
+
           // Keep session data - expiration will be based on order completion status from API
           setSessionData(data);
           setOrderItems(data.items || []);
@@ -300,12 +302,18 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
 
   // Cleanup sessionStorage based on order completion status
   useEffect(() => {
+    // SW-78 FO-104: Don't cleanup sessionStorage for offline orders
+    if (sessionData?.isOfflineOrder) {
+      console.log('[Confirmation] Offline order - skipping sessionStorage cleanup');
+      return;
+    }
+
     if (orderDetails?.status === 'completed' && orderDetails?.completedAt) {
       // Check if order was completed more than 10 minutes ago
       const completionTime = new Date(orderDetails.completedAt).getTime();
       const tenMinutesLater = completionTime + (10 * 60 * 1000);
       const now = Date.now();
-      
+
       if (now > tenMinutesLater) {
         // Order expired - cleanup immediately
         sessionStorage.removeItem('vizion-order-confirmation');
@@ -320,11 +328,11 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
           setSessionData(null);
           console.log('Order confirmation expired via timer');
         }, timeUntilCleanup);
-        
+
         return () => clearTimeout(timeoutId);
       }
     }
-  }, [orderDetails]);
+  }, [orderDetails, sessionData?.isOfflineOrder]);
 
   // Action handlers
   // Move fetchOrderStatus function here to fix scope issue
@@ -333,6 +341,34 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
       setError('Order ID not found');
       setLoading(false);
       return;
+    }
+
+    // SW-78 FO-104: Skip API call for offline orders
+    // IMPORTANT: Check sessionStorage directly to avoid re-triggering when sessionData changes
+    const currentSessionData = typeof window !== 'undefined'
+      ? sessionStorage.getItem('vizion-order-confirmation')
+      : null;
+
+    if (currentSessionData) {
+      try {
+        const parsedData = JSON.parse(currentSessionData);
+        if (parsedData.isOfflineOrder) {
+          console.log('[Confirmation] Offline order detected, skipping API call');
+          setOrderDetails({
+            orderId: parsedData.orderId,
+            orderNumber: parsedData.orderNumber || orderId.substring(0, 8).toUpperCase(),
+            status: 'pending_offline',
+            createdAt: new Date().toISOString(),
+            pricing: parsedData.pricing,
+            items: parsedData.items,
+          } as OrderDetails);
+          setOrderItems(parsedData.items);
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.error('[Confirmation] Error parsing sessionStorage:', e);
+      }
     }
 
     try {
@@ -349,8 +385,8 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
         if (result.error.code === 'ORDER_EXPIRED') {
           // Clear session storage for expired order
           sessionStorage.removeItem('vizion-order-confirmation');
-          setError(language === 'fr' 
-            ? 'Le lien de confirmation de commande a expiré.' 
+          setError(language === 'fr'
+            ? 'Le lien de confirmation de commande a expiré.'
             : 'Order confirmation link has expired.'
           );
         } else {
@@ -359,13 +395,14 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
       }
     } catch {
       // Don't set error if we have sessionStorage data
-      if (!sessionData) {
+      const hasSessionData = typeof window !== 'undefined' && sessionStorage.getItem('vizion-order-confirmation');
+      if (!hasSessionData) {
         setError('Failed to load order details');
       }
     } finally {
       setLoading(false);
     }
-  }, [orderId, sessionData, language]);
+  }, [orderId, language]);
 
   useEffect(() => {
     fetchOrderStatus();
@@ -448,6 +485,27 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                 </p>
               </div>
             </div>
+
+            {/* SW-78 FO-104: Offline order notice */}
+            {sessionData?.isOfflineOrder && (
+              <div className="mb-6 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center mt-0.5">
+                    <span className="text-yellow-700 text-sm font-bold">⚠</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-yellow-900 mb-1">
+                      {language === 'fr' ? 'Commande hors ligne' : 'Offline Order'}
+                    </h3>
+                    <p className="text-sm text-yellow-800">
+                      {language === 'fr'
+                        ? 'Cette commande a été créée en mode hors ligne. Elle sera automatiquement synchronisée avec le système lorsque la connexion sera rétablie.'
+                        : 'This order was created in offline mode. It will be automatically synced to the system when connection is restored.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Order Details - Badge Style */}
             <div className="space-y-4 mb-8">
