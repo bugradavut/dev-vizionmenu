@@ -203,6 +203,14 @@ export function OrderTotalSidebar({
 
       console.log('[OrderTotalSidebar] Offline order saved:', localReceiptNumber)
 
+      // SW-78 FO-105: Increment orders count in offline session
+      try {
+        const { incrementOfflineOrders } = await import('@/services/offline-events.service')
+        await incrementOfflineOrders(orderContext.branchId)
+      } catch (error) {
+        console.error('[OrderTotalSidebar] Failed to increment offline orders:', error)
+      }
+
       // Show success toast
       toast({
         variant: 'success' as any,

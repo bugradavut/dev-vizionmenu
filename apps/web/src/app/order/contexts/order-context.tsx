@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, ReactNode } from 'react'
+import { useOfflineSessionTracking } from '@/hooks/use-offline-session-tracking'
 
 export interface OrderContext {
   chainSlug?: string // NEW: Add chainSlug support
@@ -20,6 +21,9 @@ interface OrderContextProviderProps {
 }
 
 export function OrderContextProvider({ value, children }: OrderContextProviderProps) {
+  // SW-78 FO-105: Track offline mode sessions
+  useOfflineSessionTracking(value.branchId);
+
   return (
     <OrderContextContext.Provider value={value}>
       {children}
