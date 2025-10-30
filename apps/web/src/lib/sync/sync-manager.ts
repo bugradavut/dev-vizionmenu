@@ -102,6 +102,8 @@ class SyncManager {
     const payload = order.order_data;
 
     return {
+      // ✅ FIX: Include order ID from frontend (SW-78 FO-104)
+      orderId: order.id,
       customer: {
         name: payload.customer_name || "Offline Customer",
         phone: payload.customer_phone || "N/A",

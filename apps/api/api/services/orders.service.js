@@ -1001,6 +1001,7 @@ async function updateOrderTiming(orderId, adjustmentMinutes, userBranch) {
  */
 async function createOrderWithCommission(orderData, branchId) {
   const {
+    orderId, // SW-78 FO-104: Frontend-generated order ID for offline orders
     customer,
     items,
     orderType,
@@ -1115,6 +1116,8 @@ async function createOrderWithCommission(orderData, branchId) {
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
+      // SW-78 FO-104: Use frontend-generated ID for offline orders
+      ...(orderId && { id: orderId }),
       branch_id: branchId,
       customer_name: customer.name,
       customer_phone: customer.phone,

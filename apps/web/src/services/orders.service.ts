@@ -168,6 +168,8 @@ export interface OrderStatusUpdateRequest {
 }
 
 export interface CreateOrderRequest {
+  // SW-78 FO-104: Order ID from frontend (for offline order sync)
+  orderId?: string;
   customer: {
     name: string;
     phone: string;

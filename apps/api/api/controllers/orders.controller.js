@@ -179,7 +179,7 @@ const checkAutoAccept = async (req, res) => {
  */
 const createOrder = async (req, res) => {
   try {
-    const { customer, items, orderType, source, tableNumber, notes, specialInstructions, total } = req.body;
+    const { orderId, customer, items, orderType, source, tableNumber, notes, specialInstructions, total, pricing, paymentMethod, tip } = req.body;
     
     // Validation
     if (!customer || !items || !orderType || !source) {
@@ -231,20 +231,25 @@ const createOrder = async (req, res) => {
     );
 
     // 3. CREATE ORDER WITH COMMISSION DATA
-    const orderData = { 
-      customer, 
-      items, 
-      orderType, 
-      source, 
-      tableNumber, 
-      notes, 
+    const orderData = {
+      orderId, // SW-78 FO-104: Use frontend-generated ID for offline orders
+      customer,
+      items,
+      orderType,
+      source,
+      tableNumber,
+      notes,
       specialInstructions,
       // Add commission fields
       order_source: orderSource,
       commission_rate: commission.rate,
       commission_amount: commission.commissionAmount,
       net_amount: commission.netAmount,
-      commission_status: 'pending'
+      commission_status: 'pending',
+      // SW-78 FO-104: Add pricing data for offline orders
+      pricing,
+      paymentMethod,
+      tip
     };
     
     const createResult = await ordersService.createOrderWithCommission(orderData, branchId);
