@@ -67,6 +67,7 @@ const activityLogsRoutes = require('./routes/activity-logs');
 const analyticsRoutes = require('./routes/analytics');
 const waiterCallsRoutes = require('./routes/waiter-calls.routes');
 const chainTemplatesRoutes = require('./routes/chain-templates.routes');
+const offlineEventsRoutes = require('./routes/offline-events.routes');
 const uberDirectSettingsRoutes = require('./uber-direct-settings');
 const uberEatsAuthRoutes = require('./routes/uber-eats-auth.routes');
 const uberEatsWebhooksRoutes = require('./routes/uber-eats-webhooks.routes');
@@ -230,6 +231,9 @@ app.use('/api/v1/reports/analytics', analyticsRoutes);
 
 // Use waiter calls routes (mixed auth - create public, others protected)
 app.use('/api/v1/waiter-calls', waiterCallsRoutes);
+
+// Use offline events routes (SW-78 FO-105 - mixed auth: activate/deactivate public, history protected)
+app.use('/api/v1/offline-events', offlineEventsRoutes);
 
 // Use chain templates routes (protected - chain owner access required)
 app.use('/api/v1/chains', chainTemplatesRoutes);
