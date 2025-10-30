@@ -32,7 +32,9 @@ export interface OrderPayload {
 
   // Pricing
   subtotal: number;
-  tax: number;
+  tax: number; // Combined tax (for backward compatibility)
+  gst?: number; // GST (5%) - SW-78 FO-104
+  qst?: number; // QST (9.975%) - SW-78 FO-104
   tip?: number;
   delivery_fee?: number;
   total: number;

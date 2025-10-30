@@ -184,6 +184,22 @@ export interface CreateOrderRequest {
   tableNumber?: string;
   notes?: string;
   specialInstructions?: string;
+  // SW-78 FO-104: Comprehensive pricing for offline order sync
+  pricing?: {
+    itemsTotal?: number;
+    discountAmount?: number;
+    deliveryFee?: number;
+    gst?: number;
+    qst?: number;
+    tipAmount?: number;
+    finalTotal?: number;
+  };
+  paymentMethod?: string;
+  tip?: {
+    amount: number;
+    type: 'percentage' | 'fixed';
+    value: number;
+  };
 }
 
 export interface CreateOrderResponse {

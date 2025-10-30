@@ -118,6 +118,22 @@ class SyncManager {
       tableNumber: payload.table_number,
       notes: payload.notes,
       specialInstructions: payload.notes,
+      // ✅ FIX: Include comprehensive pricing data (SW-78 FO-104)
+      pricing: {
+        itemsTotal: payload.subtotal || 0,
+        discountAmount: 0, // Offline orders don't support discounts yet
+        deliveryFee: payload.delivery_fee || 0,
+        gst: payload.gst || 0,
+        qst: payload.qst || 0,
+        tipAmount: payload.tip || 0,
+        finalTotal: payload.total || 0,
+      },
+      paymentMethod: payload.payment_method || "cash",
+      tip: payload.tip ? {
+        amount: payload.tip,
+        type: "fixed",
+        value: payload.tip,
+      } : undefined,
     };
   }
 

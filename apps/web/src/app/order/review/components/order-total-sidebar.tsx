@@ -178,6 +178,8 @@ export function OrderTotalSidebar({
         chain_id: orderContext.chainSlug || 'unknown',
         subtotal: orderTotals.subtotalAfterDiscount,
         tax: orderTotals.gst + orderTotals.qst,
+        gst: orderTotals.gst, // ✅ FIX: Store GST separately
+        qst: orderTotals.qst, // ✅ FIX: Store QST separately
         tip: orderTotals.tipAmount,
         delivery_fee: orderTotals.applicableDeliveryFee,
         total: orderTotals.finalTotal,
@@ -266,9 +268,9 @@ export function OrderTotalSidebar({
   }
 
   // Generate local receipt number for offline orders
-  // Format: OFF-{first 8 chars of UUID} (matches system order ID format)
+  // Format: First 8 chars of UUID in uppercase (matches system order ID format)
   const generateLocalReceiptNumber = (orderId: string): string => {
-    return `OFF-${orderId.substring(0, 8)}`
+    return orderId.substring(0, 8).toUpperCase()
   }
 
   // Generate PDF receipt for offline order
