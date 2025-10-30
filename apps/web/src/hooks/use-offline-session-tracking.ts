@@ -3,14 +3,17 @@
 import { useEffect, useRef } from "react";
 import { useNetworkStatus } from "./use-network-status";
 import {
-  activateOfflineMode,
-  deactivateOfflineMode,
   getDeviceInfo,
+  syncOfflineSessions,
 } from "@/services/offline-events.service";
+import { offlineSessionStorage } from "@/lib/db/offline-session-storage";
 
 /**
  * Hook to track offline mode sessions for SW-78 FO-105 Step 2
- * Automatically sends activation/deactivation events to backend
+ *
+ * FIXED: Use static import instead of dynamic import
+ * - Dynamic import fails offline (can't load chunk from network)
+ * - Static import is bundled, works offline
  */
 export function useOfflineSessionTracking(branchId: string | undefined) {
   const { isOnline, isOffline } = useNetworkStatus();
@@ -21,23 +24,37 @@ export function useOfflineSessionTracking(branchId: string | undefined) {
     // Skip if no branchId
     if (!branchId) return;
 
-    // Detect offline → online transition
+    // Network went OFFLINE (online -> offline)
     if (prevOnlineStatus.current === true && isOffline && !sessionActivated.current) {
-      console.log("[OfflineSessionTracking] Network lost - activating offline mode");
+      console.log("[OfflineSessionTracking] Network lost - creating local session");
 
-      activateOfflineMode({
+      // Store session locally (static import works offline)
+      offlineSessionStorage.createSession({
         branch_id: branchId,
         device_info: getDeviceInfo(),
+        user_agent: navigator.userAgent,
+      }).catch(err => {
+        console.error("[OfflineSessionTracking] Failed to create session:", err);
       });
 
       sessionActivated.current = true;
     }
 
-    // Detect online → offline transition
+    // Network came ONLINE (offline -> online)
     if (prevOnlineStatus.current === false && isOnline && sessionActivated.current) {
-      console.log("[OfflineSessionTracking] Network restored - deactivating offline mode");
+      console.log("[OfflineSessionTracking] Network restored - deactivating and syncing");
 
-      deactivateOfflineMode(branchId);
+      // Deactivate current session locally then sync to backend
+      offlineSessionStorage.deactivateSession(branchId)
+        .then(async () => {
+          // Sync all unsynced sessions to backend
+          console.log("[OfflineSessionTracking] Syncing sessions to backend...");
+          const result = await syncOfflineSessions();
+          console.log("[OfflineSessionTracking] Sync result:", result);
+        })
+        .catch(err => {
+          console.error("[OfflineSessionTracking] Failed to sync:", err);
+        });
 
       sessionActivated.current = false;
     }

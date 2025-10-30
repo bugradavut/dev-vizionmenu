@@ -150,41 +150,77 @@ async function incrementOrdersCreated(branchId) {
 }
 
 /**
- * Get offline sessions for a branch with optional filters
+ * Get offline sessions for a branch with optional filters and pagination
  * @param {string} branchId - Branch ID
- * @param {Object} filters - Optional filters (startDate, endDate, limit)
- * @returns {Array} List of sessions
+ * @param {Object} filters - Optional filters (startDate, endDate, page, limit)
+ * @returns {Object} Paginated sessions with metadata
  */
 async function getOfflineSessions(branchId, filters = {}) {
   if (!branchId) {
     throw new Error('Branch ID is required');
   }
 
-  const { startDate, endDate, limit = 50 } = filters;
+  const { startDate, endDate, page = 1, limit = 50 } = filters;
+  const offset = (page - 1) * limit;
 
-  let query = supabase
+  // Build query for data
+  let dataQuery = supabase
     .from('offline_mode_sessions')
     .select('*')
     .eq('branch_id', branchId)
     .order('activated_at', { ascending: false })
-    .limit(limit);
+    .range(offset, offset + limit - 1);
 
   if (startDate) {
-    query = query.gte('activated_at', startDate);
+    dataQuery = dataQuery.gte('activated_at', startDate);
   }
 
   if (endDate) {
-    query = query.lte('activated_at', endDate);
+    dataQuery = dataQuery.lte('activated_at', endDate);
   }
 
-  const { data, error } = await query;
+  // Build query for total count
+  let countQuery = supabase
+    .from('offline_mode_sessions')
+    .select('*', { count: 'exact', head: true })
+    .eq('branch_id', branchId);
+
+  if (startDate) {
+    countQuery = countQuery.gte('activated_at', startDate);
+  }
+
+  if (endDate) {
+    countQuery = countQuery.lte('activated_at', endDate);
+  }
+
+  // Execute both queries
+  const [{ data, error }, { count, error: countError }] = await Promise.all([
+    dataQuery,
+    countQuery
+  ]);
 
   if (error) {
     console.error('Failed to fetch offline sessions:', error);
     throw new Error(`Failed to fetch offline sessions: ${error.message}`);
   }
 
-  return data || [];
+  if (countError) {
+    console.error('Failed to count offline sessions:', countError);
+    throw new Error(`Failed to count offline sessions: ${countError.message}`);
+  }
+
+  const total = count || 0;
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    sessions: data || [],
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages
+    }
+  };
 }
 
 /**
@@ -213,10 +249,51 @@ async function getActiveSessions(branchId = null) {
   return data || [];
 }
 
+/**
+ * Sync offline session from frontend (stored locally when offline)
+ * This endpoint is called when network comes back online
+ * @param {Object} sessionData - Session data from frontend
+ * @returns {Object} Created session
+ */
+async function syncOfflineSession(sessionData) {
+  const { branch_id, activated_at, deactivated_at, orders_created, device_info, user_agent } = sessionData;
+
+  // Input validation
+  if (!branch_id || !activated_at) {
+    throw new Error('Branch ID and activation time are required');
+  }
+
+  console.log(`[OfflineEvents] Syncing offline session for branch ${branch_id}`);
+
+  // Create session with provided timestamps
+  const { data, error } = await supabase
+    .from('offline_mode_sessions')
+    .insert({
+      branch_id,
+      activated_at,
+      deactivated_at: deactivated_at || null,
+      orders_created: orders_created || 0,
+      device_info: device_info || null,
+      user_agent: user_agent || null,
+      last_network_status: deactivated_at ? 'online' : 'offline',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to sync offline session:', error);
+    throw new Error(`Failed to sync offline session: ${error.message}`);
+  }
+
+  console.log(`[OfflineEvents] Synced session ${data.id} for branch ${branch_id}`);
+  return data;
+}
+
 module.exports = {
   createOfflineSession,
   deactivateOfflineSession,
   incrementOrdersCreated,
   getOfflineSessions,
   getActiveSessions,
+  syncOfflineSession,
 };

@@ -126,3 +126,57 @@ export function getDeviceInfo() {
     language: navigator.language,
   };
 }
+
+/**
+ * Sync all unsynced offline sessions to backend
+ * Called when network comes back online
+ */
+export async function syncOfflineSessions(): Promise<{ success: number; failed: number }> {
+  try {
+    const { offlineSessionStorage } = await import('@/lib/db/offline-session-storage');
+    const unsyncedSessions = await offlineSessionStorage.getUnsyncedSessions();
+
+    console.log('[OfflineEvents] Syncing offline sessions:', unsyncedSessions.length);
+
+    let success = 0;
+    let failed = 0;
+
+    for (const session of unsyncedSessions) {
+      try {
+        // Send session to backend
+        const response = await fetch(`${API_BASE_URL}/api/v1/offline-events/sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            branch_id: session.branch_id,
+            activated_at: session.activated_at,
+            deactivated_at: session.deactivated_at,
+            orders_created: session.orders_created,
+            device_info: session.device_info,
+            user_agent: session.user_agent,
+          }),
+        });
+
+        if (response.ok) {
+          await offlineSessionStorage.markAsSynced(session.id);
+          success++;
+          console.log('[OfflineEvents] Session synced successfully:', session.id);
+        } else {
+          failed++;
+          console.error('[OfflineEvents] Failed to sync session:', session.id, response.statusText);
+        }
+      } catch (error) {
+        failed++;
+        console.error('[OfflineEvents] Error syncing session:', session.id, error);
+      }
+    }
+
+    console.log(`[OfflineEvents] Sync complete: ${success} success, ${failed} failed`);
+    return { success, failed };
+  } catch (error) {
+    console.error('[OfflineEvents] Error during sync:', error);
+    return { success: 0, failed: 0 };
+  }
+}

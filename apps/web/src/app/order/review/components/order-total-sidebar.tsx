@@ -16,6 +16,7 @@ import type { CustomerFormData, CustomerValidationResult } from './customer-info
 import { useNetworkStatus } from '@/hooks/use-network-status'
 import { useOfflineSync } from '@/hooks/use-offline-sync'
 import { offlineStorage } from '@/lib/db/offline-storage'
+import { offlineSessionStorage } from '@/lib/db/offline-session-storage'
 import type { OfflineOrder, OrderPayload } from '@/lib/db/schema'
 import { v4 as uuidv4 } from 'uuid'
 import { useToast } from '@/hooks/use-toast'
@@ -203,12 +204,12 @@ export function OrderTotalSidebar({
 
       console.log('[OrderTotalSidebar] Offline order saved:', localReceiptNumber)
 
-      // SW-78 FO-105: Increment orders count in offline session
+      // SW-78 FO-105: Increment orders count in LOCAL offline session (static import)
       try {
-        const { incrementOfflineOrders } = await import('@/services/offline-events.service')
-        await incrementOfflineOrders(orderContext.branchId)
+        await offlineSessionStorage.incrementOrdersCreated(orderContext.branchId)
+        console.log('[OrderTotalSidebar] Offline session order count incremented')
       } catch (error) {
-        console.error('[OrderTotalSidebar] Failed to increment offline orders:', error)
+        console.error('[OrderTotalSidebar] Failed to increment offline session orders:', error)
       }
 
       // Show success toast

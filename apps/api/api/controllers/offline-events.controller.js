@@ -146,19 +146,24 @@ async function getOfflineSessions(req, res) {
   try {
     // User and branch context provided by auth middleware
     const branchId = req.userBranch.branch_id;
-    const { start_date, end_date, limit } = req.query;
+    const { start_date, end_date, page, limit } = req.query;
 
-    // Get offline sessions for user's branch
-    const sessions = await offlineEventsService.getOfflineSessions(branchId, {
+    // Get offline sessions for user's branch with pagination
+    const result = await offlineEventsService.getOfflineSessions(branchId, {
       startDate: start_date,
       endDate: end_date,
+      page: page ? parseInt(page) : 1,
       limit: limit ? parseInt(limit) : 50,
     });
 
     res.json({
-      data: sessions,
+      data: {
+        sessions: result.sessions,
+        total: result.pagination.total,
+        totalPages: result.pagination.totalPages,
+        page: result.pagination.page,
+      },
       meta: {
-        count: sessions.length,
         branch_id: branchId,
         timestamp: new Date().toISOString(),
       },
@@ -197,10 +202,58 @@ async function getActiveSessions(req, res) {
   }
 }
 
+/**
+ * Sync offline session from frontend
+ * POST /api/v1/offline-events/sync
+ * Public endpoint - called when network comes back online
+ */
+async function syncOfflineSession(req, res) {
+  try {
+    const { branch_id, activated_at, deactivated_at, orders_created, device_info, user_agent } = req.body;
+
+    // Input validation
+    if (!branch_id || !activated_at) {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'branch_id and activated_at are required' }
+      });
+    }
+
+    // Sync session to database
+    const session = await offlineEventsService.syncOfflineSession({
+      branch_id,
+      activated_at,
+      deactivated_at,
+      orders_created: orders_created || 0,
+      device_info: device_info || null,
+      user_agent: user_agent || req.headers['user-agent'] || null,
+    });
+
+    res.status(201).json({
+      data: {
+        session_id: session.id,
+        branch_id: session.branch_id,
+        activated_at: session.activated_at,
+        deactivated_at: session.deactivated_at,
+        orders_created: session.orders_created,
+        status: 'synced',
+      },
+      meta: {
+        message: 'Offline session synced successfully',
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+  } catch (error) {
+    console.error('Sync offline session error:', error);
+    handleControllerError(error, 'sync offline session', res);
+  }
+}
+
 module.exports = {
   activateOfflineMode,
   deactivateOfflineMode,
   incrementOrdersCreated,
   getOfflineSessions,
   getActiveSessions,
+  syncOfflineSession,
 };

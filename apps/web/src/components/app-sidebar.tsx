@@ -113,6 +113,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               title: language === 'fr' ? 'Journaux d\'Activité' : 'Activity Logs',
               url: "/reports/activity",
             }] : []),
+            // Offline Sessions - SW-78 FO-105 compliance
+            {
+              title: language === 'fr' ? 'Sessions Hors Ligne' : 'Offline Sessions',
+              url: "/reports/offline-sessions",
+            },
           ],
         }] : []),
         // Menu Management - Hide from Chain Owners (branch-specific)

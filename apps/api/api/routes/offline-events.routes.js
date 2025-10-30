@@ -42,6 +42,21 @@ router.post('/deactivate', offlineEventsController.deactivateOfflineMode);
 router.post('/increment-orders', offlineEventsController.incrementOrdersCreated);
 
 /**
+ * Sync offline session from frontend (Public - called when online)
+ * POST /api/v1/offline-events/sync
+ *
+ * Body: {
+ *   branch_id: string (required),
+ *   activated_at: ISO date string (required),
+ *   deactivated_at: ISO date string (optional),
+ *   orders_created: number (optional),
+ *   device_info: object (optional),
+ *   user_agent: string (optional)
+ * }
+ */
+router.post('/sync', offlineEventsController.syncOfflineSession);
+
+/**
  * Get offline sessions for user's branch (Protected)
  * GET /api/v1/offline-events
  *
