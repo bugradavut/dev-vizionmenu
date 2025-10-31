@@ -1282,6 +1282,37 @@ async function createOrderWithCommission(orderData, branchId) {
     console.warn('⚠️ [EMAIL] Email service unavailable:', error.message);
   }
 
+  // ==================================================================================
+  // WEB-SRM TRANSACTION QUEUING (SW-78 FO-106: Quebec SRS Certification)
+  // Queue transaction for transmission to Quebec government
+  // ==================================================================================
+  try {
+    const enabled = process.env.WEBSRM_ENABLED === 'true';
+    console.log('[WEB-SRM] Enabled:', enabled, 'Env:', process.env.WEBSRM_ENV);
+
+    if (enabled) {
+      console.log('[WEB-SRM] Queueing transaction for order:', order.id);
+
+      // Import queue service (JavaScript - no TypeScript dependencies)
+      const { queueWebsrmTransaction } = require('./websrm-queue.service');
+
+      // Queue transaction (non-blocking)
+      // Best practice: Pass only IDs, let worker fetch full order data
+      queueWebsrmTransaction(order.id, branchId)
+        .then((result) => {
+          console.log('[WEB-SRM] Transaction queued successfully:', result.queueId);
+        })
+        .catch((error) => {
+          console.error('[WEB-SRM] Failed to queue transaction:', error.message);
+        });
+    } else {
+      console.log('[WEB-SRM] Disabled - skipping transaction queue');
+    }
+  } catch (error) {
+    // WebSRM service not critical - don't fail order creation
+    console.error('[WEB-SRM] Service error:', error.message);
+  }
+
   return {
     order: {
       id: order.id,

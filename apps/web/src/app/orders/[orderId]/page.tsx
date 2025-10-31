@@ -31,6 +31,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/translations"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
+import { WebSrmTransactionDialog } from "@/components/orders/websrm-transaction-dialog"
 // import { UberDeliveryStatus } from "@/components/delivery/uber-delivery-status"
 
 // Types - Clean and simple interface definitions
@@ -1834,6 +1835,14 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                       )}
                     </CardContent>
                   </Card>
+
+                  {/* WebSRM Transaction (SW-78 FO-107) */}
+                  {branchId && order?.id && (
+                    <WebSrmTransactionDialog
+                      orderId={order.id}
+                      branchId={branchId}
+                    />
+                  )}
                 </div>
               </div>
             </div>

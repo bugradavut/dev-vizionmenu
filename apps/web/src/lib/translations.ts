@@ -226,7 +226,35 @@ export const translations = {
       cancelled: "Cancelled",
       rejected: "Rejected"
     },
-    
+
+    // WebSRM (Quebec SRS Compliance - SW-78 FO-107)
+    webSrm: {
+      buttonTitle: "Quebec Tax Receipt",
+      dialogTitle: "WebSRM Fiscal Transaction",
+      dialogDescription: "Quebec Sales Recording System (SRS) compliance transaction details",
+      status: "Status",
+      completed: "Completed",
+      pending: "Pending",
+      processing: "Processing",
+      failed: "Failed",
+      transactionId: "Transaction ID",
+      environment: "Environment",
+      device: "Device",
+      environmentEssai: "ESSAI (Test)",
+      errorDetails: "Error Details (SW-78 FO-107)",
+      errorMessage: "Error Message",
+      returnCode: "Return Code",
+      retryAttempts: "Retry Attempts",
+      created: "Created",
+      completedTime: "Completed",
+      lastError: "Last Error",
+      refreshStatus: "Refresh Status",
+      loading: "Loading transaction details...",
+      notFound: "No WebSRM transaction found for this order.",
+      notFoundDesc: "This order may not require Quebec SRS compliance.",
+      notAuthenticated: "Not authenticated"
+    },
+
     // Kitchen Display
     kitchenDisplay: {
       // Page Title and Description
@@ -1516,7 +1544,35 @@ export const translations = {
       cancelled: "Annulée",
       rejected: "Rejetée"
     },
-    
+
+    // WebSRM (Conformité SRS du Québec - SW-78 FO-107)
+    webSrm: {
+      buttonTitle: "Reçu Fiscal Québec",
+      dialogTitle: "Transaction Fiscale WebSRM",
+      dialogDescription: "Détails de conformité du système d'enregistrement des ventes (SRS) du Québec",
+      status: "Statut",
+      completed: "Complété",
+      pending: "En attente",
+      processing: "En traitement",
+      failed: "Échoué",
+      transactionId: "ID de Transaction",
+      environment: "Environnement",
+      device: "Appareil",
+      environmentEssai: "ESSAI (Test)",
+      errorDetails: "Détails de l'erreur (SW-78 FO-107)",
+      errorMessage: "Message d'erreur",
+      returnCode: "Code de retour",
+      retryAttempts: "Tentatives de relance",
+      created: "Créé",
+      completedTime: "Complété",
+      lastError: "Dernière erreur",
+      refreshStatus: "Actualiser le statut",
+      loading: "Chargement des détails de transaction...",
+      notFound: "Aucune transaction WebSRM trouvée pour cette commande.",
+      notFoundDesc: "Cette commande peut ne pas nécessiter la conformité SRS du Québec.",
+      notAuthenticated: "Non authentifié"
+    },
+
     // Kitchen Display - Canadian French
     kitchenDisplay: {
       // Page Title and Description
