@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CheckCircle, AlertCircle, RefreshCw, ArrowRight, Settings2, Blocks, Bell } from "lucide-react"
+import { CheckCircle, AlertCircle, RefreshCw, ArrowRight, Settings2, Blocks, Bell, FileText } from "lucide-react"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useBranchSettings } from "@/hooks/use-branch-settings"
 import { useLanguage } from "@/contexts/language-context"
@@ -378,7 +378,6 @@ export default function BranchSettingsPage() {
       })
     }
   }
-
 
   // Handle Uber Direct settings save
   const handleSaveUberDirect = async () => {
@@ -920,6 +919,49 @@ export default function BranchSettingsPage() {
                         </div>
                       </div>
                       <div className="mt-4 cursor-pointer group/button" onClick={() => router.push('/settings/branch/integrations')}>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg group-hover/button:border-purple-200 group-hover/button:bg-purple-50 transition-colors">
+                          <span className="text-sm text-gray-600 group-hover/button:text-purple-600 transition-colors">
+                            {language === 'fr' ? 'Cliquez pour configurer' : 'Click to configure'}
+                          </span>
+                          <ArrowRight className="h-4 w-4 text-gray-400 group-hover/button:text-purple-600 group-hover/button:translate-x-1 transition-all" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Tax Registration Navigation Card */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-50 rounded-lg">
+                          <FileText className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base">
+                            {t.settingsBranch.taxInformationTitle}
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {t.settingsBranch.taxInformationDesc}
+                          </p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
+                          <span>{t.settingsBranch.gstLabel}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
+                          <span>{t.settingsBranch.qstLabel}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
+                          <span>{language === 'fr' ? 'Conformité SRS Québec' : 'Quebec SRS compliance'}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 cursor-pointer group/button" onClick={() => router.push('/settings/branch/tax-registration')}>
                         <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg group-hover/button:border-purple-200 group-hover/button:bg-purple-50 transition-colors">
                           <span className="text-sm text-gray-600 group-hover/button:text-purple-600 transition-colors">
                             {language === 'fr' ? 'Cliquez pour configurer' : 'Click to configure'}

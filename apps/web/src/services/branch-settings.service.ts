@@ -60,6 +60,8 @@ export interface BranchSettings {
   deliveryFee?: number;
   freeDeliveryThreshold?: number;
   deliveryZones?: DeliveryZonesData;
+  gstNumber?: string; // GST (Goods and Services Tax) registration number
+  qstNumber?: string; // QST (Quebec Sales Tax) registration number
 }
 
 export interface BranchSettingsResponse {
@@ -141,6 +143,8 @@ export const updateBranchSettings = async (
       deliveryFee: settings.deliveryFee,
       freeDeliveryThreshold: settings.freeDeliveryThreshold,
       deliveryZones: settings.deliveryZones,
+      gstNumber: settings.gstNumber,
+      qstNumber: settings.qstNumber,
     };
 
     // Use Express.js API URL
@@ -215,4 +219,6 @@ export const getDefaultSettings = (): BranchSettings => ({
     enabled: false,
     zones: []
   }, // Default: delivery zones disabled
+  gstNumber: '', // Default: no GST number
+  qstNumber: '', // Default: no QST number
 });

@@ -23,7 +23,9 @@ async function getBranchSettings(branchId) {
       .select(`
         id,
         name,
-        settings
+        settings,
+        gst_number,
+        qst_number
       `)
       .eq('id', branchId)
       .single();
@@ -64,6 +66,8 @@ async function getBranchSettings(branchId) {
       deliveryFee: settings.deliveryFee || 0,
       freeDeliveryThreshold: settings.freeDeliveryThreshold || 0,
       deliveryZones: settings.deliveryZones || { enabled: false, zones: [] },
+      gstNumber: branchData.gst_number || '',
+      qstNumber: branchData.qst_number || '',
     };
 
     return {
@@ -104,7 +108,9 @@ async function updateBranchSettings(branchId, settingsData) {
       minimumOrderAmount = 0,
       deliveryFee = 0,
       freeDeliveryThreshold = 0,
-      deliveryZones
+      deliveryZones,
+      gstNumber = '',
+      qstNumber = ''
     } = settingsData;
 
     // Validate minimum order amount
@@ -137,7 +143,7 @@ async function updateBranchSettings(branchId, settingsData) {
       validateNotificationSettings(notificationSettings);
     }
 
-    // Prepare complete settings JSON (including all settings)
+    // Prepare complete settings JSON (NOT including GST/QST - those are direct columns)
     const settingsJson = {
       orderFlow: orderFlow || 'standard',
       timingSettings: {
@@ -165,19 +171,22 @@ async function updateBranchSettings(branchId, settingsData) {
       freeDeliveryThreshold: freeDeliveryThreshold || 0,
     };
 
-
-    // Update branch in database (only settings and updated_at)
+    // Update branch in database (settings, GST/QST, and updated_at)
     const { data: updatedBranch, error: updateError } = await supabase
       .from('branches')
       .update({
         settings: settingsJson,
+        gst_number: gstNumber || null,
+        qst_number: qstNumber || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', branchId)
       .select(`
         id,
         name,
-        settings
+        settings,
+        gst_number,
+        qst_number
       `)
       .single();
 
@@ -206,6 +215,8 @@ async function updateBranchSettings(branchId, settingsData) {
           waiterCallSound: 'Notification-1.mp3',
           soundEnabled: true,
         },
+        gstNumber: updatedBranch.gst_number || '',
+        qstNumber: updatedBranch.qst_number || '',
       },
     };
   } catch (error) {

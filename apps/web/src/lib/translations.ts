@@ -517,7 +517,24 @@ export const translations = {
       minimumOrderDesc: "Set minimum order value required for checkout",
       noMinimumSet: "No minimum order amount set",
       minimumOrderWarning: "Orders below {amount} will be blocked",
-      
+
+      // Tax Information (Quebec SRS - SW-78 FO-108)
+      taxInformationTitle: "Tax Registration",
+      taxInformationDesc: "Quebec GST/QST registration numbers",
+      gstCardTitle: "GST Registration",
+      gstCardDesc: "Federal tax number",
+      gstLabel: "GST Number",
+      gstPlaceholder: "123456789RT0001",
+      gstFormat: "Format: 9 digits + RT + 4 digits",
+      qstCardTitle: "QST Registration",
+      qstCardDesc: "Quebec provincial tax",
+      qstLabel: "QST Number",
+      qstPlaceholder: "1234567890TQ0001",
+      qstFormat: "Format: 10 digits + TQ + 4 digits",
+      invalidFormat: "Invalid format",
+      validFormat: "Valid format",
+      requiredForQuebec: "Required for Quebec SRS (Sales Recording System) compliance",
+
       // Delivery Settings
       deliveryFeeTitle: "Delivery Settings",
       deliveryFeeDesc: "Set delivery fee for delivery orders",
@@ -1835,7 +1852,24 @@ export const translations = {
       minimumOrderDesc: "Définir le montant minimum requis pour le processus de commande",
       noMinimumSet: "Aucun montant minimum défini",
       minimumOrderWarning: "Les commandes inférieures à {amount} seront bloquées",
-      
+
+      // Tax Information (Quebec SRS - SW-78 FO-108) - Canadian French
+      taxInformationTitle: "Enregistrement fiscal",
+      taxInformationDesc: "Numéros d'enregistrement TPS/TVQ du Québec",
+      gstCardTitle: "Enregistrement TPS",
+      gstCardDesc: "Numéro de taxe fédérale",
+      gstLabel: "Numéro TPS",
+      gstPlaceholder: "123456789RT0001",
+      gstFormat: "Format : 9 chiffres + RT + 4 chiffres",
+      qstCardTitle: "Enregistrement TVQ",
+      qstCardDesc: "Taxe provinciale du Québec",
+      qstLabel: "Numéro TVQ",
+      qstPlaceholder: "1234567890TQ0001",
+      qstFormat: "Format : 10 chiffres + TQ + 4 chiffres",
+      invalidFormat: "Format invalide",
+      validFormat: "Format valide",
+      requiredForQuebec: "Requis pour la conformité au SRS (Système d'enregistrement des ventes) du Québec",
+
       // Delivery Settings - Canadian French
       deliveryFeeTitle: "Paramètres de livraison",
       deliveryFeeDesc: "Définir les frais de livraison pour les commandes à livrer",
