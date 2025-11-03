@@ -60,7 +60,8 @@ const createCustomerOrder = async (req, res) => {
       campaign,
       tip,
       commission,
-      paymentIntentId
+      paymentIntentId,
+      removedItems // SW-78 FO-114: Quebec SRS compliance - track removed items
     } = req.body;
 
     if (!branchId) {
@@ -204,7 +205,23 @@ const createCustomerOrder = async (req, res) => {
       commission_status: 'pending',
 
       // Payment tracking - Stripe payment intent
-      paymentIntentId: paymentIntentId || null
+      paymentIntentId: paymentIntentId || null,
+
+      // SW-78 FO-114: Quebec SRS compliance - removed items tracking
+      removedItems: Array.isArray(removedItems) ? removedItems.map(removed => ({
+        item: {
+          id: removed.item.id,
+          name: removed.item.name,
+          price: removed.item.price,
+          quantity: removed.item.quantity,
+          image_url: removed.item.image_url,
+          notes: removed.item.notes
+        },
+        removedAt: removed.removedAt,
+        reason: removed.reason,
+        originalQuantity: removed.originalQuantity,
+        removedQuantity: removed.removedQuantity
+      })) : []
     };
 
     // Create order using commission service (supports payment tracking)

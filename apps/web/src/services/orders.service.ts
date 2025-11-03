@@ -133,6 +133,22 @@ export interface Order {
     threshold: number;
     savings: number;
   } | null;
+
+  // SW-78 FO-114: Quebec SRS compliance - removed items tracking
+  removedItems?: Array<{
+    id: string;
+    order_id: string;
+    item_name: string;
+    item_price: number;
+    item_id: string;
+    image_url?: string;
+    removed_at: string;
+    reason: 'user_removed' | 'quantity_decreased';
+    original_quantity: number;
+    removed_quantity: number;
+    notes?: string;
+    customizations?: Record<string, unknown>;
+  }>;
 }
 
 export interface UpdateTimingResponse {

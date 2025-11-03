@@ -7,7 +7,16 @@ console.log('Working directory:', process.cwd());
 if (process.env.NODE_ENV !== 'production') {
   try {
     const path = require('path');
-    require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
+    const envPath = path.resolve(__dirname, '../.env');
+    console.log('🔧 Loading .env from:', envPath);
+    const result = require('dotenv').config({ path: envPath });
+    if (result.error) {
+      console.log('⚠️  Failed to load .env:', result.error.message);
+    } else {
+      console.log('✅ .env loaded successfully');
+      console.log('🔍 WEBSRM_ENABLED:', process.env.WEBSRM_ENABLED);
+      console.log('🔍 WEBSRM_ENV:', process.env.WEBSRM_ENV);
+    }
   } catch (error) {
     console.log('⚠️  dotenv not found, using environment variables directly');
     // Fallback: set environment variables manually for local dev
@@ -67,10 +76,13 @@ const activityLogsRoutes = require('./routes/activity-logs');
 const analyticsRoutes = require('./routes/analytics');
 const waiterCallsRoutes = require('./routes/waiter-calls.routes');
 const chainTemplatesRoutes = require('./routes/chain-templates.routes');
+const offlineEventsRoutes = require('./routes/offline-events.routes');
 const uberDirectSettingsRoutes = require('./uber-direct-settings');
 const uberEatsAuthRoutes = require('./routes/uber-eats-auth.routes');
 const uberEatsWebhooksRoutes = require('./routes/uber-eats-webhooks.routes');
 const websrmAdminRoutes = require('./routes/websrm-admin.routes');
+const websrmAuditRoutes = require('./routes/websrm-audit.routes');
+const websrmQueueRoutes = require('./routes/websrm-queue.routes');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -201,6 +213,12 @@ app.use('/api/v1/admin/branches', adminBranchRoutes);
 // Use WEB-SRM admin routes (platform admin only, DEV/ESSAI only)
 app.use('/api/v1/admin/websrm', websrmAdminRoutes);
 
+// Use WEB-SRM audit routes (SW-78 FO-107 - branch staff auth required)
+app.use('/api/v1/websrm', websrmAuditRoutes);
+
+// Use WEB-SRM queue routes (SW-78 FO-106 - queue worker endpoint)
+app.use('/api/v1/websrm', websrmQueueRoutes);
+
 // Use chain users routes (unified chain employee management)
 app.use('/api/v1/users/chain', chainUsersRoutes);
 
@@ -230,6 +248,9 @@ app.use('/api/v1/reports/analytics', analyticsRoutes);
 
 // Use waiter calls routes (mixed auth - create public, others protected)
 app.use('/api/v1/waiter-calls', waiterCallsRoutes);
+
+// Use offline events routes (SW-78 FO-105 - mixed auth: activate/deactivate public, history protected)
+app.use('/api/v1/offline-events', offlineEventsRoutes);
 
 // Use chain templates routes (protected - chain owner access required)
 app.use('/api/v1/chains', chainTemplatesRoutes);

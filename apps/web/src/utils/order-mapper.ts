@@ -75,6 +75,21 @@ export interface FrontendOrderData {
     netAmount: number;
   };
   paymentIntentId?: string; // Stripe Payment Intent ID for online payments
+  // SW-78 FO-114: Quebec SRS compliance - removed items tracking
+  removedItems?: Array<{
+    item: {
+      id: string;
+      name: string;
+      price: number;
+      quantity: number;
+      image_url?: string;
+      notes?: string;
+    };
+    removedAt: string;
+    reason: 'user_removed' | 'quantity_decreased';
+    originalQuantity: number;
+    removedQuantity: number;
+  }>;
 }
 
 export interface BackendOrderData {
@@ -135,6 +150,21 @@ export interface BackendOrderData {
     netAmount: number;
   };
   paymentIntentId?: string; // Stripe Payment Intent ID for online payments
+  // SW-78 FO-114: Quebec SRS compliance - removed items tracking
+  removedItems?: Array<{
+    item: {
+      id: string;
+      name: string;
+      price: number;
+      quantity: number;
+      image_url?: string;
+      notes?: string;
+    };
+    removedAt: string;
+    reason: 'user_removed' | 'quantity_decreased';
+    originalQuantity: number;
+    removedQuantity: number;
+  }>;
 }
 
 /**
@@ -146,7 +176,7 @@ export function mapOrderDataForAPI(
   tableNumber?: number,
   zone?: string
 ): BackendOrderData {
-  const { customerInfo, addressInfo, items, orderType, paymentMethod, subtotal, tax, total, tip, notes, preOrder, pricing, campaign, tipDetails, commission } = frontendData;
+  const { customerInfo, addressInfo, items, orderType, paymentMethod, subtotal, tax, total, tip, notes, preOrder, pricing, campaign, tipDetails, commission, removedItems } = frontendData;
 
   // Combine order notes (NO delivery address in notes anymore!)
   const combinedNotes = [
@@ -237,9 +267,12 @@ export function mapOrderDataForAPI(
       commissionAmount: commission.commissionAmount,
       netAmount: commission.netAmount
     } : undefined,
-    
+
     // Stripe payment data
-    paymentIntentId: frontendData.paymentIntentId
+    paymentIntentId: frontendData.paymentIntentId,
+
+    // SW-78 FO-114: Quebec SRS compliance - removed items tracking
+    removedItems: removedItems || []
   };
 }
 

@@ -31,7 +31,8 @@ interface OrderContext {
 export function OrderReviewContainer({ orderContext }: { orderContext: OrderContext }) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { items } = useCart()
+  // SW-78 FO-114: Add updateQuantity and removeItem for Quebec SRS compliance
+  const { items, updateQuantity, removeItem } = useCart()
   const { language } = useLanguage()
   const t = translations[language] || translations.en
   
@@ -209,7 +210,13 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
 
           {/* Right Side - Order Summary & Details */}
           <div className="space-y-6">
-            <OrderSummary items={items} language={language} />
+            {/* SW-78 FO-114: Pass cart manipulation functions for Quebec SRS compliance */}
+            <OrderSummary
+              items={items}
+              language={language}
+              onUpdateQuantity={updateQuantity}
+              onRemoveItem={removeItem}
+            />
             <PriceDetailsSection 
               items={items} 
               language={language} 

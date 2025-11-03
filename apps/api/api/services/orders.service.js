@@ -285,6 +285,13 @@ async function getOrderDetail(orderId, userBranch) {
     throw new Error('Order not found or access denied');
   }
 
+  // SW-78 FO-114: Fetch removed items for Quebec SRS compliance
+  const { data: removedItems } = await supabase
+    .from('order_removed_items')
+    .select('*')
+    .eq('order_id', existingOrder.id)
+    .order('removed_at', { ascending: false });
+
   // Format detailed response for frontend (match Order interface)
   const formattedOrder = {
     id: existingOrder.id,
@@ -375,6 +382,22 @@ async function getOrderDetail(orderId, userBranch) {
         name: variant.variant_name,
         price: parseFloat(variant.variant_price || 0)
       }))
+    })),
+
+    // SW-78 FO-114: Quebec SRS compliance - removed items tracking
+    removedItems: (removedItems || []).map(removedItem => ({
+      id: removedItem.id,
+      order_id: removedItem.order_id,
+      item_name: removedItem.item_name,
+      item_price: parseFloat(removedItem.item_price || 0),
+      item_id: removedItem.item_id,
+      image_url: removedItem.image_url,
+      removed_at: removedItem.removed_at,
+      reason: removedItem.reason,
+      original_quantity: removedItem.original_quantity,
+      removed_quantity: removedItem.removed_quantity,
+      notes: removedItem.notes,
+      customizations: removedItem.customizations
     }))
   };
 
@@ -1023,7 +1046,9 @@ async function createOrderWithCommission(orderData, branchId) {
     net_amount,
     commission_status,
     // Payment tracking
-    paymentIntentId
+    paymentIntentId,
+    // SW-78 FO-114: Quebec SRS compliance - removed items tracking
+    removedItems = []
   } = orderData;
   
   // Use comprehensive pricing if provided, otherwise calculate basic totals
@@ -1185,6 +1210,34 @@ async function createOrderWithCommission(orderData, branchId) {
     // Clean up the order if items creation failed
     await supabase.from('orders').delete().eq('id', order.id);
     throw new Error(`Failed to create order items: ${itemsError.message}`);
+  }
+
+  // SW-78 FO-114: Save removed items for Quebec SRS compliance
+  if (removedItems && removedItems.length > 0) {
+    const removedItemsData = removedItems.map(removed => ({
+      order_id: order.id,
+      item_name: removed.item.name,
+      item_price: removed.item.price,
+      item_id: removed.item.id,
+      image_url: removed.item.image_url || null,
+      removed_at: removed.removedAt,
+      reason: removed.reason,
+      original_quantity: removed.originalQuantity,
+      removed_quantity: removed.removedQuantity,
+      notes: removed.item.notes || null,
+      customizations: removed.item.customizations ? JSON.stringify(removed.item.customizations) : null
+    }));
+
+    const { error: removedItemsError } = await supabase
+      .from('order_removed_items')
+      .insert(removedItemsData);
+
+    if (removedItemsError) {
+      console.warn('⚠️ Failed to save removed items (non-critical):', removedItemsError.message);
+      // Don't fail order creation if removed items logging fails
+    } else {
+      console.log(`📋 Saved ${removedItems.length} removed item(s) for order ${order.id.substring(0, 8).toUpperCase()}`);
+    }
   }
 
   console.log(`✅ Order created successfully with commission: ${order.id.substring(0, 8).toUpperCase()} - Commission: ${commission_rate}% = $${commission_amount}`);

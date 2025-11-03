@@ -16,7 +16,7 @@ import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle, Timer, ClockPlus, TicketPercent, Minus, Plus } from "lucide-react"
+import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle, Timer, ClockPlus, TicketPercent, Minus, Plus, Trash2 } from "lucide-react"
 import { ordersService } from "@/services/orders.service"
 import { refundsService } from "@/services/refunds.service"
 import { getSourceIcon } from "@/assets/images"
@@ -1042,6 +1042,100 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         </AccordionContent>
                       </Card>
                     </AccordionItem>
+
+                    {/* SW-78 FO-114: Removed Items - Quebec SRS Compliance */}
+                    {order.removedItems && order.removedItems.length > 0 && (
+                      <AccordionItem value="removed-items" className="border-none">
+                        <Card>
+                          <AccordionTrigger className="hover:no-underline px-6">
+                            <div className="flex items-center gap-2">
+                              <Trash2 className="h-5 w-5 text-orange-600" />
+                              <span className="font-medium">
+                                {language === 'fr' ? 'Articles retirés' : 'Removed Items'} ({order.removedItems.length})
+                              </span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-0 pb-0">
+                            <Separator />
+                            <CardContent className="p-6">
+                              <div className="mb-3 p-3 bg-orange-50 border border-orange-200 rounded-md">
+                                <p className="text-sm text-orange-700">
+                                  {language === 'fr'
+                                    ? 'Ces articles ont été retirés du panier avant le paiement.'
+                                    : 'These items were removed from the cart before payment.'}
+                                </p>
+                              </div>
+
+                              <div className="space-y-3">
+                                {order.removedItems.map((removedItem) => (
+                                  <div key={removedItem.id} className="flex items-start gap-3 p-3 rounded-lg border border-orange-200 bg-orange-50/50">
+                                    <div className="pt-1">
+                                      <Trash2 className="h-4 w-4 text-orange-600" />
+                                    </div>
+
+                                    <div className="flex-1 space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium text-gray-900">
+                                            {removedItem.removed_quantity}x {removedItem.item_name}
+                                          </span>
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs border-orange-400 text-orange-700 bg-orange-100"
+                                          >
+                                            {removedItem.reason === 'user_removed'
+                                              ? (language === 'fr' ? 'Retiré' : 'Removed')
+                                              : (language === 'fr' ? 'Quantité réduite' : 'Qty Decreased')
+                                            }
+                                          </Badge>
+                                        </div>
+                                        <span className="font-medium text-gray-900">
+                                          ${(removedItem.item_price * removedItem.removed_quantity).toFixed(2)}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-gray-600">
+                                        <div className="flex items-center gap-1">
+                                          <Clock className="h-3 w-3" />
+                                          <span>
+                                            {new Date(removedItem.removed_at).toLocaleString('en-CA', {
+                                              timeZone: 'America/Toronto',
+                                              month: 'short',
+                                              day: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit'
+                                            })}
+                                          </span>
+                                        </div>
+
+                                        {removedItem.reason === 'quantity_decreased' && (
+                                          <div className="text-xs text-gray-500">
+                                            {language === 'fr'
+                                              ? `Quantité originale: ${removedItem.original_quantity}`
+                                              : `Original quantity: ${removedItem.original_quantity}`
+                                            }
+                                          </div>
+                                        )}
+
+                                        <div className="text-xs text-gray-500">
+                                          ${removedItem.item_price.toFixed(2)} {language === 'fr' ? 'chacun' : 'each'}
+                                        </div>
+                                      </div>
+
+                                      {removedItem.notes && (
+                                        <div className="text-sm text-orange-700 italic">
+                                          {removedItem.notes}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </AccordionContent>
+                        </Card>
+                      </AccordionItem>
+                    )}
 
                     {/* Customer Information */}
                     <AccordionItem value="customer" className="border-none">

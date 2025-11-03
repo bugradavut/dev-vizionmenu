@@ -55,6 +55,9 @@ photos/
 # Claude Code local settings
 .claude/settings.local.json
 
+# MCP configuration (contains sensitive tokens)
+.mcp.json
+
 # WEB-SRM outputs
 tmp/
 evidence/

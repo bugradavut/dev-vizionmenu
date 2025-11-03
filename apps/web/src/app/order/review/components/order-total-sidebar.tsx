@@ -89,7 +89,8 @@ export function OrderTotalSidebar({
   orderTotals
 }: OrderTotalSidebarProps) {
   const router = useRouter()
-  const { items, subtotal, tax, total, preOrder, clearCart } = useCart()
+  // SW-78 FO-114: Add removedItems for Quebec SRS compliance
+  const { items, subtotal, tax, total, preOrder, clearCart, removedItems, clearRemovedItems } = useCart()
   const t = translations[language as keyof typeof translations] || translations.en
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle')
@@ -106,6 +107,7 @@ export function OrderTotalSidebar({
 
   // SW-78 FO-104: Auto-navigate to confirmation AFTER sync completes
   useEffect(() => {
+
     // Only proceed if modal is open and we have a pending URL
     if (!showOfflineOrderModal) return
 
@@ -530,7 +532,9 @@ export function OrderTotalSidebar({
         commissionAmount: commissionData.commissionAmount,
         netAmount: commissionData.netAmount
       },
-      paymentIntentId
+      paymentIntentId,
+      // SW-78 FO-114: Quebec SRS compliance - include removed items
+      removedItems: removedItems || []
     }
 
     const result = await orderService.submitOrder(
@@ -682,7 +686,9 @@ export function OrderTotalSidebar({
           commissionRate: commissionData.rate,
           commissionAmount: commissionData.commissionAmount,
           netAmount: commissionData.netAmount
-        }
+        },
+        // SW-78 FO-114: Quebec SRS compliance - include removed items
+        removedItems: removedItems || []
       }
 
       if (paymentMethod === 'online') {
