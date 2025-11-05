@@ -108,6 +108,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               title: language === 'fr' ? 'Analytiques' : 'Analytics',
               url: "/reports/analytics",
             },
+            // Daily Closing - SW-78 FO-115 compliance
+            {
+              title: language === 'fr' ? 'Clôture Journalière' : 'Daily Closing',
+              url: "/reports/daily-closing",
+            },
             // Activity logs - Chain Owner only
             ...(isChainOwner ? [{
               title: language === 'fr' ? 'Journaux d\'Activité' : 'Activity Logs',

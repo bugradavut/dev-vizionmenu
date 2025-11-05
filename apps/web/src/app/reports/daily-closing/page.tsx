@@ -73,9 +73,7 @@ function DailyClosingContent() {
 
       // Load summary
       const summaryResponse = await dailyClosingService.getDailySummary(selectedDate);
-      if (summaryResponse.success && summaryResponse.data) {
-        setSummary(summaryResponse.data.data);
-      }
+      setSummary(summaryResponse.data);
 
       // Check for existing closing
       const closingsResponse = await dailyClosingService.getDailyClosings({
@@ -84,7 +82,7 @@ function DailyClosingContent() {
         limit: 1,
       });
 
-      if (closingsResponse.success && closingsResponse.data?.closings?.length > 0) {
+      if (closingsResponse.data?.closings?.length > 0) {
         setCurrentClosing(closingsResponse.data.closings[0]);
       } else {
         setCurrentClosing(null);
@@ -101,13 +99,8 @@ function DailyClosingContent() {
       setLoading(true);
       setError(null);
 
-      const response = await dailyClosingService.startDailyClosing({ date: selectedDate });
-
-      if (response.success) {
-        await loadDailySummary();
-      } else {
-        setError("Failed to start daily closing");
-      }
+      await dailyClosingService.startDailyClosing({ date: selectedDate });
+      await loadDailySummary();
     } catch (err: any) {
       setError(err.message || "Failed to start daily closing");
     } finally {
@@ -122,17 +115,13 @@ function DailyClosingContent() {
       setCancelling(true);
       setError(null);
 
-      const response = await dailyClosingService.cancelDailyClosing(currentClosing.id, {
+      await dailyClosingService.cancelDailyClosing(currentClosing.id, {
         reason: cancelReason || undefined,
       });
 
-      if (response.success) {
-        setCancelModalOpen(false);
-        setCancelReason("");
-        await loadDailySummary();
-      } else {
-        setError("Failed to cancel daily closing");
-      }
+      setCancelModalOpen(false);
+      setCancelReason("");
+      await loadDailySummary();
     } catch (err: any) {
       setError(err.message || "Failed to cancel daily closing");
     } finally {
@@ -147,13 +136,8 @@ function DailyClosingContent() {
       setLoading(true);
       setError(null);
 
-      const response = await dailyClosingService.completeDailyClosing(currentClosing.id);
-
-      if (response.success) {
-        await loadDailySummary();
-      } else {
-        setError("Failed to complete daily closing");
-      }
+      await dailyClosingService.completeDailyClosing(currentClosing.id);
+      await loadDailySummary();
     } catch (err: any) {
       setError(err.message || "Failed to complete daily closing");
     } finally {
