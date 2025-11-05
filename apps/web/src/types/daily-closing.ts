@@ -19,9 +19,9 @@ export interface DailyClosing {
   qst_collected: number;
   transaction_count: number;
 
-  // Payment breakdown
-  cash_total: number;
-  card_total: number;
+  // Payment source breakdown
+  terminal_total: number; // Terminal/kasada ödeme
+  online_total: number;   // Online ödeme
 
   // Timestamps
   started_at: string;
@@ -48,8 +48,8 @@ export interface DailySummary {
   transaction_count: number;
   gst_collected: number;
   qst_collected: number;
-  cash_total: number;
-  card_total: number;
+  terminal_total: number; // Terminal/kasada ödeme
+  online_total: number;   // Online ödeme
 }
 
 export interface DailyClosingListResponse {

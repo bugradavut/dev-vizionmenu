@@ -17,7 +17,7 @@ const getDailyClosings = async (req, res) => {
     const userBranch = req.userBranch;
 
     const result = await dailyClosingService.getDailyClosings(filters, userBranch);
-    res.json(result);
+    res.json({ data: result });
 
   } catch (error) {
     handleControllerError(error, 'fetch daily closings', res);

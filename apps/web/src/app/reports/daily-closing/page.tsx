@@ -14,9 +14,15 @@
 import { useState, useEffect } from "react";
 import { AuthGuard } from "@/components/auth-guard";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AppSidebar } from "@/components/app-sidebar";
+import { Separator } from "@/components/ui/separator";
+import {
+  SidebarInset,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -28,42 +34,106 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { dailyClosingService } from "@/services";
 import type { DailyClosing, DailySummary } from "@/types";
 import { format } from "date-fns";
-import { Calendar, CheckCircle, XCircle, Clock, DollarSign, AlertTriangle } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  CheckCircle,
+  XCircle,
+  Clock,
+  DollarSign,
+  Receipt,
+  Store,
+  Globe,
+  TrendingUp
+} from "lucide-react";
+import { useLanguage } from "@/contexts/language-context";
 
 export default function DailyClosingPage() {
   return (
-    <AuthGuard>
+    <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">
       <DashboardLayout>
-        <DailyClosingContent />
+        <AppSidebar />
+        <SidebarInset>
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+            <div className="flex items-center gap-2 px-4">
+              <SidebarTrigger className="-ml-1" />
+              <Separator orientation="vertical" className="mr-2 h-4" />
+              <DynamicBreadcrumb />
+            </div>
+          </header>
+          <DailyClosingContent />
+        </SidebarInset>
       </DashboardLayout>
     </AuthGuard>
   );
 }
 
 function DailyClosingContent() {
+  const { language } = useLanguage();
+
   // State
-  const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [summary, setSummary] = useState<DailySummary | null>(null);
   const [currentClosing, setCurrentClosing] = useState<DailyClosing | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   // Cancel modal state
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
 
+  const t = {
+    title: language === 'fr' ? 'Clôture Journalière' : 'Daily Closing',
+    subtitle: language === 'fr' ? 'Clôtures de caisse quotidiennes WEB-SRM (FER)' : 'Quebec WEB-SRM Daily Closing Receipts (FER)',
+    selectDate: language === 'fr' ? 'Sélectionner la Date' : 'Select Date',
+    loadSummary: language === 'fr' ? 'Charger le Résumé' : 'Load Summary',
+    loading: language === 'fr' ? 'Chargement...' : 'Loading...',
+    totalSales: language === 'fr' ? 'Ventes Totales' : 'Total Sales',
+    netSales: language === 'fr' ? 'Ventes Nettes' : 'Net Sales',
+    transactions: language === 'fr' ? 'Transactions' : 'Transactions',
+    taxes: language === 'fr' ? 'Taxes Collectées' : 'Taxes Collected',
+    atRegister: language === 'fr' ? 'Paiement à la Caisse' : 'Payment at Counter',
+    online: language === 'fr' ? 'Paiement en Ligne' : 'Online Payment',
+    refunds: language === 'fr' ? 'Remboursements' : 'Refunds',
+    paymentSources: language === 'fr' ? 'Sources de Paiement' : 'Payment Sources',
+    status: language === 'fr' ? 'Statut' : 'Status',
+    draft: language === 'fr' ? 'Brouillon' : 'Draft',
+    completed: language === 'fr' ? 'Complété' : 'Completed',
+    cancelled: language === 'fr' ? 'Annulé' : 'Cancelled',
+    startClosing: language === 'fr' ? 'Démarrer la Clôture' : 'Start Daily Closing',
+    completeClosing: language === 'fr' ? 'Compléter & Envoyer' : 'Complete & Send to WEB-SRM',
+    cancelClosing: language === 'fr' ? 'Annuler la Clôture' : 'Cancel Closing',
+    cancelTitle: language === 'fr' ? 'Annuler la Clôture Journalière' : 'Cancel Daily Closing',
+    cancelDesc: language === 'fr'
+      ? 'Êtes-vous sûr de vouloir annuler cette clôture? Cette action sera enregistrée dans les journaux d\'audit.'
+      : 'Are you sure you want to cancel this closing? This action will be recorded in the audit logs.',
+    cancelReason: language === 'fr' ? 'Raison de l\'Annulation (Optionnel)' : 'Cancellation Reason (Optional)',
+    cancelReasonPlaceholder: language === 'fr' ? 'Entrez la raison de l\'annulation...' : 'Enter the reason for cancelling...',
+    goBack: language === 'fr' ? 'Retour' : 'Go Back',
+    confirmCancel: language === 'fr' ? 'Oui, Annuler' : 'Yes, Cancel',
+    cancelling: language === 'fr' ? 'Annulation...' : 'Cancelling...',
+    noData: language === 'fr' ? 'Aucune donnée pour cette date' : 'No data for this date',
+    startDesc: language === 'fr'
+      ? 'Aucune clôture n\'existe pour cette date. Démarrer une nouvelle clôture pour préparer la transaction FER pour WEB-SRM.'
+      : 'No closing exists for this date. Start a new daily closing to prepare the FER transaction for WEB-SRM.',
+  };
+
   // Load summary and check for existing closing
   useEffect(() => {
-    loadDailySummary();
+    if (selectedDate) {
+      loadDailySummary();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
   async function loadDailySummary() {
@@ -71,14 +141,16 @@ function DailyClosingContent() {
       setLoading(true);
       setError(null);
 
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+
       // Load summary
-      const summaryResponse = await dailyClosingService.getDailySummary(selectedDate);
+      const summaryResponse = await dailyClosingService.getDailySummary(dateStr);
       setSummary(summaryResponse.data);
 
       // Check for existing closing
       const closingsResponse = await dailyClosingService.getDailyClosings({
-        date_from: selectedDate,
-        date_to: selectedDate,
+        date_from: dateStr,
+        date_to: dateStr,
         limit: 1,
       });
 
@@ -99,7 +171,8 @@ function DailyClosingContent() {
       setLoading(true);
       setError(null);
 
-      await dailyClosingService.startDailyClosing({ date: selectedDate });
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      await dailyClosingService.startDailyClosing({ date: dateStr });
       await loadDailySummary();
     } catch (err: any) {
       setError(err.message || "Failed to start daily closing");
@@ -148,11 +221,11 @@ function DailyClosingContent() {
   function getStatusBadge(status: string) {
     switch (status) {
       case "draft":
-        return <Badge variant="outline" className="flex items-center gap-1"><Clock className="h-3 w-3" /> Draft</Badge>;
+        return <Badge variant="outline" className="flex items-center gap-1"><Clock className="h-3 w-3" /> {t.draft}</Badge>;
       case "completed":
-        return <Badge variant="default" className="flex items-center gap-1 bg-green-500"><CheckCircle className="h-3 w-3" /> Completed</Badge>;
+        return <Badge variant="default" className="flex items-center gap-1 text-green-700 border-green-500 bg-green-100"><CheckCircle className="h-3 w-3" /> {t.completed}</Badge>;
       case "cancelled":
-        return <Badge variant="destructive" className="flex items-center gap-1"><XCircle className="h-3 w-3" /> Cancelled</Badge>;
+        return <Badge variant="destructive" className="flex items-center gap-1 text-red-700 border-red-300 bg-red-100"><XCircle className="h-3 w-3" /> {t.cancelled}</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -166,196 +239,238 @@ function DailyClosingContent() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Daily Closing</h1>
-          <p className="text-muted-foreground">Quebec WEB-SRM Daily Closing Receipts (FER)</p>
+    <div className="flex flex-1 flex-col px-2 sm:px-4 lg:px-6 max-w-full overflow-hidden">
+      {/* Header */}
+      <div className="px-2 py-6 sm:px-4 lg:px-6 bg-background">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
+            <p className="text-muted-foreground mt-2 text-lg">{t.subtitle}</p>
+          </div>
+
+          {/* Date Selector */}
+          <div className="flex items-center gap-2">
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-64 justify-start text-left font-normal"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(selectedDate, "MMMM d, yyyy")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <CalendarComponent
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setSelectedDate(date);
+                      setCalendarOpen(false);
+                    }
+                  }}
+                  disabled={(date) => date > new Date()}
+                  initialFocus
+                  className="rounded-lg border shadow-sm"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </div>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Date Selector */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Select Date
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="flex-1 max-w-xs">
-              <Label htmlFor="date">Closing Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                max={format(new Date(), "yyyy-MM-dd")}
-              />
+      {/* Content */}
+      <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6 max-w-full overflow-hidden">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-32 space-y-4">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <div className="text-center space-y-2">
+              <p className="text-lg font-medium text-foreground">{t.loading}</p>
+              <p className="text-sm text-muted-foreground">
+                {language === 'fr' ? 'Veuillez patienter...' : 'Please wait...'}
+              </p>
             </div>
-            <Button onClick={loadDailySummary} disabled={loading}>
-              {loading ? "Loading..." : "Load Summary"}
-            </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Daily Summary */}
-      {summary && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Daily Summary - {format(new Date(selectedDate), "MMMM d, yyyy")}
-            </CardTitle>
-            <CardDescription>Sales and transaction summary for the selected date</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Total Sales</p>
-                <p className="text-2xl font-bold">{formatCurrency(summary.total_sales)}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Total Refunds</p>
-                <p className="text-2xl font-bold text-red-500">-{formatCurrency(summary.total_refunds)}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Net Sales</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(summary.net_sales)}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Transactions</p>
-                <p className="text-2xl font-bold">{summary.transaction_count}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">GST Collected</p>
-                <p className="text-lg font-semibold">{formatCurrency(summary.gst_collected)}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">QST Collected</p>
-                <p className="text-lg font-semibold">{formatCurrency(summary.qst_collected)}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Cash Total</p>
-                <p className="text-lg font-semibold">{formatCurrency(summary.cash_total)}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Card Total</p>
-                <p className="text-lg font-semibold">{formatCurrency(summary.card_total)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Current Closing Status */}
-      {currentClosing ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Closing Status</span>
-              {getStatusBadge(currentClosing.status)}
-            </CardTitle>
-            <CardDescription>
-              {currentClosing.status === "draft" && "This closing is in draft status and can be completed or cancelled"}
-              {currentClosing.status === "completed" && `Completed on ${format(new Date(currentClosing.completed_at!), "PPpp")}`}
-              {currentClosing.status === "cancelled" && `Cancelled on ${format(new Date(currentClosing.cancelled_at!), "PPpp")}`}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Started At</p>
-                <p className="font-medium">{format(new Date(currentClosing.started_at), "PPpp")}</p>
-              </div>
-              {currentClosing.websrm_transaction_id && (
-                <div>
-                  <p className="text-sm text-muted-foreground">WEB-SRM Transaction ID</p>
-                  <p className="font-mono text-xs">{currentClosing.websrm_transaction_id}</p>
-                </div>
-              )}
-            </div>
-
-            {currentClosing.cancellation_reason && (
-              <div>
-                <p className="text-sm text-muted-foreground">Cancellation Reason</p>
-                <p className="font-medium">{currentClosing.cancellation_reason}</p>
-              </div>
-            )}
-
-            {currentClosing.status === "draft" && (
-              <div className="flex gap-2 pt-4">
-                <Button
-                  onClick={handleCompleteClosing}
-                  disabled={loading}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Complete & Send to WEB-SRM
-                </Button>
-                <Button
-                  onClick={() => setCancelModalOpen(true)}
-                  variant="destructive"
-                  disabled={loading}
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Cancel Closing
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        summary && summary.transaction_count > 0 && (
+        ) : error ? (
           <Card>
-            <CardHeader>
-              <CardTitle>Start Daily Closing</CardTitle>
-              <CardDescription>
-                No closing exists for this date. Start a new daily closing to prepare the FER transaction for WEB-SRM.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={handleStartClosing} disabled={loading}>
-                <Clock className="h-4 w-4 mr-2" />
-                Start Daily Closing
-              </Button>
-            </CardContent>
+            <CardContent className="p-6 text-sm text-red-600">{error}</CardContent>
           </Card>
-        )
-      )}
+        ) : (
+          <div className="space-y-8">
+            {/* Metrics Cards - Daily Summary */}
+            {summary && (
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                {/* Total Sales */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t.totalSales}</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{formatCurrency(summary.total_sales)}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t.refunds}: -{formatCurrency(summary.total_refunds)}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Net Sales */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t.netSales}</CardTitle>
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">{formatCurrency(summary.net_sales)}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {summary.transaction_count} {t.transactions}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Taxes */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t.taxes}</CardTitle>
+                    <Receipt className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {formatCurrency(summary.gst_collected + summary.qst_collected)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      GST: {formatCurrency(summary.gst_collected)} | QST: {formatCurrency(summary.qst_collected)}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Payment Sources */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t.paymentSources}</CardTitle>
+                    <Store className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm flex items-center gap-1">
+                          <Store className="h-3 w-3" /> {t.atRegister}
+                        </span>
+                        <span className="text-sm font-medium">{formatCurrency(summary.terminal_total)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm flex items-center gap-1">
+                          <Globe className="h-3 w-3" /> {t.online}
+                        </span>
+                        <span className="text-sm font-medium">{formatCurrency(summary.online_total)}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Status and Actions Card */}
+            {currentClosing ? (
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-medium">{t.status}</h3>
+                    {getStatusBadge(currentClosing.status)}
+                  </div>
+
+                  <div className="text-sm text-muted-foreground space-y-1 mb-3">
+                    <p>{language === 'fr' ? 'Démarré' : 'Started'}: {format(new Date(currentClosing.started_at), "PPp")}</p>
+                    {currentClosing.completed_at && (
+                      <p>{language === 'fr' ? 'Complété' : 'Completed'}: {format(new Date(currentClosing.completed_at), "PPp")}</p>
+                    )}
+                    {currentClosing.cancelled_at && (
+                      <p>{language === 'fr' ? 'Annulé' : 'Cancelled'}: {format(new Date(currentClosing.cancelled_at), "PPp")}</p>
+                    )}
+                    {currentClosing.websrm_transaction_id && (
+                      <p className="font-mono text-xs">ID: {currentClosing.websrm_transaction_id}</p>
+                    )}
+                  </div>
+
+                  {currentClosing.cancellation_reason && (
+                    <div className="p-2 bg-red-50 border border-red-200 rounded mb-3">
+                      <p className="text-xs text-red-700">{currentClosing.cancellation_reason}</p>
+                    </div>
+                  )}
+
+                  {currentClosing.status === "draft" && (
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        onClick={() => setCancelModalOpen(true)}
+                        variant="outline"
+                        disabled={loading}
+                        size="sm"
+                      >
+                        {t.cancelClosing}
+                      </Button>
+                      <Button
+                        onClick={handleCompleteClosing}
+                        disabled={loading}
+                        className="bg-green-600 hover:bg-green-700"
+                        size="sm"
+                      >
+                        {t.completeClosing}
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              summary && summary.transaction_count > 0 && (
+                <Card className="border-2 border-dashed">
+                  <CardHeader>
+                    <CardTitle className="text-xl">{t.startClosing}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground mb-4">{t.startDesc}</p>
+                    <Button onClick={handleStartClosing} disabled={loading} size="lg">
+                      <Clock className="h-4 w-4 mr-2" />
+                      {t.startClosing}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )
+            )}
+
+            {summary && summary.transaction_count === 0 && !currentClosing && (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">{t.noData}</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Cancel Closing Modal - CRITICAL for FO-115 Step 2 */}
       <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel Daily Closing</DialogTitle>
-            <DialogDescription>
-              SW-78 FO-115 Step 2: Cancel the entry of a new closing receipt before completion.
-              This action will be logged for compliance purposes.
-            </DialogDescription>
+            <DialogTitle>{t.cancelTitle}</DialogTitle>
+            <DialogDescription>{t.cancelDesc}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="reason">Cancellation Reason (Optional)</Label>
+              <Label htmlFor="reason">{t.cancelReason}</Label>
               <Textarea
                 id="reason"
-                placeholder="Enter the reason for cancelling this closing..."
+                placeholder={t.cancelReasonPlaceholder}
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 rows={4}
               />
               <p className="text-sm text-muted-foreground">
-                This cancellation will be logged in the activity logs for audit purposes.
+                {language === 'fr'
+                  ? 'Cette annulation sera enregistrée dans les journaux d\'activité à des fins d\'audit.'
+                  : 'This cancellation will be logged in the activity logs for audit purposes.'}
               </p>
             </div>
           </div>
@@ -368,14 +483,14 @@ function DailyClosingContent() {
               }}
               disabled={cancelling}
             >
-              Keep Closing
+              {t.goBack}
             </Button>
             <Button
-              variant="destructive"
               onClick={handleCancelClosing}
               disabled={cancelling}
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
-              {cancelling ? "Cancelling..." : "Cancel Closing"}
+              {cancelling ? t.cancelling : t.confirmCancel}
             </Button>
           </DialogFooter>
         </DialogContent>

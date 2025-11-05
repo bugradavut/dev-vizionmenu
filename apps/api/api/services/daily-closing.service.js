@@ -19,14 +19,14 @@ const supabase = createClient(
  */
 async function getDailySummary(branchId, date) {
   try {
-    // Get all completed orders for the day
+    // Get all completed orders for the day - include total_refunded and payment_method
     const { data: orders, error } = await supabase
       .from('orders')
-      .select('total_amount, payment_method, order_status, gst_amount, qst_amount')
+      .select('total_amount, order_source, order_type, payment_method, order_status, gst_amount, qst_amount, total_refunded')
       .eq('branch_id', branchId)
       .gte('created_at', `${date}T00:00:00`)
       .lt('created_at', `${date}T23:59:59`)
-      .in('order_status', ['completed', 'cancelled', 'refunded']);
+      .in('order_status', ['completed', 'cancelled', 'refunded', 'rejected']);
 
     if (error) throw error;
 
@@ -38,26 +38,50 @@ async function getDailySummary(branchId, date) {
       transaction_count: 0,
       gst_collected: 0,
       qst_collected: 0,
-      cash_total: 0,
-      card_total: 0,
+      terminal_total: 0, // Kasada ödeme (QR code, dine-in)
+      online_total: 0,   // Online ödeme (web, apps)
     };
 
     orders.forEach(order => {
       const amount = parseFloat(order.total_amount || 0);
+      const refunded = parseFloat(order.total_refunded || 0);
+      const gst = parseFloat(order.gst_amount || 0);
+      const qst = parseFloat(order.qst_amount || 0);
 
       if (order.order_status === 'completed') {
         summary.total_sales += amount;
-        summary.gst_collected += parseFloat(order.gst_amount || 0);
-        summary.qst_collected += parseFloat(order.qst_amount || 0);
         summary.transaction_count++;
 
-        // Payment method breakdown
-        if (order.payment_method === 'cash') {
-          summary.cash_total += amount;
+        // Calculate refunds from total_refunded field (partial or full refunds)
+        if (refunded > 0) {
+          summary.total_refunds += refunded;
+
+          // Proportionally reduce taxes based on refund amount
+          const refundRatio = refunded / amount;
+          summary.gst_collected += gst * (1 - refundRatio);
+          summary.qst_collected += qst * (1 - refundRatio);
         } else {
-          summary.card_total += amount;
+          // No refunds, add full tax amounts
+          summary.gst_collected += gst;
+          summary.qst_collected += qst;
+        }
+
+        // Payment source breakdown - kasada vs online
+        // Use net amount (after refunds) for payment source tracking
+        const netAmount = amount - refunded;
+
+        // Payment method is either 'counter' or 'online' directly in the database
+        const isCounterPayment = order.payment_method === 'counter';
+
+        if (isCounterPayment) {
+          // Kasada ödeme
+          summary.terminal_total += netAmount;
+        } else {
+          // Online ödeme
+          summary.online_total += netAmount;
         }
       } else if (order.order_status === 'refunded' || order.order_status === 'cancelled') {
+        // Fully refunded/cancelled orders
         summary.total_refunds += Math.abs(amount);
       }
     });

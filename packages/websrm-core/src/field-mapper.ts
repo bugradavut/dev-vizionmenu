@@ -312,8 +312,8 @@ export interface DailyClosingShape {
   gst_collected: number; // Dollars
   qst_collected: number; // Dollars
   transaction_count: number;
-  cash_total: number; // Dollars
-  card_total: number; // Dollars
+  terminal_total: number; // Dollars - Terminal/kasada ödeme
+  online_total: number; // Dollars - Online ödeme
   created_by?: string; // User ID
 }
 
@@ -337,8 +337,8 @@ export interface DailyClosingShape {
  *   gst_collected: 60.00,
  *   qst_collected: 119.70,
  *   transaction_count: 45,
- *   cash_total: 300.00,
- *   card_total: 900.00,
+ *   terminal_total: 300.00, // Kasada ödeme
+ *   online_total: 900.00,   // Online ödeme
  *   created_by: "user-789"
  * };
  * const request = mapClosingToReqFer(closing, "signature-abc123");
@@ -367,8 +367,10 @@ export function mapClosingToReqFer(
   const montNet = formatAmount(closing.net_sales);
   const montTPS = formatAmount(closing.gst_collected);
   const montTVQ = formatAmount(closing.qst_collected);
-  const montComptant = formatAmount(closing.cash_total);
-  const montCarte = formatAmount(closing.card_total);
+  // Map terminal_total → montComptant (cash), online_total → montCarte (card)
+  // Note: We track terminal vs online, but WEB-SRM expects cash vs card breakdown
+  const montComptant = formatAmount(closing.terminal_total);
+  const montCarte = formatAmount(closing.online_total);
 
   // Build closing receipt request
   return {
