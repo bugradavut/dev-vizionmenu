@@ -86,7 +86,7 @@ export interface FrontendOrderData {
       notes?: string;
     };
     removedAt: string;
-    reason: 'user_removed' | 'quantity_decreased';
+    reason: 'user_removed' | 'quantity_decreased' | 'quantity_increased';
     originalQuantity: number;
     removedQuantity: number;
   }>;
@@ -161,7 +161,7 @@ export interface BackendOrderData {
       notes?: string;
     };
     removedAt: string;
-    reason: 'user_removed' | 'quantity_decreased';
+    reason: 'user_removed' | 'quantity_decreased' | 'quantity_increased';
     originalQuantity: number;
     removedQuantity: number;
   }>;

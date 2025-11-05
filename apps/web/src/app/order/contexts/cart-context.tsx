@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react'
+import { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react'
 import { shouldBlockOrders } from '@/utils/restaurant-hours'
 import type { RestaurantHours } from '@/utils/restaurant-hours'
 
@@ -33,7 +33,7 @@ export interface PreOrderData {
 export interface RemovedCartItem {
   item: CartItem
   removedAt: string
-  reason: 'user_removed' | 'quantity_decreased'
+  reason: 'user_removed' | 'quantity_decreased' | 'quantity_increased'
   originalQuantity: number
   removedQuantity: number
 }
@@ -168,6 +168,9 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
   const [isRestaurantOpen, setIsRestaurantOpen] = useState(true) // Default to open for safety
   const [restaurantHours, setRestaurantHours] = useState<RestaurantHours | null>(null)
 
+  // SW-78 FO-114: Track processed removals to prevent duplicates
+  const processedRemovalsRef = useRef<Set<string>>(new Set())
+
   // Load cart, pre-order, and removed items from localStorage on mount
   useEffect(() => {
     const savedCart = loadCartFromStorage()
@@ -262,17 +265,28 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
       const itemToRemove = prev.find(item => item.id === itemId)
 
       if (itemToRemove) {
-        // Log the removed item
-        setRemovedItems(prevRemoved => [
-          ...prevRemoved,
-          {
-            item: itemToRemove,
-            removedAt: new Date().toISOString(),
-            reason: 'user_removed',
-            originalQuantity: itemToRemove.quantity,
-            removedQuantity: itemToRemove.quantity
-          }
-        ])
+        // Create unique key to prevent duplicates
+        const removalKey = `${itemId}-removed-${itemToRemove.quantity}`
+
+        // Only process if not already processed (duplicate prevention)
+        if (!processedRemovalsRef.current.has(removalKey)) {
+          processedRemovalsRef.current.add(removalKey)
+
+          // React 18 automatic batching handles this safely
+          setRemovedItems(prevRemoved => [
+            ...prevRemoved,
+            {
+              item: { ...itemToRemove }, // Create copy to avoid reference issues
+              removedAt: new Date().toISOString(),
+              reason: 'user_removed',
+              originalQuantity: itemToRemove.quantity,
+              removedQuantity: itemToRemove.quantity
+            }
+          ])
+
+          // Clean up tracking after a short delay
+          setTimeout(() => processedRemovalsRef.current.delete(removalKey), 1000)
+        }
       }
 
       return prev.filter(item => item.id !== itemId)
@@ -289,21 +303,62 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
     setItems(prev => {
       const existingItem = prev.find(item => item.id === itemId)
 
-      // Track if quantity decreased (partial removal)
+      // Track if quantity DECREASED
       if (existingItem && quantity < existingItem.quantity) {
         const removedQty = existingItem.quantity - quantity
-        setRemovedItems(prevRemoved => [
-          ...prevRemoved,
-          {
-            item: existingItem,
-            removedAt: new Date().toISOString(),
-            reason: 'quantity_decreased',
-            originalQuantity: existingItem.quantity,
-            removedQuantity: removedQty
-          }
-        ])
+
+        // Create unique key to prevent duplicates
+        const removalKey = `${itemId}-decreased-${existingItem.quantity}-to-${quantity}`
+
+        // Only process if not already processed (duplicate prevention)
+        if (!processedRemovalsRef.current.has(removalKey)) {
+          processedRemovalsRef.current.add(removalKey)
+
+          // React 18 automatic batching handles this safely
+          setRemovedItems(prevRemoved => [
+            ...prevRemoved,
+            {
+              item: { ...existingItem }, // Create copy to avoid reference issues
+              removedAt: new Date().toISOString(),
+              reason: 'quantity_decreased',
+              originalQuantity: existingItem.quantity,
+              removedQuantity: removedQty
+            }
+          ])
+
+          // Clean up tracking after a short delay
+          setTimeout(() => processedRemovalsRef.current.delete(removalKey), 1000)
+        }
+      }
+      // Track if quantity INCREASED
+      else if (existingItem && quantity > existingItem.quantity) {
+        const addedQty = quantity - existingItem.quantity
+
+        // Create unique key to prevent duplicates
+        const removalKey = `${itemId}-increased-${existingItem.quantity}-to-${quantity}`
+
+        // Only process if not already processed (duplicate prevention)
+        if (!processedRemovalsRef.current.has(removalKey)) {
+          processedRemovalsRef.current.add(removalKey)
+
+          // React 18 automatic batching handles this safely
+          setRemovedItems(prevRemoved => [
+            ...prevRemoved,
+            {
+              item: { ...existingItem }, // Create copy to avoid reference issues
+              removedAt: new Date().toISOString(),
+              reason: 'quantity_increased',
+              originalQuantity: existingItem.quantity,
+              removedQuantity: addedQty // represents added quantity
+            }
+          ])
+
+          // Clean up tracking after a short delay
+          setTimeout(() => processedRemovalsRef.current.delete(removalKey), 1000)
+        }
       }
 
+      // Update the item quantity
       return prev.map(item =>
         item.id === itemId
           ? { ...item, quantity }
@@ -333,6 +388,8 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
   // SW-78 FO-114: Clear removed items (typically after order is created)
   const clearRemovedItems = useCallback(() => {
     setRemovedItems([])
+    // Clear tracking set for next order
+    processedRemovalsRef.current.clear()
     // Also clear from localStorage
     if (typeof window !== 'undefined') {
       localStorage.removeItem(REMOVED_ITEMS_STORAGE_KEY)

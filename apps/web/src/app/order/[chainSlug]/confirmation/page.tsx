@@ -199,7 +199,7 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { language } = useLanguage();
-  const { items, clearCart, clearPreOrder } = useCart();
+  const { items, clearCart, clearPreOrder, clearRemovedItems } = useCart();
   const t = translations[language] || translations.en;
 
   const orderId = searchParams.get('orderId');
@@ -294,11 +294,12 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
   const deliveryAddress = sessionData?.deliveryAddress;
   
 
-  // Clear cart and pre-order when confirmation page loads (order is successful)
+  // SW-78 FO-114: Clear cart, pre-order, and removed items when confirmation page loads (order is successful)
   useEffect(() => {
     clearCart();
     clearPreOrder();
-  }, [clearCart, clearPreOrder]);
+    clearRemovedItems(); // Clear removed items for next order
+  }, [clearCart, clearPreOrder, clearRemovedItems]);
 
   // Cleanup sessionStorage based on order completion status
   useEffect(() => {

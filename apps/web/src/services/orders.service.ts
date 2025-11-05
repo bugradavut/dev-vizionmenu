@@ -143,7 +143,7 @@ export interface Order {
     item_id: string;
     image_url?: string;
     removed_at: string;
-    reason: 'user_removed' | 'quantity_decreased';
+    reason: 'user_removed' | 'quantity_decreased' | 'quantity_increased';
     original_quantity: number;
     removed_quantity: number;
     notes?: string;
