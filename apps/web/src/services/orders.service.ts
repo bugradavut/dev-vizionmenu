@@ -368,7 +368,11 @@ class OrdersService {
       third_party_platform: apiOrder.third_party_platform || undefined,
       created_at: apiOrder.timestamps?.createdAt || apiOrder.created_at,
       updated_at: apiOrder.timestamps?.updatedAt || apiOrder.updated_at,
-      
+
+      // SW-78 FO-115: Refund tracking
+      total_refunded: apiOrder.total_refunded || 0,
+      refund_count: apiOrder.refund_count || 0,
+
       // NEW: Individual timing adjustment (Phase 2 - +5min button feature)
       individual_timing_adjustment: apiOrder.individual_timing_adjustment || 0,
       

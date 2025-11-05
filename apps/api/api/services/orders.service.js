@@ -69,6 +69,9 @@ async function getOrders(filters, userBranch) {
       scheduled_datetime,
       created_at,
       updated_at,
+      total_refunded,
+      refund_count,
+      last_refund_at,
       order_items(
         id,
         menu_item_name,
@@ -150,6 +153,10 @@ async function getOrders(filters, userBranch) {
         deliveryFee: parseFloat(order.delivery_fee || 0),
         total: parseFloat(order.total_amount || 0)
       },
+      // SW-78 FO-115: Refund tracking
+      total_refunded: parseFloat(order.total_refunded || 0),
+      refund_count: order.refund_count || 0,
+      last_refund_at: order.last_refund_at || null,
       notes: order.notes,
       specialInstructions: order.special_instructions,
       estimatedReadyTime: order.estimated_ready_time,

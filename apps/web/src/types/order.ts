@@ -21,6 +21,9 @@ export interface Order {
   actual_ready_time?: string;
   created_at: string;
   updated_at: string;
+  total_refunded?: number; // SW-78 FO-115: Total refunded amount for partial/full refunds
+  refund_count?: number; // SW-78 FO-115: Number of refunds processed
+  last_refund_at?: string; // SW-78 FO-115: Timestamp of most recent refund
 }
 
 export interface CustomerInfo {
@@ -50,6 +53,8 @@ export interface OrderItem {
   variation?: OrderItemVariation;
   modifiers?: OrderItemModifier[];
   special_instructions?: string;
+  refunded_quantity?: number; // SW-78 FO-115: Number of items refunded from this line item
+  refund_amount?: number; // SW-78 FO-115: Total amount refunded for this line item
 }
 
 export interface OrderItemVariation {

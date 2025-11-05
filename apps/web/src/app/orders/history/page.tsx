@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Table2, LayoutGrid, ArrowRight, CalendarIcon, ArrowUpDown, Search, X, RefreshCw, AlertCircle, QrCode } from "lucide-react"
+import { Table2, LayoutGrid, ArrowRight, CalendarIcon, ArrowUpDown, Search, X, RefreshCw, AlertCircle, QrCode, CornerUpLeft } from "lucide-react"
 import {
   Popover,
   PopoverContent,
@@ -164,7 +164,7 @@ export default function OrderHistoryPage() {
     }
     
     const colors: Record<string, string> = {
-      completed: "text-green-700 border-green-300 bg-green-100",
+      completed: "text-green-700 border-green-500 bg-green-100",
       cancelled: "text-red-700 border-red-300 bg-red-100",
       rejected: "text-red-700 border-red-300 bg-red-100"
     }
@@ -645,7 +645,17 @@ export default function OrderHistoryPage() {
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
-                    <TableCell className="text-base text-muted-foreground">${order.pricing.total.toFixed(2)}</TableCell>
+                    <TableCell className="text-base text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <span>${order.pricing.total.toFixed(2)}</span>
+                        {order.total_refunded && order.total_refunded > 0 && (
+                          <Badge variant="outline" className="text-xs px-2 py-0.5 bg-amber-50 text-amber-700 border-amber-300">
+                            <CornerUpLeft className="h-3 w-3 mr-1" />
+                            Partial Refund
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-base text-muted-foreground">
                       {new Date(order.created_at).toLocaleDateString('en-CA', {
                         timeZone: 'America/Toronto'
@@ -762,8 +772,16 @@ export default function OrderHistoryPage() {
                   
                   {/* Total and Action */}
                   <div className="flex items-center justify-between">
-                    <div className="text-xl font-bold text-foreground">
-                      ${order.pricing.total.toFixed(2)}
+                    <div className="flex flex-col gap-1">
+                      <div className="text-xl font-bold text-foreground">
+                        ${order.pricing.total.toFixed(2)}
+                      </div>
+                      {order.total_refunded && order.total_refunded > 0 && (
+                        <Badge variant="outline" className="text-xs px-2 py-0.5 bg-amber-50 text-amber-700 border-amber-300 w-fit">
+                          <CornerUpLeft className="h-3 w-3 mr-1" />
+                          Partial Refund
+                        </Badge>
+                      )}
                     </div>
                     <Link href={`/orders/${order.orderNumber}?context=history`}>
                       <button className="px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors text-base font-medium text-gray-700">
