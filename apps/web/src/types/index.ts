@@ -13,6 +13,9 @@ export * from "./auth";
 // Campaign Types
 export * from "./campaign";
 
+// Daily Closing Types
+export * from "./daily-closing";
+
 // Common Types
 export interface ApiResponse<T = unknown> {
   data: T;
