@@ -17,6 +17,8 @@ export enum ActionType {
   CANCEL = 'ANN',
   /** MOD - Modify an existing transaction (Modification) */
   MODIFY = 'MOD',
+  /** FER - Daily closing receipt (Fermeture) - SW-78 FO-115 */
+  CLOSING = 'FER',
 }
 
 /**
