@@ -116,6 +116,48 @@ export interface TransactionRequest {
 }
 
 /**
+ * Closing Receipt Request (reqFer)
+ * SW-78 FO-115: Daily closing receipt (FER) transaction
+ * This is sent at end-of-day to summarize all sales
+ */
+export interface ClosingReceiptRequest {
+  /** Closing unique ID (UUID format) */
+  idFer: string;
+  /** Action type (must be FER for closing receipts) */
+  acti: ActionType.CLOSING;
+  /** Closing date (YYYY-MM-DD) */
+  dtFer: string;
+
+  /** Total sales amount in cents (integer, no decimals) */
+  montVente: number;
+  /** Total refunds amount in cents (integer, no decimals) */
+  montRembours: number;
+  /** Net sales in cents (montVente - montRembours) */
+  montNet: number;
+
+  /** GST collected in cents (integer, no decimals) */
+  montTPS: number;
+  /** QST collected in cents (integer, no decimals) */
+  montTVQ: number;
+
+  /** Number of transactions for the day */
+  nbTrans: number;
+
+  /** Cash payment total in cents */
+  montComptant: number;
+  /** Card payment total in cents */
+  montCarte: number;
+
+  /** Optional: Branch reference */
+  refSucc?: string;
+  /** Optional: Employee who created the closing */
+  refEmpl?: string;
+
+  /** Digital signature (HMAC-SHA256 or ECDSA) */
+  signature: string;
+}
+
+/**
  * Document Request (reqDoc)
  * Used to retrieve or verify a previously registered transaction
  */
@@ -188,6 +230,21 @@ export interface TransactionCancellationResponse {
   dtAnnulation: string;
   /** Cancellation reason (if provided) */
   raison?: string;
+}
+
+/**
+ * Closing Receipt Response
+ * Response from POST /api/v1/closings (SW-78 FO-115)
+ */
+export interface ClosingReceiptResponse {
+  /** Closing ID (echoed from request) */
+  idFer: string;
+  /** WEB-SRM internal closing ID */
+  idFerSrm: string;
+  /** Confirmation timestamp */
+  dtConfirmation: string;
+  /** Receipt URL (optional) */
+  urlRecu?: string;
 }
 
 /**
@@ -283,11 +340,13 @@ export interface WebSrmConfig {
 /**
  * Transaction Queue Item
  * For offline queue management
+ * Supports both regular transactions (ENR/ANN/MOD) and closing receipts (FER)
  */
 export interface TransactionQueueItem {
   id: string;
-  order_id: string;
-  payload: TransactionRequest;
+  order_id?: string; // Optional for FER transactions
+  closing_id?: string; // For FER transactions (SW-78 FO-115)
+  payload: TransactionRequest | ClosingReceiptRequest;
   status: 'pending' | 'sending' | 'sent' | 'failed' | 'failed_permanent';
   retry_count: number;
   last_error?: string;

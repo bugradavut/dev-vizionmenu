@@ -28,7 +28,7 @@ import {
   WebSrmResponse,
 } from './websrm-client';
 import { mapWebSrmError, calculateBackoff } from './error-mapper';
-import { handleOrderForWebSrm } from './runtime-adapter';
+import { handleOrderForWebSrm, handleClosingForWebSrm } from './runtime-adapter';
 import { resolveProfile, ComplianceProfile } from './profile-resolver';
 
 // Supabase client (sandbox or production based on ENV)
@@ -312,37 +312,78 @@ export async function processQueueItem(queueId: string): Promise<{
       };
     }
 
-    // 5) Get order and profile
-    const { data: order } = await supabase
-      .from('orders')
-      .select('*, order_items(*)')
-      .eq('id', queueItem.order_id)
-      .single();
+    // 5) Check if this is an order or closing transaction
+    const isClosing = !!queueItem.closing_id;
+    let result: any;
+    let profile: ComplianceProfile;
+    let entityId: string;
+    let transactionTimestamp: string;
+    let totalAmount: number;
 
-    if (!order) {
-      throw new Error(`Order not found: ${queueItem.order_id}`);
+    if (isClosing) {
+      // FER (Fermeture) transaction - daily closing
+      const { data: closing } = await supabase
+        .from('daily_closings')
+        .select('*')
+        .eq('id', queueItem.closing_id)
+        .single();
+
+      if (!closing) {
+        throw new Error(`Daily closing not found: ${queueItem.closing_id}`);
+      }
+
+      profile = await resolveProfile(
+        queueItem.tenant_id,
+        closing.branch_id,
+        null // No device_id for FER transactions
+      );
+
+      // Generate FER payload (similar to handleOrderForWebSrm but for closings)
+      result = await handleClosingForWebSrm(closing, profile, {
+        persist: 'none',
+        previousActu: await getPreviousActu(queueItem.tenant_id, profile.deviceId),
+      });
+
+      entityId = closing.id;
+      transactionTimestamp = closing.closing_date;
+      totalAmount = closing.net_sales;
+    } else {
+      // Regular ENR/ANN/MOD transaction - order
+      const { data: order } = await supabase
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('id', queueItem.order_id)
+        .single();
+
+      if (!order) {
+        throw new Error(`Order not found: ${queueItem.order_id}`);
+      }
+
+      profile = await resolveProfile(
+        queueItem.tenant_id,
+        order.branch_id,
+        order.device_id
+      );
+
+      // 6) Generate WEB-SRM payload and signatures
+      result = await handleOrderForWebSrm(order, profile, {
+        persist: 'none', // Don't persist again (already persisted)
+        previousActu: await getPreviousActu(queueItem.tenant_id, profile.deviceId),
+      });
+
+      entityId = order.id;
+      transactionTimestamp = result.payload.dtTrans;
+      totalAmount = result.payload.montTot;
     }
-
-    const profile = await resolveProfile(
-      queueItem.tenant_id,
-      order.branch_id,
-      order.device_id
-    );
-
-    // 6) Generate WEB-SRM payload and signatures
-    const result = await handleOrderForWebSrm(order, profile, {
-      persist: 'none', // Don't persist again (already persisted)
-      previousActu: await getPreviousActu(queueItem.tenant_id, profile.deviceId),
-    });
 
     // 7) Generate idempotency key (with env for cross-env isolation)
     const idempotencyKey = generateIdempotencyKey(
       profile.env,
       queueItem.tenant_id,
-      order.id,
-      result.payload.dtTrans,
+      entityId,
+      transactionTimestamp,
       result.sigs.actu,
-      result.payload.montTot
+      totalAmount
     );
 
     // 8) POST to WEB-SRM API
@@ -368,17 +409,18 @@ export async function processQueueItem(queueId: string): Promise<{
     // 10) Log audit trail
     await logAudit({
       tenantId: queueItem.tenant_id,
-      orderId: order.id,
-      operation: 'transaction',
+      orderId: isClosing ? null : entityId,
+      closingId: isClosing ? entityId : null,
+      operation: isClosing ? 'closing' : 'transaction',
       requestMethod: 'POST',
-      requestPath: '/transaction',
+      requestPath: isClosing ? '/closing' : '/transaction',
       requestBodyHash: result.sigs.sha256Hex,
       requestSignature: result.sigs.actu,
       responseStatus: response.httpStatus,
       responseBodyHash: response.rawBody
         ? createHash('sha256').update(response.rawBody, 'utf8').digest('hex')
         : null,
-      websrmTransactionId: response.body?.idTrans || null,
+      websrmTransactionId: response.body?.idTrans || response.body?.idFer || null,
       durationMs,
       errorCode: mappedError.code !== 'OK' ? mappedError.code : null,
       errorMessage: mappedError.rawMessage || null,
@@ -390,30 +432,41 @@ export async function processQueueItem(queueId: string): Promise<{
 
     // 12) Handle response
     if (mappedError.code === 'OK') {
-      // Success - update queue and receipts
+      // Success - update queue
       await supabase
         .from('websrm_transaction_queue')
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
-          websrm_transaction_id: response.body?.idTrans || null,
+          websrm_transaction_id: response.body?.idTrans || response.body?.idFer || null,
           response_code: 'OK',
         })
         .eq('id', queueId);
 
-      // Update receipts table with WEB-SRM transaction ID
-      await supabase
-        .from('receipts')
-        .update({
-          websrm_transaction_id: response.body?.idTrans || null,
-        })
-        .eq('order_id', order.id)
-        .eq('tenant_id', queueItem.tenant_id);
+      if (isClosing) {
+        // Update daily_closings table with WEB-SRM transaction ID
+        await supabase
+          .from('daily_closings')
+          .update({
+            websrm_transaction_id: response.body?.idFer || null,
+          })
+          .eq('id', entityId)
+          .eq('branch_id', profile.branchId || queueItem.tenant_id);
+      } else {
+        // Update receipts table with WEB-SRM transaction ID
+        await supabase
+          .from('receipts')
+          .update({
+            websrm_transaction_id: response.body?.idTrans || null,
+          })
+          .eq('order_id', entityId)
+          .eq('tenant_id', queueItem.tenant_id);
+      }
 
       return {
         success: true,
         status: 'completed',
-        message: `Transaction completed: ${response.body?.idTrans}`,
+        message: `${isClosing ? 'Closing' : 'Transaction'} completed: ${response.body?.idTrans || response.body?.idFer}`,
       };
     } else if (mappedError.retryable) {
       // Retryable error - check max retries
@@ -526,10 +579,12 @@ async function getPreviousActu(tenantId: string, deviceId: string): Promise<stri
 
 /**
  * Log audit entry
+ * SW-78 FO-115: Updated to support both order and closing transactions
  */
 async function logAudit(params: {
   tenantId: string;
-  orderId: string;
+  orderId: string | null;
+  closingId?: string | null;
   operation: string;
   requestMethod: string;
   requestPath: string;
@@ -546,6 +601,7 @@ async function logAudit(params: {
   await supabase.from('websrm_audit_log').insert({
     tenant_id: params.tenantId,
     order_id: params.orderId,
+    closing_id: params.closingId,
     operation: params.operation,
     request_method: params.requestMethod,
     request_path: params.requestPath,
@@ -697,5 +753,78 @@ export async function enqueueOrder(
     success: true,
     queueId: queueItem.id,
     message: 'Enqueued successfully',
+  };
+}
+
+/**
+ * Enqueue daily closing for WEB-SRM processing (FER transaction)
+ * SW-78 FO-115: Daily closing receipts
+ *
+ * @param closingId - Daily closing ID
+ * @param tenantId - Tenant ID
+ * @returns Queue item ID
+ */
+export async function enqueueDailyClosing(
+  closingId: string,
+  tenantId: string
+): Promise<{ success: boolean; queueId?: string; message: string }> {
+  // Check if already queued
+  const { data: existing } = await supabase
+    .from('websrm_transaction_queue')
+    .select('id, status')
+    .eq('closing_id', closingId)
+    .eq('tenant_id', tenantId)
+    .single();
+
+  if (existing) {
+    return {
+      success: false,
+      message: `Already queued: ${existing.status}`,
+    };
+  }
+
+  // Get closing
+  const { data: closing } = await supabase
+    .from('daily_closings')
+    .select('id, net_sales, branch_id')
+    .eq('id', closingId)
+    .single();
+
+  if (!closing) {
+    return {
+      success: false,
+      message: 'Daily closing not found',
+    };
+  }
+
+  // Generate idempotency key (preliminary - will be regenerated with signature)
+  const idempotencyKey = createHash('sha256')
+    .update(`${tenantId}|closing|${closingId}|${new Date().toISOString()}`, 'utf8')
+    .digest('hex');
+
+  // Create queue item
+  const { data: queueItem, error } = await supabase
+    .from('websrm_transaction_queue')
+    .insert({
+      tenant_id: tenantId,
+      closing_id: closingId,
+      idempotency_key: idempotencyKey,
+      status: 'pending',
+      canonical_payload_hash: '0'.repeat(64), // Placeholder - will be updated on processing
+    })
+    .select()
+    .single();
+
+  if (error || !queueItem) {
+    return {
+      success: false,
+      message: `Failed to enqueue: ${error?.message}`,
+    };
+  }
+
+  return {
+    success: true,
+    queueId: queueItem.id,
+    message: 'Daily closing enqueued successfully',
   };
 }

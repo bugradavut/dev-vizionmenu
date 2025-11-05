@@ -184,9 +184,6 @@ async function completeDailyClosing(closingId) {
       throw new Error(`Cannot complete closing with status: ${closing.status}`);
     }
 
-    // TODO: Enqueue FER transaction to WEB-SRM
-    // This will be implemented in queue-worker.ts
-
     // Update to completed
     const { data: updated, error: updateError } = await supabase
       .from('daily_closings')
@@ -199,6 +196,27 @@ async function completeDailyClosing(closingId) {
       .single();
 
     if (updateError) throw updateError;
+
+    // Enqueue FER transaction to WEB-SRM (SW-78 FO-115)
+    try {
+      const { enqueueDailyClosing } = require('../../services/websrm-adapter/queue-worker');
+
+      // Get tenant_id from branch
+      const { data: branch } = await supabase
+        .from('branches')
+        .select('tenant_id')
+        .eq('id', closing.branch_id)
+        .single();
+
+      if (branch?.tenant_id) {
+        await enqueueDailyClosing(closingId, branch.tenant_id);
+        console.log(`[DAILY CLOSING] Enqueued FER transaction for closing ${closingId}`);
+      }
+    } catch (queueError) {
+      // Log error but don't fail the completion
+      console.error('[DAILY CLOSING] Failed to enqueue FER transaction:', queueError);
+      // The queue can be retried later if needed
+    }
 
     return updated;
   } catch (error) {

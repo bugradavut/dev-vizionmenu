@@ -297,3 +297,94 @@ export function validateTransactionRequest(request: TransactionRequest): {
     errors,
   };
 }
+
+/**
+ * Daily Closing Shape (for FER transactions)
+ * SW-78 FO-115: Daily closing receipts
+ */
+export interface DailyClosingShape {
+  id: string;
+  branch_id: string;
+  closing_date: string; // YYYY-MM-DD
+  total_sales: number; // Dollars
+  total_refunds: number; // Dollars
+  net_sales: number; // Dollars
+  gst_collected: number; // Dollars
+  qst_collected: number; // Dollars
+  transaction_count: number;
+  cash_total: number; // Dollars
+  card_total: number; // Dollars
+  created_by?: string; // User ID
+}
+
+/**
+ * Map daily closing to WEB-SRM FER (Fermeture) request
+ * SW-78 FO-115: Daily closing receipts
+ *
+ * @param closing - Daily closing record
+ * @param signature - Digital signature (computed separately)
+ * @returns WEB-SRM closing receipt request payload
+ * @throws Error if required fields are missing or invalid
+ *
+ * @example
+ * const closing = {
+ *   id: "closing-123",
+ *   branch_id: "branch-456",
+ *   closing_date: "2025-01-11",
+ *   total_sales: 1250.00,
+ *   total_refunds: 50.00,
+ *   net_sales: 1200.00,
+ *   gst_collected: 60.00,
+ *   qst_collected: 119.70,
+ *   transaction_count: 45,
+ *   cash_total: 300.00,
+ *   card_total: 900.00,
+ *   created_by: "user-789"
+ * };
+ * const request = mapClosingToReqFer(closing, "signature-abc123");
+ * // => { idFer: "closing-123", acti: "FER", dtFer: "2025-01-11", ... }
+ */
+export function mapClosingToReqFer(
+  closing: DailyClosingShape,
+  signature: string
+): import('./dto.js').ClosingReceiptRequest {
+  // Validate required fields
+  if (!closing || !closing.id) {
+    throw new Error('Daily closing is required and must have an ID');
+  }
+
+  if (!signature || typeof signature !== 'string') {
+    throw new Error('Signature is required');
+  }
+
+  if (!closing.closing_date || !/^\d{4}-\d{2}-\d{2}$/.test(closing.closing_date)) {
+    throw new Error('Valid closing_date is required (YYYY-MM-DD format)');
+  }
+
+  // Convert amounts to cents (integer, no decimals)
+  const montVente = formatAmount(closing.total_sales);
+  const montRembours = formatAmount(closing.total_refunds);
+  const montNet = formatAmount(closing.net_sales);
+  const montTPS = formatAmount(closing.gst_collected);
+  const montTVQ = formatAmount(closing.qst_collected);
+  const montComptant = formatAmount(closing.cash_total);
+  const montCarte = formatAmount(closing.card_total);
+
+  // Build closing receipt request
+  return {
+    idFer: closing.id,
+    acti: ActionType.CLOSING,
+    dtFer: closing.closing_date,
+    montVente,
+    montRembours,
+    montNet,
+    montTPS,
+    montTVQ,
+    nbTrans: closing.transaction_count,
+    montComptant,
+    montCarte,
+    refSucc: closing.branch_id,
+    refEmpl: closing.created_by,
+    signature,
+  };
+}

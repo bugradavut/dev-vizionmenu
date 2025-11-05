@@ -35,11 +35,13 @@ export type {
   UserRequest,
   LineItemDescription,
   TransactionRequest,
+  ClosingReceiptRequest,
   DocumentRequest,
   WebSrmResponse,
   ErrorDetails,
   TransactionRegistrationResponse,
   TransactionCancellationResponse,
+  ClosingReceiptResponse,
   TransactionStatusResponse,
   OrderShape,
   WebSrmConfig,
@@ -90,5 +92,7 @@ export type { QrCodeOptions } from './qr.js';
 // Field mapper (stub)
 export {
   mapOrderToReqTrans,
+  mapClosingToReqFer,
   validateTransactionRequest,
 } from './field-mapper.js';
+export type { DailyClosingShape } from './field-mapper.js';
