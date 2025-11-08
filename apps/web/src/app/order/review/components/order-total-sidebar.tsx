@@ -54,7 +54,8 @@ interface OrderTotalSidebarProps {
   language: string
   isFormValid: boolean
   formData: CustomerFormData | null
-  paymentMethod: 'counter' | 'online'
+  // SW-78 FO-116 Step 1: Updated payment method type for Quebec WEB-SRM
+  paymentMethod: 'online' | 'cash' | 'card'
   orderNotes?: string
   orderContext: {
     chainSlug?: string
@@ -186,7 +187,7 @@ export function OrderTotalSidebar({
         tip: orderTotals.tipAmount,
         delivery_fee: orderTotals.applicableDeliveryFee,
         total: orderTotals.finalTotal,
-        payment_method: 'cash', // Offline orders are cash by default
+        payment_method: paymentMethod, // SW-78 FO-116: Use selected payment method (cash/card/online)
         notes: orderNotes.trim() || undefined,
         promo_code: appliedDiscount?.code,
         table_number: orderContext.tableNumber?.toString(),
@@ -235,7 +236,7 @@ export function OrderTotalSidebar({
         orderType: currentFormData.orderType || 'takeaway',
         source: orderContext.source || 'web',
         branchId: orderContext.branchId,
-        paymentMethod: 'counter' as const,
+        paymentMethod: paymentMethod, // SW-78 FO-116: Use selected payment method (cash/card/online)
         paymentIntentId: undefined,
         paymentStatus: 'pending_offline',
         pricing: {
@@ -466,10 +467,11 @@ export function OrderTotalSidebar({
   }
 
   // Submit order after successful payment
+  // SW-78 FO-116 Step 1: Support 3 payment methods for Quebec WEB-SRM
   const submitOrderAfterPayment = async (
     paymentIntentId: string,
     latestFormData: CustomerFormData,
-    resolvedPaymentMethod: 'counter' | 'online'
+    resolvedPaymentMethod: 'online' | 'cash' | 'card'
   ) => {
     const customerInfo = latestFormData.customerInfo
     const addressInfo = latestFormData.addressInfo

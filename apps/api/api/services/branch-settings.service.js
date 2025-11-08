@@ -51,9 +51,14 @@ async function getBranchSettings(branchId) {
         temporaryDeliveryDelay: settings.timingSettings?.temporaryDeliveryDelay || 0,
         autoReady: settings.timingSettings?.autoReady || false,
       },
+      // SW-78 FO-116: Updated payment settings to support cash/card distinction
       paymentSettings: {
         allowOnlinePayment: settings.paymentSettings?.allowOnlinePayment ?? true,
-        allowCounterPayment: settings.paymentSettings?.allowCounterPayment ?? false,
+        allowCashPayment: settings.paymentSettings?.allowCashPayment ??
+          (settings.paymentSettings?.allowCounterPayment ?? false),
+        allowCardPayment: settings.paymentSettings?.allowCardPayment ??
+          (settings.paymentSettings?.allowCounterPayment ?? false),
+        allowCounterPayment: settings.paymentSettings?.allowCounterPayment ?? false, // Legacy
         defaultPaymentMethod: settings.paymentSettings?.defaultPaymentMethod || 'online',
       },
       notificationSettings: {
@@ -153,9 +158,12 @@ async function updateBranchSettings(branchId, settingsData) {
         temporaryDeliveryDelay: timingSettings?.temporaryDeliveryDelay || 0,
         autoReady: timingSettings?.autoReady || false,
       },
+      // SW-78 FO-116: Updated payment settings to support cash/card distinction
       paymentSettings: {
         allowOnlinePayment: paymentSettings?.allowOnlinePayment ?? true,
-        allowCounterPayment: paymentSettings?.allowCounterPayment ?? false,
+        allowCashPayment: paymentSettings?.allowCashPayment ?? false,
+        allowCardPayment: paymentSettings?.allowCardPayment ?? false,
+        allowCounterPayment: paymentSettings?.allowCounterPayment ?? false, // Legacy
         defaultPaymentMethod: paymentSettings?.defaultPaymentMethod || 'online',
       },
       notificationSettings: notificationSettings ? sanitizeNotificationSettings(notificationSettings) : {

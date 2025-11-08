@@ -619,6 +619,19 @@ export const translations = {
         enabledDesc: "Notification sounds are active for this branch",
         disabledDesc: "All notification sounds are muted for this branch",
         saved: "Notification sounds updated successfully"
+      },
+
+      // Payment Methods - SW-78 FO-116
+      paymentMethods: {
+        title: "Payment Methods",
+        subtitle: "Configure payment options for your branch",
+        onlinePayment: "Pay Online",
+        onlinePaymentDesc: "Credit card payments",
+        cashPayment: "Pay Cash",
+        cashPaymentDesc: "Cash at counter",
+        cardPayment: "Pay with Card",
+        cardPaymentDesc: "Card at counter",
+        saved: "Payment settings updated successfully"
       }
     },
     
@@ -948,6 +961,15 @@ export const translations = {
       payWhenPickingUp: "Pay when picking up",
       payOnline: "Pay Online",
       payOnlineDesc: "Credit card or digital payment",
+
+      // SW-78 FO-116: Quebec WEB-SRM Payment Methods
+      paymentMethods: {
+        title: "Select payment method",
+        online: "Online",
+        cash: "Cash",
+        card: "Card",
+        offlineWarning: "Online payment is unavailable in offline mode. Cash payment has been selected."
+      },
       
       
       // Item Modal
@@ -1954,6 +1976,19 @@ export const translations = {
         enabledDesc: "Les sons de notification sont actifs pour cette succursale",
         disabledDesc: "Tous les sons de notification sont en sourdine pour cette succursale",
         saved: "Sons de notification mis à jour avec succès"
+      },
+
+      // Payment Methods - SW-78 FO-116 - Canadian French
+      paymentMethods: {
+        title: "Modes de paiement",
+        subtitle: "Configurez les options de paiement pour votre succursale",
+        onlinePayment: "Payer en ligne",
+        onlinePaymentDesc: "Paiements par carte de crédit",
+        cashPayment: "Payer comptant",
+        cashPaymentDesc: "Argent au comptoir",
+        cardPayment: "Payer par carte",
+        cardPaymentDesc: "Carte au comptoir",
+        saved: "Paramètres de paiement mis à jour avec succès"
       }
     },
     
@@ -2283,6 +2318,15 @@ export const translations = {
       payWhenPickingUp: "Payer lors du ramassage",
       payOnline: "Payer en ligne",
       payOnlineDesc: "Carte de crédit ou paiement numérique",
+
+      // SW-78 FO-116: Quebec WEB-SRM Payment Methods
+      paymentMethods: {
+        title: "Sélectionnez le mode de paiement",
+        online: "En ligne",
+        cash: "Comptant",
+        card: "Carte",
+        offlineWarning: "Le paiement en ligne n'est pas disponible en mode hors ligne. Le paiement comptant a été sélectionné."
+      },
       
       
       // Item Modal

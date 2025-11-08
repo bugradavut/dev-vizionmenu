@@ -12,10 +12,14 @@ export interface TimingSettings {
   autoReady: boolean;
 }
 
+// SW-78 FO-116: Updated payment settings to support cash/card distinction
 export interface PaymentSettings {
   allowOnlinePayment: boolean;
-  allowCounterPayment: boolean;
-  defaultPaymentMethod: 'online' | 'counter';
+  allowCashPayment: boolean;
+  allowCardPayment: boolean;
+  // Legacy field for backward compatibility
+  allowCounterPayment?: boolean;
+  defaultPaymentMethod: 'online' | 'cash' | 'card';
 }
 
 // Import RestaurantHours from utils to maintain consistency
@@ -184,9 +188,12 @@ export const getDefaultSettings = (): BranchSettings => ({
     temporaryDeliveryDelay: 0,
     autoReady: false,
   },
+  // SW-78 FO-116: Updated payment defaults
   paymentSettings: {
     allowOnlinePayment: true,
-    allowCounterPayment: false, // Default: counter payment disabled
+    allowCashPayment: false, // Default: cash payment disabled
+    allowCardPayment: false, // Default: card payment disabled
+    allowCounterPayment: false, // Legacy: counter payment disabled (backward compatibility)
     defaultPaymentMethod: 'online',
   },
   restaurantHours: {

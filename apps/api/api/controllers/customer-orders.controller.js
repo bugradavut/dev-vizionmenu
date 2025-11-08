@@ -76,8 +76,9 @@ const createCustomerOrder = async (req, res) => {
       });
     }
 
-    if (!['counter', 'online'].includes(paymentMethod)) {
-      paymentMethod = 'counter';
+    // SW-78 FO-116: Updated payment method validation for Quebec WEB-SRM
+    if (!['online', 'cash', 'card'].includes(paymentMethod)) {
+      paymentMethod = 'cash'; // Default to cash for backward compatibility
     }
 
     const sanitizedCustomerInfo = {

@@ -25,7 +25,8 @@ export interface FrontendOrderData {
   customerInfo: FrontendCustomerInfo;
   addressInfo?: FrontendAddressInfo;
   orderType: 'dine_in' | 'takeaway' | 'delivery';
-  paymentMethod: 'counter' | 'online';
+  // SW-78 FO-116: Updated payment method types for Quebec WEB-SRM
+  paymentMethod: 'online' | 'cash' | 'card';
   items: Array<{
     id: string;
     name: string;
@@ -103,7 +104,8 @@ export interface BackendOrderData {
   }>;
   orderType: 'dine_in' | 'takeaway' | 'delivery';
   source: 'qr' | 'web';
-  paymentMethod: 'counter' | 'online';
+  // SW-78 FO-116: Updated payment method types for Quebec WEB-SRM
+  paymentMethod: 'online' | 'cash' | 'card';
   customerInfo: {
     name: string;
     phone: string;
