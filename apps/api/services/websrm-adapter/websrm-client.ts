@@ -10,15 +10,21 @@
  * - NO automatic retries (queue worker handles retry logic)
  * - Parses JSON/text responses
  * - Returns raw HTTP response for error mapping
+ * - Uses https module for mTLS (mutual TLS) support
  */
 
 import { createHash } from 'crypto';
+import https from 'https';
+import { URL } from 'url';
 
 export interface WebSrmClientConfig {
   baseUrl: string; // e.g., 'https://websrm-dev.revenuquebec.ca' or 'http://localhost:3001'
   timeout?: number; // milliseconds (default: 30000)
   env: 'DEV' | 'ESSAI' | 'PROD';
   casEssai?: string; // ESSAI test case code (e.g., '000.000')
+  // mTLS client certificate (required for Quebec API)
+  certPem?: string; // Client certificate PEM
+  keyPem?: string; // Client private key PEM
 }
 
 export interface WebSrmResponse {
@@ -76,77 +82,132 @@ export async function postTransaction(
     requestHeaders['X-Idempotency-Key'] = idempotencyKey;
   }
 
-  // Add CASESSAI header for ESSAI environment
-  if (config.env === 'ESSAI' && config.casEssai) {
-    requestHeaders['CASESSAI'] = config.casEssai;
+  // CASESSAI header: ONLY for enrolment/annulation/modification, NOT for transaction
+  // if (config.env === 'ESSAI' && config.casEssai) {
+  //   requestHeaders['CASESSAI'] = config.casEssai;
+  // }
+
+  // DEBUG: Log the FULL request body being sent
+  console.log('[WEB-SRM] 📤 FULL Request Body:');
+  console.log(JSON.stringify(JSON.parse(bodyCanonical), null, 2));
+
+  // Parse URL
+  const parsedUrl = new URL(url);
+
+  // Configure mTLS (mutual TLS) with client certificate
+  const httpsOptions: https.RequestOptions = {
+    hostname: parsedUrl.hostname,
+    port: parsedUrl.port || 443,
+    path: parsedUrl.pathname + parsedUrl.search,
+    method: 'POST',
+    headers: requestHeaders,
+    timeout,
+  };
+
+  // Add client certificate for mTLS (required by Quebec API)
+  if (config.certPem && config.keyPem) {
+    httpsOptions.cert = config.certPem;
+    httpsOptions.key = config.keyPem;
+    httpsOptions.rejectUnauthorized = true; // Verify server certificate
   }
 
-  try {
-    // Create AbortController for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+  return new Promise<WebSrmResponse>((resolve) => {
+    let timedOut = false;
 
-    // Make HTTP request
-    const fetchResponse = await fetch(url, {
-      method: 'POST',
-      headers: requestHeaders,
-      body: bodyCanonical,
-      signal: controller.signal,
+    const req = https.request(httpsOptions, (res) => {
+      const chunks: Buffer[] = [];
+
+      // Collect response data
+      res.on('data', (chunk: Buffer) => {
+        chunks.push(chunk);
+      });
+
+      // Response complete
+      res.on('end', () => {
+        if (timedOut) return; // Ignore if already timed out
+
+        const rawBody = Buffer.concat(chunks).toString('utf8');
+
+        // Try to parse as JSON
+        let parsedBody: any;
+        try {
+          parsedBody = JSON.parse(rawBody);
+        } catch {
+          // If not JSON, keep as text
+          parsedBody = rawBody;
+        }
+
+        // Extract response headers
+        const responseHeaders: Record<string, string> = {};
+        if (res.headers) {
+          Object.entries(res.headers).forEach(([key, value]) => {
+            if (typeof value === 'string') {
+              responseHeaders[key] = value;
+            } else if (Array.isArray(value)) {
+              responseHeaders[key] = value.join(', ');
+            }
+          });
+        }
+
+        // Check if successful
+        const httpStatus = res.statusCode || 0;
+        const success = httpStatus >= 200 && httpStatus < 300;
+
+        // Log all responses for debugging
+        if (!success) {
+          console.error('[WEB-SRM] ❌ Quebec API Error Response:');
+          console.error('  Status:', httpStatus);
+          console.error('  Body:', JSON.stringify(parsedBody, null, 2));
+          console.error('  Response Headers:', JSON.stringify(responseHeaders, null, 2));
+          console.error('  Request Headers:', JSON.stringify(requestHeaders, null, 2));
+        } else {
+          console.log('[WEB-SRM] ✅ Quebec API Success Response:');
+          console.log('  Status:', httpStatus);
+          console.log('  Body:', JSON.stringify(parsedBody, null, 2));
+        }
+
+        resolve({
+          success,
+          httpStatus,
+          body: parsedBody,
+          rawBody,
+          headers: responseHeaders,
+        });
+      });
     });
 
-    clearTimeout(timeoutId);
-
-    // Read response body
-    const rawBody = await fetchResponse.text();
-
-    // Try to parse as JSON
-    let parsedBody: any;
-    try {
-      parsedBody = JSON.parse(rawBody);
-    } catch {
-      // If not JSON, keep as text
-      parsedBody = rawBody;
-    }
-
-    // Extract response headers
-    const responseHeaders: Record<string, string> = {};
-    fetchResponse.headers.forEach((value, key) => {
-      responseHeaders[key] = value;
-    });
-
-    // Check if successful
-    const success = fetchResponse.ok; // 200-299 status codes
-
-    return {
-      success,
-      httpStatus: fetchResponse.status,
-      body: parsedBody,
-      rawBody,
-      headers: responseHeaders,
-    };
-  } catch (error: any) {
-    // Handle timeout
-    if (error.name === 'AbortError') {
-      return {
+    // Handle request timeout
+    req.setTimeout(timeout, () => {
+      timedOut = true;
+      req.destroy();
+      resolve({
         success: false,
-        httpStatus: 0, // No HTTP status for timeout
+        httpStatus: 0,
         error: {
           code: 'TIMEOUT',
           message: `Request timeout after ${timeout}ms`,
         },
-      };
-    }
+      });
+    });
 
-    // Handle network errors (DNS, connection refused, etc.)
-    return {
-      success: false,
-      httpStatus: 0,
-      error: {
-        code: 'NETWORK_ERROR',
-        message: error.message || 'Network request failed',
-      },
-    };
-  }
+    // Handle request errors (network, DNS, TLS, etc.)
+    req.on('error', (error: any) => {
+      if (timedOut) return; // Ignore if already timed out
+
+      resolve({
+        success: false,
+        httpStatus: 0,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error.message || 'Network request failed',
+        },
+      });
+    });
+
+    // Write request body
+    req.write(bodyCanonical);
+    req.end();
+  });
 }
 
 /**

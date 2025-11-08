@@ -27,10 +27,10 @@ const supabase = createClient(
 async function processQueueBatch(batchSize = 20) {
   console.log(`[WebSRM Queue Processor] Processing batch (limit: ${batchSize})...`);
 
-  // Try to use TypeScript queue-worker
+  // Try to use compiled queue-worker
   try {
-    // Dynamically require TypeScript worker (will work if tsx is available)
-    const { consumeQueue } = require('../../services/websrm-adapter/queue-worker.ts');
+    // Use compiled JavaScript version (built from TypeScript)
+    const { consumeQueue } = require('./websrm-compiled/queue-worker.js');
 
     const result = await consumeQueue(batchSize);
 
@@ -159,10 +159,10 @@ async function processQueueItemSimple(queueItem) {
     // 4) Get profile (ESSAI environment)
     const profile = getProfileForOrder(order);
 
-    // 5) Try to use TypeScript adapter for payload generation
+    // 5) Try to use compiled adapter for payload generation
     let result;
     try {
-      const { handleOrderForWebSrm } = require('../../services/websrm-adapter/runtime-adapter.ts');
+      const { handleOrderForWebSrm } = require('./websrm-compiled/runtime-adapter.js');
       const { getPreviousActu } = getHelpers();
 
       result = await handleOrderForWebSrm(order, profile, {
@@ -184,7 +184,7 @@ async function processQueueItemSimple(queueItem) {
 
     // 7) POST to Quebec API
     const baseUrl = getWebSrmBaseUrl(profile.env);
-    const casEssai = profile.casEssai || process.env.WEBSRM_CASESSAI || '500.001';
+    // CASESSAI: NOT USED for /transaction endpoint (only for enrolment/annulation/modification)
 
     const response = await postToQuebec({
       baseUrl,
@@ -192,7 +192,7 @@ async function processQueueItemSimple(queueItem) {
       body: result.sigs.canonical,
       headers: result.headers,
       idempotencyKey,
-      casEssai: profile.env === 'ESSAI' ? casEssai : undefined
+      casEssai: undefined // NEVER send CASESSAI to /transaction endpoint
     });
 
     const endTime = Date.now();
@@ -403,9 +403,11 @@ async function postToQuebec({ baseUrl, path, body, headers, idempotencyKey, casE
     requestHeaders['X-Idempotency-Key'] = idempotencyKey;
   }
 
-  if (casEssai) {
-    requestHeaders['CASESSAI'] = casEssai;
-  }
+  // CASESSAI header: ONLY for enrolment/annulation/modification endpoints, NOT for /transaction
+  // Removed: Quebec API rejects CASESSAI on /transaction endpoint (SW-73 specification)
+  // if (casEssai && path !== '/transaction') {
+  //   requestHeaders['CASESSAI'] = casEssai;
+  // }
 
   try {
     const controller = new AbortController();
@@ -657,5 +659,6 @@ async function getQueueStatistics() {
 
 module.exports = {
   processQueueBatch,
-  getQueueStatistics
+  getQueueStatistics,
+  processQueueItemSimple  // Export for direct queue item processing
 };

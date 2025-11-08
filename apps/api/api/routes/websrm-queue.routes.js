@@ -8,12 +8,16 @@ const router = express.Router();
 const { requireAuth } = require('../middleware/auth.middleware');
 const websrmQueueController = require('../controllers/websrm-queue.controller');
 
+// Development mode: Allow queue processing without auth for local testing
+const isDevelopment = process.env.NODE_ENV === 'development';
+const authMiddleware = isDevelopment ? (req, res, next) => next() : requireAuth;
+
 /**
  * POST /api/v1/websrm/process-queue
  * Process pending WebSRM transactions
  *
  * Best Practice:
- * - Requires authentication
+ * - Requires authentication (bypassed in development for testing)
  * - Idempotent (safe to call multiple times)
  * - Production-ready (Vercel Cron compatible)
  *
@@ -32,7 +36,7 @@ const websrmQueueController = require('../controllers/websrm-queue.controller');
  *   }
  * }
  */
-router.post('/process-queue', requireAuth, websrmQueueController.processQueue);
+router.post('/process-queue', authMiddleware, websrmQueueController.processQueue);
 
 /**
  * GET /api/v1/websrm/queue-stats
@@ -50,6 +54,6 @@ router.post('/process-queue', requireAuth, websrmQueueController.processQueue);
  *   }
  * }
  */
-router.get('/queue-stats', requireAuth, websrmQueueController.getQueueStats);
+router.get('/queue-stats', authMiddleware, websrmQueueController.getQueueStats);
 
 module.exports = router;

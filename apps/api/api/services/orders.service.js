@@ -500,6 +500,47 @@ async function updateOrderStatus(orderId, updateData, userBranch) {
 
   console.log(`✅ Order status updated: ${orderId} - ${existingOrder.order_status} → ${status}`);
 
+  // 🧾 WEB-SRM: Process receipt immediately when order is completed (SW-78 FO-106)
+  // Fire-and-forget: Quebec receipt generation happens in background
+  if (status === 'completed') {
+    setImmediate(async () => {
+      try {
+        console.log('[WEB-SRM] Order completed - processing receipt immediately...');
+
+        // Find pending queue item for this order (fetch all fields for processing)
+        const { data: queueItem } = await supabase
+          .from('websrm_transaction_queue')
+          .select('*')
+          .eq('order_id', actualOrderId)
+          .eq('tenant_id', userBranch.branch_id)
+          .single();
+
+        if (queueItem && queueItem.status === 'pending') {
+          console.log('[WEB-SRM] Found pending queue item:', queueItem.id.substring(0, 8));
+
+          // Use compiled WebSRM adapter (production-ready)
+          try {
+            const { processQueueItem } = require('./websrm-compiled/queue-worker');
+            const result = await processQueueItem(queueItem.id);
+            console.log('[WEB-SRM] ✅ Receipt processed:', result.status, '-', result.message);
+          } catch (workerError) {
+            // Fallback: Use JavaScript processor with specific queue item
+            console.error('[WEB-SRM] ❌ Worker failed:', workerError.message);
+            console.log('[WEB-SRM] Falling back to JavaScript processor...');
+            const { processQueueItemSimple } = require('./websrm-queue-processor.service');
+            const result = await processQueueItemSimple(queueItem);
+            console.log('[WEB-SRM] Receipt processed:', result.status, '-', result.message);
+          }
+        } else {
+          console.log('[WEB-SRM] No pending queue item found (status:', queueItem?.status || 'not found', ')');
+        }
+      } catch (error) {
+        console.error('[WEB-SRM] Background receipt processing failed:', error.message);
+        // Non-critical error - don't block order update
+      }
+    });
+  }
+
   // ✉️ Send status change email notification (async, non-blocking)
   // For pre-orders: send email when status changes to 'preparing'
   // For all orders: send email when status changes to 'completed'

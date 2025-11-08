@@ -72,16 +72,16 @@ export enum PrintFormat {
  * Defines the payment method used for the transaction
  */
 export enum PaymentMode {
-  /** CARTE - Credit/debit card payment */
-  CARD = 'CARTE',
-  /** COMPTANT - Cash payment */
-  CASH = 'COMPTANT',
-  /** DEBIT - Debit card (Interac) */
-  DEBIT = 'DEBIT',
-  /** CHEQUE - Check payment */
-  CHECK = 'CHEQUE',
-  /** ELECTRONIQUE - Other electronic payment (digital wallet, etc.) */
-  ELECTRONIC = 'ELECTRONIQUE',
+  /** CRE - Credit card payment (Quebec 3-letter code) */
+  CARD = 'CRE',
+  /** ARG - Cash payment (Argent) */
+  CASH = 'ARG',
+  /** DEB - Debit card */
+  DEBIT = 'DEB',
+  /** CHQ - Check payment (Chèque) */
+  CHECK = 'CHQ',
+  /** MVO - Digital wallet (Monnaie virtuelle) */
+  ELECTRONIC = 'MVO',
 }
 
 /**

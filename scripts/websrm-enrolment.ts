@@ -152,11 +152,12 @@ async function generateKeyPairP256(): Promise<{ privateKeyPem: string; publicKey
  * - Key Usage: digitalSignature + nonRepudiation (critical)
  * - Extended Key Usage: NONE (server adds clientAuth automatically)
  * - PEM Format: Single-line base64 (no wrapping)
- * - Subject format:
- *   DEV (RBC): C=CA, ST=QC, L=-05:00, 2.5.4.4=Certificat du serveur, O=RBC-{AUTH_CODE}, OU={NEQ}TQ0001, 2.5.4.42=ER0001, CN={NEQ}
- *   ESSAI (FOB): C=CA, ST=QC, L=-05:00, 2.5.4.4=Certificat du serveur, O=FOB-{CODCERTIF}, CN={IDPARTN}
+ * - Subject format (SW-73 specification):
+ *   DEV (RBC operator - Table 10/11): C=CA, ST=QC, L=-05:00, 2.5.4.4=Certificat du serveur, O=RBC-{AUTH_CODE}, OU={NEQ}TQ0001, 2.5.4.42=ER0001, CN={NEQ}
+ *   ESSAI (FOB server admin - Table 9): C=CA, ST=QC, L=-05:00, 2.5.4.4=Certificat du serveur, O=FOB-{CODCERTIF}, CN={IDPARTN}
  *
  * CRITICAL: Use 2.5.4.4 (surname) NOT 2.5.4.5 (serialNumber) - this was key to success!
+ * NOTE: RBC operator requires OU and GivenName; FOB server admin does NOT
  */
 async function buildCSR(
   cryptoKey: CryptoKeyPair,
@@ -582,10 +583,12 @@ async function runEnrolment() {
 
     // CSR Subject: Match GOLDEN CONFIG exactly
     // CRITICAL: Both DEV and ESSAI use surname (2.5.4.4) = "Certificat du serveur"
+    // SW-73 Table 10/11: RBC operator requires OU and GivenName in CSR Subject
+    // SW-73 Table 9: FOB server admin does NOT include OU/GN
     const csrSubject = CONFIG.env === 'DEV' ? {
       commonName: process.env.WEBSRM_DEV_CSR_CN || '5678912340',
-      organizationalUnit: process.env.WEBSRM_DEV_CSR_OU || '5678912340TQ0001',
-      givenName: process.env.WEBSRM_DEV_CSR_GN || 'ER0001',
+      organizationalUnit: process.env.WEBSRM_DEV_CSR_OU || '5678912340TQ0001', // QST file number (noTVQ)
+      givenName: process.env.WEBSRM_DEV_CSR_GN || 'ER0001', // Billing file number (noDossFO)
       organization,
       surname: 'Certificat du serveur', // 2.5.4.4 (CRITICAL!)
       country: 'CA',
@@ -598,6 +601,7 @@ async function runEnrolment() {
       country: 'CA',
       state: 'QC',
       locality: '-05:00',
+      // ESSAI FOB: No OU/GN (server admin mode per SW-73 Table 9)
     };
 
     const csr = await buildCSR(cryptoKey, csrSubject);

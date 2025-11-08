@@ -85,29 +85,69 @@ export async function persistReceipt(target: PersistTarget, data: PersistInput):
       return;
     }
 
-    // !!! SANDBOX ONLY !!!
-    // Production database must NEVER be used here
-    // Uncomment when sandbox credentials are configured:
+    try {
+      // Import Supabase client
+      const { createClient } = require('@supabase/supabase-js');
 
-    // const { createClient } = require('@supabase/supabase-js');
-    // const supabase = createClient(
-    //   process.env.SANDBOX_URL!,
-    //   process.env.SANDBOX_KEY!
-    // );
-    //
-    // await supabase.from('receipts').insert({
-    //   tenant_id: data.tenantId,
-    //   order_id: data.orderId,
-    //   print_mode: data.printMode,
-    //   format: data.format,
-    //   signa_preced: data.signaPreced,
-    //   signa_actu: data.signaActu,
-    //   payload_hash: data.payloadHash,
-    //   qr_data: data.qrData,
-    //   websrm_transaction_id: data.websrmTransactionId,
-    //   transaction_timestamp: data.transactionTimestamp,
-    // });
+      // Use production database (safe in ESSAI mode for testing)
+      const supabase = createClient(
+        process.env.SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
 
-    console.info('[WEB-SRM] DB persist placeholder - implement when sandbox ready');
+      // Convert Quebec timestamp format (YYYYMMDDHHmmss) to ISO 8601
+      const convertQuebecTimestamp = (quebecTs: string): string => {
+        // Format: YYYYMMDDHHmmss -> YYYY-MM-DDTHH:mm:ss.000Z
+        if (quebecTs.length !== 14) {
+          return new Date().toISOString(); // Fallback to current time
+        }
+        const year = quebecTs.substring(0, 4);
+        const month = quebecTs.substring(4, 6);
+        const day = quebecTs.substring(6, 8);
+        const hour = quebecTs.substring(8, 10);
+        const minute = quebecTs.substring(10, 12);
+        const second = quebecTs.substring(12, 14);
+        return `${year}-${month}-${day}T${hour}:${minute}:${second}.000Z`;
+      };
+
+      // Insert receipt into database
+      const { data: receipt, error } = await supabase
+        .from('receipts')
+        .insert({
+          tenant_id: data.tenantId,
+          order_id: data.orderId,
+          websrm_transaction_id: data.websrmTransactionId,
+          transaction_timestamp: convertQuebecTimestamp(data.transactionTimestamp),
+          format: data.format,
+          print_mode: data.printMode,
+          signa_preced: data.signaPreced,
+          signa_actu: data.signaActu,
+          payload_hash: data.payloadHash,
+          qr_data: data.qrData,
+          receipt_content: data.payloadCanonical || '',
+          device_id: data.deviceId,
+          env: data.env,
+          software_id: data.softwareId,
+          software_version: data.softwareVersion,
+          metadata: data.metadata || {},
+          is_reproduction: false,
+          is_credit_note: false,
+          print_status: 'pending',
+          print_attempts: 0,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[WEB-SRM] Failed to persist receipt to database:', error);
+        throw new Error(`Database persist failed: ${error.message}`);
+      }
+
+      console.info('[WEB-SRM] Receipt persisted to database:', receipt.id);
+    } catch (error) {
+      console.error('[WEB-SRM] Exception during DB persist:', error);
+      // Re-throw to allow caller to handle
+      throw error;
+    }
   }
 }

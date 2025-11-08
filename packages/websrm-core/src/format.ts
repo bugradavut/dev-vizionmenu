@@ -50,8 +50,8 @@ export function formatAmount(amount: number): number {
  * TODO: Wire in moment-timezone or date-fns-tz when integrating
  *
  * @example
- * toQuebecLocalIso("2025-01-06T14:30:00.000Z") // => "2025-01-06T09:30:00-05:00" (EST)
- * toQuebecLocalIso("2025-07-06T14:30:00.000Z") // => "2025-07-06T10:30:00-04:00" (EDT, approx)
+ * toQuebecLocalIso("2025-01-06T14:30:00.000Z") // => "20250106093000" (EST, YYYYMMDDHHmmss)
+ * toQuebecLocalIso("2025-07-06T14:30:00.000Z") // => "20250706103000" (EDT, approx)
  */
 export function toQuebecLocalIso(utcTimestamp: string): string {
   if (typeof utcTimestamp !== 'string' || !utcTimestamp) {
@@ -81,8 +81,8 @@ export function toQuebecLocalIso(utcTimestamp: string): string {
     const minutes = String(localDate.getUTCMinutes()).padStart(2, '0');
     const seconds = String(localDate.getUTCSeconds()).padStart(2, '0');
 
-    // Format: YYYY-MM-DDTHH:mm:ss-05:00
-    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}-05:00`;
+    // Format: YYYYMMDDHHmmss (Quebec compact format, no dashes/colons)
+    return `${year}${month}${day}${hours}${minutes}${seconds}`;
   } catch (error) {
     throw new Error(`Failed to convert timestamp: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }

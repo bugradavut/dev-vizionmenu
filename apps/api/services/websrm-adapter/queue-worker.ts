@@ -340,7 +340,7 @@ export async function processQueueItem(queueId: string): Promise<{
 
       // Generate FER payload (similar to handleOrderForWebSrm but for closings)
       result = await handleClosingForWebSrm(closing, profile, {
-        persist: 'none',
+        persist: 'db', // Persist receipt to database
         previousActu: await getPreviousActu(queueItem.tenant_id, profile.deviceId),
       });
 
@@ -367,7 +367,7 @@ export async function processQueueItem(queueId: string): Promise<{
 
       // 6) Generate WEB-SRM payload and signatures
       result = await handleOrderForWebSrm(order, profile, {
-        persist: 'none', // Don't persist again (already persisted)
+        persist: 'db', // Persist receipt to database
         previousActu: await getPreviousActu(queueItem.tenant_id, profile.deviceId),
       });
 
@@ -386,17 +386,31 @@ export async function processQueueItem(queueId: string): Promise<{
       totalAmount
     );
 
-    // 8) POST to WEB-SRM API
+    // 8) POST to WEB-SRM API (with complete payload wrapper)
     const baseUrl = getWebSrmBaseUrl(profile.env);
+
+    // Add NOTPS and NOTVQ headers (Quebec format: GST=9digits+RT+4digits, QST=10digits+TQ+4digits)
+    const transactionHeaders = {
+      ...result.headers,
+      NOTPS: profile.gstNumber || '567891234RT0001', // Must include RT0001 suffix
+      NOTVQ: profile.qstNumber || '5678912340TQ0001',
+    };
+
+    // Canonicalize the complete payload (with reqTrans/transActu wrapper)
+    const { canonicalizePayload } = require('./body-signer');
+    const payloadCanonical = canonicalizePayload(result.payload);
+
     const response = await postTransaction(
       {
         baseUrl,
         env: profile.env,
-        casEssai: profile.casEssai, // ESSAI test case code (only for ESSAI)
+        // casEssai: ONLY for enrolment/annulation/modification, NOT for transaction
+        certPem: profile.certPem, // mTLS client certificate
+        keyPem: profile.privateKeyPem, // mTLS client private key
       },
       '/transaction',
-      result.sigs.canonical,
-      result.headers,
+      payloadCanonical,
+      transactionHeaders,
       idempotencyKey
     );
 
@@ -420,7 +434,7 @@ export async function processQueueItem(queueId: string): Promise<{
       responseBodyHash: response.rawBody
         ? createHash('sha256').update(response.rawBody, 'utf8').digest('hex')
         : null,
-      websrmTransactionId: response.body?.idTrans || response.body?.idFer || null,
+      websrmTransactionId: response.body?.retourTrans?.retourTransActu?.psiNoTrans || response.body?.retourFer?.retourFerActu?.psiNoFer || null,
       durationMs,
       errorCode: mappedError.code !== 'OK' ? mappedError.code : null,
       errorMessage: mappedError.rawMessage || null,
@@ -438,7 +452,7 @@ export async function processQueueItem(queueId: string): Promise<{
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
-          websrm_transaction_id: response.body?.idTrans || response.body?.idFer || null,
+          websrm_transaction_id: response.body?.retourTrans?.retourTransActu?.psiNoTrans || response.body?.retourFer?.retourFerActu?.psiNoFer || null,
           response_code: 'OK',
         })
         .eq('id', queueId);
@@ -448,7 +462,7 @@ export async function processQueueItem(queueId: string): Promise<{
         await supabase
           .from('daily_closings')
           .update({
-            websrm_transaction_id: response.body?.idFer || null,
+            websrm_transaction_id: response.body?.retourFer?.retourFerActu?.psiNoFer || null,
           })
           .eq('id', entityId)
           .eq('branch_id', profile.branchId || queueItem.tenant_id);
@@ -457,7 +471,7 @@ export async function processQueueItem(queueId: string): Promise<{
         await supabase
           .from('receipts')
           .update({
-            websrm_transaction_id: response.body?.idTrans || null,
+            websrm_transaction_id: response.body?.retourTrans?.retourTransActu?.psiNoTrans || null,
           })
           .eq('order_id', entityId)
           .eq('tenant_id', queueItem.tenant_id);
@@ -466,7 +480,7 @@ export async function processQueueItem(queueId: string): Promise<{
       return {
         success: true,
         status: 'completed',
-        message: `${isClosing ? 'Closing' : 'Transaction'} completed: ${response.body?.idTrans || response.body?.idFer}`,
+        message: `${isClosing ? 'Closing' : 'Transaction'} completed: ${response.body?.retourTrans?.retourTransActu?.psiNoTrans || response.body?.retourFer?.retourFerActu?.psiNoFer}`,
       };
     } else if (mappedError.retryable) {
       // Retryable error - check max retries

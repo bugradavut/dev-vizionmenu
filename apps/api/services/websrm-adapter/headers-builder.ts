@@ -67,6 +67,7 @@ export interface HeaderInput {
 export interface WebSrmHeaders {
   ENVIRN: string;
   CASESSAI?: string;
+  APPRLINIT: string; // Device type that initiated request (SRV = Serveur/Server)
   IDAPPRL: string;
   IDSEV: string;
   IDVERSI: string;
@@ -116,8 +117,8 @@ export function buildOfficialHeaders(
   }
 
   // Validate required string fields (must be non-empty ASCII)
+  // Required fields (idApprl is optional - only for enrolment, not transaction)
   const requiredFields = {
-    idApprl: input.idApprl,
     idSev: input.idSev,
     idVersi: input.idVersi,
     codCertif: input.codCertif,
@@ -135,6 +136,15 @@ export function buildOfficialHeaders(
     for (let i = 0; i < value.length; i++) {
       if (value.charCodeAt(i) > 0x7f) {
         throw new Error(`${key} contains non-ASCII characters: ${value}`);
+      }
+    }
+  }
+
+  // Validate idApprl separately (optional, but must be ASCII if provided)
+  if (input.idApprl && typeof input.idApprl === 'string' && input.idApprl.trim() !== '') {
+    for (let i = 0; i < input.idApprl.length; i++) {
+      if (input.idApprl.charCodeAt(i) > 0x7f) {
+        throw new Error(`idApprl contains non-ASCII characters: ${input.idApprl}`);
       }
     }
   }
@@ -182,7 +192,7 @@ export function buildOfficialHeaders(
   // Build headers object
   const headers: WebSrmHeaders = {
     ENVIRN: input.env,
-    IDAPPRL: input.idApprl,
+    APPRLINIT: 'SRV', // Device type: SRV = Serveur (Server) - per Quebec specification
     IDSEV: input.idSev,
     IDVERSI: input.idVersi,
     CODCERTIF: input.codCertif,
@@ -191,7 +201,12 @@ export function buildOfficialHeaders(
     VERSIPARN: input.versiParn,
     SIGNATRANSM: signature,
     EMPRCERTIFTRANSM: fingerprint,
-  };
+  } as any;
+
+  // IDAPPRL: Only add if not empty (transaction endpoint excludes this header)
+  if (input.idApprl && input.idApprl.trim() !== '') {
+    headers.IDAPPRL = input.idApprl;
+  }
 
   // Add CASESSAI if present (optional, only for ESSAI environment)
   if (input.caseEssai && typeof input.caseEssai === 'string' && input.caseEssai.trim() !== '') {
@@ -318,8 +333,8 @@ export function buildCanonicalBaseString(
     .toLowerCase();
 
   // Build header list in fixed order
+  // NOTE: IDAPPRL removed from required list - only used for enrolment, not transaction
   const requiredHeaders = [
-    'IDAPPRL',
     'IDSEV',
     'IDVERSI',
     'CODCERTIF',
@@ -330,6 +345,20 @@ export function buildCanonicalBaseString(
   ] as const;
 
   const headerPairs: string[] = [];
+
+  // Add IDAPPRL first if present (optional for transaction endpoint)
+  if (headers.IDAPPRL && typeof headers.IDAPPRL === 'string' && headers.IDAPPRL.trim() !== '') {
+    const idapprl = headers.IDAPPRL;
+
+    // Validate ASCII
+    for (let i = 0; i < idapprl.length; i++) {
+      if (idapprl.charCodeAt(i) > 0x7f) {
+        throw new Error(`Header IDAPPRL contains non-ASCII characters: ${idapprl}`);
+      }
+    }
+
+    headerPairs.push(`IDAPPRL=${idapprl}`);
+  }
 
   for (const key of requiredHeaders) {
     const value = headers[key];
