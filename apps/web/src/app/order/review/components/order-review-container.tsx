@@ -43,7 +43,8 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   const [isFormValid, setIsFormValid] = useState(false)
   const [formData, setFormData] = useState<CustomerFormData | null>(null)
   const [orderNotes, setOrderNotes] = useState<string>('')
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'counter' | 'online'>('online')
+  // SW-78 FO-116 Step 1: Updated payment method type to support cash/card distinction
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'online' | 'cash' | 'card'>('online')
   const [selectedOrderType, setSelectedOrderType] = useState<'takeaway' | 'delivery' | null>(initialOrderType)
   const [appliedDiscount, setAppliedDiscount] = useState<{
     id: string
@@ -155,7 +156,8 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   }
 
   // Handle payment method changes
-  const handlePaymentMethodChange = (method: 'counter' | 'online') => {
+  // SW-78 FO-116 Step 1: Support 3 payment methods for Quebec WEB-SRM
+  const handlePaymentMethodChange = (method: 'online' | 'cash' | 'card') => {
     setSelectedPaymentMethod(method)
     console.log('Payment method changed to:', method)
   }

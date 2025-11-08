@@ -6,10 +6,14 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { CreditCard } from "lucide-react"
 
+// SW-78 FO-116 Step 1: Updated payment settings to support cash/card distinction
 interface PaymentSettings {
   allowOnlinePayment: boolean
-  allowCounterPayment: boolean
-  defaultPaymentMethod: "online" | "counter"
+  allowCashPayment: boolean
+  allowCardPayment: boolean
+  // Legacy field for backward compatibility
+  allowCounterPayment?: boolean
+  defaultPaymentMethod: "online" | "cash" | "card"
 }
 
 interface PaymentMethodsCardProps {
@@ -21,20 +25,35 @@ export function PaymentMethodsCard({
   paymentSettings,
   onPaymentSettingsChange
 }: PaymentMethodsCardProps) {
+  // SW-78 FO-116: Migrate legacy allowCounterPayment to new cash/card settings
+  const allowCashPayment = paymentSettings?.allowCashPayment ??
+    (paymentSettings?.allowCounterPayment ?? false)
+  const allowCardPayment = paymentSettings?.allowCardPayment ??
+    (paymentSettings?.allowCounterPayment ?? false)
+
   const handleOnlinePaymentChange = (enabled: boolean) => {
     onPaymentSettingsChange({
-      ...paymentSettings,
       allowOnlinePayment: enabled,
-      allowCounterPayment: paymentSettings?.allowCounterPayment ?? false,
+      allowCashPayment,
+      allowCardPayment,
       defaultPaymentMethod: paymentSettings?.defaultPaymentMethod ?? 'online'
     })
   }
 
-  const handleCounterPaymentChange = (enabled: boolean) => {
+  const handleCashPaymentChange = (enabled: boolean) => {
     onPaymentSettingsChange({
-      ...paymentSettings,
       allowOnlinePayment: paymentSettings?.allowOnlinePayment ?? true,
-      allowCounterPayment: enabled,
+      allowCashPayment: enabled,
+      allowCardPayment,
+      defaultPaymentMethod: paymentSettings?.defaultPaymentMethod ?? 'online'
+    })
+  }
+
+  const handleCardPaymentChange = (enabled: boolean) => {
+    onPaymentSettingsChange({
+      allowOnlinePayment: paymentSettings?.allowOnlinePayment ?? true,
+      allowCashPayment,
+      allowCardPayment: enabled,
       defaultPaymentMethod: paymentSettings?.defaultPaymentMethod ?? 'online'
     })
   }
@@ -49,7 +68,7 @@ export function PaymentMethodsCard({
           <div>
             <CardTitle className="text-base">Payment Methods</CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              Configure payment options for customers
+              Configure payment options for customers (Quebec WEB-SRM)
             </p>
           </div>
         </div>
@@ -58,8 +77,10 @@ export function PaymentMethodsCard({
         {/* Online Payment Toggle */}
         <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
           <div>
-            <Label htmlFor="online-payment" className="text-sm font-medium">Pay Online</Label>
-            <p className="text-xs text-muted-foreground">Credit card payments</p>
+            <Label htmlFor="online-payment" className="text-sm font-medium">
+              Pay Online (En ligne)
+            </Label>
+            <p className="text-xs text-muted-foreground">Credit card payments (MVO)</p>
           </div>
           <Switch
             id="online-payment"
@@ -68,16 +89,33 @@ export function PaymentMethodsCard({
           />
         </div>
 
-        {/* Counter Payment Toggle */}
+        {/* Cash Payment Toggle - SW-78 FO-116 */}
         <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
           <div>
-            <Label htmlFor="counter-payment" className="text-sm font-medium">Pay at Counter</Label>
-            <p className="text-xs text-muted-foreground">Cash or card at pickup</p>
+            <Label htmlFor="cash-payment" className="text-sm font-medium">
+              Pay Cash (Comptant)
+            </Label>
+            <p className="text-xs text-muted-foreground">Cash at counter (ARG)</p>
           </div>
           <Switch
-            id="counter-payment"
-            checked={paymentSettings?.allowCounterPayment ?? false}
-            onCheckedChange={handleCounterPaymentChange}
+            id="cash-payment"
+            checked={allowCashPayment}
+            onCheckedChange={handleCashPaymentChange}
+          />
+        </div>
+
+        {/* Card Payment Toggle - SW-78 FO-116 */}
+        <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+          <div>
+            <Label htmlFor="card-payment" className="text-sm font-medium">
+              Pay with Card (Carte)
+            </Label>
+            <p className="text-xs text-muted-foreground">Card at counter (CRE)</p>
+          </div>
+          <Switch
+            id="card-payment"
+            checked={allowCardPayment}
+            onCheckedChange={handleCardPaymentChange}
           />
         </div>
       </CardContent>

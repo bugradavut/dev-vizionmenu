@@ -189,11 +189,18 @@ export const WEBSRM_CONSTANTS = {
 
 /**
  * Type-safe mapping from internal payment methods to WEB-SRM PaymentMode
+ * SW-78 FO-116 Step 1: Updated to support new payment method types
  */
 export const PAYMENT_METHOD_MAP: Record<string, PaymentMode> = {
+  // SW-78 FO-116: New payment method types
+  online: PaymentMode.ELECTRONIC, // Online payment (MVO)
+  cash: PaymentMode.CASH, // Cash at counter (ARG)
+  card: PaymentMode.CARD, // Card at counter (CRE)
+
+  // Legacy mappings (backward compatibility)
   credit_card: PaymentMode.CARD,
   debit_card: PaymentMode.DEBIT,
-  cash: PaymentMode.CASH,
+  counter: PaymentMode.CASH, // Old counter → default to cash
   check: PaymentMode.CHECK,
   digital_wallet: PaymentMode.ELECTRONIC,
   bank_transfer: PaymentMode.ELECTRONIC,
