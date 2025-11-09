@@ -336,6 +336,87 @@ class PaymentMethodChangeService {
         } else {
           console.warn('⚠️ Failed to queue WEB-SRM VEN transaction:', websrmNewResult.message);
         }
+
+        // Process WEB-SRM transactions immediately (sequential: REM then VEN)
+        // Fire-and-forget background processing (same pattern as orders.service.js)
+        if (websrmRefundResult.success && websrmNewResult.success) {
+          setImmediate(async () => {
+            try {
+              console.log('[WEB-SRM] Payment method change - processing transactions immediately...');
+
+              // Step 1: Process REM (cancel original transaction)
+              console.log('[WEB-SRM] Processing REM transaction (cancel original)...');
+              try {
+                const { processQueueItem } = require('./websrm-compiled/queue-worker');
+                const remResult = await processQueueItem(websrmRefundResult.queueId);
+                console.log('[WEB-SRM] ✅ REM transaction processed:', remResult.status, '-', remResult.message);
+
+                // Step 2: Only process VEN if REM succeeded
+                if (remResult.status === 'completed') {
+                  console.log('[WEB-SRM] REM successful - processing VEN transaction (new payment)...');
+                  const venResult = await processQueueItem(websrmNewResult.queueId);
+                  console.log('[WEB-SRM] ✅ VEN transaction processed:', venResult.status, '-', venResult.message);
+
+                  // Update payment method change status
+                  await supabase
+                    .from('payment_method_changes')
+                    .update({ websrm_status: 'completed' })
+                    .eq('id', changeRecord.id);
+                } else {
+                  console.error('[WEB-SRM] ❌ REM failed - VEN not sent to maintain Quebec consistency');
+                  await supabase
+                    .from('payment_method_changes')
+                    .update({ websrm_status: 'failed' })
+                    .eq('id', changeRecord.id);
+                }
+              } catch (workerError) {
+                // Fallback: Use JavaScript processor
+                console.error('[WEB-SRM] ❌ Worker failed:', workerError.message);
+                console.log('[WEB-SRM] Falling back to JavaScript processor...');
+                const { processQueueItemSimple } = require('./websrm-queue-processor.service');
+
+                // Process REM
+                const { data: remQueueItem } = await supabase
+                  .from('websrm_transaction_queue')
+                  .select('*')
+                  .eq('id', websrmRefundResult.queueId)
+                  .single();
+
+                if (remQueueItem) {
+                  const remResult = await processQueueItemSimple(remQueueItem);
+                  console.log('[WEB-SRM] REM processed:', remResult.status, '-', remResult.message);
+
+                  // Process VEN only if REM succeeded
+                  if (remResult.status === 'completed') {
+                    const { data: venQueueItem } = await supabase
+                      .from('websrm_transaction_queue')
+                      .select('*')
+                      .eq('id', websrmNewResult.queueId)
+                      .single();
+
+                    if (venQueueItem) {
+                      const venResult = await processQueueItemSimple(venQueueItem);
+                      console.log('[WEB-SRM] VEN processed:', venResult.status, '-', venResult.message);
+
+                      await supabase
+                        .from('payment_method_changes')
+                        .update({ websrm_status: venResult.status === 'completed' ? 'completed' : 'failed' })
+                        .eq('id', changeRecord.id);
+                    }
+                  } else {
+                    await supabase
+                      .from('payment_method_changes')
+                      .update({ websrm_status: 'failed' })
+                      .eq('id', changeRecord.id);
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('[WEB-SRM] Background transaction processing failed:', error.message);
+              // Non-critical error - don't block payment method change
+            }
+          });
+        }
       } else {
         console.log('⏭️ Skipping WEB-SRM transactions - order not completed yet');
         console.log('✅ When order completes, VEN will be sent with correct payment method');
