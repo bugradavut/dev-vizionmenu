@@ -1,4 +1,5 @@
 const refundsService = require('../services/refunds.service');
+const counterRefundsService = require('../services/counter-refunds.service');
 const { logActivity } = require('../helpers/audit-logger');
 
 // Get all refund-eligible orders for the current branch (last 7 days)
@@ -60,14 +61,52 @@ const processRefund = async (req, res) => {
       refundedItemsCount: refundedItems?.length || 0
     });
 
-    const refund = await refundsService.processRefund(
-      orderId,
-      parseFloat(amount),
-      reason || 'requested_by_customer',
-      userId,  // Just userId, no prefix
-      branchId,
-      refundedItems || [] // Pass refunded items array to service
-    );
+    // Validate refund eligibility first to determine payment type
+    const validation = await refundsService.validateRefundEligibility(orderId, branchId);
+    const { isOnlinePayment, isCounterPayment } = validation;
+
+    let refund;
+
+    // Route to appropriate refund service based on payment type
+    if (isOnlinePayment) {
+      console.log('💳 Processing online payment refund (Stripe)');
+      refund = await refundsService.processRefund(
+        orderId,
+        parseFloat(amount),
+        reason || 'requested_by_customer',
+        userId,
+        branchId,
+        refundedItems || []
+      );
+    } else if (isCounterPayment) {
+      console.log('💵 Processing counter payment refund (cash/card)');
+
+      // Determine refund type
+      const orderTotal = parseFloat(validation.order.total_amount);
+      const refundAmountParsed = parseFloat(amount);
+      const alreadyRefunded = parseFloat(validation.alreadyRefunded);
+      const willBeFullyRefunded = (alreadyRefunded + refundAmountParsed) >= orderTotal;
+
+      let refundType = 'partial';
+      if (willBeFullyRefunded) {
+        refundType = 'full';
+      } else if (refundAmountParsed <= 5.00) {
+        // Small amount likely correction
+        refundType = 'correction';
+      }
+
+      refund = await counterRefundsService.processCounterRefund(
+        orderId,
+        refundAmountParsed,
+        refundType,
+        reason || 'requested_by_customer',
+        userId,
+        branchId,
+        refundedItems || []
+      );
+    } else {
+      throw new Error('Invalid payment method for refund');
+    }
 
     const response = {
       success: true,
@@ -118,10 +157,10 @@ const processRefund = async (req, res) => {
         error: 'Order not paid',
         message: 'This order has not been paid yet and cannot be refunded.'
       },
-      'Cannot refund counter payments': {
+      'Invalid payment method for refund': {
         status: 400,
         error: 'Invalid payment method',
-        message: 'Counter payments cannot be refunded through this system. Please handle cash refunds manually.'
+        message: 'This order has an invalid payment method and cannot be refunded.'
       },
       'Order already fully refunded': {
         status: 400,
@@ -269,7 +308,10 @@ const validateRefundEligibility = async (req, res) => {
         orderAge: validation.orderAge,
         orderNumber: validation.order.id.substring(0, 8).toUpperCase(),
         totalAmount: validation.order.total_amount,
-        commissionRate: validation.order.commission_rate
+        commissionRate: validation.order.commission_rate,
+        paymentMethod: validation.order.payment_method,
+        isOnlinePayment: validation.isOnlinePayment,
+        isCounterPayment: validation.isCounterPayment
       }
     });
   } catch (error) {

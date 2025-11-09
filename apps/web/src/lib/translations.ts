@@ -224,7 +224,27 @@ export const translations = {
       preparing: "Preparing",
       completed: "Completed",
       cancelled: "Cancelled",
-      rejected: "Rejected"
+      rejected: "Rejected",
+
+      // Payment Method Change (Case FO-116 Step 1)
+      changePaymentMethod: "Change Payment Method",
+      currentPayment: "Current Payment",
+      newPayment: "New Payment",
+      cashLabel: "Cash",
+      cardLabel: "Card",
+      onlineLabel: "Online",
+      selectPaymentMethod: "Select a payment method",
+      confirmChange: "Confirm Change",
+      back: "Back",
+      orderAmount: "Order Amount",
+      currentMethod: "Current Method",
+      newMethod: "New Method",
+      cannotUndo: "This action cannot be undone",
+      processing: "Processing...",
+      paymentMethodChanged: "Payment Method Changed!",
+      changeSuccessDesc: "The payment method has been successfully changed.",
+      websrmQueued: "WEB-SRM transactions queued for processing",
+      update: "Update"
     },
 
     // WebSRM (Quebec SRS Compliance - SW-78 FO-107)
@@ -1581,7 +1601,27 @@ export const translations = {
       preparing: "En préparation",
       completed: "Terminée",
       cancelled: "Annulée",
-      rejected: "Rejetée"
+      rejected: "Rejetée",
+
+      // Payment Method Change (Case FO-116 Step 1) - Canadian French
+      changePaymentMethod: "Changer le mode de paiement",
+      currentPayment: "Paiement actuel",
+      newPayment: "Nouveau paiement",
+      cashLabel: "Comptant",
+      cardLabel: "Carte",
+      onlineLabel: "En ligne",
+      selectPaymentMethod: "Sélectionner un mode de paiement",
+      confirmChange: "Confirmer le changement",
+      back: "Retour",
+      orderAmount: "Montant de la commande",
+      currentMethod: "Méthode actuelle",
+      newMethod: "Nouvelle méthode",
+      cannotUndo: "Cette action ne peut pas être annulée",
+      processing: "Traitement...",
+      paymentMethodChanged: "Mode de paiement modifié!",
+      changeSuccessDesc: "Le mode de paiement a été modifié avec succès.",
+      websrmQueued: "Transactions WEB-SRM en file d'attente",
+      update: "Mettre à jour"
     },
 
     // WebSRM (Conformité SRS du Québec - SW-78 FO-107)

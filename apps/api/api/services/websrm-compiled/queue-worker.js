@@ -730,12 +730,14 @@ var WEBSRM_CONSTANTS = {
   VERSION_REGEX: /^\d+\.\d+\.\d+$/
 };
 var PAYMENT_METHOD_MAP = {
-  credit_card: PaymentMode.CARD,
-  debit_card: PaymentMode.DEBIT,
-  cash: PaymentMode.CASH,
-  check: PaymentMode.CHECK,
-  digital_wallet: PaymentMode.ELECTRONIC,
-  bank_transfer: PaymentMode.ELECTRONIC
+  credit_card: PaymentMode.CARD,      // "CRE"
+  debit_card: PaymentMode.DEBIT,      // "DEB"
+  cash: PaymentMode.CASH,             // "ARG"
+  card: PaymentMode.CARD,             // "CRE" - Counter card payment
+  online: PaymentMode.ELECTRONIC,     // "MVO" - Stripe online payment
+  check: PaymentMode.CHECK,           // "CHQ"
+  digital_wallet: PaymentMode.ELECTRONIC, // "MVO"
+  bank_transfer: PaymentMode.ELECTRONIC   // "MVO"
 };
 var ORDER_TYPE_MAP = {
   dine_in: ServiceType.RESTAURANT,

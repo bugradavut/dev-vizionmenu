@@ -16,6 +16,7 @@ import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle, Timer, ClockPlus, TicketPercent, Minus, Plus, Trash2, ClipboardList } from "lucide-react"
 import { ordersService } from "@/services/orders.service"
 import { refundsService } from "@/services/refunds.service"
@@ -32,6 +33,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/translations"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
 import { WebSrmTransactionDialog } from "@/components/orders/websrm-transaction-dialog"
+import { PaymentMethodChangeDialog } from "@/components/orders/payment-method-change-dialog"
 // import { UberDeliveryStatus } from "@/components/delivery/uber-delivery-status"
 
 // Types - Clean and simple interface definitions
@@ -84,6 +86,9 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   const [showRefundDialog, setShowRefundDialog] = useState(false)
   const [refundLoading, setRefundLoading] = useState(false)
   const [refundError, setRefundError] = useState<string | null>(null)
+
+  // Payment method change dialog state
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
   
   // Reject confirmation state
   const [showRejectDialog, setShowRejectDialog] = useState(false)
@@ -1445,24 +1450,50 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                       <Separator className="my-3" />
                       <div className="space-y-2 text-sm">
                         {/* Payment Method */}
-                        <div className="flex justify-between">
+                        <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">{language === 'fr' ? 'Méthode de paiement' : 'Payment Method'}</span>
-                          <span>
-                            {(() => {
-                              const method = order.payment_method?.toLowerCase();
-                              if (method === 'counter') {
-                                return language === 'fr' ? 'À la caisse' : 'Pay at Counter';
-                              } else if (method === 'online') {
-                                return language === 'fr' ? 'Paiement en ligne' : 'Online Payment';
-                              } else if (method === 'cash') {
-                                return language === 'fr' ? 'Comptant' : 'Cash';
-                              } else if (method === 'card') {
-                                return language === 'fr' ? 'Carte' : 'Card';
-                              } else {
-                                return order.payment_method || (language === 'fr' ? 'Non spécifié' : 'Not specified');
-                              }
-                            })()}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            {!order.payment_method_changed && order.payment_method && (
+                              (order.payment_method === 'online' && order.payment_status === 'succeeded') ||
+                              (['cash', 'card'].includes(order.payment_method) && ['preparing', 'ready', 'completed'].includes(order.status))
+                            ) && (
+                              <TooltipProvider delayDuration={100}>
+                                <Tooltip open={isPaymentDialogOpen ? false : undefined}>
+                                  <TooltipTrigger asChild>
+                                    <div>
+                                      <PaymentMethodChangeDialog
+                                        orderId={order.id}
+                                        currentPaymentMethod={order.payment_method}
+                                        orderNumber={order.id.substring(0, 8).toUpperCase()}
+                                        totalAmount={order.total_amount}
+                                        onSuccess={refetch}
+                                        onOpenChange={setIsPaymentDialogOpen}
+                                      />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="left">
+                                    <p>{t.orderDetail.changePaymentMethod}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            <span>
+                              {(() => {
+                                const method = order.payment_method?.toLowerCase();
+                                if (method === 'counter') {
+                                  return language === 'fr' ? 'À la caisse' : 'Pay at Counter';
+                                } else if (method === 'online') {
+                                  return language === 'fr' ? 'Paiement en ligne' : 'Online Payment';
+                                } else if (method === 'cash') {
+                                  return language === 'fr' ? 'Comptant' : 'Cash';
+                                } else if (method === 'card') {
+                                  return language === 'fr' ? 'Carte' : 'Card';
+                                } else {
+                                  return order.payment_method || (language === 'fr' ? 'Non spécifié' : 'Not specified');
+                                }
+                              })()}
+                            </span>
+                          </div>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{t.orderDetail.orderDate}</span>

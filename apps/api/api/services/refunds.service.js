@@ -20,6 +20,7 @@ class RefundsService {
           total_amount,
           commission_rate,
           payment_status,
+          payment_method,
           payment_intent_id,
           total_refunded,
           created_at
@@ -82,9 +83,12 @@ class RefundsService {
         throw new Error('Cannot refund unpaid orders');
       }
 
-      // Check if payment was processed online (has payment_intent_id)
-      if (!order.payment_intent_id) {
-        throw new Error('Cannot refund counter payments through this system');
+      // Determine payment type (online vs counter)
+      const isOnlinePayment = order.payment_method === 'online' && order.payment_intent_id;
+      const isCounterPayment = (order.payment_method === 'cash' || order.payment_method === 'card') && !order.payment_intent_id;
+
+      if (!isOnlinePayment && !isCounterPayment) {
+        throw new Error('Invalid payment method for refund');
       }
 
       // Calculate remaining refundable amount
@@ -101,7 +105,9 @@ class RefundsService {
         maxRefundable: parseFloat(maxRefundable.toFixed(2)),
         alreadyRefunded: parseFloat(alreadyRefunded.toFixed(2)),
         orderAge: daysDifference,
-        stripeAccountId: stripeAccountId
+        stripeAccountId: stripeAccountId,
+        isOnlinePayment,
+        isCounterPayment
       };
     } catch (error) {
       console.error('Error validating refund eligibility:', error);
@@ -123,6 +129,7 @@ class RefundsService {
           total_amount,
           commission_rate,
           payment_status,
+          payment_method,
           payment_intent_id,
           total_refunded,
           order_type,
@@ -138,7 +145,6 @@ class RefundsService {
         `)
         .eq('branch_id', branchId)
         .eq('payment_status', 'succeeded')
-        .not('payment_intent_id', 'is', null)
         .gte('created_at', sevenDaysAgo.toISOString())
         .order('created_at', { ascending: false });
 

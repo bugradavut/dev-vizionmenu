@@ -70,6 +70,7 @@ const customerChainsRoutes = require('./routes/customer-chains.routes');
 const commissionRoutes = require('./routes/commission');
 const stripeRoutes = require('./routes/stripe');
 const refundsRoutes = require('./routes/refunds');
+const paymentMethodChangeRoutes = require('./routes/payment-method-change');
 const notificationsRoutes = require('./routes/notifications');
 const webhookTestRoutes = require('./routes/webhook-test');
 const activityLogsRoutes = require('./routes/activity-logs');
@@ -83,6 +84,7 @@ const uberEatsWebhooksRoutes = require('./routes/uber-eats-webhooks.routes');
 const websrmAdminRoutes = require('./routes/websrm-admin.routes');
 const websrmAuditRoutes = require('./routes/websrm-audit.routes');
 const websrmQueueRoutes = require('./routes/websrm-queue.routes');
+const dailyClosingRoutes = require('./routes/daily-closing.routes');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -219,6 +221,9 @@ app.use('/api/v1/websrm', websrmAuditRoutes);
 // Use WEB-SRM queue routes (SW-78 FO-106 - queue worker endpoint)
 app.use('/api/v1/websrm', websrmQueueRoutes);
 
+// Use daily closing routes (SW-78 FO-115 - daily closing receipts / FER transactions)
+app.use('/api/v1/daily-closings', dailyClosingRoutes);
+
 // Use chain users routes (unified chain employee management)
 app.use('/api/v1/users/chain', chainUsersRoutes);
 
@@ -233,6 +238,9 @@ app.use('/api/v1/stripe', stripeRoutes);
 
 // Use refunds routes (protected - auth required)
 app.use('/api/v1/refunds', refundsRoutes);
+
+// Use payment method change routes (protected - auth required)
+app.use('/api/v1/payment-method-change', paymentMethodChangeRoutes);
 
 // Use notifications routes (protected - auth required)
 app.use('/api/v1/notifications', notificationsRoutes);

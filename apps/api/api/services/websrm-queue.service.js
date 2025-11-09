@@ -125,6 +125,127 @@ async function queueWebsrmTransaction(orderId, branchId) {
   }
 }
 
+/**
+ * Queue WebSRM refund transaction (REM type)
+ * Case FO-116: Step 2, 3, 4 - Refund transactions
+ *
+ * @param {string} orderId - Order UUID
+ * @param {string} refundId - Counter refund ID or Stripe refund ID
+ * @param {string} branchId - Branch UUID (used as tenant_id)
+ * @param {string} refundType - 'counter' or 'online'
+ * @param {Object} metadata - Additional refund metadata
+ * @returns {Promise<{success: boolean, queueId?: string, message: string}>}
+ */
+async function queueWebsrmRefund(orderId, refundId, branchId, refundType, metadata = {}) {
+  try {
+    // Validate inputs
+    if (!orderId || !refundId || !branchId) {
+      return {
+        success: false,
+        message: 'Missing orderId, refundId, or branchId'
+      };
+    }
+
+    // Check if already queued (idempotency by refundId)
+    const { data: existing } = await supabase
+      .from('websrm_transaction_queue')
+      .select('id, status')
+      .eq('order_id', orderId)
+      .eq('metadata->>refund_id', refundId)
+      .maybeSingle();
+
+    if (existing) {
+      console.log(`[WEB-SRM] Refund ${refundId} already queued with status: ${existing.status}`);
+      return {
+        success: false,
+        queueId: existing.id,
+        message: `Already queued: ${existing.status}`
+      };
+    }
+
+    // Verify order exists
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select('id, total_amount, branch_id, payment_method')
+      .eq('id', orderId)
+      .single();
+
+    if (orderError || !order) {
+      console.error('[WEB-SRM] Order not found:', orderId);
+      return {
+        success: false,
+        message: 'Order not found'
+      };
+    }
+
+    // Generate idempotency key (unique per refund)
+    const idempotencyKey = crypto
+      .createHash('sha256')
+      .update(`${branchId}|${orderId}|refund|${refundId}|${new Date().toISOString()}`, 'utf8')
+      .digest('hex');
+
+    console.log('[WEB-SRM] Inserting REFUND transaction to queue:', {
+      orderId: orderId.substring(0, 8),
+      refundId: refundId.substring(0, 8),
+      branchId: branchId.substring(0, 8),
+      refundType,
+      idempotencyKey: idempotencyKey.substring(0, 16) + '...'
+    });
+
+    // Insert into queue with refund metadata
+    const { data: queueItem, error: insertError } = await supabase
+      .from('websrm_transaction_queue')
+      .insert({
+        tenant_id: branchId,
+        order_id: orderId,
+        idempotency_key: idempotencyKey,
+        status: 'pending',
+        canonical_payload_hash: '0'.repeat(64), // Placeholder - updated during processing
+        max_retries: 5,
+        retry_count: 0,
+        scheduled_at: new Date().toISOString(),
+        metadata: {
+          transaction_type: 'REM', // Refund type
+          refund_id: refundId,
+          refund_type: refundType, // 'counter' or 'online'
+          payment_method: order.payment_method,
+          ...metadata
+        }
+      })
+      .select()
+      .single();
+
+    if (insertError || !queueItem) {
+      console.error('[WEB-SRM] Failed to insert refund queue item:', insertError?.message);
+      return {
+        success: false,
+        message: `Failed to enqueue refund: ${insertError?.message}`
+      };
+    }
+
+    console.log('[WEB-SRM] Refund transaction queued successfully:', {
+      queueId: queueItem.id.substring(0, 8),
+      orderId: orderId.substring(0, 8),
+      refundId: refundId.substring(0, 8),
+      status: queueItem.status
+    });
+
+    return {
+      success: true,
+      queueId: queueItem.id,
+      message: 'Refund transaction queued successfully'
+    };
+
+  } catch (error) {
+    console.error('[WEB-SRM] Unexpected error in queueWebsrmRefund:', error.message);
+    return {
+      success: false,
+      message: `Unexpected error: ${error.message}`
+    };
+  }
+}
+
 module.exports = {
-  queueWebsrmTransaction
+  queueWebsrmTransaction,
+  queueWebsrmRefund
 };

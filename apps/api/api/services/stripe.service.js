@@ -1041,6 +1041,75 @@ class StripeService {
       throw error;
     }
   }
+
+  // ============================================
+  // REFUND PROCESSING
+  // ============================================
+
+  /**
+   * Create refund for payment method change (online → cash/card)
+   * Case FO-116: Step 1 - Payment method change requires Stripe refund
+   *
+   * Stripe Connect Refund Flow:
+   * - reverse_transfer: true → Reverses transfer from connected account (restaurant pays back)
+   * - refund_application_fee: true → Platform commission also refunded to customer
+   *
+   * @param {string} paymentIntentId - Stripe Payment Intent ID
+   * @param {number} amount - Refund amount in CAD
+   * @param {string} reason - Refund reason
+   * @param {Object} metadata - Additional metadata
+   * @returns {Promise<Object>} Refund result
+   */
+  async createPaymentMethodChangeRefund(paymentIntentId, amount, reason = 'payment_method_change', metadata = {}) {
+    if (!stripe) {
+      throw new Error('Stripe not initialized - check STRIPE_SECRET_KEY environment variable');
+    }
+
+    try {
+      console.log(`💸 Creating Stripe Connect refund for payment method change:`, {
+        paymentIntentId: paymentIntentId.substring(0, 20) + '...',
+        amount: `$${amount} CAD`,
+        reason,
+        reverseTransfer: true,
+        refundApplicationFee: true
+      });
+
+      // Convert to cents for Stripe
+      const amountCents = Math.round(amount * 100);
+
+      // Create refund with Stripe Connect parameters
+      const refund = await stripe.refunds.create({
+        payment_intent: paymentIntentId,
+        amount: amountCents,
+        reason: 'requested_by_customer',
+        reverse_transfer: true,           // Reverse transfer from connected account
+        refund_application_fee: true,     // Refund platform commission too
+        metadata: {
+          refund_reason: reason,
+          refund_type: 'payment_method_change',
+          ...metadata
+        }
+      });
+
+      console.log(`✅ Stripe Connect refund created: ${refund.id} - Status: ${refund.status}`);
+      console.log(`   💰 Amount refunded: $${refund.amount / 100} CAD`);
+      console.log(`   🔄 Transfer reversed: ${refund.transfer_reversal ? 'Yes' : 'No'}`);
+
+      return {
+        success: true,
+        refundId: refund.id,
+        amount: refund.amount / 100, // Convert back to dollars
+        status: refund.status,
+        currency: refund.currency.toUpperCase(),
+        paymentIntentId: refund.payment_intent,
+        transferReversed: !!refund.transfer_reversal
+      };
+
+    } catch (error) {
+      console.error('❌ Error creating Stripe Connect refund:', error);
+      throw new Error(`Failed to create Stripe refund: ${error.message}`);
+    }
+  }
   // ============================================
   // NOTIFICATION & REAL-TIME UPDATES
   // ============================================

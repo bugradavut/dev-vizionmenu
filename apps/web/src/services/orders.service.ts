@@ -70,6 +70,8 @@ export interface Order {
   payment_method?: string;
   payment_status?: string;
   payment_intent_id?: string;
+  payment_method_changed?: boolean; // SW-78 FO-116: Payment method change tracking
+  original_payment_method?: string; // SW-78 FO-116: Original payment method before change
   total_amount?: number;
   total_refunded?: number;
   refund_count?: number;
