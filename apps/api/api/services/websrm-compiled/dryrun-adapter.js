@@ -129,9 +129,18 @@ var WEBSRM_CONSTANTS = {
   VERSION_REGEX: /^\d+\.\d+\.\d+$/
 };
 var PAYMENT_METHOD_MAP = {
+  // SW-78 FO-116: New payment method types
+  online: PaymentMode.ELECTRONIC,
+  // Online payment (MVO)
+  cash: PaymentMode.CASH,
+  // Cash at counter (ARG)
+  card: PaymentMode.CARD,
+  // Card at counter (CRE)
+  // Legacy mappings (backward compatibility)
   credit_card: PaymentMode.CARD,
   debit_card: PaymentMode.DEBIT,
-  cash: PaymentMode.CASH,
+  counter: PaymentMode.CASH,
+  // Old counter → default to cash
   check: PaymentMode.CHECK,
   digital_wallet: PaymentMode.ELECTRONIC,
   bank_transfer: PaymentMode.ELECTRONIC
@@ -402,7 +411,8 @@ function mapOrderToReqTrans(order, signature) {
   const eCommerce = isEcommerceOrder(order);
   const desc = mapLineItems(order.items);
   return {
-    idTrans: order.id,
+    idTrans: order._transaction_id || order.id,
+    // FO-116: Use queue ID for unique transactions
     acti,
     typServ,
     typTrans,

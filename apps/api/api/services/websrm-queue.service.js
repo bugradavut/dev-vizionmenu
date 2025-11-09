@@ -166,7 +166,7 @@ async function queueWebsrmRefund(orderId, refundId, branchId, refundType, metada
     // Verify order exists
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id, total_amount, branch_id, payment_method')
+      .select('id, total_amount, branch_id')
       .eq('id', orderId)
       .single();
 
@@ -193,6 +193,8 @@ async function queueWebsrmRefund(orderId, refundId, branchId, refundType, metada
     });
 
     // Insert into queue with refund metadata
+    // IMPORTANT: Use original_payment_method from metadata (not order.payment_method)
+    // For payment changes, order may already be updated with new payment method
     const { data: queueItem, error: insertError } = await supabase
       .from('websrm_transaction_queue')
       .insert({
@@ -205,11 +207,10 @@ async function queueWebsrmRefund(orderId, refundId, branchId, refundType, metada
         retry_count: 0,
         scheduled_at: new Date().toISOString(),
         metadata: {
-          transaction_type: 'REM', // Refund type
+          transaction_type: 'REM', // Refund type (negative closing receipt)
           refund_id: refundId,
-          refund_type: refundType, // 'counter' or 'online'
-          payment_method: order.payment_method,
-          ...metadata
+          refund_type: refundType, // 'counter' or 'online' or 'payment_change'
+          ...metadata // Contains original_payment_method for payment changes
         }
       })
       .select()
