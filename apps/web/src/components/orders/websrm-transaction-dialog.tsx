@@ -4,8 +4,7 @@ import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, CheckCircle, Clock, RefreshCw, XCircle, Info } from "lucide-react"
-import { Separator } from "@/components/ui/separator"
+import { AlertCircle, CheckCircle, Clock, RefreshCw, XCircle, Receipt } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/translations"
 
@@ -14,8 +13,10 @@ interface WebSrmTransactionDialogProps {
   branchId: string
 }
 
-interface TransactionStatus {
+interface Transaction {
+  id: string
   order_id: string
+  tenant_id: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
   websrm_transaction_id: string | null
   response_code: string | null
@@ -25,10 +26,17 @@ interface TransactionStatus {
   created_at: string
   completed_at: string | null
   last_error_at: string | null
+  metadata?: {
+    transaction_type?: 'VEN' | 'REM'
+    original_payment_method?: string
+    change_to?: string
+    refund_type?: string
+    amount?: number
+  }
 }
 
 export function WebSrmTransactionDialog({ orderId, branchId }: WebSrmTransactionDialogProps) {
-  const [status, setStatus] = useState<TransactionStatus | null>(null)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
@@ -38,11 +46,11 @@ export function WebSrmTransactionDialog({ orderId, branchId }: WebSrmTransaction
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
-  const fetchStatus = async () => {
+  const fetchTransactionHistory = async () => {
     setLoading(true)
     setError(null)
 
-    console.log('[WebSRM Dialog] Fetching for order:', orderId, 'branch:', branchId)
+    console.log('[WebSRM Dialog] Fetching transaction history for order:', orderId, 'branch:', branchId)
 
     try {
       const { supabase } = await import('@/lib/supabase')
@@ -53,7 +61,7 @@ export function WebSrmTransactionDialog({ orderId, branchId }: WebSrmTransaction
         throw new Error('Not authenticated')
       }
 
-      const url = `${API_BASE_URL}/api/v1/websrm/transaction-status/${orderId}?branch_id=${branchId}`
+      const url = `${API_BASE_URL}/api/v1/websrm/transaction-history/${orderId}?branch_id=${branchId}`
       console.log('[WebSRM Dialog] Fetching from:', url)
 
       const response = await fetch(url, {
@@ -65,23 +73,15 @@ export function WebSrmTransactionDialog({ orderId, branchId }: WebSrmTransaction
 
       console.log('[WebSRM Dialog] Response status:', response.status)
 
-      if (response.status === 404) {
-        // No WebSRM transaction for this order
-        console.log('[WebSRM Dialog] No transaction found (404)')
-        setStatus(null)
-        setLoading(false)
-        return
-      }
-
       if (!response.ok) {
         const errorText = await response.text()
         console.error('[WebSRM Dialog] API error:', response.status, errorText)
-        throw new Error('Failed to fetch WebSRM transaction status')
+        throw new Error('Failed to fetch WebSRM transaction history')
       }
 
       const result = await response.json()
-      console.log('[WebSRM Dialog] Transaction found:', result.data)
-      setStatus(result.data)
+      console.log('[WebSRM Dialog] Transactions found:', result.data.count, 'transactions')
+      setTransactions(result.data.transactions || [])
 
     } catch (err) {
       console.error('[WebSRM Dialog] Fetch error:', err)
@@ -94,7 +94,7 @@ export function WebSrmTransactionDialog({ orderId, branchId }: WebSrmTransaction
   // Fetch when dialog opens
   useEffect(() => {
     if (open) {
-      fetchStatus()
+      fetchTransactionHistory()
     }
   }, [open])
 
@@ -137,27 +137,46 @@ export function WebSrmTransactionDialog({ orderId, branchId }: WebSrmTransaction
     }
   }
 
-  // Don't render button if no WebSRM transaction exists
-  if (!loading && !status && !error && !open) {
-    return null
+  const getTransactionTypeLabel = (transaction: Transaction) => {
+    const txType = transaction.metadata?.transaction_type
+    if (txType === 'REM') {
+      return language === 'fr' ? 'Remboursement' : 'Refund'
+    }
+    return language === 'fr' ? 'Vente' : 'Sale'
+  }
+
+  const getPaymentMethodLabel = (method?: string) => {
+    if (!method) return 'N/A'
+    switch (method) {
+      case 'cash': return language === 'fr' ? 'Comptant' : 'Cash'
+      case 'card': return language === 'fr' ? 'Carte' : 'Card'
+      case 'online': return 'Online'
+      default: return method.toUpperCase()
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="w-full">
-          <Info className="h-4 w-4 mr-2" />
-          {text.buttonTitle}
+          <Receipt className="h-4 w-4 mr-2" />
+          {language === 'fr' ? 'Faturalar' : 'Receipts'}
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {text.dialogTitle}
+            {language === 'fr' ? 'Fatura Geçmişi' : 'Receipt History'}
           </DialogTitle>
           <DialogDescription>
-            {text.dialogDescription}
+            {loading
+              ? (language === 'fr' ? 'Chargement...' : 'Loading...')
+              : transactions.length > 0
+              ? (language === 'fr'
+                  ? `${transactions.length} transaction(s) fiscale(s)`
+                  : `${transactions.length} fiscal transaction(s)`)
+              : (language === 'fr' ? 'Aucune transaction' : 'No transactions')}
           </DialogDescription>
         </DialogHeader>
 
@@ -174,99 +193,107 @@ export function WebSrmTransactionDialog({ orderId, branchId }: WebSrmTransaction
               <AlertCircle className="h-4 w-4" />
               {error}
             </div>
-          ) : !status ? (
+          ) : transactions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <p className="text-sm">{text.notFound}</p>
-              <p className="text-xs mt-2">{text.notFoundDesc}</p>
+              <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-sm font-medium">
+                {language === 'fr' ? 'Aucune transaction trouvée' : 'No transactions found'}
+              </p>
+              <p className="text-xs mt-2 text-gray-500">
+                {language === 'fr'
+                  ? 'Cette commande n\'a pas encore de transactions fiscales.'
+                  : 'This order does not have any fiscal transactions yet.'}
+              </p>
             </div>
           ) : (
             <>
-              {/* Status */}
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <span className="text-sm font-medium text-muted-foreground">{text.status}:</span>
-                {getStatusBadge(status.status)}
-              </div>
-
-              <Separator />
-
-              {/* Transaction ID */}
-              {status.websrm_transaction_id && (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">{text.transactionId}:</p>
-                  <p className="text-sm font-mono bg-gray-50 p-3 rounded border break-all">
-                    {status.websrm_transaction_id}
-                  </p>
-                </div>
-              )}
-
-              {/* Environment Badge */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 border-blue-500">
-                  {text.environment}: {text.environmentEssai}
-                </Badge>
-                <Badge variant="outline" className="text-xs bg-gray-100 text-gray-700 border-gray-500">
-                  {text.device}: 0000-0000-0000
-                </Badge>
-              </div>
-
-              {/* Error Information (FO-107) */}
-              {status.error_message && (
-                <>
-                  <Separator />
-                  <div className="bg-destructive/10 border border-destructive rounded-lg p-4 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
-                      <p className="text-xs font-semibold text-destructive">{text.errorDetails}</p>
+              {/* Transaction List */}
+              <div className="space-y-3">
+                {transactions.map((tx, index) => (
+                  <div key={tx.id} className="border rounded-lg overflow-hidden">
+                    {/* Header */}
+                    <div className="flex items-center justify-between p-3 bg-gray-50 border-b">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold text-gray-900">
+                          #{index + 1} - {getTransactionTypeLabel(tx)}
+                        </span>
+                        {tx.metadata?.refund_type === 'payment_change' && (
+                          <span className="text-xs text-orange-600">
+                            ({language === 'fr' ? 'Changement de paiement' : 'Payment change'})
+                          </span>
+                        )}
+                      </div>
+                      {getStatusBadge(tx.status)}
                     </div>
 
-                    {/* Error Message */}
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">{text.errorMessage}:</p>
-                      <p className="text-sm font-medium">{status.error_message}</p>
+                    {/* Content */}
+                    <div className="p-4 space-y-3">
+                      {/* Transaction ID */}
+                      {tx.websrm_transaction_id && (
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">{text.transactionId}:</p>
+                          <p className="text-xs font-mono bg-gray-50 p-2 rounded border break-all">
+                            {tx.websrm_transaction_id}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Payment Method Change Info */}
+                      {tx.metadata?.transaction_type === 'REM' && tx.metadata?.original_payment_method && (
+                        <div className="text-sm text-gray-700 bg-orange-50 border border-orange-200 rounded p-2">
+                          {language === 'fr' ? 'Paiement' : 'Payment'}: {getPaymentMethodLabel(tx.metadata.original_payment_method)}
+                          {tx.metadata.change_to && (
+                            <> → {getPaymentMethodLabel(tx.metadata.change_to)}</>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Error Information */}
+                      {tx.error_message && (
+                        <div className="bg-red-50 border border-red-200 rounded p-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                            <p className="text-sm font-semibold text-red-900">{text.errorDetails}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-600 mb-1">{text.errorMessage}:</p>
+                            <p className="text-sm text-gray-900">{tx.error_message}</p>
+                          </div>
+                          {tx.response_code && (
+                            <div>
+                              <p className="text-xs text-gray-600 mb-1">{text.returnCode}:</p>
+                              <p className="text-xs font-mono bg-white p-2 rounded border">
+                                {tx.response_code}
+                              </p>
+                            </div>
+                          )}
+                          {tx.retry_count > 0 && (
+                            <div>
+                              <p className="text-xs text-gray-600 mb-1">{text.retryAttempts}:</p>
+                              <p className="text-sm text-gray-900">
+                                {tx.retry_count} / {tx.max_retries}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Timestamps */}
+                      <div className="pt-2 border-t space-y-1 text-xs text-gray-500">
+                        <div className="flex justify-between">
+                          <span>{text.created}:</span>
+                          <span className="font-mono text-gray-700">{new Date(tx.created_at).toLocaleString()}</span>
+                        </div>
+                        {tx.completed_at && (
+                          <div className="flex justify-between">
+                            <span>{text.completedTime}:</span>
+                            <span className="font-mono text-gray-700">{new Date(tx.completed_at).toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-
-                    {/* Response Code */}
-                    {status.response_code && (
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">{text.returnCode}:</p>
-                        <p className="text-sm font-mono bg-white p-2 rounded border">
-                          {status.response_code}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Retry Count */}
-                    {status.retry_count > 0 && (
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">{text.retryAttempts}:</p>
-                        <p className="text-sm">
-                          {status.retry_count} / {status.max_retries}
-                        </p>
-                      </div>
-                    )}
                   </div>
-                </>
-              )}
-
-              {/* Timestamps */}
-              <Separator />
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{text.created}:</span>
-                  <span className="font-mono">{new Date(status.created_at).toLocaleString()}</span>
-                </div>
-                {status.completed_at && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{text.completedTime}:</span>
-                    <span className="font-mono">{new Date(status.completed_at).toLocaleString()}</span>
-                  </div>
-                )}
-                {status.last_error_at && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{text.lastError}:</span>
-                    <span className="font-mono">{new Date(status.last_error_at).toLocaleString()}</span>
-                  </div>
-                )}
+                ))}
               </div>
 
               {/* Refresh Button */}
@@ -274,7 +301,7 @@ export function WebSrmTransactionDialog({ orderId, branchId }: WebSrmTransaction
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={fetchStatus}
+                  onClick={fetchTransactionHistory}
                   disabled={loading}
                   className="w-full"
                 >

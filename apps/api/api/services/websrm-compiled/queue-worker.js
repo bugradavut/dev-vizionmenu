@@ -730,14 +730,21 @@ var WEBSRM_CONSTANTS = {
   VERSION_REGEX: /^\d+\.\d+\.\d+$/
 };
 var PAYMENT_METHOD_MAP = {
-  credit_card: PaymentMode.CARD,      // "CRE"
-  debit_card: PaymentMode.DEBIT,      // "DEB"
-  cash: PaymentMode.CASH,             // "ARG"
-  card: PaymentMode.CARD,             // "CRE" - Counter card payment
-  online: PaymentMode.ELECTRONIC,     // "MVO" - Stripe online payment
-  check: PaymentMode.CHECK,           // "CHQ"
-  digital_wallet: PaymentMode.ELECTRONIC, // "MVO"
-  bank_transfer: PaymentMode.ELECTRONIC   // "MVO"
+  // SW-78 FO-116: New payment method types
+  online: PaymentMode.ELECTRONIC,
+  // Online payment (MVO)
+  cash: PaymentMode.CASH,
+  // Cash at counter (ARG)
+  card: PaymentMode.CARD,
+  // Card at counter (CRE)
+  // Legacy mappings (backward compatibility)
+  credit_card: PaymentMode.CARD,
+  debit_card: PaymentMode.DEBIT,
+  counter: PaymentMode.CASH,
+  // Old counter → default to cash
+  check: PaymentMode.CHECK,
+  digital_wallet: PaymentMode.ELECTRONIC,
+  bank_transfer: PaymentMode.ELECTRONIC
 };
 var ORDER_TYPE_MAP = {
   dine_in: ServiceType.RESTAURANT,
@@ -898,7 +905,8 @@ function mapOrderToReqTrans(order, signature) {
   const eCommerce = isEcommerceOrder(order);
   const desc = mapLineItems(order.items);
   return {
-    idTrans: order.id,
+    idTrans: order._transaction_id || order.id,
+    // FO-116: Use queue ID for unique transactions
     acti,
     typServ,
     typTrans,
@@ -1251,6 +1259,8 @@ async function persistReceipt(target, data) {
       const { data: receipt, error } = await supabase2.from("receipts").insert({
         tenant_id: data.tenantId,
         order_id: data.orderId,
+        transaction_queue_id: data.transactionQueueId,
+        // FO-116: 1:1 receipt-to-transaction mapping
         websrm_transaction_id: data.websrmTransactionId,
         transaction_timestamp: convertQuebecTimestamp(data.transactionTimestamp),
         format: data.format,
@@ -1339,7 +1349,7 @@ function transformToQuebecFormat(reqTrans, profile) {
     noTrans: noTransNumeric,
     datTrans: reqTrans.dtTrans,
     typTrans: "RFER",
-    // Closing receipt (facture finale)
+    // Quebec API requirement: ALL transactions use RFER (closing receipt type)
     modTrans: "OPE",
     // Operating mode (normal operation)
     // Business sector (Restaurant/Bar/Cafeteria)
@@ -1416,7 +1426,9 @@ __name(transformToQuebecFormat, "transformToQuebecFormat");
 async function handleOrderForWebSrm(order, profile, options = { persist: "files" }) {
   const orderWithItems = {
     ...order,
-    items: order.order_items || order.items || []
+    items: order.order_items || order.items || [],
+    _transaction_id: options.queueId || order.id
+    // Use queue ID for unique transactions
   };
   const reqTransInternal = mapOrderToReqTrans(orderWithItems, "=".repeat(88));
   const transActuBase = transformToQuebecFormat(reqTransInternal, profile);
@@ -1484,6 +1496,8 @@ async function handleOrderForWebSrm(order, profile, options = { persist: "files"
   await persistReceipt(options.persist, {
     tenantId: order.tenant_id || profile.tenantId,
     orderId: order.id,
+    transactionQueueId: options.queueId,
+    // FO-116: 1:1 receipt-to-transaction mapping
     printMode: "PAPER",
     format: "CUSTOMER",
     signaPreced: sigs.preced,
@@ -1931,10 +1945,19 @@ async function processQueueItem(queueId) {
         order.branch_id,
         order.device_id
       );
+      if (queueItem.metadata?.transaction_type === "REM") {
+        console.log(`[WEB-SRM] REM transaction detected - will use original payment method`);
+        if (queueItem.metadata?.original_payment_method) {
+          console.log(`[WEB-SRM] Using original payment method: ${queueItem.metadata.original_payment_method} (order currently: ${order.payment_method})`);
+          order.payment_method = queueItem.metadata.original_payment_method;
+        }
+      }
       result = await handleOrderForWebSrm(order, profile, {
         persist: "db",
         // Persist receipt to database
-        previousActu: await getPreviousActu(queueItem.tenant_id, profile.deviceId)
+        previousActu: await getPreviousActu(queueItem.tenant_id, profile.deviceId),
+        queueId: queueItem.id
+        // FO-116: Pass queue ID for unique transaction numbers
       });
       entityId = order.id;
       transactionTimestamp = result.payload.dtTrans;

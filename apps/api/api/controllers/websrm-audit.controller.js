@@ -153,6 +153,50 @@ async function getTransactionStatus(req, res) {
 }
 
 /**
+ * Get ALL WebSRM transaction history for an order
+ * GET /api/v1/websrm/transaction-history/:orderId
+ * FO-116: Support multiple transactions per order (original VEN + REM + new VEN after payment method change)
+ * Requires authentication
+ */
+async function getTransactionHistory(req, res) {
+  try {
+    const { orderId } = req.params;
+    const branchId = req.user?.branch_id || req.query.branch_id;
+
+    if (!orderId) {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Order ID is required' }
+      });
+    }
+
+    if (!branchId) {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Branch ID is required' }
+      });
+    }
+
+    // Fetch all transactions for this order
+    const transactions = await websrmAuditService.getTransactionHistory(orderId, branchId);
+
+    res.json({
+      data: {
+        order_id: orderId,
+        transactions,
+        count: transactions.length,
+      },
+      meta: {
+        message: 'Transaction history retrieved successfully',
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+  } catch (error) {
+    console.error('Get transaction history error:', error);
+    handleControllerError(error, 'get transaction history', res);
+  }
+}
+
+/**
  * Get error statistics for dashboard
  * GET /api/v1/websrm/error-stats
  * Requires authentication
@@ -192,5 +236,6 @@ module.exports = {
   getAuditLogs,
   getAuditLogsByOrderId,
   getTransactionStatus,
+  getTransactionHistory, // FO-116: Transaction history for payment method changes
   getErrorStatistics,
 };

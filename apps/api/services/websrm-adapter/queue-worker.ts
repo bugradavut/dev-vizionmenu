@@ -365,10 +365,22 @@ export async function processQueueItem(queueId: string): Promise<{
         order.device_id
       );
 
+      // FO-116: Check if this is a REM transaction (payment method change refund)
+      // For REM transactions, use original payment method from metadata
+      if (queueItem.metadata?.transaction_type === 'REM') {
+        console.log(`[WEB-SRM] REM transaction detected - will use original payment method`);
+
+        if (queueItem.metadata?.original_payment_method) {
+          console.log(`[WEB-SRM] Using original payment method: ${queueItem.metadata.original_payment_method} (order currently: ${order.payment_method})`);
+          order.payment_method = queueItem.metadata.original_payment_method;
+        }
+      }
+
       // 6) Generate WEB-SRM payload and signatures
       result = await handleOrderForWebSrm(order, profile, {
         persist: 'db', // Persist receipt to database
         previousActu: await getPreviousActu(queueItem.tenant_id, profile.deviceId),
+        queueId: queueItem.id, // FO-116: Pass queue ID for unique transaction numbers
       });
 
       entityId = order.id;

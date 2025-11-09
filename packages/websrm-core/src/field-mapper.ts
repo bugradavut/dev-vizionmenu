@@ -122,7 +122,7 @@ export function mapOrderToReqTrans(
 
   // Build transaction request
   return {
-    idTrans: order.id,
+    idTrans: (order as any)._transaction_id || order.id, // FO-116: Use queue ID for unique transactions
     acti,
     typServ,
     typTrans,

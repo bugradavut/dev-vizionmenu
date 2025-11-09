@@ -113,7 +113,7 @@ function transformToQuebecFormat(reqTrans: TransactionRequest, profile: Complian
     // Transaction identification (Quebec field names)
     noTrans: noTransNumeric,
     datTrans: reqTrans.dtTrans,
-    typTrans: 'RFER', // Closing receipt (facture finale)
+    typTrans: 'RFER', // Quebec API requirement: ALL transactions use RFER (closing receipt type)
     modTrans: 'OPE', // Operating mode (normal operation)
 
     // Business sector (Restaurant/Bar/Cafeteria)
@@ -186,6 +186,7 @@ function transformToQuebecFormat(reqTrans: TransactionRequest, profile: Complian
 export interface WebSrmRuntimeOptions {
   persist: PersistTarget;
   previousActu?: string; // For signature chain (future enhancement)
+  queueId?: string; // FO-116: Queue ID for unique transaction numbers (multiple transactions per order)
 }
 
 export interface WebSrmResult {
@@ -210,7 +211,7 @@ export interface WebSrmResult {
  *
  * @param order - Order object with items
  * @param profile - Compliance profile (from profile-resolver)
- * @param options - Runtime options (persist target, signature chain)
+ * @param options - Runtime options (persist target, signature chain, queue ID)
  * @returns Generated WEB-SRM artifacts
  */
 export async function handleOrderForWebSrm(
@@ -219,9 +220,11 @@ export async function handleOrderForWebSrm(
   options: WebSrmRuntimeOptions = { persist: 'files' }
 ): Promise<WebSrmResult> {
   // 0) Map Supabase order format to OrderShape (order_items → items)
+  // FO-116: Add unique transaction ID from queue ID (for multiple transactions per order)
   const orderWithItems = {
     ...order,
-    items: order.order_items || order.items || []
+    items: order.order_items || order.items || [],
+    _transaction_id: options.queueId || order.id, // Use queue ID for unique transactions
   };
 
   // 1) Order → WEB-SRM internal format (signature placeholder, will be computed after)
@@ -319,6 +322,7 @@ export async function handleOrderForWebSrm(
   await persistReceipt(options.persist, {
     tenantId: order.tenant_id || profile.tenantId,
     orderId: order.id,
+    transactionQueueId: options.queueId, // FO-116: 1:1 receipt-to-transaction mapping
     printMode: 'PAPER',
     format: 'CUSTOMER',
     signaPreced: sigs.preced,

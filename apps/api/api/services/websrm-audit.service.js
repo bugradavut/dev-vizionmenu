@@ -156,6 +156,36 @@ async function getTransactionStatus(orderId, branchId) {
 }
 
 /**
+ * Get ALL WebSRM transaction history for an order
+ * FO-116: Support multiple transactions per order (original VEN + REM + new VEN after payment method change)
+ * @param {string} orderId - Order ID
+ * @param {string} branchId - Branch ID (tenant_id)
+ * @returns {Array} List of all transactions for this order, ordered by creation time
+ */
+async function getTransactionHistory(orderId, branchId) {
+  if (!orderId) {
+    throw new Error('Order ID is required');
+  }
+  if (!branchId) {
+    throw new Error('Branch ID is required');
+  }
+
+  const { data, error } = await supabase
+    .from('websrm_transaction_queue')
+    .select('*')
+    .eq('order_id', orderId)
+    .eq('tenant_id', branchId)
+    .order('created_at', { ascending: true }); // Chronological order
+
+  if (error) {
+    console.error(`Failed to fetch transaction history for order ${orderId}:`, error);
+    throw new Error(`Failed to fetch transaction history: ${error.message}`);
+  }
+
+  return data || [];
+}
+
+/**
  * Get error statistics for dashboard
  * @param {string} branchId - Branch ID
  * @param {Object} filters - Optional filters (startDate, endDate)
@@ -206,5 +236,6 @@ module.exports = {
   getAuditLogs,
   getAuditLogsByOrderId,
   getTransactionStatus,
+  getTransactionHistory, // FO-116: Transaction history for payment method changes
   getErrorStatistics,
 };

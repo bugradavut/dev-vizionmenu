@@ -82,6 +82,8 @@ async function persistReceipt(target, data) {
       const { data: receipt, error } = await supabase.from("receipts").insert({
         tenant_id: data.tenantId,
         order_id: data.orderId,
+        transaction_queue_id: data.transactionQueueId,
+        // FO-116: 1:1 receipt-to-transaction mapping
         websrm_transaction_id: data.websrmTransactionId,
         transaction_timestamp: convertQuebecTimestamp(data.transactionTimestamp),
         format: data.format,

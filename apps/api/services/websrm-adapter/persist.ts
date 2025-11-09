@@ -13,6 +13,7 @@ export type PersistTarget = 'files' | 'db' | 'none';
 export type PersistInput = {
   tenantId: string;
   orderId: string;
+  transactionQueueId?: string; // FO-116: Queue ID for 1:1 receipt-to-transaction mapping
   printMode: 'PAPER' | 'ELECTRONIC';
   format: 'CUSTOMER' | 'MERCHANT' | 'INTERNAL';
   signaPreced: string;   // 88 base64
@@ -116,6 +117,7 @@ export async function persistReceipt(target: PersistTarget, data: PersistInput):
         .insert({
           tenant_id: data.tenantId,
           order_id: data.orderId,
+          transaction_queue_id: data.transactionQueueId, // FO-116: 1:1 receipt-to-transaction mapping
           websrm_transaction_id: data.websrmTransactionId,
           transaction_timestamp: convertQuebecTimestamp(data.transactionTimestamp),
           format: data.format,

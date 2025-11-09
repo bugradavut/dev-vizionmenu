@@ -295,7 +295,7 @@ class PaymentMethodChangeService {
           }
         }
 
-        // Queue WEB-SRM transactions
+        // Queue WEB-SRM transactions BEFORE updating order
         // Step 1: REM (Refund/Cancel original transaction)
         console.log('📤 Queueing WEB-SRM REM transaction (cancel original)...');
         websrmRefundResult = await queueWebsrmRefund(
@@ -306,7 +306,7 @@ class PaymentMethodChangeService {
           {
             amount: parseFloat(order.total_amount),
             refund_type: 'payment_change',
-            payment_method: order.payment_method,
+            original_payment_method: order.payment_method, // CRITICAL: Use original before update
             gst_refund: parseFloat(order.gst_amount || 0),
             qst_refund: parseFloat(order.qst_amount || 0),
             change_to: newPaymentMethod

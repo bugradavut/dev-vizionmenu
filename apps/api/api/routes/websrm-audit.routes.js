@@ -51,6 +51,21 @@ router.get(
 );
 
 /**
+ * GET /api/v1/websrm/transaction-history/:orderId
+ * Get ALL WebSRM transactions for an order (supports multiple transactions)
+ * FO-116: After payment method change, orders have multiple transactions:
+ * - Original VEN (initial sale)
+ * - REM (refund/cancel original payment)
+ * - New VEN (sale with new payment method)
+ * Requires branch staff authentication
+ */
+router.get(
+  '/transaction-history/:orderId',
+  requireAuth,
+  websrmAuditController.getTransactionHistory
+);
+
+/**
  * GET /api/v1/websrm/error-stats
  * Get error statistics for dashboard
  * Requires branch staff authentication
