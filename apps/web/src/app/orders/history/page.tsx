@@ -648,7 +648,7 @@ export default function OrderHistoryPage() {
                     <TableCell className="text-base text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <span>${order.pricing.total.toFixed(2)}</span>
-                        {order.total_refunded && order.total_refunded > 0 && (
+                        {(order.total_refunded ?? 0) > 0 && (
                           <Badge variant="outline" className="text-xs px-2 py-0.5 bg-amber-50 text-amber-700 border-amber-300">
                             <CornerUpLeft className="h-3 w-3 mr-1" />
                             Partial Refund
@@ -776,7 +776,7 @@ export default function OrderHistoryPage() {
                       <div className="text-xl font-bold text-foreground">
                         ${order.pricing.total.toFixed(2)}
                       </div>
-                      {order.total_refunded && order.total_refunded > 0 && (
+                      {(order.total_refunded ?? 0) > 0 && (
                         <Badge variant="outline" className="text-xs px-2 py-0.5 bg-amber-50 text-amber-700 border-amber-300 w-fit">
                           <CornerUpLeft className="h-3 w-3 mr-1" />
                           Partial Refund
