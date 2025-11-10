@@ -208,8 +208,31 @@ function mapReceiptFormat(receiptFormat?: string): PrintFormat {
 
 /**
  * Determine if order is e-commerce (online)
+ *
+ * Quebec API Rule (Error JW00B999548E):
+ * - If commerElectr = "O" (e-commerce), payment method CANNOT be "ARG" (cash) or "CHQ" (cheque)
+ * - Cash/card at counter = physical payment = NOT e-commerce
+ *
+ * Logic:
+ * - payment_method === 'online' → e-commerce (customer paid online)
+ * - payment_method === 'cash' or 'card' → NOT e-commerce (customer will pay at counter)
  */
 function isEcommerceOrder(order: OrderShape): boolean {
+  // CRITICAL: Payment method determines if this is e-commerce
+  // Cash/card at counter = physical payment, even if order placed online
+  const paymentMethod = (order as any).payment_method; // Use 'any' to bypass type check
+
+  if (paymentMethod === 'cash' || paymentMethod === 'card') {
+    // Customer will pay at counter → NOT e-commerce
+    return false;
+  }
+
+  if (paymentMethod === 'online') {
+    // Customer paid online → e-commerce
+    return true;
+  }
+
+  // Legacy logic for other payment methods
   // E-commerce: web, mobile, qr_code orders
   // Not e-commerce: phone, admin, third-party platforms (uber_eats, doordash)
   const ecommerceSourcesRegex = /^(web|mobile|qr_code)$/i;

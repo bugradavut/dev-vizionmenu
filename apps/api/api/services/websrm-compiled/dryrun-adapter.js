@@ -480,6 +480,13 @@ function mapReceiptFormat(receiptFormat) {
 }
 __name(mapReceiptFormat, "mapReceiptFormat");
 function isEcommerceOrder(order) {
+  const paymentMethod = order.payment_method;
+  if (paymentMethod === "cash" || paymentMethod === "card") {
+    return false;
+  }
+  if (paymentMethod === "online") {
+    return true;
+  }
   const ecommerceSourcesRegex = /^(web|mobile|qr_code)$/i;
   if (order.third_party_platform) {
     return ecommerceSourcesRegex.test(order.third_party_platform);
