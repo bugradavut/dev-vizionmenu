@@ -374,6 +374,20 @@ export async function processQueueItem(queueId: string): Promise<{
           console.log(`[WEB-SRM] Using original payment method: ${queueItem.metadata.original_payment_method} (order currently: ${order.payment_method})`);
           order.payment_method = queueItem.metadata.original_payment_method;
         }
+
+        // FO-116 Step 2, 3, 4: Use NEGATIVE amounts for refund transactions
+        if (queueItem.metadata?.amount) {
+          const refundAmount = parseFloat(queueItem.metadata.amount);
+          console.log(`[WEB-SRM] REM transaction - converting to negative amounts: -$${refundAmount}`);
+
+          // Use refund amounts from metadata (already proportionally calculated)
+          order.total_amount = -Math.abs(refundAmount);
+          order.gst_amount = -(Math.abs(parseFloat(queueItem.metadata.gst_refund || 0)));
+          order.qst_amount = -(Math.abs(parseFloat(queueItem.metadata.qst_refund || 0)));
+          order.items_subtotal = -(Math.abs(refundAmount) - Math.abs(parseFloat(queueItem.metadata.gst_refund || 0)) - Math.abs(parseFloat(queueItem.metadata.qst_refund || 0)));
+
+          console.log(`[WEB-SRM] REM amounts - Total: $${order.total_amount}, GST: $${order.gst_amount}, QST: $${order.qst_amount}`);
+        }
       }
 
       // 6) Generate WEB-SRM payload and signatures

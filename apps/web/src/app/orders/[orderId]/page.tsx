@@ -16,6 +16,8 @@ import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle, Timer, ClockPlus, TicketPercent, Minus, Plus, Trash2, ClipboardList } from "lucide-react"
 import { ordersService } from "@/services/orders.service"
@@ -86,6 +88,10 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   const [showRefundDialog, setShowRefundDialog] = useState(false)
   const [refundLoading, setRefundLoading] = useState(false)
   const [refundError, setRefundError] = useState<string | null>(null)
+
+  // Custom amount refund state (FO-116 Step 2)
+  const [refundMode, setRefundMode] = useState<'items' | 'custom'>('items')
+  const [customAmount, setCustomAmount] = useState<string>('')
 
   // Payment method change dialog state
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
@@ -230,40 +236,83 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
     });
   }, [order?.items, getRefundableQuantity]);
 
+  // Get max refundable amount for order
+  const getMaxRefundable = () => {
+    if (!order) return 0;
+    const totalAmount = parseFloat(order.total_amount?.toString() || '0');
+    const alreadyRefunded = parseFloat(order.total_refunded?.toString() || '0');
+    return Math.max(0, totalAmount - alreadyRefunded);
+  };
+
   const handleRefundClick = () => {
     setShowRefundDialog(true)
+    setRefundError(null)
   }
 
   const handleConfirmRefund = async () => {
-    if (!order?.id || !order?.items) return;
-
-    const refundAmount = getSelectedAmount();
-    if (refundAmount <= 0) return;
+    if (!order?.id) return;
 
     setRefundLoading(true);
     setRefundError(null);
 
     try {
-      const refundedItems = selectedItemEntries
-        .map(([itemId, quantity]) => {
-          const item = order.items?.find(orderItem => orderItem.id === itemId);
-          if (!item) return null;
+      let refundAmount: number;
+      let refundedItems: Array<{ itemId: string; quantity: number; amount: number }> = [];
 
-          const refundableQty = getRefundableQuantity(item);
-          const safeQuantity = Math.min(quantity, refundableQty);
-          if (safeQuantity <= 0) return null;
+      if (refundMode === 'custom') {
+        // Custom amount mode (FO-116 Step 2)
+        const amount = parseFloat(customAmount);
+        const maxRefundable = getMaxRefundable();
 
-          return {
-            itemId: item.id,
-            quantity: safeQuantity,
-            amount: item.price * safeQuantity
-          };
-        })
-        .filter(Boolean) as Array<{ itemId: string; quantity: number; amount: number }>;
+        if (isNaN(amount) || amount <= 0) {
+          setRefundError('Please enter a valid refund amount');
+          setRefundLoading(false);
+          return;
+        }
 
-      if (refundedItems.length === 0) {
-        setRefundLoading(false);
-        return;
+        if (amount > maxRefundable) {
+          setRefundError(`Refund amount cannot exceed $${maxRefundable.toFixed(2)}`);
+          setRefundLoading(false);
+          return;
+        }
+
+        refundAmount = amount;
+        // Empty refundedItems for custom amount refund
+      } else {
+        // Item selection mode (FO-116 Step 3, 4)
+        if (!order.items) {
+          setRefundLoading(false);
+          return;
+        }
+
+        refundAmount = getSelectedAmount();
+        if (refundAmount <= 0) {
+          setRefundError('Please select items to refund');
+          setRefundLoading(false);
+          return;
+        }
+
+        refundedItems = selectedItemEntries
+          .map(([itemId, quantity]) => {
+            const item = order.items?.find(orderItem => orderItem.id === itemId);
+            if (!item) return null;
+
+            const refundableQty = getRefundableQuantity(item);
+            const safeQuantity = Math.min(quantity, refundableQty);
+            if (safeQuantity <= 0) return null;
+
+            return {
+              itemId: item.id,
+              quantity: safeQuantity,
+              amount: item.price * safeQuantity
+            };
+          })
+          .filter(Boolean) as Array<{ itemId: string; quantity: number; amount: number }>;
+
+        if (refundedItems.length === 0) {
+          setRefundLoading(false);
+          return;
+        }
       }
 
       await refundsService.processRefund(
@@ -275,6 +324,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
 
       setRefundSuccess(true);
       setSelectedItems({});
+      setCustomAmount('');
       setShowRefundDialog(false);
 
       await refetch();
@@ -283,7 +333,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
         setRefundSuccess(false);
       }, 3000);
     } catch (error) {
-      console.error('Partial refund failed:', error);
+      console.error('Refund failed:', error);
       setRefundError(error instanceof Error ? error.message : 'Failed to process refund');
     } finally {
       setRefundLoading(false);
@@ -787,10 +837,10 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                   </div>
                                 </div>
                                 
-                                {/* Show selected items summary */}
-                                {selectedCount > 0 && (
-                                  <div className="mt-3 pt-3 border-t border-gray-300">
-                                    <div className="flex items-center justify-between">
+                                {/* Refund button - always visible */}
+                                <div className="mt-3 pt-3 border-t border-gray-300">
+                                  <div className="flex items-center justify-between">
+                                    {selectedCount > 0 ? (
                                       <div className="text-sm text-blue-700">
                                         <span>
                                           {selectedCount} {t.orderDetail.itemsSelected}
@@ -801,58 +851,146 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                           </span>
                                         )}
                                       </div>
-                                      <Dialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>
-                                        <DialogTrigger asChild>
-                                          <Button 
-                                            size="sm" 
-                                            onClick={handleRefundClick}
-                                            className="bg-blue-600 hover:bg-blue-700"
-                                            disabled={refundLoading}
-                                          >
-                                            {t.orderDetail.refund} ${getSelectedAmount().toFixed(2)}
-                                          </Button>
-                                        </DialogTrigger>
+                                    ) : (
+                                      <div className="text-xs text-gray-500">
+                                        {language === 'fr' ? 'Sélectionnez des articles ou utilisez un montant personnalisé' : 'Select items or use custom amount'}
+                                      </div>
+                                    )}
+                                    <Dialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>
+                                      <DialogTrigger asChild>
+                                        <Button
+                                          size="sm"
+                                          onClick={handleRefundClick}
+                                          className="bg-blue-600 hover:bg-blue-700"
+                                          disabled={refundLoading}
+                                        >
+                                          {selectedCount > 0
+                                            ? `${t.orderDetail.refund} $${getSelectedAmount().toFixed(2)}`
+                                            : (language === 'fr' ? 'Rembourser' : 'Refund')
+                                          }
+                                        </Button>
+                                      </DialogTrigger>
                                         
-                                        <DialogContent className="max-w-md">
+                                        <DialogContent className="max-w-lg">
                                           <DialogHeader>
                                             <DialogTitle className="flex items-center gap-2">
                                               <AlertCircle className="h-5 w-5 text-red-600" />
-                                              {t.orderDetail.confirmPartialRefund}
+                                              {language === 'fr' ? 'Traiter le remboursement' : 'Process Refund'}
                                             </DialogTitle>
                                             <DialogDescription>
-                                              {t.orderDetail.refundDescription} {selectedCount} {t.orderDetail.refundDescriptionItems} ${getSelectedAmount().toFixed(2)}.
-                                              {t.orderDetail.refundCannotUndo}
+                                              {language === 'fr' ? 'Sélectionnez la méthode de remboursement' : 'Select refund method'}
                                             </DialogDescription>
                                           </DialogHeader>
-                                          
-                                          <div className="py-4">
-                                            <div className="space-y-2">
-                                              <h4 className="font-medium text-sm">{t.orderDetail.itemsToRefund}</h4>
-                                              <div className="space-y-1 max-h-40 overflow-y-auto border rounded-md p-2 bg-gray-50">
-                                                {order.items
-                                                  ?.filter(item => (selectedItems[item.id] ?? 0) > 0)
-                                                  .map(item => {
-                                                    const selectedQuantity = selectedItems[item.id] ?? 0;
-                                                    return (
-                                                      <div key={item.id} className="flex justify-between text-sm bg-white p-2 rounded border">
-                                                        <span>{item.name} x{selectedQuantity}</span>
-                                                        <span className="font-medium">${(item.price * selectedQuantity).toFixed(2)}</span>
-                                                      </div>
-                                                    );
-                                                  })}
+
+                                          <Tabs value={refundMode} onValueChange={(v) => setRefundMode(v as 'items' | 'custom')} className="w-full">
+                                            <TabsList className="grid w-full grid-cols-2">
+                                              <TabsTrigger value="items">
+                                                {language === 'fr' ? 'Par articles' : 'Select Items'}
+                                              </TabsTrigger>
+                                              <TabsTrigger value="custom">
+                                                {language === 'fr' ? 'Montant personnalisé' : 'Custom Amount'}
+                                              </TabsTrigger>
+                                            </TabsList>
+
+                                            {/* Item Selection Mode */}
+                                            <TabsContent value="items" className="space-y-4">
+                                              {selectedCount > 0 ? (
+                                                <div className="space-y-2">
+                                                  <h4 className="font-medium text-sm">{t.orderDetail.itemsToRefund}</h4>
+                                                  <div className="space-y-1 max-h-40 overflow-y-auto border rounded-md p-2 bg-gray-50">
+                                                    {order.items
+                                                      ?.filter(item => (selectedItems[item.id] ?? 0) > 0)
+                                                      .map(item => {
+                                                        const selectedQuantity = selectedItems[item.id] ?? 0;
+                                                        return (
+                                                          <div key={item.id} className="flex justify-between text-sm bg-white p-2 rounded border">
+                                                            <span>{item.name} x{selectedQuantity}</span>
+                                                            <span className="font-medium">${(item.price * selectedQuantity).toFixed(2)}</span>
+                                                          </div>
+                                                        );
+                                                      })}
+                                                  </div>
+                                                  <div className="flex justify-between items-center pt-2 border-t">
+                                                    <span className="font-semibold text-sm">{language === 'fr' ? 'Total:' : 'Total:'}</span>
+                                                    <span className="font-bold text-lg text-red-600">${getSelectedAmount().toFixed(2)}</span>
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                <div className="text-center py-6 text-muted-foreground">
+                                                  <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                                  <p className="text-sm">
+                                                    {language === 'fr'
+                                                      ? 'Veuillez sélectionner des articles à rembourser'
+                                                      : 'Please select items to refund'}
+                                                  </p>
+                                                </div>
+                                              )}
+                                            </TabsContent>
+
+                                            {/* Custom Amount Mode */}
+                                            <TabsContent value="custom" className="space-y-4">
+                                              <div className="space-y-3">
+                                                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                                  <div className="flex justify-between text-sm mb-1">
+                                                    <span className="text-blue-900">{language === 'fr' ? 'Total de la commande:' : 'Order Total:'}</span>
+                                                    <span className="font-semibold text-blue-900">${order.total_amount?.toFixed(2)}</span>
+                                                  </div>
+                                                  <div className="flex justify-between text-sm mb-1">
+                                                    <span className="text-blue-900">{language === 'fr' ? 'Déjà remboursé:' : 'Already Refunded:'}</span>
+                                                    <span className="font-semibold text-red-600">-${(order.total_refunded || 0).toFixed(2)}</span>
+                                                  </div>
+                                                  <div className="flex justify-between text-sm pt-2 border-t border-blue-300">
+                                                    <span className="font-bold text-blue-900">{language === 'fr' ? 'Max remboursable:' : 'Max Refundable:'}</span>
+                                                    <span className="font-bold text-green-600">${getMaxRefundable().toFixed(2)}</span>
+                                                  </div>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                  <Label htmlFor="custom-amount" className="text-sm font-medium">
+                                                    {language === 'fr' ? 'Montant du remboursement' : 'Refund Amount'}
+                                                  </Label>
+                                                  <div className="relative">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                                                    <Input
+                                                      id="custom-amount"
+                                                      type="number"
+                                                      min="0.01"
+                                                      max={getMaxRefundable()}
+                                                      step="0.01"
+                                                      value={customAmount}
+                                                      onChange={(e) => setCustomAmount(e.target.value)}
+                                                      placeholder="0.00"
+                                                      className="pl-7"
+                                                    />
+                                                  </div>
+                                                  <p className="text-xs text-muted-foreground">
+                                                    {language === 'fr'
+                                                      ? 'Par exemple: $1.00 pour corriger une erreur de prix'
+                                                      : 'e.g., $1.00 to correct a pricing error'}
+                                                  </p>
+                                                </div>
+
+                                                {parseFloat(customAmount) > 0 && (
+                                                  <div className="p-3 bg-gray-50 border rounded-md">
+                                                    <div className="flex justify-between items-center">
+                                                      <span className="font-semibold text-sm">{language === 'fr' ? 'Montant à rembourser:' : 'Amount to Refund:'}</span>
+                                                      <span className="font-bold text-lg text-red-600">${parseFloat(customAmount).toFixed(2)}</span>
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </TabsContent>
+                                          </Tabs>
+
+                                          {/* Error Message */}
+                                          {refundError && (
+                                            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                                              <div className="flex items-center gap-2">
+                                                <XCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                                                <p className="text-sm text-red-700">{refundError}</p>
                                               </div>
                                             </div>
-
-                                            {/* Error Message */}
-                                            {refundError && (
-                                              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-                                                <div className="flex items-center gap-2">
-                                                  <XCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
-                                                  <p className="text-sm text-red-700">{refundError}</p>
-                                                </div>
-                                              </div>
-                                            )}
-                                          </div>
+                                          )}
 
                                           <DialogFooter>
                                             <Button
@@ -860,6 +998,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                               onClick={() => {
                                                 setShowRefundDialog(false)
                                                 setRefundError(null)
+                                                setCustomAmount('')
                                               }}
                                               disabled={refundLoading}
                                             >
@@ -867,16 +1006,18 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                             </Button>
                                             <Button
                                               onClick={handleConfirmRefund}
-                                              disabled={refundLoading}
+                                              disabled={refundLoading || (refundMode === 'items' && selectedCount === 0) || (refundMode === 'custom' && (!customAmount || parseFloat(customAmount) <= 0))}
                                               className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
                                             >
                                               {refundLoading ? (
                                                 <div className="flex items-center gap-2">
                                                   <RefreshCw className="h-4 w-4 animate-spin" />
-                                                  Processing...
+                                                  {language === 'fr' ? 'Traitement...' : 'Processing...'}
                                                 </div>
                                               ) : (
-                                                `${t.orderDetail.confirmRefund} $${getSelectedAmount().toFixed(2)}`
+                                                <>
+                                                  {t.orderDetail.confirmRefund} ${refundMode === 'items' ? getSelectedAmount().toFixed(2) : (parseFloat(customAmount) || 0).toFixed(2)}
+                                                </>
                                               )}
                                             </Button>
                                           </DialogFooter>
@@ -884,7 +1025,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                       </Dialog>
                                     </div>
                                   </div>
-                                )}
+
                                 {eligibleItems.length === 0 && (
                                   <div className="mt-3 text-xs text-gray-500">
                                     {t.orderDetail.noItemsEligible}
