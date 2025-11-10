@@ -187,6 +187,28 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
     }, 0);
   };
 
+  // Calculate proportional taxes for selected items refund
+  const getRefundTaxes = () => {
+    if (!order) return { gst: 0, qst: 0, total: 0 };
+
+    const itemsTotal = getSelectedAmount();
+    if (itemsTotal <= 0) return { gst: 0, qst: 0, total: 0 };
+
+    // Calculate proportional ratio based on items subtotal
+    const orderItemsSubtotal = parseFloat(order.pricing?.itemsTotal?.toString() || '0');
+    const refundRatio = orderItemsSubtotal > 0 ? itemsTotal / orderItemsSubtotal : 0;
+
+    // Calculate proportional taxes using pricing.gst and pricing.qst
+    const orderGst = parseFloat(order.pricing?.gst?.toString() || '0');
+    const orderQst = parseFloat(order.pricing?.qst?.toString() || '0');
+
+    const gst = parseFloat((orderGst * refundRatio).toFixed(2));
+    const qst = parseFloat((orderQst * refundRatio).toFixed(2));
+    const total = parseFloat((itemsTotal + gst + qst).toFixed(2));
+
+    return { gst, qst, total };
+  };
+
   const selectedItemEntries = useMemo(() => Object.entries(selectedItems), [selectedItems]);
   const selectedCount = selectedItemEntries.length;
   const totalSelectedUnits = useMemo(
@@ -285,7 +307,10 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
           return;
         }
 
-        refundAmount = getSelectedAmount();
+        // Use total with taxes included
+        const refundTaxes = getRefundTaxes();
+        refundAmount = refundTaxes.total;
+
         if (refundAmount <= 0) {
           setRefundError('Please select items to refund');
           setRefundLoading(false);
@@ -865,7 +890,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                           disabled={refundLoading}
                                         >
                                           {selectedCount > 0
-                                            ? `${t.orderDetail.refund} $${getSelectedAmount().toFixed(2)}`
+                                            ? `${t.orderDetail.refund} $${getRefundTaxes().total.toFixed(2)}`
                                             : (language === 'fr' ? 'Rembourser' : 'Refund')
                                           }
                                         </Button>
@@ -910,9 +935,25 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                                         );
                                                       })}
                                                   </div>
-                                                  <div className="flex justify-between items-center pt-2 border-t">
-                                                    <span className="font-semibold text-sm">{language === 'fr' ? 'Total:' : 'Total:'}</span>
-                                                    <span className="font-bold text-lg text-red-600">${getSelectedAmount().toFixed(2)}</span>
+
+                                                  {/* Tax Breakdown */}
+                                                  <div className="pt-3 border-t space-y-2">
+                                                    <div className="flex justify-between items-center text-sm text-gray-600">
+                                                      <span>{language === 'fr' ? 'Sous-total articles:' : 'Items Subtotal:'}</span>
+                                                      <span className="font-medium">${getSelectedAmount().toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-sm text-gray-600">
+                                                      <span>GST (5%):</span>
+                                                      <span className="font-medium">${getRefundTaxes().gst.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-sm text-gray-600">
+                                                      <span>QST (9.975%):</span>
+                                                      <span className="font-medium">${getRefundTaxes().qst.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center pt-2 border-t">
+                                                      <span className="font-bold text-base">{language === 'fr' ? 'Total (taxes incluses):' : 'Total (taxes included):'}</span>
+                                                      <span className="font-bold text-lg text-red-600">${getRefundTaxes().total.toFixed(2)}</span>
+                                                    </div>
                                                   </div>
                                                 </div>
                                               ) : (
@@ -1016,7 +1057,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                                 </div>
                                               ) : (
                                                 <>
-                                                  {t.orderDetail.confirmRefund} ${refundMode === 'items' ? getSelectedAmount().toFixed(2) : (parseFloat(customAmount) || 0).toFixed(2)}
+                                                  {t.orderDetail.confirmRefund} ${refundMode === 'items' ? getRefundTaxes().total.toFixed(2) : (parseFloat(customAmount) || 0).toFixed(2)}
                                                 </>
                                               )}
                                             </Button>
