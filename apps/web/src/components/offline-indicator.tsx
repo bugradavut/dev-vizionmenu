@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
+import { useWebSrmQueueSync } from "@/hooks/use-websrm-queue-sync";
 import { useToast } from "@/hooks/use-toast";
 import { WifiOff, Wifi, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -10,14 +11,18 @@ import { cn } from "@/lib/utils";
 /**
  * Offline mode indicator
  * Shows persistent badge when offline + toast notifications
- * Auto-syncs when network reconnects
+ * Auto-syncs orders and Quebec transactions when network reconnects
+ * Implements SW-78 FO-104 requirement
  */
 export function OfflineIndicator() {
   const { isOnline, isOffline, wasOffline } = useNetworkStatus();
-  const { isSyncing } = useOfflineSync();
+  const { isSyncing: isSyncingOrders } = useOfflineSync();
+  const { isSyncing: isSyncingWebSrm } = useWebSrmQueueSync();
   const { toast } = useToast();
   const [hasShownOfflineToast, setHasShownOfflineToast] = useState(false);
   const [hasShownOnlineToast, setHasShownOnlineToast] = useState(false);
+
+  const isSyncing = isSyncingOrders || isSyncingWebSrm;
 
   // Show toast when going offline
   useEffect(() => {
@@ -30,7 +35,7 @@ export function OfflineIndicator() {
             Offline Mode
           </span>
         ) as any,
-        description: "You're offline. Orders will be saved locally and synced when connection returns.",
+        description: "You're offline. Orders and Quebec transactions will be saved and synced when connection returns.",
         duration: 5000,
       });
       setHasShownOfflineToast(true);
@@ -49,7 +54,7 @@ export function OfflineIndicator() {
             Back Online
           </span>
         ) as any,
-        description: "Connection restored. Syncing offline orders...",
+        description: "Connection restored. Syncing offline orders and Quebec transactions...",
         duration: 3000,
       });
       setHasShownOnlineToast(true);
@@ -86,7 +91,7 @@ export function OfflineIndicator() {
           )}
         >
           <RefreshCw className="h-4 w-4 animate-spin" />
-          <span className="text-sm font-semibold">Syncing Orders...</span>
+          <span className="text-sm font-semibold">Syncing...</span>
         </div>
       </div>
     );

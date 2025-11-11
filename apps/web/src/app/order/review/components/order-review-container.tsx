@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useCart } from '../../contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
 import { useCustomerBranchSettings } from '@/hooks/use-customer-branch-settings'
+import { useNetworkStatus } from '@/hooks/use-network-status'
 import { translations } from '@/lib/translations'
 import { OrderSummary } from './order-summary'
 import { CustomerInformationSection, type CustomerFormData, type CustomerInformationSectionHandle, type CustomerValidationResult } from './customer-information-section'
@@ -14,9 +15,10 @@ import { OrderNotesSection } from './order-notes-section'
 import { PriceDetailsSection } from './price-details-section'
 import { PromoCodeSection } from './promo-code-section'
 import { OrderTotalSidebar } from './order-total-sidebar'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Toaster } from '@/components/ui/toaster'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface OrderContext {
   source: 'qr' | 'web'
@@ -35,6 +37,8 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   const { items, updateQuantity, removeItem } = useCart()
   const { language } = useLanguage()
   const t = translations[language] || translations.en
+  // SW-78 FO-104: Network status for offline mode indicator
+  const { isOffline } = useNetworkStatus()
   
   // Initialize order type from URL params
   const initialOrderType = (searchParams.get('orderType') as 'takeaway' | 'delivery') || null
@@ -190,6 +194,18 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
             </div>
           </div>
         </div>
+
+        {/* SW-78 FO-104: Offline mode warning banner */}
+        {isOffline && (
+          <Alert variant="destructive" className="mb-6">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              <strong>No Internet Connection</strong>
+              <br />
+              Your order will be saved locally and synced automatically when connection is restored.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Side - Customer Information & Preferences */}

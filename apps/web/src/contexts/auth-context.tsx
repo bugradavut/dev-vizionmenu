@@ -180,6 +180,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
+    // SW-78 FO-104: Process pending Quebec transactions before logout
+    // Ensures offline bills are sent to WEB-SRM before user logs out
+    if (session?.access_token) {
+      try {
+        console.log('[Auth] Processing pending Quebec transactions before logout...');
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/websrm/process-queue`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          const data = result.data;
+
+          if (data.processed > 0) {
+            console.log(
+              `[Auth] ✅ Processed ${data.completed} Quebec transaction(s) before logout`
+            );
+          }
+        }
+      } catch (error) {
+        // Don't block logout if queue processing fails
+        console.error('[Auth] Queue processing failed during logout:', error);
+      }
+    }
+
     const { error } = await supabase.auth.signOut()
     if (error) throw error
 
