@@ -17,7 +17,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// apps/api/services/websrm-adapter/persist.ts
+// services/websrm-adapter/persist.ts
 var persist_exports = {};
 __export(persist_exports, {
   persistReceipt: () => persistReceipt

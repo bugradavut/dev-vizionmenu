@@ -30,7 +30,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// apps/api/services/websrm-adapter/signature-ecdsa.ts
+// services/websrm-adapter/signature-ecdsa.ts
 var signature_ecdsa_exports = {};
 __export(signature_ecdsa_exports, {
   derToP1363: () => derToP1363,
@@ -150,7 +150,7 @@ function verifyP256P1363(baseString, p1363SignatureBase64, publicKeyPem) {
 }
 var import_crypto2;
 var init_signature_ecdsa = __esm({
-  "apps/api/services/websrm-adapter/signature-ecdsa.ts"() {
+  "services/websrm-adapter/signature-ecdsa.ts"() {
     import_crypto2 = require("crypto");
     __name(derToP1363, "derToP1363");
     __name(p1363ToDer, "p1363ToDer");
@@ -160,7 +160,7 @@ var init_signature_ecdsa = __esm({
   }
 });
 
-// apps/api/services/websrm-adapter/body-signer.ts
+// services/websrm-adapter/body-signer.ts
 var body_signer_exports = {};
 __export(body_signer_exports, {
   canonicalizePayload: () => canonicalizePayload,
@@ -320,7 +320,7 @@ async function getPreviousSignature(branchId) {
   return void 0;
 }
 var init_body_signer = __esm({
-  "apps/api/services/websrm-adapter/body-signer.ts"() {
+  "services/websrm-adapter/body-signer.ts"() {
     __name(computeBodySignatures, "computeBodySignatures");
     __name(canonicalizePayload, "canonicalizePayload");
     __name(validateSignaturePair, "validateSignaturePair");
@@ -328,7 +328,7 @@ var init_body_signer = __esm({
   }
 });
 
-// apps/api/services/websrm-adapter/queue-worker.ts
+// services/websrm-adapter/queue-worker.ts
 var queue_worker_exports = {};
 __export(queue_worker_exports, {
   consumeQueue: () => consumeQueue,
@@ -341,7 +341,7 @@ var import_supabase_js2 = require("@supabase/supabase-js");
 var import_crypto5 = require("crypto");
 var import_p_limit = __toESM(require("p-limit"));
 
-// apps/api/services/websrm-adapter/websrm-client.ts
+// services/websrm-adapter/websrm-client.ts
 var import_crypto = require("crypto");
 var import_https = __toESM(require("https"));
 var import_url = require("url");
@@ -477,7 +477,7 @@ function getWebSrmBaseUrl(env) {
 }
 __name(getWebSrmBaseUrl, "getWebSrmBaseUrl");
 
-// apps/api/services/websrm-adapter/error-mapper.ts
+// services/websrm-adapter/error-mapper.ts
 function mapWebSrmError(response) {
   if (response.success && response.httpStatus >= 200 && response.httpStatus < 300) {
     return {
@@ -635,7 +635,7 @@ function calculateBackoff(retryCount, baseDelaySeconds = 60, maxDelaySeconds = 3
 }
 __name(calculateBackoff, "calculateBackoff");
 
-// packages/websrm-core/dist/enums.js
+// ../../packages/websrm-core/dist/enums.js
 var ActionType;
 (function(ActionType2) {
   ActionType2["REGISTER"] = "ENR";
@@ -758,7 +758,7 @@ var ORDER_STATUS_MAP = {
   refunded: ActionType.CANCEL
 };
 
-// packages/websrm-core/dist/format.js
+// ../../packages/websrm-core/dist/format.js
 function formatAmount(amount) {
   if (!Number.isFinite(amount)) {
     throw new Error(`Invalid amount: ${amount}. Must be a finite number.`);
@@ -871,14 +871,14 @@ function sanitizeAscii(text, maxLength = WEBSRM_CONSTANTS.MAX_TEXT_LENGTH) {
 }
 __name(sanitizeAscii, "sanitizeAscii");
 
-// packages/websrm-core/dist/signature.js
+// ../../packages/websrm-core/dist/signature.js
 var SignatureAlgorithm;
 (function(SignatureAlgorithm2) {
   SignatureAlgorithm2["HMAC_SHA256"] = "HMAC-SHA256";
   SignatureAlgorithm2["ECDSA"] = "ECDSA";
 })(SignatureAlgorithm || (SignatureAlgorithm = {}));
 
-// packages/websrm-core/dist/field-mapper.js
+// ../../packages/websrm-core/dist/field-mapper.js
 function mapOrderToReqTrans(order, signature) {
   if (!order || !order.id) {
     throw new Error("Order is required and must have an ID");
@@ -1037,10 +1037,10 @@ function mapClosingToReqFer(closing, signature) {
 }
 __name(mapClosingToReqFer, "mapClosingToReqFer");
 
-// apps/api/services/websrm-adapter/runtime-adapter.ts
+// services/websrm-adapter/runtime-adapter.ts
 init_body_signer();
 
-// apps/api/services/websrm-adapter/headers-builder.ts
+// services/websrm-adapter/headers-builder.ts
 init_signature_ecdsa();
 function buildOfficialHeaders(input, baseString) {
   if (!input.env || !["DEV", "ESSAI", "PROD"].includes(input.env)) {
@@ -1180,7 +1180,7 @@ ${headerList}`;
 }
 __name(buildCanonicalBaseString, "buildCanonicalBaseString");
 
-// apps/api/services/websrm-adapter/qr-builder.ts
+// services/websrm-adapter/qr-builder.ts
 function toBase64Url(b64) {
   return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
@@ -1206,7 +1206,7 @@ function buildOfficialQr(payload, actuBase64, opts) {
 }
 __name(buildOfficialQr, "buildOfficialQr");
 
-// apps/api/services/websrm-adapter/persist.ts
+// services/websrm-adapter/persist.ts
 var import_fs = require("fs");
 var import_path = require("path");
 async function persistReceipt(target, data) {
@@ -1300,7 +1300,7 @@ async function persistReceipt(target, data) {
 }
 __name(persistReceipt, "persistReceipt");
 
-// apps/api/services/websrm-adapter/runtime-adapter.ts
+// services/websrm-adapter/runtime-adapter.ts
 init_signature_ecdsa();
 var import_crypto3 = require("crypto");
 function formatQuebecAmount(amountInCents) {
@@ -1597,7 +1597,7 @@ async function handleClosingForWebSrm(closing, profile, options = { persist: "no
 }
 __name(handleClosingForWebSrm, "handleClosingForWebSrm");
 
-// apps/api/services/websrm-adapter/secrets.ts
+// services/websrm-adapter/secrets.ts
 var import_crypto4 = require("crypto");
 var ALGORITHM = "aes-256-gcm";
 var KEY_LENGTH = 32;
@@ -1630,7 +1630,7 @@ function decryptSecret(encrypted) {
 }
 __name(decryptSecret, "decryptSecret");
 
-// apps/api/services/websrm-adapter/profile-resolver.ts
+// services/websrm-adapter/profile-resolver.ts
 var import_supabase_js = require("@supabase/supabase-js");
 var MOCK_PROFILES = {
   // Default DEV profile
@@ -1715,7 +1715,8 @@ var MOCK_PROFILES = {
         return "";
       }
     })(),
-    tenantId: "essai-tenant",
+    tenantId: "cc554f6f-2d89-4c17-9b6d-17a27151dcd4",
+    // Queen Burger King (fallback for ESSAI tests)
     branchId: void 0,
     createdAt: (/* @__PURE__ */ new Date()).toISOString(),
     updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
@@ -1766,7 +1767,7 @@ async function resolveProfile(tenantId, branchId, deviceLocalId) {
 }
 __name(resolveProfile, "resolveProfile");
 
-// apps/api/services/websrm-adapter/queue-worker.ts
+// services/websrm-adapter/queue-worker.ts
 var supabase = (0, import_supabase_js2.createClient)(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY

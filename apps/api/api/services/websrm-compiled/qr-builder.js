@@ -17,7 +17,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// apps/api/services/websrm-adapter/qr-builder.ts
+// services/websrm-adapter/qr-builder.ts
 var qr_builder_exports = {};
 __export(qr_builder_exports, {
   buildOfficialQr: () => buildOfficialQr,

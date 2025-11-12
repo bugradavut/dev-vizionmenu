@@ -20,7 +20,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// apps/api/services/websrm-adapter/signature-ecdsa.ts
+// services/websrm-adapter/signature-ecdsa.ts
 var signature_ecdsa_exports = {};
 __export(signature_ecdsa_exports, {
   derToP1363: () => derToP1363,
@@ -140,7 +140,7 @@ function verifyP256P1363(baseString, p1363SignatureBase64, publicKeyPem) {
 }
 var import_crypto;
 var init_signature_ecdsa = __esm({
-  "apps/api/services/websrm-adapter/signature-ecdsa.ts"() {
+  "services/websrm-adapter/signature-ecdsa.ts"() {
     import_crypto = require("crypto");
     __name(derToP1363, "derToP1363");
     __name(p1363ToDer, "p1363ToDer");
@@ -150,7 +150,7 @@ var init_signature_ecdsa = __esm({
   }
 });
 
-// apps/api/services/websrm-adapter/body-signer.ts
+// services/websrm-adapter/body-signer.ts
 var body_signer_exports = {};
 __export(body_signer_exports, {
   canonicalizePayload: () => canonicalizePayload,

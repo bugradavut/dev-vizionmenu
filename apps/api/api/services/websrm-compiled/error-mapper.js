@@ -17,7 +17,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// apps/api/services/websrm-adapter/error-mapper.ts
+// services/websrm-adapter/error-mapper.ts
 var error_mapper_exports = {};
 __export(error_mapper_exports, {
   calculateBackoff: () => calculateBackoff,

@@ -20,7 +20,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// apps/api/services/websrm-adapter/signature-ecdsa.ts
+// services/websrm-adapter/signature-ecdsa.ts
 var signature_ecdsa_exports = {};
 __export(signature_ecdsa_exports, {
   derToP1363: () => derToP1363,
@@ -140,7 +140,7 @@ function verifyP256P1363(baseString, p1363SignatureBase64, publicKeyPem) {
 }
 var import_crypto;
 var init_signature_ecdsa = __esm({
-  "apps/api/services/websrm-adapter/signature-ecdsa.ts"() {
+  "services/websrm-adapter/signature-ecdsa.ts"() {
     import_crypto = require("crypto");
     __name(derToP1363, "derToP1363");
     __name(p1363ToDer, "p1363ToDer");
@@ -150,7 +150,7 @@ var init_signature_ecdsa = __esm({
   }
 });
 
-// apps/api/services/websrm-adapter/runtime-adapter.ts
+// services/websrm-adapter/runtime-adapter.ts
 var runtime_adapter_exports = {};
 __export(runtime_adapter_exports, {
   handleClosingForWebSrm: () => handleClosingForWebSrm,
@@ -158,7 +158,7 @@ __export(runtime_adapter_exports, {
 });
 module.exports = __toCommonJS(runtime_adapter_exports);
 
-// packages/websrm-core/dist/enums.js
+// ../../packages/websrm-core/dist/enums.js
 var ActionType;
 (function(ActionType2) {
   ActionType2["REGISTER"] = "ENR";
@@ -281,7 +281,7 @@ var ORDER_STATUS_MAP = {
   refunded: ActionType.CANCEL
 };
 
-// packages/websrm-core/dist/format.js
+// ../../packages/websrm-core/dist/format.js
 function formatAmount(amount) {
   if (!Number.isFinite(amount)) {
     throw new Error(`Invalid amount: ${amount}. Must be a finite number.`);
@@ -394,14 +394,14 @@ function sanitizeAscii(text, maxLength = WEBSRM_CONSTANTS.MAX_TEXT_LENGTH) {
 }
 __name(sanitizeAscii, "sanitizeAscii");
 
-// packages/websrm-core/dist/signature.js
+// ../../packages/websrm-core/dist/signature.js
 var SignatureAlgorithm;
 (function(SignatureAlgorithm2) {
   SignatureAlgorithm2["HMAC_SHA256"] = "HMAC-SHA256";
   SignatureAlgorithm2["ECDSA"] = "ECDSA";
 })(SignatureAlgorithm || (SignatureAlgorithm = {}));
 
-// packages/websrm-core/dist/field-mapper.js
+// ../../packages/websrm-core/dist/field-mapper.js
 function mapOrderToReqTrans(order, signature) {
   if (!order || !order.id) {
     throw new Error("Order is required and must have an ID");
@@ -560,7 +560,7 @@ function mapClosingToReqFer(closing, signature) {
 }
 __name(mapClosingToReqFer, "mapClosingToReqFer");
 
-// apps/api/services/websrm-adapter/body-signer.ts
+// services/websrm-adapter/body-signer.ts
 function computeBodySignatures(payload, opts) {
   const { createHash: createHash3 } = require("crypto");
   const { signP256P1363: signP256P13632 } = (init_signature_ecdsa(), __toCommonJS(signature_ecdsa_exports));
@@ -705,7 +705,7 @@ function canonicalizePayload(payload) {
 }
 __name(canonicalizePayload, "canonicalizePayload");
 
-// apps/api/services/websrm-adapter/headers-builder.ts
+// services/websrm-adapter/headers-builder.ts
 init_signature_ecdsa();
 function buildOfficialHeaders(input, baseString) {
   if (!input.env || !["DEV", "ESSAI", "PROD"].includes(input.env)) {
@@ -845,7 +845,7 @@ ${headerList}`;
 }
 __name(buildCanonicalBaseString, "buildCanonicalBaseString");
 
-// apps/api/services/websrm-adapter/qr-builder.ts
+// services/websrm-adapter/qr-builder.ts
 function toBase64Url(b64) {
   return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
@@ -871,7 +871,7 @@ function buildOfficialQr(payload, actuBase64, opts) {
 }
 __name(buildOfficialQr, "buildOfficialQr");
 
-// apps/api/services/websrm-adapter/persist.ts
+// services/websrm-adapter/persist.ts
 var import_fs = require("fs");
 var import_path = require("path");
 async function persistReceipt(target, data) {
@@ -965,7 +965,7 @@ async function persistReceipt(target, data) {
 }
 __name(persistReceipt, "persistReceipt");
 
-// apps/api/services/websrm-adapter/runtime-adapter.ts
+// services/websrm-adapter/runtime-adapter.ts
 init_signature_ecdsa();
 var import_crypto2 = require("crypto");
 function formatQuebecAmount(amountInCents) {

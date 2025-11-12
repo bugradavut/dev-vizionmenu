@@ -84,6 +84,7 @@ const uberEatsWebhooksRoutes = require('./routes/uber-eats-webhooks.routes');
 const websrmAdminRoutes = require('./routes/websrm-admin.routes');
 const websrmAuditRoutes = require('./routes/websrm-audit.routes');
 const websrmQueueRoutes = require('./routes/websrm-queue.routes');
+const websrmCertificateRoutes = require('../routes/websrm-certificate.routes');
 const dailyClosingRoutes = require('./routes/daily-closing.routes');
 
 // Global Supabase client initialization
@@ -214,6 +215,11 @@ app.use('/api/v1/admin/branches', adminBranchRoutes);
 
 // Use WEB-SRM admin routes (platform admin only, DEV/ESSAI only)
 app.use('/api/v1/admin/websrm', websrmAdminRoutes);
+
+// Use WEB-SRM certificate routes (FO-109 - certificate management)
+// IMPORTANT: More specific routes must come BEFORE less specific routes
+console.log('🔐 [FO-109] Registering certificate routes at /api/v1/websrm/certificate');
+app.use('/api/v1/websrm/certificate', websrmCertificateRoutes);
 
 // Use WEB-SRM audit routes (SW-78 FO-107 - branch staff auth required)
 app.use('/api/v1/websrm', websrmAuditRoutes);

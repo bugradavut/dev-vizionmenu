@@ -17,7 +17,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// apps/api/services/websrm-adapter/signature-ecdsa.ts
+// services/websrm-adapter/signature-ecdsa.ts
 var signature_ecdsa_exports = {};
 __export(signature_ecdsa_exports, {
   derToP1363: () => derToP1363,

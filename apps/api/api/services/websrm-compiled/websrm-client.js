@@ -27,7 +27,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// apps/api/services/websrm-adapter/websrm-client.ts
+// services/websrm-adapter/websrm-client.ts
 var websrm_client_exports = {};
 __export(websrm_client_exports, {
   generateIdempotencyKey: () => generateIdempotencyKey,

@@ -17,7 +17,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// apps/api/services/websrm-adapter/secrets.ts
+// services/websrm-adapter/secrets.ts
 var secrets_exports = {};
 __export(secrets_exports, {
   decryptSecret: () => decryptSecret,
