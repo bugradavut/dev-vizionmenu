@@ -137,7 +137,7 @@ const MOCK_PROFILES: Record<string, ComplianceProfile> = {
       }
     })(),
 
-    tenantId: 'essai-tenant',
+    tenantId: 'cc554f6f-2d89-4c17-9b6d-17a27151dcd4', // Queen Burger King (fallback for ESSAI tests)
     branchId: undefined,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

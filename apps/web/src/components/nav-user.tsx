@@ -1,6 +1,8 @@
 "use client"
 
+import * as React from "react"
 import {
+  Bell,
   ChevronsUpDown,
   LogOut,
 } from "lucide-react"
@@ -26,6 +28,8 @@ import {
 } from "@/components/ui/sidebar"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
+import { NotificationsDialog } from "@/components/notifications-dialog"
+import { usePendingWebSrmCount } from "@/hooks/use-pending-websrm-count"
 
 export function NavUser({
   user,
@@ -40,6 +44,8 @@ export function NavUser({
   const { isMobile } = useSidebar()
   const { signOut } = useAuth()
   const router = useRouter()
+  const [notificationsOpen, setNotificationsOpen] = React.useState(false)
+  const { count: pendingCount, refetch: refetchCount } = usePendingWebSrmCount()
 
   const handleLogout = async () => {
     try {
@@ -52,6 +58,10 @@ export function NavUser({
     }
   }
 
+  const handleNotificationsClick = () => {
+    setNotificationsOpen(true)
+  }
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -59,7 +69,7 @@ export function NavUser({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="border-t border-sidebar-border pt-2 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-full">
                 <AvatarImage src={user.avatar} alt={user.name} />
@@ -91,6 +101,16 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleNotificationsClick}>
+              <Bell />
+              Notifications
+              {pendingCount > 0 && (
+                <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs font-medium text-white">
+                  {pendingCount}
+                </span>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
               <LogOut />
               Log out
@@ -98,6 +118,14 @@ export function NavUser({
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
+
+      {/* Notifications Dialog */}
+      <NotificationsDialog
+        open={notificationsOpen}
+        onOpenChange={setNotificationsOpen}
+        pendingCount={pendingCount}
+        onSendSuccess={refetchCount}
+      />
     </SidebarMenu>
   )
 }
