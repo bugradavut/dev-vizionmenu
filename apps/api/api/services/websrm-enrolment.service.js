@@ -370,7 +370,7 @@ async function runEnrolmentFlow({ tenantId, env, config }) {
       software_version: enrolmentConfig.softwareVersion,
       versi: enrolmentConfig.versi,
       versi_parn: env === 'DEV' ? '0' : '1.0.0',
-      cas_essai: env === 'ESSAI' ? '500.001' : null,
+      cas_essai: env === 'ESSAI' ? '000.000' : null,  // IMPORTANT: 000.000 for transactions (500.001 only for enrolment API call)
       private_key_pem_encrypted: privateKeyPemEncrypted,
       cert_pem_encrypted: certPemEncrypted,
       cert_psi_pem_encrypted: certPsiPemEncrypted,
