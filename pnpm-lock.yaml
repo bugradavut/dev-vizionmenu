@@ -72,6 +72,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.50.5
         version: 2.53.0
+      adm-zip:
+        specifier: ^0.5.10
+        version: 0.5.16
       cross-env:
         specifier: ^10.0.0
         version: 10.0.0

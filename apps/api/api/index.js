@@ -86,6 +86,7 @@ const websrmAuditRoutes = require('./routes/websrm-audit.routes');
 const websrmQueueRoutes = require('./routes/websrm-queue.routes');
 const websrmCertificateRoutes = require('../routes/websrm-certificate.routes');
 const dailyClosingRoutes = require('./routes/daily-closing.routes');
+const dataExportRoutes = require('./routes/data-export.routes');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -268,6 +269,9 @@ app.use('/api/v1/offline-events', offlineEventsRoutes);
 
 // Use chain templates routes (protected - chain owner access required)
 app.use('/api/v1/chains', chainTemplatesRoutes);
+
+// Use data export routes (FO-120 compliance - protected - branch auth required)
+app.use('/api/v1/data-export', dataExportRoutes);
 
 // Catch all other routes
 app.use('*', (req, res) => {

@@ -204,6 +204,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               title: t.navigation.paymentSettings,
               url: "/settings/payments",
             }] : []),
+            // Data Export - FO-120 compliance
+            {
+              title: language === 'fr' ? 'Exportation de Données' : 'Data Export',
+              url: "/settings/data-export",
+            },
           ],
         },
         // Platform Admin Section (conditional for branch users who are also platform admin)
