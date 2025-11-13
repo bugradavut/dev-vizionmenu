@@ -574,7 +574,6 @@ export function UserListTable({
                                   onClick={() => handleExportUserData(user)}
                                   disabled={exportingUserId === user.user_id}
                                 >
-                                  <Download className="mr-2 h-4 w-4" />
                                   {exportingUserId === user.user_id
                                     ? (language === 'en' ? 'Exporting...' : 'Exportation...')
                                     : (language === 'en' ? 'Export Data' : 'Exporter Données')}
