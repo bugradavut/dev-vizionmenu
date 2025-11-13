@@ -12,6 +12,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +31,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
 import { NotificationsDialog } from "@/components/notifications-dialog"
 import { usePendingWebSrmCount } from "@/hooks/use-pending-websrm-count"
+import { useCertificateExpiry } from "@/hooks/use-certificate-expiry"
 
 export function NavUser({
   user,
@@ -46,6 +48,15 @@ export function NavUser({
   const router = useRouter()
   const [notificationsOpen, setNotificationsOpen] = React.useState(false)
   const { count: pendingCount, refetch: refetchCount } = usePendingWebSrmCount()
+
+  // FO-127: Certificate expiry monitoring
+  const { status: certificateStatus } = useCertificateExpiry({
+    enabled: true,
+    refetchInterval: 3600000, // 1 hour
+  })
+
+  // Calculate total notification count
+  const totalNotifications = pendingCount + (certificateStatus?.shouldShowNotification ? 1 : 0)
 
   const handleLogout = async () => {
     try {
@@ -71,10 +82,20 @@ export function NavUser({
               size="lg"
               className="border-t border-sidebar-border pt-2 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-full">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-full bg-primary text-primary-foreground font-semibold">{user.initials}</AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="h-8 w-8 rounded-full">
+                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarFallback className="rounded-full bg-primary text-primary-foreground font-semibold">{user.initials}</AvatarFallback>
+                </Avatar>
+                {totalNotifications > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-200 text-red-700 border-red-500"
+                  >
+                    {totalNotifications}
+                  </Badge>
+                )}
+              </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">{user.name}</span>
                 <span className="truncate text-xs">{user.email}</span>
@@ -104,10 +125,13 @@ export function NavUser({
             <DropdownMenuItem onClick={handleNotificationsClick}>
               <Bell />
               Notifications
-              {pendingCount > 0 && (
-                <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs font-medium text-white">
-                  {pendingCount}
-                </span>
+              {totalNotifications > 0 && (
+                <Badge
+                  variant="outline"
+                  className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-200 text-red-700 border-red-500"
+                >
+                  {totalNotifications}
+                </Badge>
               )}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -124,6 +148,7 @@ export function NavUser({
         open={notificationsOpen}
         onOpenChange={setNotificationsOpen}
         pendingCount={pendingCount}
+        certificateStatus={certificateStatus}
         onSendSuccess={refetchCount}
       />
     </SidebarMenu>

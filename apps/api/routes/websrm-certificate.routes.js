@@ -93,6 +93,127 @@ router.get('/:tenantId', async (req, res) => {
 });
 
 /**
+ * GET /api/v1/websrm/certificate/status/:tenantId
+ * Check certificate expiry status and warning level (FO-127)
+ *
+ * @param {string} tenantId - Tenant ID (branch ID)
+ * @returns {object} Certificate expiry status with warning level
+ */
+router.get('/status/:tenantId', async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+
+    if (!tenantId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tenant ID is required',
+      });
+    }
+
+    console.log('[FO-127] Checking certificate expiry status for tenant:', tenantId);
+
+    // Query websrm_profiles for active certificate
+    const { data: profile, error } = await supabase
+      .from('websrm_profiles')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .is('deleted_at', null)
+      .single();
+
+    // No active certificate
+    if (error && error.code === 'PGRST116') {
+      return res.status(200).json({
+        success: true,
+        hasActiveCertificate: false,
+        shouldShowNotification: false,
+        warningLevel: 'none',
+        message: 'No active certificate found',
+      });
+    }
+
+    if (error) {
+      throw error;
+    }
+
+    if (!profile) {
+      return res.status(200).json({
+        success: true,
+        hasActiveCertificate: false,
+        shouldShowNotification: false,
+        warningLevel: 'none',
+        message: 'No active certificate found',
+      });
+    }
+
+    // Calculate days until expiry
+    const expiryDate = profile.cert_valid_until || calculateExpiryDate(profile.created_at);
+    const now = new Date();
+    const expiry = new Date(expiryDate);
+    const daysUntilExpiry = Math.floor((expiry - now) / (1000 * 60 * 60 * 24));
+
+    console.log('[FO-127] Certificate expires in', daysUntilExpiry, 'days');
+
+    // Determine warning level based on FO-127 requirements
+    let warningLevel = 'none';
+    let shouldShowNotification = false;
+    let message = '';
+
+    if (daysUntilExpiry < 0) {
+      // EXPIRED
+      warningLevel = 'expired';
+      shouldShowNotification = true;
+      message = 'Certificate has expired - immediate renewal required';
+    } else if (daysUntilExpiry <= 7) {
+      // CRITICAL - 7 days or less
+      warningLevel = 'critical';
+      shouldShowNotification = true;
+      message = `Certificate expires in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''} - renew immediately`;
+    } else if (daysUntilExpiry <= 30) {
+      // URGENT - 30 days or less
+      warningLevel = 'urgent';
+      shouldShowNotification = true;
+      message = `Certificate expires in ${daysUntilExpiry} days - action required`;
+    } else if (daysUntilExpiry <= 90) {
+      // WARNING - 90 days or less
+      warningLevel = 'warning';
+      shouldShowNotification = true;
+      message = `Certificate expires in ${daysUntilExpiry} days`;
+    } else if (daysUntilExpiry <= 1095) {
+      // INFO - 3 years (1095 days) or less - Quebec recommends renewal
+      warningLevel = 'info';
+      shouldShowNotification = true;
+      message = 'Quebec recommends renewing your certificate every 3 years';
+    } else {
+      // No warning needed yet
+      warningLevel = 'none';
+      shouldShowNotification = false;
+      message = 'Certificate is valid';
+    }
+
+    return res.status(200).json({
+      success: true,
+      hasActiveCertificate: true,
+      daysUntilExpiry,
+      expiryDate,
+      warningLevel,
+      shouldShowNotification,
+      message,
+      certificateId: profile.id,
+      serialNumber: profile.cert_serial_number,
+      env: profile.env,
+    });
+  } catch (error) {
+    console.error('[FO-127] Failed to check certificate status:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to check certificate status',
+      error: error.message,
+    });
+  }
+});
+
+/**
  * POST /api/v1/websrm/certificate/annul
  * Annul (delete) certificate - sends annulation request to WEB-SRM
  *

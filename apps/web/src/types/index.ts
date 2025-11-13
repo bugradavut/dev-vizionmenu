@@ -16,6 +16,9 @@ export * from "./campaign";
 // Daily Closing Types
 export * from "./daily-closing";
 
+// WEB-SRM Types
+export * from "./websrm";
+
 // Common Types
 export interface ApiResponse<T = unknown> {
   data: T;

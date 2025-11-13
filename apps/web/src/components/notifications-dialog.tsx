@@ -14,11 +14,14 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
+import { CertificateWarningCard } from "@/components/certificate-warning-card"
+import type { CertificateExpiryStatus } from "@/types/websrm"
 
 interface NotificationsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   pendingCount: number
+  certificateStatus?: CertificateExpiryStatus | null
   onSendSuccess?: () => void
 }
 
@@ -26,6 +29,7 @@ export function NotificationsDialog({
   open,
   onOpenChange,
   pendingCount,
+  certificateStatus,
   onSendSuccess,
 }: NotificationsDialogProps) {
   const [isSending, setIsSending] = React.useState(false)
@@ -111,44 +115,53 @@ export function NotificationsDialog({
         <Separator />
 
         <div className="py-4">
-          {pendingCount > 0 ? (
+          {/* Check if we have any notifications to show */}
+          {pendingCount > 0 || certificateStatus?.shouldShowNotification ? (
             <div className="space-y-4">
-              <div className="rounded-lg border border-border bg-muted/50 p-4">
-                <div className="flex items-start gap-3">
-                  <div className="rounded-full bg-orange-100 p-2">
-                    <Bell className="h-4 w-4 text-orange-600" />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      Pending Quebec Transactions
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      You have {pendingCount} transaction{pendingCount > 1 ? "s" : ""}{" "}
-                      waiting to be sent to WEB-SRM.
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      These transactions were created offline and need to be synced.
-                    </p>
-                  </div>
-                </div>
+              {/* Certificate Warning - Show first if present */}
+              {certificateStatus?.shouldShowNotification && (
+                <CertificateWarningCard status={certificateStatus} />
+              )}
 
-                <DialogFooter className="mt-4">
-                  <Button
-                    onClick={handleSendToWebSrm}
-                    disabled={isSending}
-                    className="w-full"
-                  >
-                    {isSending ? (
-                      <>Processing...</>
-                    ) : (
-                      <>
-                        <Send className="mr-2 h-4 w-4" />
-                        Send to WEB-SRM
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </div>
+              {/* Pending Transactions */}
+              {pendingCount > 0 && (
+                <div className="rounded-lg border border-border bg-muted/50 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-orange-100 p-2">
+                      <Bell className="h-4 w-4 text-orange-600" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        Pending Quebec Transactions
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        You have {pendingCount} transaction{pendingCount > 1 ? "s" : ""}{" "}
+                        waiting to be sent to WEB-SRM.
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        These transactions were created offline and need to be synced.
+                      </p>
+                    </div>
+                  </div>
+
+                  <DialogFooter className="mt-4">
+                    <Button
+                      onClick={handleSendToWebSrm}
+                      disabled={isSending}
+                      className="w-full"
+                    >
+                      {isSending ? (
+                        <>Processing...</>
+                      ) : (
+                        <>
+                          <Send className="mr-2 h-4 w-4" />
+                          Send to WEB-SRM
+                        </>
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-8 text-center">
