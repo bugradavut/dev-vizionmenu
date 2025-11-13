@@ -9,7 +9,7 @@ import type { CertificateExpiryStatus } from '@/types/websrm';
 
 interface UseCertificateExpiryOptions {
   enabled?: boolean;
-  refetchInterval?: number; // Refetch interval in milliseconds (default: 1 hour)
+  refetchInterval?: number; // Refetch interval in milliseconds (default: 24 hours)
 }
 
 interface UseCertificateExpiryReturn {
@@ -37,7 +37,7 @@ interface UseCertificateExpiryReturn {
 export function useCertificateExpiry(
   options: UseCertificateExpiryOptions = {}
 ): UseCertificateExpiryReturn {
-  const { enabled = true, refetchInterval = 3600000 } = options; // Default: 1 hour
+  const { enabled = true, refetchInterval = 86400000 } = options; // Default: 24 hours
 
   const { session } = useAuth();
   const [status, setStatus] = useState<CertificateExpiryStatus | null>(null);
@@ -60,7 +60,6 @@ export function useCertificateExpiry(
       const branchId = session.user?.user_metadata?.branch_id;
 
       if (!branchId) {
-        console.warn('[useCertificateExpiry] No branch ID found in session');
         setStatus({
           success: true,
           hasActiveCertificate: false,
@@ -70,8 +69,6 @@ export function useCertificateExpiry(
         });
         return;
       }
-
-      console.log('[FO-127] Fetching certificate expiry status for branch:', branchId);
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/v1/websrm/certificate/status/${branchId}`,
@@ -90,11 +87,10 @@ export function useCertificateExpiry(
 
       const data: CertificateExpiryStatus = await response.json();
 
-      console.log('[FO-127] Certificate status:', {
-        warningLevel: data.warningLevel,
-        daysUntilExpiry: data.daysUntilExpiry,
-        shouldShow: data.shouldShowNotification,
-      });
+      // Only log if there's an active notification to show
+      if (data.shouldShowNotification) {
+        console.log(`[FO-127] Certificate notification: ${data.warningLevel.toUpperCase()} - ${data.daysUntilExpiry} days remaining`);
+      }
 
       setStatus(data);
     } catch (err) {

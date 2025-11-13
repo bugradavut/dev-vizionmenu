@@ -50,9 +50,10 @@ export function NavUser({
   const { count: pendingCount, refetch: refetchCount } = usePendingWebSrmCount()
 
   // FO-127: Certificate expiry monitoring
+  // Check once per day (24 hours) - certificate expiry happens over days/months, not hours
   const { status: certificateStatus } = useCertificateExpiry({
     enabled: true,
-    refetchInterval: 3600000, // 1 hour
+    refetchInterval: 86400000, // 24 hours (24 * 60 * 60 * 1000)
   })
 
   // Calculate total notification count

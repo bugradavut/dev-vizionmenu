@@ -110,8 +110,6 @@ router.get('/status/:tenantId', async (req, res) => {
       });
     }
 
-    console.log('[FO-127] Checking certificate expiry status for tenant:', tenantId);
-
     // Query websrm_profiles for active certificate
     const { data: profile, error } = await supabase
       .from('websrm_profiles')
@@ -152,8 +150,6 @@ router.get('/status/:tenantId', async (req, res) => {
     const expiry = new Date(expiryDate);
     const daysUntilExpiry = Math.floor((expiry - now) / (1000 * 60 * 60 * 24));
 
-    console.log('[FO-127] Certificate expires in', daysUntilExpiry, 'days');
-
     // Determine warning level based on FO-127 requirements
     let warningLevel = 'none';
     let shouldShowNotification = false;
@@ -164,16 +160,19 @@ router.get('/status/:tenantId', async (req, res) => {
       warningLevel = 'expired';
       shouldShowNotification = true;
       message = 'Certificate has expired - immediate renewal required';
+      console.log(`[FO-127] ❌ EXPIRED: Tenant ${tenantId} certificate expired`);
     } else if (daysUntilExpiry <= 7) {
       // CRITICAL - 7 days or less
       warningLevel = 'critical';
       shouldShowNotification = true;
       message = `Certificate expires in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''} - renew immediately`;
+      console.log(`[FO-127] 🔴 CRITICAL: Tenant ${tenantId} certificate expires in ${daysUntilExpiry} days`);
     } else if (daysUntilExpiry <= 30) {
       // URGENT - 30 days or less
       warningLevel = 'urgent';
       shouldShowNotification = true;
       message = `Certificate expires in ${daysUntilExpiry} days - action required`;
+      console.log(`[FO-127] ⚠️ URGENT: Tenant ${tenantId} certificate expires in ${daysUntilExpiry} days`);
     } else if (daysUntilExpiry <= 90) {
       // WARNING - 90 days or less
       warningLevel = 'warning';
