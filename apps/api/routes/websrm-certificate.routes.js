@@ -208,22 +208,32 @@ router.post('/enrol', async (req, res) => {
       });
     }
 
-    // Check if certificate already exists
+    // Check if certificate already exists (active or deleted)
     const { data: existingProfile } = await supabase
       .from('websrm_profiles')
       .select('*')
       .eq('tenant_id', tenantId)
       .eq('env', env)
-      .eq('is_active', true)
-      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
-    if (existingProfile) {
+    // If active certificate exists, reject
+    if (existingProfile && existingProfile.is_active && !existingProfile.deleted_at) {
       return res.status(409).json({
         success: false,
         message: 'Active certificate already exists for this tenant',
         certificateId: existingProfile.id,
       });
+    }
+
+    // If deleted certificate exists, hard delete it before creating new one
+    if (existingProfile && !existingProfile.is_active && existingProfile.deleted_at) {
+      console.log('[WEB-SRM] Found deleted certificate, removing before re-enrolment...');
+      await supabase
+        .from('websrm_profiles')
+        .delete()
+        .eq('id', existingProfile.id);
     }
 
     // Import enrolment service

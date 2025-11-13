@@ -160,7 +160,7 @@ export default function WebsrmCertificatePage() {
           },
           body: JSON.stringify({
             tenantId: branchId,
-            env: 'ESSAI', // Using ESSAI credentials for demo
+            env: 'DEV', // Using DEV environment for demo (matches .env WEBSRM_ENV)
             config: {},
           }),
         }
