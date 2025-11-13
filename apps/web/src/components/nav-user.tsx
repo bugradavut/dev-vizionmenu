@@ -90,7 +90,7 @@ export function NavUser({
                 {totalNotifications > 0 && (
                   <Badge
                     variant="outline"
-                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-200 text-red-700 border-red-500"
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-200 text-red-700 border-red-500 rounded-full"
                   >
                     {totalNotifications}
                   </Badge>
@@ -128,7 +128,7 @@ export function NavUser({
               {totalNotifications > 0 && (
                 <Badge
                   variant="outline"
-                  className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-200 text-red-700 border-red-500"
+                  className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-200 text-red-700 border-red-500 rounded-full"
                 >
                   {totalNotifications}
                 </Badge>
