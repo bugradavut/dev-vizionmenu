@@ -21,6 +21,9 @@ router.get('/branch/:branchId', requireAuthWithBranch, usersController.getBranch
 // Role assignment endpoint
 router.post('/:userId/branch/:branchId/assign-role', requireAuth, usersController.assignUserRole);
 
+// Admin data export endpoint (FO-126 - chain owner only)
+router.get('/:userId/data-export', requireAuth, usersController.exportUserData);
+
 // Delete user endpoint
 router.delete('/:userId/branch/:branchId', requireAuth, usersController.deleteUser);
 

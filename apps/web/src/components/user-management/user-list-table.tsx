@@ -39,13 +39,15 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { MoreHorizontal, Search, UserPlus } from 'lucide-react';
+import { MoreHorizontal, Search, UserPlus, Download } from 'lucide-react';
 import { useUsers, useUserMutations } from '@/hooks';
 import { usePermissions } from '@/hooks/use-enhanced-auth';
 import { useLanguage } from '@/contexts/language-context';
 import { translations } from '@/lib/translations';
+import { useToast } from '@/hooks/use-toast';
 import type { BranchUser, BranchRole } from '@repo/types/auth';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
 interface UserListTableProps {
   branchId?: string;
@@ -93,9 +95,11 @@ export function UserListTable({
   const [roleFilter, setRoleFilter] = useState<BranchRole | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
-  
+  const [exportingUserId, setExportingUserId] = useState<string | null>(null);
+
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
+  const { toast } = useToast();
   
   // Dynamic role labels based on language
   const getRoleLabel = (role: BranchRole): string => {
@@ -170,6 +174,77 @@ export function UserListTable({
       await removeUser(user.user_id, user.branch_id);
     } catch (error) {
       console.error('Failed to delete user:', error);
+    }
+  };
+
+  const handleExportUserData = async (user: BranchUser) => {
+    setExportingUserId(user.user_id);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        toast({
+          variant: 'destructive',
+          title: language === 'en' ? 'Authentication Required' : 'Authentification requise',
+          description: language === 'en'
+            ? 'Please login to export user data'
+            : 'Veuillez vous connecter pour exporter les données',
+        });
+        return;
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/${user.user_id}/data-export`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error?.message || `Export failed: ${response.status}`
+        );
+      }
+
+      const blob = await response.blob();
+      const timestamp = new Date().toISOString().split('T')[0];
+      const fullName = (user as unknown as Record<string, unknown>).full_name || user.user?.full_name;
+      const email = (user as unknown as Record<string, unknown>).email || user.user?.email;
+      const userName = (fullName || email || user.user_id.substring(0, 8)) as string;
+      const filename = `user-data-export-${userName.replace(/\s+/g, '-')}-${timestamp}.zip`;
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        variant: 'default',
+        title: language === 'en' ? 'Export Successful' : 'Exportation réussie',
+        description: language === 'en'
+          ? 'User data has been exported successfully'
+          : 'Les données utilisateur ont été exportées avec succès',
+      });
+    } catch (error) {
+      console.error('[Export User Data] Error:', error);
+      toast({
+        variant: 'destructive',
+        title: language === 'en' ? 'Export Failed' : 'Échec de l\'exportation',
+        description: error instanceof Error
+          ? error.message
+          : (language === 'en' ? 'Failed to export user data' : 'Échec de l\'exportation des données'),
+      });
+    } finally {
+      setExportingUserId(null);
     }
   };
 
@@ -464,7 +539,8 @@ export function UserListTable({
                         const canEdit = onEditUser && permissions.canEditUser(user.role);
                         const canToggleStatus = permissions.canManageUsers && permissions.canEditUser(user.role);
                         const canDelete = permissions.canDeleteUsers && permissions.canEditUser(user.role);
-                        const hasAnyActions = canEdit || canToggleStatus || canDelete;
+                        const canExport = isChainOwner; // FO-126: Chain owner can export user data
+                        const hasAnyActions = canEdit || canToggleStatus || canDelete || canExport;
 
                         return (
                           <DropdownMenu>
@@ -490,6 +566,18 @@ export function UserListTable({
                               {permissions.canManageUsers && permissions.canEditUser(user.role) && (
                                 <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
                                   {user.is_active ? t.settingsUsers.userTable.inactive : t.settingsUsers.userTable.active}
+                                </DropdownMenuItem>
+                              )}
+
+                              {canExport && (
+                                <DropdownMenuItem
+                                  onClick={() => handleExportUserData(user)}
+                                  disabled={exportingUserId === user.user_id}
+                                >
+                                  <Download className="mr-2 h-4 w-4" />
+                                  {exportingUserId === user.user_id
+                                    ? (language === 'en' ? 'Exporting...' : 'Exportation...')
+                                    : (language === 'en' ? 'Export Data' : 'Exporter Données')}
                                 </DropdownMenuItem>
                               )}
 

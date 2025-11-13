@@ -183,6 +183,106 @@ const assignUserRole = async (req, res) => {
 };
 
 /**
+ * GET /api/v1/users/:userId/data-export
+ * Export user's branch data (chain owner only - FO-126)
+ * Allows chain owner to export data for deactivated users
+ */
+const exportUserData = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const currentUserId = req.currentUserId;
+
+    if (!currentUserId) {
+      return res.status(401).json({
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
+      });
+    }
+
+    // Get current user's profile to check if chain owner
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    const { data: currentUserProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('role, is_platform_admin')
+      .eq('user_id', currentUserId)
+      .single();
+
+    if (profileError || !currentUserProfile) {
+      return res.status(403).json({
+        error: { code: 'ACCESS_DENIED', message: 'User profile not found' }
+      });
+    }
+
+    // Check if chain owner or platform admin
+    const isChainOwner = currentUserProfile.role === 'chain_owner';
+    const isPlatformAdmin = currentUserProfile.is_platform_admin === true;
+
+    if (!isChainOwner && !isPlatformAdmin) {
+      return res.status(403).json({
+        error: {
+          code: 'ACCESS_DENIED',
+          message: 'Only chain owners can export user data'
+        }
+      });
+    }
+
+    // Get target user's branch (including inactive users)
+    const { data: targetUserBranch, error: branchError } = await supabase
+      .from('branch_users')
+      .select('branch_id, user_id')
+      .eq('user_id', userId)
+      .single();
+
+    if (branchError || !targetUserBranch) {
+      return res.status(404).json({
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'Target user not found in any branch'
+        }
+      });
+    }
+
+    // Generate data export using existing service
+    const dataExportService = require('../services/data-export.service');
+    const zipBuffer = await dataExportService.generateDataExportZip(targetUserBranch.branch_id);
+
+    // Log activity
+    await logActivity({
+      req,
+      action: 'export',
+      entity: 'user_data',
+      entityId: userId,
+      entityName: 'Admin Data Export',
+      branchId: targetUserBranch.branch_id,
+    });
+
+    // Get user email for filename
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('email')
+      .eq('user_id', userId)
+      .single();
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+    const userEmail = userProfile?.email?.split('@')[0] || userId.substring(0, 8);
+    const filename = `user-data-export-${userEmail}-${timestamp}.zip`;
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', zipBuffer.length);
+
+    res.send(zipBuffer);
+
+  } catch (error) {
+    handleControllerError(error, 'export user data', res);
+  }
+};
+
+/**
  * DELETE /api/v1/users/:userId/branch/:branchId
  * Delete user (hard delete)
  */
@@ -204,7 +304,7 @@ const deleteUser = async (req, res) => {
       tableName: 'user_profiles'
     })
     res.json({ data: result });
-    
+
   } catch (error) {
     handleControllerError(error, 'delete user', res);
   }
@@ -215,5 +315,6 @@ module.exports = {
   updateUser,
   getBranchUsers,
   assignUserRole,
+  exportUserData,
   deleteUser
 };
