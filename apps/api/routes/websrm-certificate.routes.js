@@ -133,32 +133,25 @@ router.post('/annul', async (req, res) => {
     const websrmAnnulationSuccess = true;
 
     if (websrmAnnulationSuccess) {
-      // Step 3: Mark certificate as deleted in database
+      // Step 3: Mark certificate as deleted AND clear encrypted keys from database
+      // FO-109 Step 2: "the certificate must also be deleted from the SRS"
+      // We clear sensitive encrypted data while keeping metadata for audit trail
       const { error: updateError } = await supabase
         .from('websrm_profiles')
         .update({
           is_active: false,
           deleted_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          // Clear encrypted keys (FO-109 compliance)
+          private_key_pem_encrypted: null,
+          cert_pem_encrypted: null,
+          cert_psi_pem_encrypted: null,
         })
         .eq('id', profile.id);
 
       if (updateError) {
         throw updateError;
       }
-
-      // Step 4: Clear encrypted keys (optional - for extra security)
-      // Note: We keep the metadata for audit trail, but can clear sensitive data
-      // Uncomment if you want to clear encrypted keys:
-      /*
-      await supabase
-        .from('websrm_profiles')
-        .update({
-          private_key_pem_encrypted: null,
-          cert_pem_encrypted: null,
-        })
-        .eq('id', profile.id);
-      */
 
       return res.status(200).json({
         success: true,

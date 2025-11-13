@@ -10,7 +10,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { RefreshCw, ArrowLeft } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
 import { useLanguage } from "@/contexts/language-context"
 import { DashboardLayout } from "@/components/dashboard-layout"
@@ -228,23 +228,15 @@ export default function WebsrmCertificatePage() {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-8">
-                  <h1 className="text-3xl font-bold tracking-tight">
-                    {language === 'fr' ? 'Certificat WEB-SRM du Québec' : 'Quebec WEB-SRM Certificate'}
-                  </h1>
-                  <p className="text-muted-foreground mt-2 text-lg">
-                    {language === 'fr'
-                      ? 'Gérez votre certificat numérique pour la conformité SRS du Québec'
-                      : 'Manage your digital certificate for Quebec SRS compliance'}
-                  </p>
-                </div>
-                <div className="lg:col-span-4 flex items-center justify-end">
-                  <Button onClick={fetchCertificate} variant="outline" disabled={loading}>
-                    <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                    {language === 'fr' ? 'Actualiser' : 'Refresh'}
-                  </Button>
-                </div>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">
+                  {language === 'fr' ? 'Certificat WEB-SRM du Québec' : 'Quebec WEB-SRM Certificate'}
+                </h1>
+                <p className="text-muted-foreground mt-2 text-lg">
+                  {language === 'fr'
+                    ? 'Gérez votre certificat numérique pour la conformité SRS du Québec'
+                    : 'Manage your digital certificate for Quebec SRS compliance'}
+                </p>
               </div>
             </div>
 
