@@ -25,6 +25,7 @@ import { MinimumOrderCard } from "@/components/branch-settings/minimum-order-car
 import { TimingCardsGroup } from "@/components/branch-settings/timing-cards-group"
 import { RestaurantHoursCard } from "@/components/branch-settings/restaurant-hours-card"
 import { UberDirectModal } from "@/components/branch-settings/uber-direct-modal"
+import { TimezoneCard } from "@/components/branch-settings/timezone-card"
 
 type RestaurantHoursDay = keyof typeof translations.en.settingsBranch.restaurantHours.dayLabels
 
@@ -592,6 +593,13 @@ export default function BranchSettingsPage() {
     });
   };
 
+  // Handle timezone change - FO-129
+  const handleTimezoneChange = (newTimezone: string) => {
+    updateSettings({
+      timezone: newTimezone
+    });
+  };
+
   // Handle plus/minus button changes - best practice approach
   const handleBaseDelayAdjustment = (increment: number) => {
     const currentValue = Number(baseDelayInput) || 0
@@ -877,7 +885,7 @@ export default function BranchSettingsPage() {
                   />
                 </div>
 
-                {/* Third Row: Notifications & Integrations Cards */}
+                {/* Third Row: Notifications, Integrations & Compliance Cards */}
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                   {/* Notifications Navigation Card */}
                   <Card>
@@ -1012,8 +1020,8 @@ export default function BranchSettingsPage() {
                   <Card>
                     <CardHeader className="pb-3">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-50 rounded-lg">
-                          <Shield className="h-5 w-5 text-indigo-600" />
+                        <div className="p-2 bg-purple-50 rounded-lg">
+                          <Shield className="h-5 w-5 text-purple-600" />
                         </div>
                         <div>
                           <CardTitle className="text-base">
@@ -1028,28 +1036,38 @@ export default function BranchSettingsPage() {
                     <CardContent>
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
                           <span>{language === 'fr' ? 'Statut du certificat' : 'Certificate status'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
                           <span>{language === 'fr' ? 'Enrôlement/Annulation' : 'Enrolment/Annulation'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
                           <span>{language === 'fr' ? 'Détails du certificat' : 'Certificate details'}</span>
                         </div>
                       </div>
                       <div className="mt-4 cursor-pointer group/button" onClick={() => router.push('/settings/branch/websrm-certificate')}>
-                        <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg group-hover/button:border-indigo-200 group-hover/button:bg-indigo-50 transition-colors">
-                          <span className="text-sm text-gray-600 group-hover/button:text-indigo-600 transition-colors">
+                        <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg group-hover/button:border-purple-200 group-hover/button:bg-purple-50 transition-colors">
+                          <span className="text-sm text-gray-600 group-hover/button:text-purple-600 transition-colors">
                             {language === 'fr' ? 'Cliquez pour configurer' : 'Click to configure'}
                           </span>
-                          <ArrowRight className="h-4 w-4 text-gray-400 group-hover/button:text-indigo-600 group-hover/button:translate-x-1 transition-all" />
+                          <ArrowRight className="h-4 w-4 text-gray-400 group-hover/button:text-purple-600 group-hover/button:translate-x-1 transition-all" />
                         </div>
                       </div>
                     </CardContent>
                   </Card>
+                </div>
+
+                {/* Fourth Row: Timezone Card - FO-129 */}
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                  <TimezoneCard
+                    timezone={settings.timezone || 'America/Toronto'}
+                    language={language}
+                    onTimezoneChange={handleTimezoneChange}
+                    translations={t.settingsBranch.timezone}
+                  />
                 </div>
 
               </div>

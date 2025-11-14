@@ -376,8 +376,8 @@ export default function LiveOrdersPage() {
               ) : (
                 filteredOrders.map((order) => (
                   <TableRow key={order.id} className={`transition-colors ${
-                    order.status === 'scheduled' 
-                      ? 'border-yellow-300 hover:bg-yellow-100' 
+                    order.status === 'scheduled'
+                      ? 'border-yellow-300 hover:bg-yellow-100'
                       : 'bg-white hover:bg-gray-50'
                   }`} style={{
                     backgroundColor: order.status === 'scheduled' ? '#fefce8' : undefined // Custom yellow between 50 and 100
@@ -423,34 +423,39 @@ export default function LiveOrdersPage() {
                             {(() => {
                               // Build from separate date and time fields for accurate display
                               if (order.scheduled_date && order.scheduled_time) {
-                                // Parse date and time separately to avoid timezone issues
+                                // Parse date and time separately and convert to branch timezone
                                 const dateStr = order.scheduled_date; // '2025-08-28'
                                 const timeStr = order.scheduled_time; // '11:45:00'
-                                
-                                // Create date object in local time (not UTC)
-                                const [year, month, day] = dateStr.split('-').map(Number);
-                                const [hour, minute] = timeStr.split(':').map(Number);
-                                
-                                const scheduledDate = new Date(year, month - 1, day, hour, minute);
+
+                                // Create UTC date string
+                                const utcDateTimeStr = `${dateStr}T${timeStr}Z`;
+                                const scheduledDate = new Date(utcDateTimeStr);
                                 const today = new Date();
                                 const tomorrow = new Date(today);
                                 tomorrow.setDate(today.getDate() + 1);
-                                
-                                // Check if it's today or tomorrow
-                                if (scheduledDate.toDateString() === today.toDateString()) {
+
+                                // Check if it's today or tomorrow (in branch timezone)
+                                const dateInBranchTZ = new Date(scheduledDate.toLocaleString('en-CA', {
+                                  timeZone: order.branch_timezone || 'America/Toronto'
+                                }));
+
+                                if (dateInBranchTZ.toDateString() === today.toDateString()) {
                                   return `Today ${scheduledDate.toLocaleTimeString('en-CA', {
+                                    timeZone: order.branch_timezone || 'America/Toronto',
                                     hour: '2-digit',
                                     minute: '2-digit',
                                     hour12: true
                                   })}`;
-                                } else if (scheduledDate.toDateString() === tomorrow.toDateString()) {
+                                } else if (dateInBranchTZ.toDateString() === tomorrow.toDateString()) {
                                   return `Tomorrow ${scheduledDate.toLocaleTimeString('en-CA', {
+                                    timeZone: order.branch_timezone || 'America/Toronto',
                                     hour: '2-digit',
                                     minute: '2-digit',
                                     hour12: true
                                   })}`;
                                 } else {
                                   return scheduledDate.toLocaleString('en-CA', {
+                                    timeZone: order.branch_timezone || 'America/Toronto',
                                     month: 'short',
                                     day: 'numeric',
                                     hour: '2-digit',
@@ -469,21 +474,21 @@ export default function LiveOrdersPage() {
                                 
                                 if (scheduledDate.toDateString() === today.toDateString()) {
                                   return `Today ${scheduledDate.toLocaleTimeString('en-CA', {
-                                    timeZone: 'America/Toronto',
+                                    timeZone: order.branch_timezone || 'America/Toronto',
                                     hour: '2-digit',
                                     minute: '2-digit',
                                     hour12: true
                                   })}`;
                                 } else if (scheduledDate.toDateString() === tomorrow.toDateString()) {
                                   return `Tomorrow ${scheduledDate.toLocaleTimeString('en-CA', {
-                                    timeZone: 'America/Toronto',
+                                    timeZone: order.branch_timezone || 'America/Toronto',
                                     hour: '2-digit',
                                     minute: '2-digit',
                                     hour12: true
                                   })}`;
                                 } else {
                                   return scheduledDate.toLocaleString('en-CA', {
-                                    timeZone: 'America/Toronto',
+                                    timeZone: order.branch_timezone || 'America/Toronto',
                                     month: 'short',
                                     day: 'numeric',
                                     hour: '2-digit',
@@ -498,10 +503,10 @@ export default function LiveOrdersPage() {
                         </div>
                       ) : (
                         <span className="text-muted-foreground">
-                          {new Date(order.created_at).toLocaleTimeString('en-CA', { 
-                            timeZone: 'America/Toronto',
-                            hour: '2-digit', 
-                            minute: '2-digit' 
+                          {new Date(order.created_at).toLocaleTimeString('en-CA', {
+                            timeZone: order.branch_timezone || 'America/Toronto',
+                            hour: '2-digit',
+                            minute: '2-digit'
                           })}
                         </span>
                       )}
@@ -619,29 +624,36 @@ export default function LiveOrdersPage() {
                                 if (order.scheduled_date && order.scheduled_time) {
                                   const dateStr = order.scheduled_date;
                                   const timeStr = order.scheduled_time;
-                                  
-                                  const [year, month, day] = dateStr.split('-').map(Number);
-                                  const [hour, minute] = timeStr.split(':').map(Number);
-                                  
-                                  const scheduledDate = new Date(year, month - 1, day, hour, minute);
+
+                                  // Create UTC date string
+                                  const utcDateTimeStr = `${dateStr}T${timeStr}Z`;
+                                  const scheduledDate = new Date(utcDateTimeStr);
                                   const today = new Date();
                                   const tomorrow = new Date(today);
                                   tomorrow.setDate(today.getDate() + 1);
-                                  
-                                  if (scheduledDate.toDateString() === today.toDateString()) {
+
+                                  // Check if it's today or tomorrow (in branch timezone)
+                                  const dateInBranchTZ = new Date(scheduledDate.toLocaleString('en-CA', {
+                                    timeZone: order.branch_timezone || 'America/Toronto'
+                                  }));
+
+                                  if (dateInBranchTZ.toDateString() === today.toDateString()) {
                                     return `Today ${scheduledDate.toLocaleTimeString('en-CA', {
+                                      timeZone: order.branch_timezone || 'America/Toronto',
                                       hour: '2-digit',
                                       minute: '2-digit',
                                       hour12: true
                                     })}`;
-                                  } else if (scheduledDate.toDateString() === tomorrow.toDateString()) {
+                                  } else if (dateInBranchTZ.toDateString() === tomorrow.toDateString()) {
                                     return `Tomorrow ${scheduledDate.toLocaleTimeString('en-CA', {
+                                      timeZone: order.branch_timezone || 'America/Toronto',
                                       hour: '2-digit',
                                       minute: '2-digit',
                                       hour12: true
                                     })}`;
                                   } else {
                                     return scheduledDate.toLocaleString('en-CA', {
+                                      timeZone: order.branch_timezone || 'America/Toronto',
                                       month: 'short',
                                       day: 'numeric',
                                       hour: '2-digit',
@@ -659,21 +671,21 @@ export default function LiveOrdersPage() {
                                   
                                   if (scheduledDate.toDateString() === today.toDateString()) {
                                     return `Today ${scheduledDate.toLocaleTimeString('en-CA', {
-                                      timeZone: 'America/Toronto',
+                                      timeZone: order.branch_timezone || 'America/Toronto',
                                       hour: '2-digit',
                                       minute: '2-digit',
                                       hour12: true
                                     })}`;
                                   } else if (scheduledDate.toDateString() === tomorrow.toDateString()) {
                                     return `Tomorrow ${scheduledDate.toLocaleTimeString('en-CA', {
-                                      timeZone: 'America/Toronto',
+                                      timeZone: order.branch_timezone || 'America/Toronto',
                                       hour: '2-digit',
                                       minute: '2-digit',
                                       hour12: true
                                     })}`;
                                   } else {
                                     return scheduledDate.toLocaleString('en-CA', {
-                                      timeZone: 'America/Toronto',
+                                      timeZone: order.branch_timezone || 'America/Toronto',
                                       month: 'short',
                                       day: 'numeric',
                                       hour: '2-digit',
@@ -682,16 +694,16 @@ export default function LiveOrdersPage() {
                                     });
                                   }
                                 }
-                                
+
                                 return 'Time not specified';
                               })()}
                             </div>
                           ) : (
                             <div className="text-xs text-muted-foreground">
-                              {new Date(order.created_at).toLocaleTimeString('en-CA', { 
-                                timeZone: 'America/Toronto',
-                                hour: '2-digit', 
-                                minute: '2-digit' 
+                              {new Date(order.created_at).toLocaleTimeString('en-CA', {
+                                timeZone: order.branch_timezone || 'America/Toronto',
+                                hour: '2-digit',
+                                minute: '2-digit'
                               })}
                             </div>
                           )}

@@ -66,6 +66,7 @@ export interface BranchSettings {
   deliveryZones?: DeliveryZonesData;
   gstNumber?: string; // GST (Goods and Services Tax) registration number
   qstNumber?: string; // QST (Quebec Sales Tax) registration number
+  timezone?: string; // IANA timezone (e.g., 'America/Toronto', 'America/Halifax')
 }
 
 export interface BranchSettingsResponse {
@@ -149,6 +150,7 @@ export const updateBranchSettings = async (
       deliveryZones: settings.deliveryZones,
       gstNumber: settings.gstNumber,
       qstNumber: settings.qstNumber,
+      timezone: settings.timezone,
     };
 
     // Use Express.js API URL
@@ -228,4 +230,5 @@ export const getDefaultSettings = (): BranchSettings => ({
   }, // Default: delivery zones disabled
   gstNumber: '', // Default: no GST number
   qstNumber: '', // Default: no QST number
+  timezone: 'America/Toronto', // Default: Eastern Time (most common in Canada)
 });

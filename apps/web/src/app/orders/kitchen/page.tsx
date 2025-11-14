@@ -45,10 +45,10 @@ const transformOrderForKitchen = (order: Order): KitchenOrder => {
     customerName: order.customer?.name || 'Unknown Customer',
     customerPhone: order.customer?.phone || '',
     status: mapApiStatusToKitchenStatus(order.status),
-    orderTime: new Date(order.created_at).toLocaleTimeString('en-CA', { 
-      timeZone: 'America/Toronto',
-      hour: '2-digit', 
-      minute: '2-digit' 
+    orderTime: new Date(order.created_at).toLocaleTimeString('en-CA', {
+      timeZone: order.branch_timezone || 'America/Toronto',
+      hour: '2-digit',
+      minute: '2-digit'
     }),
     isPreOrder: order.status === 'scheduled', // Scheduled orders are pre-orders in kitchen display
     scheduledFor: order.status === 'scheduled' ? (order.scheduled_datetime || order.estimated_ready_time || null) : null,

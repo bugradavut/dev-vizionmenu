@@ -658,7 +658,7 @@ export default function OrderHistoryPage() {
                     </TableCell>
                     <TableCell className="text-base text-muted-foreground">
                       {new Date(order.created_at).toLocaleDateString('en-CA', {
-                        timeZone: 'America/Toronto'
+                        timeZone: order.branch_timezone || 'America/Toronto'
                       })}
                     </TableCell>
                     <TableCell className="text-center">
@@ -756,14 +756,14 @@ export default function OrderHistoryPage() {
                         <div className="text-base font-bold text-foreground">{order.orderNumber}</div>
                         <div className="text-xs text-muted-foreground">
                           {new Date(order.created_at).toLocaleDateString('en-CA', {
-                        timeZone: 'America/Toronto'
+                        timeZone: order.branch_timezone || 'America/Toronto'
                       })}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {new Date(order.created_at).toLocaleTimeString('en-CA', { 
-                            timeZone: 'America/Toronto',
-                            hour: '2-digit', 
-                            minute: '2-digit' 
+                          {new Date(order.created_at).toLocaleTimeString('en-CA', {
+                            timeZone: order.branch_timezone || 'America/Toronto',
+                            hour: '2-digit',
+                            minute: '2-digit'
                           })}
                         </div>
                       </div>

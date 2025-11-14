@@ -36,6 +36,7 @@ import { translations } from "@/lib/translations"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
 import { WebSrmTransactionDialog } from "@/components/orders/websrm-transaction-dialog"
 import { PaymentMethodChangeDialog } from "@/components/orders/payment-method-change-dialog"
+import { PrintBill } from "@/components/orders/print-bill"
 // import { UberDeliveryStatus } from "@/components/delivery/uber-delivery-status"
 
 // Types - Clean and simple interface definitions
@@ -57,7 +58,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   
   // Get branch context
   const { branchId } = useEnhancedAuth()
-  const { settings } = useBranchSettings({ branchId: branchId || undefined })
+  const { settings, branchName } = useBranchSettings({ branchId: branchId || undefined })
   
   // Initialize timer service for auto-completion
   const { startTimer, stopTimer, runManualCheck } = useOrderTimer()
@@ -1329,7 +1330,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                             <Clock className="h-3 w-3" />
                                             <span>
                                               {new Date(removedItem.removed_at).toLocaleString('en-CA', {
-                                                timeZone: 'America/Toronto',
+                                                timeZone: order.branch_timezone || 'America/Toronto',
                                                 month: 'short',
                                                 day: 'numeric',
                                                 hour: '2-digit',
@@ -1680,13 +1681,13 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{t.orderDetail.orderDate}</span>
                           <span>{new Date(order.created_at).toLocaleDateString('en-CA', {
-                            timeZone: 'America/Toronto'
+                            timeZone: order.branch_timezone || 'America/Toronto'
                           })}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{t.orderDetail.orderTime}</span>
                           <span>{new Date(order.created_at).toLocaleTimeString('en-CA', {
-                            timeZone: 'America/Toronto',
+                            timeZone: order.branch_timezone || 'America/Toronto',
                             hour: '2-digit',
                             minute: '2-digit'
                           })}</span>
@@ -1721,7 +1722,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                 // Fallback to scheduled_datetime if separate fields not available
                                 if (order.scheduled_datetime) {
                                   return new Date(order.scheduled_datetime).toLocaleString('en-CA', {
-                                    timeZone: 'America/Toronto',
+                                    timeZone: order.branch_timezone || 'America/Toronto',
                                     month: 'short',
                                     day: 'numeric',
                                     hour: '2-digit',
@@ -1729,11 +1730,11 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                     hour12: true
                                   });
                                 }
-                                
+
                                 // Fallback to estimated_ready_time
                                 if (order.estimated_ready_time) {
                                   return new Date(order.estimated_ready_time).toLocaleString('en-CA', {
-                                    timeZone: 'America/Toronto',
+                                    timeZone: order.branch_timezone || 'America/Toronto',
                                     month: 'short',
                                     day: 'numeric',
                                     hour: '2-digit',
@@ -1789,7 +1790,7 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                               // Fallback to scheduled_datetime if separate fields not available
                               if (order.scheduled_datetime) {
                                 return new Date(order.scheduled_datetime).toLocaleString('en-CA', {
-                                  timeZone: 'America/Toronto',
+                                  timeZone: order.branch_timezone || 'America/Toronto',
                                   weekday: 'long',
                                   month: 'long',
                                   day: 'numeric',
@@ -1798,11 +1799,11 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                                   hour12: true
                                 });
                               }
-                              
+
                               // Fallback to estimated_ready_time
                               if (order.estimated_ready_time) {
                                 return new Date(order.estimated_ready_time).toLocaleString('en-CA', {
-                                  timeZone: 'America/Toronto',
+                                  timeZone: order.branch_timezone || 'America/Toronto',
                                   weekday: 'long',
                                   month: 'long',
                                   day: 'numeric',
@@ -2157,11 +2158,9 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                       )}
                       
                       {order.status === 'completed' && (
-                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
-                          <div className="flex items-center justify-center gap-2 text-green-700 dark:text-green-300 font-medium">
-                            <CheckCircle2 className="h-5 w-5" />
-                            {t.orderDetail.orderCompleted2}
-                          </div>
+                        <div>
+                          {/* FO-129: Print Bill with Timezone Notation */}
+                          <PrintBill order={order} branchName={branchName || undefined} />
                         </div>
                       )}
                       

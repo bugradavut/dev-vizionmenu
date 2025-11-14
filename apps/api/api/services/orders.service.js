@@ -39,6 +39,7 @@ async function getOrders(filters, userBranch) {
   }
 
   // Build query with comprehensive filtering including order items for Kitchen Display
+  // FO-129: Include branch timezone for proper date/time display
   let query = supabase
     .from('orders')
     .select(`
@@ -72,6 +73,7 @@ async function getOrders(filters, userBranch) {
       total_refunded,
       refund_count,
       last_refund_at,
+      branches!inner(timezone),
       order_items(
         id,
         menu_item_name,
@@ -135,6 +137,7 @@ async function getOrders(filters, userBranch) {
   const formattedOrders = (ordersResult.data || []).map(order => ({
       id: order.id,
       orderNumber: order.id.split('-')[0].toUpperCase(),
+      branch_timezone: order.branches?.timezone || 'America/Toronto', // FO-129: Branch timezone
       customerName: order.customer_name || 'Walk-in Customer',
       customerPhone: order.customer_phone,
       customerEmail: order.customer_email,
@@ -216,6 +219,7 @@ async function getOrderDetail(orderId, userBranch) {
       .from('orders')
       .select(`
         *,
+        branch:branches!inner(timezone),
         order_items(
           *,
           order_item_variants(*)
@@ -263,6 +267,7 @@ async function getOrderDetail(orderId, userBranch) {
           .from('orders')
           .select(`
             *,
+            branch:branches!inner(timezone),
             order_items(
               *,
               order_item_variants(*)
@@ -304,6 +309,7 @@ async function getOrderDetail(orderId, userBranch) {
     id: existingOrder.id,
     orderNumber: existingOrder.id.split('-')[0].toUpperCase(),
     branch_id: existingOrder.branch_id, // Add branch_id for timing calculations
+    branch_timezone: existingOrder.branch?.timezone || 'America/Toronto', // FO-129: Branch timezone
     customer: {
       name: existingOrder.customer_name || 'Walk-in Customer',
       phone: existingOrder.customer_phone || '',

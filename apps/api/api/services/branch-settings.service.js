@@ -25,7 +25,8 @@ async function getBranchSettings(branchId) {
         name,
         settings,
         gst_number,
-        qst_number
+        qst_number,
+        timezone
       `)
       .eq('id', branchId)
       .single();
@@ -73,6 +74,7 @@ async function getBranchSettings(branchId) {
       deliveryZones: settings.deliveryZones || { enabled: false, zones: [] },
       gstNumber: branchData.gst_number || '',
       qstNumber: branchData.qst_number || '',
+      timezone: branchData.timezone || 'America/Toronto', // FO-129: Include timezone
     };
 
     return {
@@ -115,7 +117,8 @@ async function updateBranchSettings(branchId, settingsData) {
       freeDeliveryThreshold = 0,
       deliveryZones,
       gstNumber = '',
-      qstNumber = ''
+      qstNumber = '',
+      timezone = 'America/Toronto' // FO-129: Extract timezone from settings
     } = settingsData;
 
     // Validate minimum order amount
@@ -179,13 +182,14 @@ async function updateBranchSettings(branchId, settingsData) {
       freeDeliveryThreshold: freeDeliveryThreshold || 0,
     };
 
-    // Update branch in database (settings, GST/QST, and updated_at)
+    // Update branch in database (settings, GST/QST, timezone, and updated_at)
     const { data: updatedBranch, error: updateError } = await supabase
       .from('branches')
       .update({
         settings: settingsJson,
         gst_number: gstNumber || null,
         qst_number: qstNumber || null,
+        timezone: timezone || 'America/Toronto', // FO-129: Save timezone
         updated_at: new Date().toISOString(),
       })
       .eq('id', branchId)
@@ -194,7 +198,8 @@ async function updateBranchSettings(branchId, settingsData) {
         name,
         settings,
         gst_number,
-        qst_number
+        qst_number,
+        timezone
       `)
       .single();
 
@@ -225,6 +230,7 @@ async function updateBranchSettings(branchId, settingsData) {
         },
         gstNumber: updatedBranch.gst_number || '',
         qstNumber: updatedBranch.qst_number || '',
+        timezone: updatedBranch.timezone || 'America/Toronto', // FO-129: Return timezone
       },
     };
   } catch (error) {

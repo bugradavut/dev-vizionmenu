@@ -89,7 +89,8 @@ export interface Order {
   created_at: string;
   updated_at: string;
   items?: OrderItem[];
-  
+  branch_timezone?: string; // FO-129: Branch timezone for proper date/time display
+
   // NEW: Individual timing adjustment (Phase 2 - +5min button feature)
   individual_timing_adjustment?: number;
   
@@ -370,6 +371,9 @@ class OrdersService {
       third_party_platform: apiOrder.third_party_platform || undefined,
       created_at: apiOrder.timestamps?.createdAt || apiOrder.created_at,
       updated_at: apiOrder.timestamps?.updatedAt || apiOrder.updated_at,
+
+      // FO-129: Branch timezone for proper date/time display
+      branch_timezone: apiOrder.branch_timezone || 'America/Toronto',
 
       // SW-78 FO-115: Refund tracking
       total_refunded: apiOrder.total_refunded || 0,

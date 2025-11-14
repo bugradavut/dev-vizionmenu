@@ -652,6 +652,16 @@ export const translations = {
         cardPayment: "Pay with Card",
         cardPaymentDesc: "Card at counter",
         saved: "Payment settings updated successfully"
+      },
+
+      // Timezone Settings - FO-129
+      timezone: {
+        title: "Time Zone",
+        subtitle: "Set your branch's local time zone",
+        currentTimezone: "Current time zone:",
+        selectTimezone: "Select time zone",
+        description: "This affects order timestamps and receipts. If different from WEB-SRM (UTC-5:00), the UTC offset will be shown on documents.",
+        utcNotation: "UTC notation will be displayed on printed bills"
       }
     },
     
@@ -2029,6 +2039,16 @@ export const translations = {
         cardPayment: "Payer par carte",
         cardPaymentDesc: "Carte au comptoir",
         saved: "Paramètres de paiement mis à jour avec succès"
+      },
+
+      // Timezone Settings - FO-129 - Canadian French
+      timezone: {
+        title: "Fuseau horaire",
+        subtitle: "Définir le fuseau horaire local de votre succursale",
+        currentTimezone: "Fuseau horaire actuel :",
+        selectTimezone: "Sélectionner le fuseau horaire",
+        description: "Cela affecte les horodatages des commandes et les reçus. Si différent de WEB-SRM (UTC-5:00), le décalage UTC sera affiché sur les documents.",
+        utcNotation: "La notation UTC sera affichée sur les factures imprimées"
       }
     },
     
