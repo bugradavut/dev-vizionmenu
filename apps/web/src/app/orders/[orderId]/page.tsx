@@ -634,11 +634,25 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
 
   // SW-76: Fetch receipt data when order is completed
   useEffect(() => {
+    let retryCount = 0
+    const maxRetries = 5
+    const retryDelay = 2000 // 2 seconds
+
     const fetchReceipt = async () => {
       if (order?.status === 'completed' && order?.id) {
-        const receipt = await getOrderReceipt(order.id)
+        // Suppress errors for first 4 retries, show error on last attempt
+        const isLastAttempt = retryCount >= maxRetries
+        const receipt = await getOrderReceipt(order.id, !isLastAttempt)
+
         if (receipt) {
           setReceiptData(receipt)
+        } else if (retryCount < maxRetries) {
+          // Receipt not found yet - retry after delay
+          retryCount++
+          console.log(`Receipt not found, retrying... (${retryCount}/${maxRetries})`)
+          setTimeout(fetchReceipt, retryDelay)
+        } else {
+          console.warn('Receipt not found after maximum retries')
         }
       }
     }

@@ -27,14 +27,14 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// services/websrm-adapter/dryrun-adapter.ts
+// apps/api/services/websrm-adapter/dryrun-adapter.ts
 var dryrun_adapter_exports = {};
 __export(dryrun_adapter_exports, {
   emitWebsrmDryRun: () => emitWebsrmDryRun
 });
 module.exports = __toCommonJS(dryrun_adapter_exports);
 
-// ../../packages/websrm-core/dist/enums.js
+// packages/websrm-core/dist/enums.js
 var ActionType;
 (function(ActionType2) {
   ActionType2["REGISTER"] = "ENR";
@@ -157,7 +157,7 @@ var ORDER_STATUS_MAP = {
   refunded: ActionType.CANCEL
 };
 
-// ../../packages/websrm-core/dist/format.js
+// packages/websrm-core/dist/format.js
 function formatAmount(amount) {
   if (!Number.isFinite(amount)) {
     throw new Error(`Invalid amount: ${amount}. Must be a finite number.`);
@@ -277,7 +277,7 @@ function validateSoftwareVersion(version) {
 }
 __name(validateSoftwareVersion, "validateSoftwareVersion");
 
-// ../../packages/websrm-core/dist/signature.js
+// packages/websrm-core/dist/signature.js
 var SignatureAlgorithm;
 (function(SignatureAlgorithm2) {
   SignatureAlgorithm2["HMAC_SHA256"] = "HMAC-SHA256";
@@ -320,7 +320,7 @@ function canonicalizePayload(payload) {
 }
 __name(canonicalizePayload, "canonicalizePayload");
 
-// ../../packages/websrm-core/dist/header-provider.js
+// packages/websrm-core/dist/header-provider.js
 function buildHeaders(options) {
   if (!options.certificationCode || typeof options.certificationCode !== "string") {
     throw new Error("certificationCode is required and must be a non-empty string");
@@ -349,7 +349,7 @@ function buildHeaders(options) {
 }
 __name(buildHeaders, "buildHeaders");
 
-// ../../packages/websrm-core/dist/qr.js
+// packages/websrm-core/dist/qr.js
 function buildReceiptQr(response, options = { format: "url" }) {
   if (!response || !response.idTrans) {
     throw new Error("Invalid WEB-SRM response: missing idTrans");
@@ -384,7 +384,7 @@ function buildReceiptQr(response, options = { format: "url" }) {
 }
 __name(buildReceiptQr, "buildReceiptQr");
 
-// ../../packages/websrm-core/dist/field-mapper.js
+// packages/websrm-core/dist/field-mapper.js
 function mapOrderToReqTrans(order, signature) {
   if (!order || !order.id) {
     throw new Error("Order is required and must have an ID");
@@ -508,7 +508,7 @@ function mapLineItems(items) {
 }
 __name(mapLineItems, "mapLineItems");
 
-// services/websrm-adapter/dryrun-adapter.ts
+// apps/api/services/websrm-adapter/dryrun-adapter.ts
 var import_fs = require("fs");
 var path = __toESM(require("path"));
 var import_crypto = require("crypto");

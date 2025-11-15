@@ -17,7 +17,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// services/websrm-adapter/profile-resolver.ts
+// apps/api/services/websrm-adapter/profile-resolver.ts
 var profile_resolver_exports = {};
 __export(profile_resolver_exports, {
   getProfileKey: () => getProfileKey,
@@ -26,7 +26,7 @@ __export(profile_resolver_exports, {
 });
 module.exports = __toCommonJS(profile_resolver_exports);
 
-// services/websrm-adapter/secrets.ts
+// apps/api/services/websrm-adapter/secrets.ts
 var import_crypto = require("crypto");
 var ALGORITHM = "aes-256-gcm";
 var KEY_LENGTH = 32;
@@ -59,7 +59,7 @@ function decryptSecret(encrypted) {
 }
 __name(decryptSecret, "decryptSecret");
 
-// services/websrm-adapter/profile-resolver.ts
+// apps/api/services/websrm-adapter/profile-resolver.ts
 var import_supabase_js = require("@supabase/supabase-js");
 var MOCK_PROFILES = {
   // Default DEV profile

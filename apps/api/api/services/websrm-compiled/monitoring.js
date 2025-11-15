@@ -17,7 +17,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// services/websrm-adapter/monitoring.ts
+// apps/api/services/websrm-adapter/monitoring.ts
 var monitoring_exports = {};
 __export(monitoring_exports, {
   checkQrOverflow: () => checkQrOverflow,

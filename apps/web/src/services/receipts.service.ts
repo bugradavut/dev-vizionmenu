@@ -19,9 +19,13 @@ export interface ReceiptData {
 /**
  * Get receipt data for an order
  * @param orderId - Order ID
+ * @param suppressError - If true, don't log errors (useful for retries)
  * @returns Receipt data with QR code and WEB-SRM transaction info
  */
-export async function getOrderReceipt(orderId: string): Promise<ReceiptData | null> {
+export async function getOrderReceipt(
+  orderId: string,
+  suppressError: boolean = false
+): Promise<ReceiptData | null> {
   try {
     const response = await apiClient.get<ReceiptData>(`/api/v1/orders/${orderId}/receipt`);
 
@@ -31,7 +35,10 @@ export async function getOrderReceipt(orderId: string): Promise<ReceiptData | nu
 
     return response.data;
   } catch (error) {
-    console.error('Failed to fetch receipt data:', error);
+    // Only log error if not suppressed (allows silent retries)
+    if (!suppressError) {
+      console.error('Failed to fetch receipt data:', error);
+    }
     return null;
   }
 }

@@ -17,7 +17,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// services/websrm-adapter/headers-builder.ts
+// apps/api/services/websrm-adapter/headers-builder.ts
 var headers_builder_exports = {};
 __export(headers_builder_exports, {
   buildCanonicalBaseString: () => buildCanonicalBaseString,
@@ -26,7 +26,7 @@ __export(headers_builder_exports, {
 });
 module.exports = __toCommonJS(headers_builder_exports);
 
-// services/websrm-adapter/signature-ecdsa.ts
+// apps/api/services/websrm-adapter/signature-ecdsa.ts
 var import_crypto = require("crypto");
 function derToP1363(der) {
   let offset = 0;
@@ -97,7 +97,7 @@ function fingerprintSha1(certPem) {
 }
 __name(fingerprintSha1, "fingerprintSha1");
 
-// services/websrm-adapter/headers-builder.ts
+// apps/api/services/websrm-adapter/headers-builder.ts
 function buildOfficialHeaders(input, baseString) {
   if (!input.env || !["DEV", "ESSAI", "PROD"].includes(input.env)) {
     throw new Error(`env must be DEV, ESSAI, or PROD, got: ${input.env}`);
