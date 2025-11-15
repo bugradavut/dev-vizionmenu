@@ -30,4 +30,7 @@ router.post('/timer-check', ordersController.checkOrderTimers);
 // Update individual order timing adjustment
 router.patch('/:orderId/timing', requireAuthWithBranch, ordersController.updateOrderTiming);
 
+// Get receipt data for an order (SW-76)
+router.get('/:orderId/receipt', optionalAuth, ordersController.getOrderReceipt);
+
 module.exports = router;

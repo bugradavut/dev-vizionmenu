@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ArrowLeft, Clock, MapPin, User, CheckCircle, CheckCircle2, Circle, AlertCircle, Package, RefreshCw, Wallet, XCircle, Timer, ClockPlus, TicketPercent, Minus, Plus, Trash2, ClipboardList } from "lucide-react"
 import { ordersService } from "@/services/orders.service"
 import { refundsService } from "@/services/refunds.service"
+import { getOrderReceipt } from "@/services/receipts.service"
 import { getSourceIcon } from "@/assets/images"
 import Image from "next/image"
 import Link from "next/link"
@@ -76,6 +77,15 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
   
   // Timer state
   const [currentTime, setCurrentTime] = useState(new Date())
+
+  // SW-76: Receipt data state
+  const [receiptData, setReceiptData] = useState<{
+    websrm_transaction_id?: string;
+    transaction_timestamp?: string;
+    qr_data?: string;
+    format?: 'CUSTOMER' | 'MERCHANT' | 'INTERNAL';
+    print_mode?: 'PAPER' | 'ELECTRONIC';
+  } | null>(null)
   
   // Timing adjustment loading state
   const [timingLoading, setTimingLoading] = useState(false)
@@ -621,6 +631,20 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
       }
     }
   }, [])
+
+  // SW-76: Fetch receipt data when order is completed
+  useEffect(() => {
+    const fetchReceipt = async () => {
+      if (order?.status === 'completed' && order?.id) {
+        const receipt = await getOrderReceipt(order.id)
+        if (receipt) {
+          setReceiptData(receipt)
+        }
+      }
+    }
+
+    fetchReceipt()
+  }, [order?.status, order?.id])
 
 
   // Loading and error states
@@ -2159,8 +2183,18 @@ export default function OrderDetailPage({ params, searchParams }: OrderDetailPag
                       
                       {order.status === 'completed' && (
                         <div>
-                          {/* FO-129: Print Bill with Timezone Notation */}
-                          <PrintBill order={order} branchName={branchName || undefined} />
+                          {/* SW-76: Print Bill with Branch Data and Receipt Data */}
+                          <PrintBill
+                            order={order}
+                            branchName={branchName || undefined}
+                            branchData={{
+                              name: branchName || 'Vision Menu',
+                              gst_number: settings?.gstNumber,
+                              qst_number: settings?.qstNumber,
+                              // TODO: Add address, phone, device_id from branches table
+                            }}
+                            receiptData={receiptData || undefined}
+                          />
                         </div>
                       )}
                       

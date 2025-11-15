@@ -8,6 +8,13 @@ const commissionService = require('../services/commission.service');
 const orderSourceService = require('../services/order-source.service');
 const { handleControllerError } = require('../helpers/error-handler');
 const { logActivity } = require('../helpers/audit-logger');
+const { createClient } = require('@supabase/supabase-js');
+
+// Create Supabase client for receipt queries
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 /**
  * GET /api/v1/orders
@@ -412,6 +419,59 @@ const updateOrderTiming = async (req, res) => {
   }
 };
 
+/**
+ * Get receipt data for an order (SW-76)
+ * Fetches WEB-SRM transaction data including QR code
+ */
+const getOrderReceipt = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID is required'
+      });
+    }
+
+    // Get receipt from receipts table
+    const { data: receipt, error } = await supabase
+      .from('receipts')
+      .select('*')
+      .eq('order_id', orderId)
+      .eq('format', 'CUSTOMER') // Only customer receipts for printing
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+      throw error;
+    }
+
+    if (!receipt) {
+      // No receipt found - order might not have been sent to WEB-SRM yet
+      return res.status(404).json({
+        success: false,
+        message: 'Receipt not found for this order'
+      });
+    }
+
+    // Return formatted receipt data
+    return res.status(200).json({
+      success: true,
+      data: {
+        websrm_transaction_id: receipt.websrm_transaction_id,
+        transaction_timestamp: receipt.transaction_timestamp,
+        qr_data: receipt.qr_data,
+        format: receipt.format,
+        print_mode: receipt.print_mode || 'PAPER'
+      }
+    });
+  } catch (error) {
+    handleControllerError(error, 'get order receipt', res);
+  }
+};
+
 module.exports = {
   getOrders,
   getOrderDetail,
@@ -419,5 +479,6 @@ module.exports = {
   checkAutoAccept,
   createOrder,
   checkOrderTimers,
-  updateOrderTiming
+  updateOrderTiming,
+  getOrderReceipt
 };
