@@ -102,6 +102,18 @@ export default function Template1Layout(props: ThemeLayoutProps) {
              item.description?.toLowerCase().includes(logic.searchQuery.toLowerCase())
     })
 
+  // Group items by category for "All Menu" view
+  const groupedItems = logic.selectedCategory === 'all'
+    ? menuItems.reduce((acc, item) => {
+        const categoryId = item.category_id
+        if (!acc[categoryId]) {
+          acc[categoryId] = []
+        }
+        acc[categoryId].push(item)
+        return acc
+      }, {} as Record<string, typeof menuItems>)
+    : {}
+
   // Branch switcher
   const BranchSwitcher = ({ className = '' }: { className?: string }) => {
     if (!logic.availableBranches.length || logic.availableBranches.length === 1 || orderContext.isQROrder) {
@@ -313,66 +325,165 @@ export default function Template1Layout(props: ThemeLayoutProps) {
 
                 {/* Products Grid - Restaurant Style Horizontal Cards */}
                 <div className="max-w-screen-2xl mx-auto px-6 py-8 pb-32">
-                  <div className="grid grid-cols-3 gap-4">
-                    {menuItems.map((item) => {
-                      const itemQuantity = getItemQuantity(item.id)
+                  {logic.selectedCategory === 'all' && Object.keys(groupedItems).length > 0 ? (
+                    // Grouped by Category View for "All Menu"
+                    <div className="space-y-12">
+                      {Object.entries(groupedItems).map(([categoryId, items]) => {
+                        const category = customerMenu.categories.find(cat => cat.id === categoryId)
 
-                      return (
-                        <div
-                          key={item.id}
-                          className="group bg-white rounded-lg overflow-hidden shadow-sm transition-all duration-200 cursor-pointer border border-gray-200 hover:border-primary/40 flex relative"
-                          onClick={() => handleItemClick(item)}
-                        >
-                          {/* Quantity Badge - Card Top Right */}
-                          {itemQuantity > 0 && (
-                            <div className="absolute top-2 right-2 z-10">
-                              <div className="bg-primary text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-md">
-                                {itemQuantity}
+                        return (
+                          <div key={categoryId}>
+                            {/* Category Section Header */}
+                            <div className="mb-6">
+                              <div className="flex items-center gap-4 mb-4">
+                                {/* Category Icon */}
+                                <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center shadow-sm border border-primary/20">
+                                  {category?.icon && (() => {
+                                    const Icon = getIconComponent(category.icon)
+                                    return <Icon className="w-7 h-7 text-primary" />
+                                  })()}
+                                </div>
+
+                                {/* Category Title & Item Count */}
+                                <div className="flex-1">
+                                  <h3 className="text-2xl font-bold text-gray-900">
+                                    {category?.name || 'Other'}
+                                  </h3>
+                                  <p className="text-sm text-gray-500">
+                                    {items.length} {items.length === 1 ? 'item' : 'items'} available
+                                  </p>
+                                </div>
                               </div>
+
+                              {/* Divider */}
+                              <div className="h-px bg-gray-300"></div>
                             </div>
-                          )}
 
-                          {/* Image - Left Side */}
-                          <div className="relative w-32 h-32 flex-shrink-0 bg-gray-100 overflow-hidden">
-                            {item.image_url ? (
-                              <img
-                                src={item.image_url}
-                                alt={item.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gradient-to-br from-gray-50 to-gray-100">
-                                <ShoppingBag className="w-12 h-12" />
-                              </div>
-                            )}
+                            {/* Category Items Grid */}
+                            <div className="grid grid-cols-3 gap-4">
+                              {items.map((item) => {
+                                const itemQuantity = getItemQuantity(item.id)
+
+                                return (
+                                  <div
+                                    key={item.id}
+                                    className="group bg-white rounded-lg overflow-hidden shadow-sm transition-all duration-200 cursor-pointer border border-gray-200 hover:border-primary/40 flex relative"
+                                    onClick={() => handleItemClick(item)}
+                                  >
+                                    {/* Quantity Badge */}
+                                    {itemQuantity > 0 && (
+                                      <div className="absolute top-2 right-2 z-10">
+                                        <div className="bg-primary text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-md">
+                                          {itemQuantity}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Image - Left Side */}
+                                    <div className="relative w-32 h-32 flex-shrink-0 bg-gray-100 overflow-hidden">
+                                      {item.image_url ? (
+                                        <img
+                                          src={item.image_url}
+                                          alt={item.name}
+                                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gradient-to-br from-gray-50 to-gray-100">
+                                          <ShoppingBag className="w-12 h-12" />
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="flex-1 p-4 flex flex-col justify-between min-w-0">
+                                      <div className="flex-1 min-h-0">
+                                        <h3 className="font-semibold text-base mb-1 line-clamp-1 text-gray-900">{item.name}</h3>
+                                        {item.description && (
+                                          <p className="text-sm text-gray-500 line-clamp-2">{item.description}</p>
+                                        )}
+                                      </div>
+
+                                      {/* Price & Arrow */}
+                                      <div className="flex items-center justify-between mt-2">
+                                        <span className="text-xl font-bold text-primary">${item.price.toFixed(2)}</span>
+                                        <div className="w-8 h-8 rounded-full bg-primary/10 group-hover:bg-primary flex items-center justify-center transition-colors">
+                                          <ChevronRight className="w-5 h-5 text-primary group-hover:text-white transition-colors" />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
                           </div>
-
-                          {/* Content - Right Side */}
-                          <div className="flex-1 p-4 flex flex-col justify-between min-w-0">
-                            <div className="flex-1 min-h-0">
-                              <h3 className="font-semibold text-base mb-1 line-clamp-1 text-gray-900">{item.name}</h3>
-                              {item.description && (
-                                <p className="text-sm text-gray-500 line-clamp-2">{item.description}</p>
-                              )}
-                            </div>
-
-                            {/* Price & Arrow */}
-                            <div className="flex items-center justify-between mt-2">
-                              <span className="text-xl font-bold text-primary">${item.price.toFixed(2)}</span>
-                              <div className="w-8 h-8 rounded-full bg-primary/10 group-hover:bg-primary flex items-center justify-center transition-colors">
-                                <ChevronRight className="w-5 h-5 text-primary group-hover:text-white transition-colors" />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {menuItems.length === 0 && (
-                    <div className="text-center py-20">
-                      <p className="text-gray-500 text-lg">No items found</p>
+                        )
+                      })}
                     </div>
+                  ) : (
+                    // Regular Grid View for Specific Categories
+                    <>
+                      <div className="grid grid-cols-3 gap-4">
+                        {menuItems.map((item) => {
+                          const itemQuantity = getItemQuantity(item.id)
+
+                          return (
+                            <div
+                              key={item.id}
+                              className="group bg-white rounded-lg overflow-hidden shadow-sm transition-all duration-200 cursor-pointer border border-gray-200 hover:border-primary/40 flex relative"
+                              onClick={() => handleItemClick(item)}
+                            >
+                              {/* Quantity Badge - Card Top Right */}
+                              {itemQuantity > 0 && (
+                                <div className="absolute top-2 right-2 z-10">
+                                  <div className="bg-primary text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-md">
+                                    {itemQuantity}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Image - Left Side */}
+                              <div className="relative w-32 h-32 flex-shrink-0 bg-gray-100 overflow-hidden">
+                                {item.image_url ? (
+                                  <img
+                                    src={item.image_url}
+                                    alt={item.name}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gradient-to-br from-gray-50 to-gray-100">
+                                    <ShoppingBag className="w-12 h-12" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Content - Right Side */}
+                              <div className="flex-1 p-4 flex flex-col justify-between min-w-0">
+                                <div className="flex-1 min-h-0">
+                                  <h3 className="font-semibold text-base mb-1 line-clamp-1 text-gray-900">{item.name}</h3>
+                                  {item.description && (
+                                    <p className="text-sm text-gray-500 line-clamp-2">{item.description}</p>
+                                  )}
+                                </div>
+
+                                {/* Price & Arrow */}
+                                <div className="flex items-center justify-between mt-2">
+                                  <span className="text-xl font-bold text-primary">${item.price.toFixed(2)}</span>
+                                  <div className="w-8 h-8 rounded-full bg-primary/10 group-hover:bg-primary flex items-center justify-center transition-colors">
+                                    <ChevronRight className="w-5 h-5 text-primary group-hover:text-white transition-colors" />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+
+                      {menuItems.length === 0 && (
+                        <div className="text-center py-20">
+                          <p className="text-gray-500 text-lg">No items found</p>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </ScrollArea>
@@ -516,67 +627,166 @@ export default function Template1Layout(props: ThemeLayoutProps) {
 
               {/* Products List - Native Scroll */}
               <div className="p-4 pb-32">
-                <div className="space-y-3">
-                  {menuItems.map((item) => {
-                    const itemQuantity = getItemQuantity(item.id)
+                {logic.selectedCategory === 'all' && Object.keys(groupedItems).length > 0 ? (
+                  // Grouped by Category View for "All Menu"
+                  <div className="space-y-8">
+                    {Object.entries(groupedItems).map(([categoryId, items]) => {
+                      const category = customerMenu.categories.find(cat => cat.id === categoryId)
 
-                    return (
-                      <div
-                        key={item.id}
-                        className="group bg-white rounded-lg overflow-hidden shadow-sm transition-all duration-200 cursor-pointer border border-gray-200 hover:border-primary/40 flex relative"
-                        onClick={() => handleItemClick(item)}
-                      >
-                        {/* Quantity Badge - Card Top Right */}
-                        {itemQuantity > 0 && (
-                          <div className="absolute top-2 right-2 z-10">
-                            <div className="bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-md">
-                              {itemQuantity}
+                      return (
+                        <div key={categoryId}>
+                          {/* Category Section Header */}
+                          <div className="mb-4">
+                            <div className="flex items-center gap-3 mb-3">
+                              {/* Category Icon */}
+                              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shadow-sm border border-primary/20">
+                                {category?.icon && (() => {
+                                  const Icon = getIconComponent(category.icon)
+                                  return <Icon className="w-6 h-6 text-primary" />
+                                })()}
+                              </div>
+
+                              {/* Category Title & Item Count */}
+                              <div className="flex-1">
+                                <h3 className="text-xl font-bold text-gray-900">
+                                  {category?.name || 'Other'}
+                                </h3>
+                                <p className="text-xs text-gray-500">
+                                  {items.length} {items.length === 1 ? 'item' : 'items'} available
+                                </p>
+                              </div>
                             </div>
+
+                            {/* Divider */}
+                            <div className="h-px bg-gray-300"></div>
                           </div>
-                        )}
 
-                        {/* Image - Left Side */}
-                        <div className="relative w-24 h-24 flex-shrink-0 bg-gray-100 overflow-hidden">
-                          {item.image_url ? (
-                            <img
-                              src={item.image_url}
-                              alt={item.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gradient-to-br from-gray-50 to-gray-100">
-                              <ShoppingBag className="w-10 h-10" />
-                            </div>
-                          )}
+                          {/* Category Items List */}
+                          <div className="space-y-3">
+                            {items.map((item) => {
+                              const itemQuantity = getItemQuantity(item.id)
+
+                              return (
+                                <div
+                                  key={item.id}
+                                  className="group bg-white rounded-lg overflow-hidden shadow-sm transition-all duration-200 cursor-pointer border border-gray-200 hover:border-primary/40 flex relative"
+                                  onClick={() => handleItemClick(item)}
+                                >
+                                  {/* Quantity Badge */}
+                                  {itemQuantity > 0 && (
+                                    <div className="absolute top-2 right-2 z-10">
+                                      <div className="bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-md">
+                                        {itemQuantity}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Image */}
+                                  <div className="relative w-24 h-24 flex-shrink-0 bg-gray-100 overflow-hidden">
+                                    {item.image_url ? (
+                                      <img
+                                        src={item.image_url}
+                                        alt={item.name}
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gradient-to-br from-gray-50 to-gray-100">
+                                        <ShoppingBag className="w-10 h-10" />
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Content */}
+                                  <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
+                                    <div className="flex-1 min-h-0">
+                                      <h3 className="font-semibold text-sm mb-1 line-clamp-1 text-gray-900">{item.name}</h3>
+                                      {item.description && (
+                                        <p className="text-xs text-gray-500 line-clamp-2">{item.description}</p>
+                                      )}
+                                    </div>
+
+                                    {/* Price & Arrow */}
+                                    <div className="flex items-center justify-between mt-2">
+                                      <span className="text-lg font-bold text-primary">${item.price.toFixed(2)}</span>
+                                      <div className="w-7 h-7 rounded-full bg-primary/10 group-hover:bg-primary flex items-center justify-center transition-colors">
+                                        <ChevronRight className="w-4 h-4 text-primary group-hover:text-white transition-colors" />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
                         </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  // Regular List View for Specific Categories
+                  <>
+                    <div className="space-y-3">
+                      {menuItems.map((item) => {
+                        const itemQuantity = getItemQuantity(item.id)
 
-                        {/* Content - Right Side */}
-                        <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
-                          <div className="flex-1 min-h-0">
-                            <h3 className="font-semibold text-sm mb-1 line-clamp-1 text-gray-900">{item.name}</h3>
-                            {item.description && (
-                              <p className="text-xs text-gray-500 line-clamp-2">{item.description}</p>
+                        return (
+                          <div
+                            key={item.id}
+                            className="group bg-white rounded-lg overflow-hidden shadow-sm transition-all duration-200 cursor-pointer border border-gray-200 hover:border-primary/40 flex relative"
+                            onClick={() => handleItemClick(item)}
+                          >
+                            {/* Quantity Badge - Card Top Right */}
+                            {itemQuantity > 0 && (
+                              <div className="absolute top-2 right-2 z-10">
+                                <div className="bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-md">
+                                  {itemQuantity}
+                                </div>
+                              </div>
                             )}
-                          </div>
 
-                          {/* Price & Arrow */}
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-lg font-bold text-primary">${item.price.toFixed(2)}</span>
-                            <div className="w-7 h-7 rounded-full bg-primary/10 group-hover:bg-primary flex items-center justify-center transition-colors">
-                              <ChevronRight className="w-4 h-4 text-primary group-hover:text-white transition-colors" />
+                            {/* Image - Left Side */}
+                            <div className="relative w-24 h-24 flex-shrink-0 bg-gray-100 overflow-hidden">
+                              {item.image_url ? (
+                                <img
+                                  src={item.image_url}
+                                  alt={item.name}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gradient-to-br from-gray-50 to-gray-100">
+                                  <ShoppingBag className="w-10 h-10" />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Content - Right Side */}
+                            <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
+                              <div className="flex-1 min-h-0">
+                                <h3 className="font-semibold text-sm mb-1 line-clamp-1 text-gray-900">{item.name}</h3>
+                                {item.description && (
+                                  <p className="text-xs text-gray-500 line-clamp-2">{item.description}</p>
+                                )}
+                              </div>
+
+                              {/* Price & Arrow */}
+                              <div className="flex items-center justify-between mt-2">
+                                <span className="text-lg font-bold text-primary">${item.price.toFixed(2)}</span>
+                                <div className="w-7 h-7 rounded-full bg-primary/10 group-hover:bg-primary flex items-center justify-center transition-colors">
+                                  <ChevronRight className="w-4 h-4 text-primary group-hover:text-white transition-colors" />
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    )
-                  })}
+                        )
+                      })}
 
-                  {menuItems.length === 0 && (
-                    <div className="text-center py-12">
-                      <p className="text-gray-500">No items found</p>
+                      {menuItems.length === 0 && (
+                        <div className="text-center py-12">
+                          <p className="text-gray-500">No items found</p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -713,67 +923,166 @@ export default function Template1Layout(props: ThemeLayoutProps) {
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 pb-32 relative z-10">
-            <div className="space-y-2">
-              {menuItems.map((item) => {
-                const itemQuantity = getItemQuantity(item.id)
+            {logic.selectedCategory === 'all' && Object.keys(groupedItems).length > 0 ? (
+              // Grouped by Category View for "All Menu"
+              <div className="space-y-6">
+                {Object.entries(groupedItems).map(([categoryId, items]) => {
+                  const category = customerMenu.categories.find(cat => cat.id === categoryId)
 
-                return (
-                  <div
-                    key={item.id}
-                    className="group bg-white rounded-lg overflow-hidden shadow-sm transition-all cursor-pointer border border-gray-200 active:border-primary/40 flex relative"
-                    onClick={() => handleItemClick(item)}
-                  >
-                    {/* Quantity Badge - Card Top Right */}
-                    {itemQuantity > 0 && (
-                      <div className="absolute top-1 right-1 z-10">
-                        <div className="bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-md">
-                          {itemQuantity}
+                  return (
+                    <div key={categoryId}>
+                      {/* Category Section Header */}
+                      <div className="mb-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          {/* Category Icon */}
+                          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shadow-sm border border-primary/20">
+                            {category?.icon && (() => {
+                              const Icon = getIconComponent(category.icon)
+                              return <Icon className="w-5 h-5 text-primary" />
+                            })()}
+                          </div>
+
+                          {/* Category Title & Item Count */}
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-gray-900">
+                              {category?.name || 'Other'}
+                            </h3>
+                            <p className="text-xs text-gray-500">
+                              {items.length} {items.length === 1 ? 'item' : 'items'}
+                            </p>
+                          </div>
                         </div>
+
+                        {/* Divider */}
+                        <div className="h-px bg-gray-300"></div>
                       </div>
-                    )}
 
-                    {/* Image - Left Side */}
-                    <div className="relative w-20 h-20 flex-shrink-0 bg-gray-100 overflow-hidden">
-                      {item.image_url ? (
-                        <img
-                          src={item.image_url}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gradient-to-br from-gray-50 to-gray-100">
-                          <ShoppingBag className="w-8 h-8" />
-                        </div>
-                      )}
+                      {/* Category Items List */}
+                      <div className="space-y-2">
+                        {items.map((item) => {
+                          const itemQuantity = getItemQuantity(item.id)
+
+                          return (
+                            <div
+                              key={item.id}
+                              className="group bg-white rounded-lg overflow-hidden shadow-sm transition-all cursor-pointer border border-gray-200 active:border-primary/40 flex relative"
+                              onClick={() => handleItemClick(item)}
+                            >
+                              {/* Quantity Badge */}
+                              {itemQuantity > 0 && (
+                                <div className="absolute top-1 right-1 z-10">
+                                  <div className="bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-md">
+                                    {itemQuantity}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Image */}
+                              <div className="relative w-20 h-20 flex-shrink-0 bg-gray-100 overflow-hidden">
+                                {item.image_url ? (
+                                  <img
+                                    src={item.image_url}
+                                    alt={item.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gradient-to-br from-gray-50 to-gray-100">
+                                    <ShoppingBag className="w-8 h-8" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Content */}
+                              <div className="flex-1 p-2 flex flex-col justify-between min-w-0">
+                                <div className="flex-1 min-h-0">
+                                  <h3 className="font-semibold text-sm mb-0.5 line-clamp-1 text-gray-900">{item.name}</h3>
+                                  {item.description && (
+                                    <p className="text-xs text-gray-500 line-clamp-1">{item.description}</p>
+                                  )}
+                                </div>
+
+                                {/* Price & Arrow */}
+                                <div className="flex items-center justify-between mt-1">
+                                  <span className="text-base font-bold text-primary">${item.price.toFixed(2)}</span>
+                                  <div className="w-6 h-6 rounded-full bg-primary/10 active:bg-primary flex items-center justify-center transition-colors">
+                                    <ChevronRight className="w-4 h-4 text-primary group-active:text-white transition-colors" />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
+                  )
+                })}
+              </div>
+            ) : (
+              // Regular List View for Specific Categories
+              <>
+                <div className="space-y-2">
+                  {menuItems.map((item) => {
+                    const itemQuantity = getItemQuantity(item.id)
 
-                    {/* Content - Right Side */}
-                    <div className="flex-1 p-2 flex flex-col justify-between min-w-0">
-                      <div className="flex-1 min-h-0">
-                        <h3 className="font-semibold text-sm mb-0.5 line-clamp-1 text-gray-900">{item.name}</h3>
-                        {item.description && (
-                          <p className="text-xs text-gray-500 line-clamp-1">{item.description}</p>
+                    return (
+                      <div
+                        key={item.id}
+                        className="group bg-white rounded-lg overflow-hidden shadow-sm transition-all cursor-pointer border border-gray-200 active:border-primary/40 flex relative"
+                        onClick={() => handleItemClick(item)}
+                      >
+                        {/* Quantity Badge - Card Top Right */}
+                        {itemQuantity > 0 && (
+                          <div className="absolute top-1 right-1 z-10">
+                            <div className="bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-md">
+                              {itemQuantity}
+                            </div>
+                          </div>
                         )}
-                      </div>
 
-                      {/* Price & Arrow */}
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-base font-bold text-primary">${item.price.toFixed(2)}</span>
-                        <div className="w-6 h-6 rounded-full bg-primary/10 active:bg-primary flex items-center justify-center transition-colors">
-                          <ChevronRight className="w-4 h-4 text-primary group-active:text-white transition-colors" />
+                        {/* Image - Left Side */}
+                        <div className="relative w-20 h-20 flex-shrink-0 bg-gray-100 overflow-hidden">
+                          {item.image_url ? (
+                            <img
+                              src={item.image_url}
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gradient-to-br from-gray-50 to-gray-100">
+                              <ShoppingBag className="w-8 h-8" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Content - Right Side */}
+                        <div className="flex-1 p-2 flex flex-col justify-between min-w-0">
+                          <div className="flex-1 min-h-0">
+                            <h3 className="font-semibold text-sm mb-0.5 line-clamp-1 text-gray-900">{item.name}</h3>
+                            {item.description && (
+                              <p className="text-xs text-gray-500 line-clamp-1">{item.description}</p>
+                            )}
+                          </div>
+
+                          {/* Price & Arrow */}
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-base font-bold text-primary">${item.price.toFixed(2)}</span>
+                            <div className="w-6 h-6 rounded-full bg-primary/10 active:bg-primary flex items-center justify-center transition-colors">
+                              <ChevronRight className="w-4 h-4 text-primary group-active:text-white transition-colors" />
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                )
-              })}
+                    )
+                  })}
 
-              {menuItems.length === 0 && (
-                <div className="text-center py-8 col-span-2">
-                  <p className="text-gray-500">No items found</p>
+                  {menuItems.length === 0 && (
+                    <div className="text-center py-8 col-span-2">
+                      <p className="text-gray-500">No items found</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
 
           <div className="relative z-10">

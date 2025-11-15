@@ -1,1 +1,8 @@
-{}
+{
+  "crons": [
+    {
+      "path": "/api/v1/websrm/process-queue",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
