@@ -145,16 +145,35 @@ async function processQueueItemSimple(queueItem) {
       };
     }
 
-    // 3) Get order with items
+    // 3) Get order with items and branch tax numbers (GST/QST required by Quebec)
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('*, order_items(*)')
+      .select(`
+        *,
+        order_items(*),
+        branches!inner(
+          gst_number,
+          qst_number
+        )
+      `)
       .eq('id', queueItem.order_id)
       .single();
 
     if (orderError || !order) {
       throw new Error(`Order not found: ${queueItem.order_id}`);
     }
+
+    // Extract tax numbers from branch (required by Quebec WEB-SRM)
+    const gstNumber = order.branches?.gst_number;
+    const qstNumber = order.branches?.qst_number;
+
+    if (!gstNumber || !qstNumber) {
+      throw new Error(`Branch missing GST/QST numbers (required by Quebec WEB-SRM)`);
+    }
+
+    // Add tax numbers to order object for payload builder
+    order.gst_number = gstNumber;
+    order.qst_number = qstNumber;
 
     // 4) Get profile from database (with decrypted certificates)
     // Note: Quebec WEB-SRM requires certificates per-branch (physical location)
