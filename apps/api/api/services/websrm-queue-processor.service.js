@@ -145,10 +145,10 @@ async function processQueueItemSimple(queueItem) {
       };
     }
 
-    // 3) Get order with items and branch (to get chain_id/tenant_id)
+    // 3) Get order with items
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('*, order_items(*), branches!inner(chain_id)')
+      .select('*, order_items(*)')
       .eq('id', queueItem.order_id)
       .single();
 
@@ -156,14 +156,10 @@ async function processQueueItemSimple(queueItem) {
       throw new Error(`Order not found: ${queueItem.order_id}`);
     }
 
-    // Extract tenant_id (chain_id) from the joined branch
-    const tenantId = order.branches?.chain_id;
-    if (!tenantId) {
-      throw new Error(`Order ${queueItem.order_id} has no tenant (chain_id missing)`);
-    }
-
     // 4) Get profile from database (with decrypted certificates)
-    const profile = await getProfileForOrder(order, tenantId);
+    // Note: Quebec WEB-SRM requires certificates per-branch (physical location)
+    // So we lookup by branch_id, not chain_id
+    const profile = await getProfileForOrder(order, order.branch_id);
 
     // 5) Try to use compiled adapter for payload generation
     let result;
@@ -355,18 +351,23 @@ async function processQueueItemSimple(queueItem) {
 /**
  * Get profile for order with database lookup
  * Production version - uses database with encrypted certificates
+ *
+ * NOTE: branchId is used to lookup the profile because Quebec WEB-SRM
+ * requires certificates per physical location (branch), not per chain.
+ * The database column is named 'tenant_id' but contains branch_id values.
  */
-async function getProfileForOrder(order, tenantId) {
+async function getProfileForOrder(order, branchId) {
   const env = process.env.WEBSRM_ENV || 'DEV';
 
-  console.log(`[WebSRM Queue Processor] Resolving profile for tenant: ${tenantId}, env: ${env}`);
+  console.log(`[WebSRM Queue Processor] Resolving profile for branch: ${branchId}, env: ${env}`);
 
   // Try database lookup first
+  // Note: Column is named 'tenant_id' but contains branch_id values
   try {
     const { data: profile, error } = await supabase
       .from('websrm_profiles')
       .select('*')
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', branchId)
       .eq('env', env)
       .eq('is_active', true)
       .single();
@@ -423,7 +424,7 @@ async function getProfileForOrder(order, tenantId) {
     authorizationCode: process.env.WEBSRM_ESSAI_AUTH_CODE || 'W7V7-K8W9',
     privateKeyPem: '', // Empty - no certificates in fallback!
     certPem: '',
-    tenantId: tenantId,
+    tenantId: branchId, // Note: Using branch_id as tenant_id for consistency
     branchId: order.branch_id,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
