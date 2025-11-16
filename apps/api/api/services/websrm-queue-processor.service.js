@@ -416,6 +416,8 @@ async function getProfileForOrder(order, branchId) {
   const env = process.env.WEBSRM_ENV || 'DEV';
 
   console.log(`[WebSRM Queue Processor] Resolving profile for branch: ${branchId}, env: ${env}`);
+  console.log(`[WebSRM Queue Processor] 🔍 DEBUG - order.gst_number:`, order.gst_number);
+  console.log(`[WebSRM Queue Processor] 🔍 DEBUG - order.qst_number:`, order.qst_number);
 
   // Try database lookup first
   // Note: Column is named 'tenant_id' but contains branch_id values
