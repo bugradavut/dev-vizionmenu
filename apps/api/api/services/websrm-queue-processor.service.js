@@ -211,6 +211,14 @@ async function processQueueItemSimple(queueItem) {
     const baseUrl = getWebSrmBaseUrl(profile.env);
     // CASESSAI: NOT USED for /transaction endpoint (only for enrolment/annulation/modification)
 
+    // DEBUG: Log request payload
+    console.log('[WebSRM Queue Processor] 📤 Sending to Quebec API:');
+    console.log('  URL:', `${baseUrl}/transaction`);
+    console.log('  Headers:', JSON.stringify(result.headers, null, 2));
+    console.log('  Request Body:', result.sigs.canonical.substring(0, 500) + '...');
+    console.log('  Order GST:', order.gst_number);
+    console.log('  Order QST:', order.qst_number);
+
     const response = await postToQuebec({
       baseUrl,
       path: '/transaction',
