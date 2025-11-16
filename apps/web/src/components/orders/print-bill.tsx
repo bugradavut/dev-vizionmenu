@@ -3,7 +3,6 @@
 import React, { useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Printer } from 'lucide-react'
 import type { Order } from '@/services/orders.service'
@@ -280,59 +279,58 @@ export const PrintBill: React.FC<PrintBillProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
-          <div className="rounded-lg border bg-white shadow-sm">
-            <div ref={printRef} className="p-6 font-mono text-sm">
+        {/* Hidden Print Content - Classic Receipt Style */}
+        <div className="hidden">
+          <div ref={printRef} className="font-mono text-sm">
             {/* SW-76: Merchant Copy Warning (Section 4.4.2) */}
             {isMerchantCopy && (
-              <div className="bg-red-50 border-2 border-red-500 rounded-md p-4 mb-6 text-center">
-                <p className="font-bold text-red-900 text-sm">
-                  *** COPIE DU COMMERÇANT ***
-                </p>
-                <p className="text-red-700 text-xs mt-1">
-                  NE PAS REMETTRE AU CLIENT
-                </p>
+              <div className="merchant-copy-warning">
+                *** COPIE DU COMMERÇANT ***
+                <br />
+                NE PAS REMETTRE AU CLIENT
               </div>
             )}
 
             {/* Bill Header - SW-76 Section 4.4.1 Prescribed Information #1 */}
-            <div className="text-center pb-4 mb-4 border-b-2 border-dashed border-gray-300">
-              <h1 className="text-xl font-bold mb-2">{branchData?.name || branchName || 'Vision Menu'}</h1>
-              <p className="text-xs text-gray-600 mb-1">{language === 'fr' ? 'Facture de commande' : 'Order Bill'}</p>
+            <div className="bill-header">
+              <h1>{branchData?.name || branchName || 'Vision Menu'}</h1>
+              <p>{language === 'fr' ? 'Facture de commande' : 'Order Bill'}</p>
               {/* SW-76: Contact information (address + phone) */}
-              {branchData?.address && <p className="text-xs text-gray-600">{branchData.address}</p>}
-              {branchData?.phone && <p className="text-xs text-gray-600">{branchData.phone}</p>}
+              {branchData?.address && <p>{branchData.address}</p>}
+              {branchData?.phone && <p>{branchData.phone}</p>}
             </div>
 
             {/* Bill Info */}
-            <div className="mb-4 pb-4 border-b border-dashed border-gray-300 space-y-2">
+            <div className="bill-info">
               {/* SW-76: Transaction date/time when user sent info (#2) */}
-              <div className="text-xs text-gray-700">
-                {new Date(order.created_at).toLocaleDateString('en-CA', {
-                  timeZone: branchTimezone,
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit'
-                })}{' '}
-                {new Date(order.created_at).toLocaleTimeString('en-CA', {
-                  timeZone: branchTimezone,
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                  hour12: false
-                })}
+              <div className="bill-info-row">
+                <span>
+                  {new Date(order.created_at).toLocaleDateString('en-CA', {
+                    timeZone: branchTimezone,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                  })}{' '}
+                  {new Date(order.created_at).toLocaleTimeString('en-CA', {
+                    timeZone: branchTimezone,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                  })}
+                </span>
               </div>
               {/* SW-76: Transaction number (#3) */}
-              <div className="font-bold text-sm">
-                TRANSACTION #{order.orderNumber}
+              <div className="bill-info-row">
+                <strong>TRANSACTION #{order.orderNumber}</strong>
               </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-600">{language === 'fr' ? 'Client' : 'Customer'}:</span>
-                <span className="font-medium">{order.customer?.name || 'N/A'}</span>
+              <div className="bill-info-row">
+                <span>{language === 'fr' ? 'Client' : 'Customer'}:</span>
+                <span>{order.customer?.name || 'N/A'}</span>
               </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-600">{language === 'fr' ? 'Type' : 'Type'}:</span>
-                <span className="font-medium">
+              <div className="bill-info-row">
+                <span>{language === 'fr' ? 'Type' : 'Type'}:</span>
+                <span>
                   {order.order_type === 'delivery'
                     ? language === 'fr' ? 'Livraison' : 'Delivery'
                     : order.order_type === 'takeaway'
@@ -343,45 +341,38 @@ export const PrintBill: React.FC<PrintBillProps> = ({
 
               {/* FO-129: Timezone Notation */}
               {showTimezoneNotation && (
-                <div className="bg-gray-50 border border-gray-200 rounded p-2 mt-3">
-                  <div className="text-xs">
-                    <strong className="text-gray-700">{language === 'fr' ? 'Fuseau horaire' : 'Timezone'}:</strong>
-                    <span className="ml-1">{timezoneOffset}</span>
-                  </div>
-                  <p className="text-[9px] text-gray-500 mt-1">
+                <div className="timezone-notation">
+                  <strong>{language === 'fr' ? 'Fuseau horaire' : 'Timezone'}:</strong> {timezoneOffset}
+                  <br />
+                  <span style={{ fontSize: '9px', color: '#666' }}>
                     {language === 'fr'
                       ? 'Les heures affichées sont dans ce fuseau horaire'
                       : 'Times shown are in this timezone'}
-                  </p>
+                  </span>
                 </div>
               )}
             </div>
 
             {/* Bill Items */}
-            <div className="mb-4 pb-4 border-b-2 border-dashed border-gray-300 space-y-3">
+            <div className="bill-items">
               {order.items?.map((item, index) => (
-                <div key={item.id || index} className="space-y-1">
-                  <div className="flex justify-between items-start text-sm">
+                <div key={item.id || index} className="bill-item">
+                  <div className="bill-item-header">
                     {/* SW-76: Item description (#4) with tax indicators (#5) */}
-                    <span className="font-medium flex-1">
-                      <span className="inline-block w-6">{item.quantity}</span>
-                      {item.name}
-                    </span>
-                    <span className="font-bold ml-2">
-                      ${((item.price || 0) * item.quantity).toFixed(2)} <span className="text-xs text-gray-500">FP</span>
-                    </span>
+                    <span>{item.quantity} {item.name}</span>
+                    <span>${((item.price || 0) * item.quantity).toFixed(2)} FP</span>
                   </div>
                   {item.variants && item.variants.length > 0 && (
-                    <div className="ml-6 space-y-0.5">
+                    <div className="bill-item-details">
                       {item.variants.map((variant, i) => (
-                        <div key={i} className="text-xs text-gray-600">
+                        <div key={i}>
                           + {variant.name} {variant.price > 0 && `($${variant.price.toFixed(2)})`}
                         </div>
                       ))}
                     </div>
                   )}
                   {item.special_instructions && (
-                    <div className="ml-6 text-xs text-gray-600 italic">
+                    <div className="bill-item-details">
                       {language === 'fr' ? 'Notes' : 'Notes'}: {item.special_instructions}
                     </div>
                   )}
@@ -390,124 +381,346 @@ export const PrintBill: React.FC<PrintBillProps> = ({
             </div>
 
             {/* Bill Totals - SW-76 Compliant */}
-            <div className="mb-4 pb-4 border-b-2 border-dashed border-gray-300 space-y-2">
+            <div className="bill-totals">
               {/* SW-76: Subtotal (#6) */}
-              <div className="flex justify-between text-sm">
-                <span className="font-medium">SOUS-TOTAL</span>
-                <span className="font-medium">${calculatedSubtotal.toFixed(2)}</span>
+              <div className="bill-total-row">
+                <span>SOUS-TOTAL</span>
+                <span>${calculatedSubtotal.toFixed(2)}</span>
               </div>
 
               {/* SW-76: Equal divider (#11) */}
-              <Separator className="my-3" />
+              <div className="equal-divider"></div>
 
               {/* SW-76: GST Registration + Amount (#7, #12) */}
-              <div className="text-xs text-gray-600">
+              <div className="tax-registration">
                 TPS {branchData?.gst_number || '000000000RT0001'}
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="bill-total-row">
                 <span>TPS :</span>
-                <span className="font-medium">${(order.pricing.gst || 0).toFixed(2)}</span>
+                <span>${(order.pricing.gst || 0).toFixed(2)}</span>
               </div>
 
               {/* SW-76: QST Registration + Amount (#8, #13) */}
-              <div className="text-xs text-gray-600 mt-2">
+              <div className="tax-registration">
                 TVQ {branchData?.qst_number || '0000000000TQ0001'}
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="bill-total-row">
                 <span>TVQ :</span>
-                <span className="font-medium">${(order.pricing.qst || 0).toFixed(2)}</span>
+                <span>${(order.pricing.qst || 0).toFixed(2)}</span>
               </div>
 
               {/* SW-76: Total (#14) */}
-              <Separator className="my-3" />
-              <div className="flex justify-between text-lg font-bold pt-2">
+              <div className="bill-total-row grand-total">
                 <span>TOTAL :</span>
                 <span>${(order.pricing.total || 0).toFixed(2)}</span>
               </div>
 
               {/* SW-76: Payment method (#9) - only for closing receipts */}
               {order.payment_method && (
-                <div className="text-center text-xs text-gray-600 mt-3">
-                  {order.payment_method === 'cash' ? 'ARGENT COMPTANT' :
-                   order.payment_method === 'card' ? 'CARTE' :
-                   order.payment_method === 'counter' ? 'PAIEMENT AU COMPTOIR' :
-                   'PAIEMENT EN LIGNE'}
+                <div className="bill-total-row" style={{ marginTop: '10px', fontSize: '11px' }}>
+                  <span>
+                    {order.payment_method === 'cash' ? 'ARGENT COMPTANT' :
+                     order.payment_method === 'card' ? 'CARTE' :
+                     order.payment_method === 'counter' ? 'PAIEMENT AU COMPTOIR' :
+                     'PAIEMENT EN LIGNE'}
+                  </span>
                 </div>
               )}
 
               {/* SW-76: Payment status note (#15) */}
-              <div className="text-center font-bold text-base border border-gray-900 rounded p-3 mt-3">
+              <div className="payment-note">
                 PAIEMENT REÇU
               </div>
             </div>
 
             {/* SW-76: QR Code Section (#16) */}
             {qrCodeDataUrl && receiptData?.qr_data && (
-              <div className="text-center mb-4 pb-4 border-b border-dashed border-gray-300">
-                <img
-                  src={qrCodeDataUrl}
-                  alt="Transaction QR Code"
-                  className="w-40 h-40 mx-auto rounded border border-gray-200"
-                />
+              <div className="qr-section">
+                <img src={qrCodeDataUrl} alt="Transaction QR Code" />
                 {receiptData.print_mode === 'ELECTRONIC' && (
-                  <a
-                    href={receiptData.qr_data}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:underline italic mt-2 block"
-                  >
-                    Consulter la transaction en ligne
-                  </a>
+                  <div className="qr-link">
+                    <a href={receiptData.qr_data} target="_blank" rel="noopener noreferrer">
+                      Consulter la transaction en ligne
+                    </a>
+                  </div>
                 )}
               </div>
             )}
 
+            {/* SW-76: Equal divider before WEB-SRM data */}
+            <div className="equal-divider"></div>
+
             {/* SW-76: WEB-SRM Transaction Data (#17, #18, #19) */}
             {receiptData && (
-              <>
-                <Separator className="my-4" />
-                <div className="text-center text-xs text-gray-600 space-y-1 mb-4 pb-4 border-b border-dashed border-gray-300">
-                  {/* #17: WEB-SRM processed time */}
-                  {receiptData.transaction_timestamp && (
-                    <div>
-                      {new Date(receiptData.transaction_timestamp).toLocaleDateString('en-CA', {
-                        timeZone: branchTimezone,
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit'
-                      })}{' '}
-                      {new Date(receiptData.transaction_timestamp).toLocaleTimeString('en-CA', {
-                        timeZone: branchTimezone,
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                        hour12: false
-                      })}
-                    </div>
-                  )}
-                  {/* #18: WEB-SRM transaction number */}
-                  {receiptData.websrm_transaction_id && (
-                    <div className="font-mono">{receiptData.websrm_transaction_id}</div>
-                  )}
-                  {/* #19: Device unique identifier */}
-                  {branchData?.device_id && (
-                    <div className="font-mono">{branchData.device_id}</div>
-                  )}
-                </div>
-              </>
+              <div className="websrm-info">
+                {/* #17: WEB-SRM processed time */}
+                {receiptData.transaction_timestamp && (
+                  <div>
+                    {new Date(receiptData.transaction_timestamp).toLocaleDateString('en-CA', {
+                      timeZone: branchTimezone,
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit'
+                    })}{' '}
+                    {new Date(receiptData.transaction_timestamp).toLocaleTimeString('en-CA', {
+                      timeZone: branchTimezone,
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: false
+                    })}
+                  </div>
+                )}
+                {/* #18: WEB-SRM transaction number */}
+                {receiptData.websrm_transaction_id && (
+                  <div>{receiptData.websrm_transaction_id}</div>
+                )}
+                {/* #19: Device unique identifier */}
+                {branchData?.device_id && (
+                  <div>{branchData.device_id}</div>
+                )}
+              </div>
             )}
 
-            {/* SW-76: Final divider */}
-            <Separator className="my-4" />
+            {/* SW-76: Final equal divider (#20) */}
+            <div className="equal-divider"></div>
 
             {/* Thank you message (optional - can be added per SW-76 note) */}
-            <div className="text-center pt-2">
-              <p className="text-sm font-medium">{language === 'fr' ? 'Merci de votre commande!' : 'Thank you for your order!'}</p>
-              <p className="text-xs text-gray-500 mt-1">Vision Menu</p>
-            </div>
+            <div className="bill-footer">
+              <p>{language === 'fr' ? 'Merci de votre commande!' : 'Thank you for your order!'}</p>
             </div>
           </div>
-        </ScrollArea>
+        </div>
+
+        {/* Visible Preview Content - Modern Layout */}
+        <div className="flex-1 overflow-y-auto -mx-6 px-6">
+          <div className="rounded-lg border bg-white shadow-sm">
+            <div className="p-6 font-mono text-sm">
+              {/* SW-76: Merchant Copy Warning (Section 4.4.2) */}
+              {isMerchantCopy && (
+                <div className="bg-red-50 border-2 border-red-500 rounded-md p-4 mb-6 text-center">
+                  <p className="font-bold text-red-900 text-sm">
+                    *** COPIE DU COMMERÇANT ***
+                  </p>
+                  <p className="text-red-700 text-xs mt-1">
+                    NE PAS REMETTRE AU CLIENT
+                  </p>
+                </div>
+              )}
+
+              {/* Bill Header - SW-76 Section 4.4.1 Prescribed Information #1 */}
+              <div className="text-center pb-4 mb-4 border-b-2 border-dashed border-gray-300">
+                <h1 className="text-xl font-bold mb-2">{branchData?.name || branchName || 'Vision Menu'}</h1>
+                <p className="text-xs text-gray-600 mb-1">{language === 'fr' ? 'Facture de commande' : 'Order Bill'}</p>
+                {/* SW-76: Contact information (address + phone) */}
+                {branchData?.address && <p className="text-xs text-gray-600">{branchData.address}</p>}
+                {branchData?.phone && <p className="text-xs text-gray-600">{branchData.phone}</p>}
+              </div>
+
+              {/* Bill Info */}
+              <div className="mb-4 pb-4 border-b border-dashed border-gray-300 space-y-2">
+                {/* SW-76: Transaction date/time when user sent info (#2) */}
+                <div className="text-xs text-gray-700">
+                  {new Date(order.created_at).toLocaleDateString('en-CA', {
+                    timeZone: branchTimezone,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                  })}{' '}
+                  {new Date(order.created_at).toLocaleTimeString('en-CA', {
+                    timeZone: branchTimezone,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                  })}
+                </div>
+                {/* SW-76: Transaction number (#3) */}
+                <div className="font-bold text-sm">
+                  TRANSACTION #{order.orderNumber}
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-600">{language === 'fr' ? 'Client' : 'Customer'}:</span>
+                  <span className="font-medium">{order.customer?.name || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-600">{language === 'fr' ? 'Type' : 'Type'}:</span>
+                  <span className="font-medium">
+                    {order.order_type === 'delivery'
+                      ? language === 'fr' ? 'Livraison' : 'Delivery'
+                      : order.order_type === 'takeaway'
+                      ? language === 'fr' ? 'À emporter' : 'Takeaway'
+                      : language === 'fr' ? 'Sur place' : 'Dine-in'}
+                  </span>
+                </div>
+
+                {/* FO-129: Timezone Notation */}
+                {showTimezoneNotation && (
+                  <div className="bg-gray-50 border border-gray-200 rounded p-2 mt-3">
+                    <div className="text-xs">
+                      <strong className="text-gray-700">{language === 'fr' ? 'Fuseau horaire' : 'Timezone'}:</strong>
+                      <span className="ml-1">{timezoneOffset}</span>
+                    </div>
+                    <p className="text-[9px] text-gray-500 mt-1">
+                      {language === 'fr'
+                        ? 'Les heures affichées sont dans ce fuseau horaire'
+                        : 'Times shown are in this timezone'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Bill Items */}
+              <div className="mb-4 pb-4 border-b-2 border-dashed border-gray-300 space-y-3">
+                {order.items?.map((item, index) => (
+                  <div key={item.id || index} className="space-y-1">
+                    <div className="flex justify-between items-start text-sm">
+                      {/* SW-76: Item description (#4) with tax indicators (#5) */}
+                      <span className="font-medium flex-1">
+                        <span className="inline-block w-6">{item.quantity}</span>
+                        {item.name}
+                      </span>
+                      <span className="font-bold ml-2">
+                        ${((item.price || 0) * item.quantity).toFixed(2)} <span className="text-xs text-gray-500">FP</span>
+                      </span>
+                    </div>
+                    {item.variants && item.variants.length > 0 && (
+                      <div className="ml-6 space-y-0.5">
+                        {item.variants.map((variant, i) => (
+                          <div key={i} className="text-xs text-gray-600">
+                            + {variant.name} {variant.price > 0 && `($${variant.price.toFixed(2)})`}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {item.special_instructions && (
+                      <div className="ml-6 text-xs text-gray-600 italic">
+                        {language === 'fr' ? 'Notes' : 'Notes'}: {item.special_instructions}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Bill Totals - SW-76 Compliant */}
+              <div className="mb-4 pb-4 border-b-2 border-dashed border-gray-300 space-y-2">
+                {/* SW-76: Subtotal (#6) */}
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">SOUS-TOTAL</span>
+                  <span className="font-medium">${calculatedSubtotal.toFixed(2)}</span>
+                </div>
+
+                {/* SW-76: Equal divider (#11) */}
+                <Separator className="my-3" />
+
+                {/* SW-76: GST Registration + Amount (#7, #12) */}
+                <div className="text-xs text-gray-600">
+                  TPS {branchData?.gst_number || '000000000RT0001'}
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>TPS :</span>
+                  <span className="font-medium">${(order.pricing.gst || 0).toFixed(2)}</span>
+                </div>
+
+                {/* SW-76: QST Registration + Amount (#8, #13) */}
+                <div className="text-xs text-gray-600 mt-2">
+                  TVQ {branchData?.qst_number || '0000000000TQ0001'}
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>TVQ :</span>
+                  <span className="font-medium">${(order.pricing.qst || 0).toFixed(2)}</span>
+                </div>
+
+                {/* SW-76: Total (#14) */}
+                <Separator className="my-3" />
+                <div className="flex justify-between text-lg font-bold pt-2">
+                  <span>TOTAL :</span>
+                  <span>${(order.pricing.total || 0).toFixed(2)}</span>
+                </div>
+
+                {/* SW-76: Payment method (#9) - only for closing receipts */}
+                {order.payment_method && (
+                  <div className="text-center text-xs text-gray-600 mt-3">
+                    {order.payment_method === 'cash' ? 'ARGENT COMPTANT' :
+                     order.payment_method === 'card' ? 'CARTE' :
+                     order.payment_method === 'counter' ? 'PAIEMENT AU COMPTOIR' :
+                     'PAIEMENT EN LIGNE'}
+                  </div>
+                )}
+
+                {/* SW-76: Payment status note (#15) */}
+                <div className="text-center font-bold text-base border border-gray-900 rounded p-3 mt-3">
+                  PAIEMENT REÇU
+                </div>
+              </div>
+
+              {/* SW-76: QR Code Section (#16) */}
+              {qrCodeDataUrl && receiptData?.qr_data && (
+                <div className="text-center mb-4 pb-4 border-b border-dashed border-gray-300">
+                  <img
+                    src={qrCodeDataUrl}
+                    alt="Transaction QR Code"
+                    className="w-40 h-40 mx-auto rounded border border-gray-200"
+                  />
+                  {receiptData.print_mode === 'ELECTRONIC' && (
+                    <a
+                      href={receiptData.qr_data}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:underline italic mt-2 block"
+                    >
+                      Consulter la transaction en ligne
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* SW-76: WEB-SRM Transaction Data (#17, #18, #19) */}
+              {receiptData && (
+                <>
+                  <Separator className="my-4" />
+                  <div className="text-center text-xs text-gray-600 space-y-1 mb-4 pb-4 border-b border-dashed border-gray-300">
+                    {/* #17: WEB-SRM processed time */}
+                    {receiptData.transaction_timestamp && (
+                      <div>
+                        {new Date(receiptData.transaction_timestamp).toLocaleDateString('en-CA', {
+                          timeZone: branchTimezone,
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit'
+                        })}{' '}
+                        {new Date(receiptData.transaction_timestamp).toLocaleTimeString('en-CA', {
+                          timeZone: branchTimezone,
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                          hour12: false
+                        })}
+                      </div>
+                    )}
+                    {/* #18: WEB-SRM transaction number */}
+                    {receiptData.websrm_transaction_id && (
+                      <div className="font-mono">{receiptData.websrm_transaction_id}</div>
+                    )}
+                    {/* #19: Device unique identifier */}
+                    {branchData?.device_id && (
+                      <div className="font-mono">{branchData.device_id}</div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* SW-76: Final divider */}
+              <Separator className="my-4" />
+
+              {/* Thank you message (optional - can be added per SW-76 note) */}
+              <div className="text-center pt-2">
+                <p className="text-sm font-medium">{language === 'fr' ? 'Merci de votre commande!' : 'Thank you for your order!'}</p>
+                <p className="text-xs text-gray-500 mt-1">Vision Menu</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <Separator className="my-4" />
 
