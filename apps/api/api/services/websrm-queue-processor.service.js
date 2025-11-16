@@ -481,14 +481,20 @@ function getWebSrmBaseUrl(env) {
 
 /**
  * POST transaction to Quebec API with mTLS support
+ * Uses native https module instead of fetch() to properly support client certificates
  */
 async function postToQuebec({ baseUrl, path, body, headers, idempotencyKey, casEssai, profile }) {
-  const url = `${baseUrl}${path}`;
+  const https = require('https');
+  const { URL } = require('url');
+
+  const fullUrl = `${baseUrl}${path}`;
+  const parsedUrl = new URL(fullUrl);
   const timeout = 30000; // 30 seconds
 
   const requestHeaders = {
     'Content-Type': 'application/json; charset=utf-8',
     'Accept': 'application/json',
+    'Content-Length': Buffer.byteLength(body),
     ...headers
   };
 
@@ -502,66 +508,74 @@ async function postToQuebec({ baseUrl, path, body, headers, idempotencyKey, casE
   //   requestHeaders['CASESSAI'] = casEssai;
   // }
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+  // Build request options with mTLS certificates
+  const requestOptions = {
+    hostname: parsedUrl.hostname,
+    port: parsedUrl.port || 443,
+    path: parsedUrl.pathname + parsedUrl.search,
+    method: 'POST',
+    headers: requestHeaders,
+    timeout: timeout
+  };
 
-    // mTLS Configuration: Add client certificate and private key
-    const https = require('https');
-    let agent = null;
+  // Add client certificate and key for mTLS (REQUIRED by Quebec API)
+  if (profile && profile.certPem && profile.privateKeyPem) {
+    console.log('[WebSRM Queue Processor] ✅ Using mTLS with client certificate');
+    requestOptions.cert = profile.certPem;
+    requestOptions.key = profile.privateKeyPem;
+    requestOptions.rejectUnauthorized = true;
+  } else {
+    console.warn('[WebSRM Queue Processor] ⚠️ No client certificate - mTLS disabled');
+  }
 
-    if (profile && profile.certPem && profile.privateKeyPem) {
-      console.log('[WebSRM Queue Processor] ✅ Using mTLS with client certificate');
-      agent = new https.Agent({
-        cert: profile.certPem,
-        key: profile.privateKeyPem,
-        rejectUnauthorized: true
+  return new Promise((resolve, reject) => {
+    const req = https.request(requestOptions, (res) => {
+      let rawBody = '';
+
+      res.on('data', (chunk) => {
+        rawBody += chunk;
       });
-    } else {
-      console.warn('[WebSRM Queue Processor] ⚠️ No client certificate - mTLS disabled');
-    }
 
-    const fetchResponse = await fetch(url, {
-      method: 'POST',
-      headers: requestHeaders,
-      body,
-      signal: controller.signal,
-      agent  // Add mTLS agent
+      res.on('end', () => {
+        let parsedBody;
+        try {
+          parsedBody = JSON.parse(rawBody);
+        } catch {
+          parsedBody = rawBody;
+        }
+
+        resolve({
+          success: res.statusCode >= 200 && res.statusCode < 300,
+          httpStatus: res.statusCode,
+          body: parsedBody,
+          rawBody
+        });
+      });
     });
 
-    clearTimeout(timeoutId);
+    req.on('error', (error) => {
+      reject(error);
+    });
 
-    const rawBody = await fetchResponse.text();
-    let parsedBody;
-
-    try {
-      parsedBody = JSON.parse(rawBody);
-    } catch {
-      parsedBody = rawBody;
-    }
-
-    return {
-      success: fetchResponse.ok,
-      httpStatus: fetchResponse.status,
-      body: parsedBody,
-      rawBody
-    };
-
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      return {
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({
         success: false,
         httpStatus: 0,
         error: { code: 'TIMEOUT', message: `Request timeout after ${timeout}ms` }
-      };
-    }
+      });
+    });
 
+    // Write request body
+    req.write(body);
+    req.end();
+  }).catch((error) => {
     return {
       success: false,
       httpStatus: 0,
       error: { code: 'NETWORK_ERROR', message: error.message || 'Network request failed' }
     };
-  }
+  });
 }
 
 /**
