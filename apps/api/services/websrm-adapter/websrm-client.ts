@@ -254,12 +254,8 @@ export function generateIdempotencyKey(
  * @returns true if network calls are allowed
  */
 export function isNetworkEnabled(): boolean {
-  // Network disabled in production (hard block)
-  if (process.env.NODE_ENV === 'production') {
-    return false;
-  }
-
-  // Network disabled by default
+  // IMPORTANT: Allow network in production if explicitly enabled
+  // This is required for Quebec WEB-SRM API calls to work
   return process.env.WEBSRM_NETWORK_ENABLED === 'true';
 }
 

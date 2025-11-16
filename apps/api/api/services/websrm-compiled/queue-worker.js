@@ -454,9 +454,6 @@ function generateIdempotencyKey(env, tenantId, orderId, timestamp, signature, to
 }
 __name(generateIdempotencyKey, "generateIdempotencyKey");
 function isNetworkEnabled() {
-  if (process.env.NODE_ENV === "production") {
-    return false;
-  }
   return process.env.WEBSRM_NETWORK_ENABLED === "true";
 }
 __name(isNetworkEnabled, "isNetworkEnabled");
@@ -1687,9 +1684,13 @@ var MOCK_PROFILES = {
     // Free development mode (no test case restrictions)
     // Authorization code (used during enrolment only)
     authorizationCode: process.env.WEBSRM_ESSAI_AUTH_CODE || "W7V7-K8W9",
-    // PEM keys: Load directly from files (simpler than encryption)
-    // Files are gitignored and stored in tmp/certs/
+    // PEM keys: Load from files ONLY in local development
+    // In production (Vercel), certificates come from database
     privateKeyPem: (() => {
+      if (process.env.VERCEL || process.env.NODE_ENV === "production") {
+        console.log("[WEB-SRM] Production detected - skipping file-based certificate loading");
+        return "";
+      }
       try {
         const fs2 = require("fs");
         const path = require("path");
@@ -1708,6 +1709,9 @@ var MOCK_PROFILES = {
       }
     })(),
     certPem: (() => {
+      if (process.env.VERCEL || process.env.NODE_ENV === "production") {
+        return "";
+      }
       try {
         const fs2 = require("fs");
         const path = require("path");

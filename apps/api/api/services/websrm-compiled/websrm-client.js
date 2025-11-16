@@ -148,9 +148,6 @@ function generateIdempotencyKey(env, tenantId, orderId, timestamp, signature, to
 }
 __name(generateIdempotencyKey, "generateIdempotencyKey");
 function isNetworkEnabled() {
-  if (process.env.NODE_ENV === "production") {
-    return false;
-  }
   return process.env.WEBSRM_NETWORK_ENABLED === "true";
 }
 __name(isNetworkEnabled, "isNetworkEnabled");

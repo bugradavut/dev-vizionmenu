@@ -91,11 +91,12 @@ const updateOrderStatus = async (req, res) => {
     const result = await ordersService.updateOrderStatus(orderId, updateData, userBranch);
 
     // Audit log: order status update
+    // IMPORTANT: Use result.id (UUID) instead of orderId (which may be formatted ORDER-XXXXX)
     await logActivity({
       req,
       action: 'update',
       entity: 'order_status',
-      entityId: orderId,
+      entityId: result.id,
       entityName: undefined,
       branchId: userBranch?.branch_id,
       changes: updateData
