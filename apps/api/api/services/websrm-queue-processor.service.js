@@ -164,8 +164,18 @@ async function processQueueItemSimple(queueItem) {
     }
 
     // Extract tax numbers from branch (required by Quebec WEB-SRM)
-    const gstNumber = order.branches?.gst_number;
-    const qstNumber = order.branches?.qst_number;
+    // IMPORTANT: Supabase join can return either object or array
+    // - If inner join with single result: object
+    // - If join with multiple results: array
+    const branchData = Array.isArray(order.branches) ? order.branches[0] : order.branches;
+
+    const gstNumber = branchData?.gst_number;
+    const qstNumber = branchData?.qst_number;
+
+    console.log('[WebSRM Queue Processor] 🔍 Branch tax numbers:');
+    console.log('  Branch data type:', Array.isArray(order.branches) ? 'array' : typeof order.branches);
+    console.log('  GST:', gstNumber);
+    console.log('  QST:', qstNumber);
 
     if (!gstNumber || !qstNumber) {
       throw new Error(`Branch missing GST/QST numbers (required by Quebec WEB-SRM)`);
