@@ -145,10 +145,10 @@ async function processQueueItemSimple(queueItem) {
       };
     }
 
-    // 3) Get order with items
+    // 3) Get order with items and branch (to get chain_id/tenant_id)
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('*, order_items(*)')
+      .select('*, order_items(*), branches!inner(chain_id)')
       .eq('id', queueItem.order_id)
       .single();
 
@@ -156,8 +156,14 @@ async function processQueueItemSimple(queueItem) {
       throw new Error(`Order not found: ${queueItem.order_id}`);
     }
 
+    // Extract tenant_id (chain_id) from the joined branch
+    const tenantId = order.branches?.chain_id;
+    if (!tenantId) {
+      throw new Error(`Order ${queueItem.order_id} has no tenant (chain_id missing)`);
+    }
+
     // 4) Get profile from database (with decrypted certificates)
-    const profile = await getProfileForOrder(order);
+    const profile = await getProfileForOrder(order, tenantId);
 
     // 5) Try to use compiled adapter for payload generation
     let result;
@@ -350,17 +356,17 @@ async function processQueueItemSimple(queueItem) {
  * Get profile for order with database lookup
  * Production version - uses database with encrypted certificates
  */
-async function getProfileForOrder(order) {
+async function getProfileForOrder(order, tenantId) {
   const env = process.env.WEBSRM_ENV || 'DEV';
 
-  console.log(`[WebSRM Queue Processor] Resolving profile for tenant: ${order.tenant_id}, env: ${env}`);
+  console.log(`[WebSRM Queue Processor] Resolving profile for tenant: ${tenantId}, env: ${env}`);
 
   // Try database lookup first
   try {
     const { data: profile, error } = await supabase
       .from('websrm_profiles')
       .select('*')
-      .eq('tenant_id', order.tenant_id)
+      .eq('tenant_id', tenantId)
       .eq('env', env)
       .eq('is_active', true)
       .single();
@@ -417,7 +423,7 @@ async function getProfileForOrder(order) {
     authorizationCode: process.env.WEBSRM_ESSAI_AUTH_CODE || 'W7V7-K8W9',
     privateKeyPem: '', // Empty - no certificates in fallback!
     certPem: '',
-    tenantId: order.tenant_id,
+    tenantId: tenantId,
     branchId: order.branch_id,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
