@@ -156,8 +156,8 @@ async function processQueueItemSimple(queueItem) {
       throw new Error(`Order not found: ${queueItem.order_id}`);
     }
 
-    // 4) Get profile (ESSAI environment)
-    const profile = getProfileForOrder(order);
+    // 4) Get profile from database (with decrypted certificates)
+    const profile = await getProfileForOrder(order);
 
     // 5) Try to use compiled adapter for payload generation
     let result;
@@ -347,11 +347,61 @@ async function processQueueItemSimple(queueItem) {
 }
 
 /**
- * Get profile for order (ESSAI environment)
- * Simplified version - uses environment variables
+ * Get profile for order with database lookup
+ * Production version - uses database with encrypted certificates
  */
-function getProfileForOrder(order) {
-  const env = process.env.WEBSRM_ENV || 'ESSAI';
+async function getProfileForOrder(order) {
+  const env = process.env.WEBSRM_ENV || 'DEV';
+
+  console.log(`[WebSRM Queue Processor] Resolving profile for tenant: ${order.tenant_id}, env: ${env}`);
+
+  // Try database lookup first
+  try {
+    const { data: profile, error } = await supabase
+      .from('websrm_profiles')
+      .select('*')
+      .eq('tenant_id', order.tenant_id)
+      .eq('env', env)
+      .eq('is_active', true)
+      .single();
+
+    if (profile && !error) {
+      console.log('[WebSRM Queue Processor] ✅ Profile found in database');
+
+      // Decrypt PEM keys
+      const { decryptSecret } = getDecryptHelper();
+      const privateKeyPem = decryptSecret(profile.private_key_pem_encrypted);
+      const certPem = decryptSecret(profile.cert_pem_encrypted);
+
+      console.log(`[WebSRM Queue Processor] ✅ Private key decrypted (length: ${privateKeyPem.length})`);
+      console.log(`[WebSRM Queue Processor] ✅ Certificate decrypted (length: ${certPem.length})`);
+
+      return {
+        deviceId: profile.device_id,
+        deviceLocalId: 'device-001',
+        partnerId: profile.partner_id,
+        certCode: profile.cert_code,
+        softwareId: profile.software_id,
+        softwareVersion: profile.software_version,
+        versi: profile.versi,
+        versiParn: profile.versi_parn,
+        env: profile.env,
+        casEssai: profile.cas_essai,
+        privateKeyPem,
+        certPem,
+        tenantId: profile.tenant_id,
+        branchId: order.branch_id,
+        createdAt: profile.created_at,
+        updatedAt: profile.updated_at,
+        isActive: profile.is_active,
+      };
+    }
+  } catch (dbError) {
+    console.warn('[WebSRM Queue Processor] Database lookup failed:', dbError.message);
+  }
+
+  // Fallback to environment variables (for testing only)
+  console.warn('[WebSRM Queue Processor] ⚠️ Using environment variable fallback (no certificates!)');
 
   return {
     env,
@@ -365,13 +415,48 @@ function getProfileForOrder(order) {
     versiParn: '1.0.0',
     casEssai: process.env.WEBSRM_CASESSAI || '500.001',
     authorizationCode: process.env.WEBSRM_ESSAI_AUTH_CODE || 'W7V7-K8W9',
-    privateKeyPem: '', // Not needed for now
+    privateKeyPem: '', // Empty - no certificates in fallback!
     certPem: '',
     tenantId: order.tenant_id,
     branchId: order.branch_id,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     isActive: true
+  };
+}
+
+/**
+ * Helper to decrypt secrets (same as profile-resolver.ts)
+ */
+function getDecryptHelper() {
+  return {
+    decryptSecret: (encrypted) => {
+      const crypto = require('crypto');
+      const ENCRYPTION_KEY = process.env.WEBSRM_ENCRYPTION_KEY;
+
+      if (!ENCRYPTION_KEY) {
+        throw new Error('WEBSRM_ENCRYPTION_KEY not found');
+      }
+
+      // Parse encrypted data: iv:authTag:encrypted
+      const parts = encrypted.split(':');
+      if (parts.length !== 3) {
+        throw new Error('Invalid encrypted format');
+      }
+
+      const iv = Buffer.from(parts[0], 'hex');
+      const authTag = Buffer.from(parts[1], 'hex');
+      const encryptedText = Buffer.from(parts[2], 'hex');
+
+      // Decrypt with AES-256-GCM
+      const decipher = crypto.createDecipheriv('aes-256-gcm', Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
+      decipher.setAuthTag(authTag);
+
+      let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+
+      return decrypted;
+    }
   };
 }
 
