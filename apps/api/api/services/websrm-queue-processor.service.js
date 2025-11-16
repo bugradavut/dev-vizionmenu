@@ -192,7 +192,8 @@ async function processQueueItemSimple(queueItem) {
       body: result.sigs.canonical,
       headers: result.headers,
       idempotencyKey,
-      casEssai: undefined // NEVER send CASESSAI to /transaction endpoint
+      casEssai: undefined, // NEVER send CASESSAI to /transaction endpoint
+      profile  // Pass profile for mTLS certificate
     });
 
     const endTime = Date.now();
@@ -387,9 +388,9 @@ function getWebSrmBaseUrl(env) {
 }
 
 /**
- * POST transaction to Quebec API
+ * POST transaction to Quebec API with mTLS support
  */
-async function postToQuebec({ baseUrl, path, body, headers, idempotencyKey, casEssai }) {
+async function postToQuebec({ baseUrl, path, body, headers, idempotencyKey, casEssai, profile }) {
   const url = `${baseUrl}${path}`;
   const timeout = 30000; // 30 seconds
 
@@ -413,11 +414,27 @@ async function postToQuebec({ baseUrl, path, body, headers, idempotencyKey, casE
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
+    // mTLS Configuration: Add client certificate and private key
+    const https = require('https');
+    let agent = null;
+
+    if (profile && profile.certPem && profile.privateKeyPem) {
+      console.log('[WebSRM Queue Processor] ✅ Using mTLS with client certificate');
+      agent = new https.Agent({
+        cert: profile.certPem,
+        key: profile.privateKeyPem,
+        rejectUnauthorized: true
+      });
+    } else {
+      console.warn('[WebSRM Queue Processor] ⚠️ No client certificate - mTLS disabled');
+    }
+
     const fetchResponse = await fetch(url, {
       method: 'POST',
       headers: requestHeaders,
       body,
-      signal: controller.signal
+      signal: controller.signal,
+      agent  // Add mTLS agent
     });
 
     clearTimeout(timeoutId);
