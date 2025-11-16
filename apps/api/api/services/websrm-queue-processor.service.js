@@ -164,6 +164,7 @@ async function processQueueItemSimple(queueItem) {
     // 5) Try to use compiled adapter for payload generation
     let result;
     try {
+      console.log('[WebSRM Queue Processor] 🔨 Trying TypeScript adapter...');
       const { handleOrderForWebSrm } = require('./websrm-compiled/runtime-adapter.js');
       const { getPreviousActu } = getHelpers();
 
@@ -171,10 +172,13 @@ async function processQueueItemSimple(queueItem) {
         persist: 'none',
         previousActu: await getPreviousActu(queueItem.tenant_id, profile.deviceId)
       });
+      console.log('[WebSRM Queue Processor] ✅ Payload built with TypeScript adapter');
     } catch (adapterError) {
       // TypeScript adapter unavailable - use simple payload builder
-      console.log('[WebSRM Queue Processor] TypeScript adapter unavailable, building payload manually');
+      console.log('[WebSRM Queue Processor] ⚠️  TypeScript adapter failed:', adapterError.message);
+      console.log('[WebSRM Queue Processor] 🔨 Building payload manually...');
       result = await buildPayloadManually(order, profile);
+      console.log('[WebSRM Queue Processor] ✅ Payload built manually');
     }
 
     // 6) Generate idempotency key
@@ -200,6 +204,16 @@ async function processQueueItemSimple(queueItem) {
 
     const endTime = Date.now();
     const durationMs = endTime - startTime;
+
+    // DEBUG: Log full response for debugging
+    console.log('[WebSRM Queue Processor] 📋 Quebec API Response:');
+    console.log('  HTTP Status:', response.httpStatus);
+    console.log('  Success:', response.success);
+    console.log('  Response Body:', JSON.stringify(response.body, null, 2));
+    console.log('  Raw Body:', response.rawBody);
+    if (response.error) {
+      console.log('  Error:', JSON.stringify(response.error, null, 2));
+    }
 
     // 8) Map error
     const mappedError = mapError(response);
