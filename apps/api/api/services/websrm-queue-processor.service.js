@@ -194,6 +194,8 @@ async function processQueueItemSimple(queueItem) {
     let result;
     try {
       console.log('[WebSRM Queue Processor] 🔨 Trying TypeScript adapter...');
+      console.log('[WebSRM Queue Processor] 🔍 DEBUG - profile.gstNumber:', profile.gstNumber);
+      console.log('[WebSRM Queue Processor] 🔍 DEBUG - profile.qstNumber:', profile.qstNumber);
       const { handleOrderForWebSrm } = require('./websrm-compiled/runtime-adapter.js');
       const { getPreviousActu } = getHelpers();
 
@@ -587,6 +589,15 @@ async function postToQuebec({ baseUrl, path, body, headers, idempotencyKey, casE
     requestOptions.rejectUnauthorized = true;
   } else {
     console.warn('[WebSRM Queue Processor] ⚠️ No client certificate - mTLS disabled');
+  }
+
+  // DEBUG: Log full request body to verify tax numbers
+  try {
+    const parsed = JSON.parse(body);
+    console.log('[WebSRM Queue Processor] 📤 FULL Request Body (noTax section):');
+    console.log(JSON.stringify(parsed?.reqTrans?.transActu?.noTax, null, 2));
+  } catch (e) {
+    console.warn('[WebSRM Queue Processor] Could not parse request body for logging');
   }
 
   return new Promise((resolve, reject) => {
