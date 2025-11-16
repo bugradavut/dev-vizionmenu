@@ -43,6 +43,10 @@ export interface ComplianceProfile {
   privateKeyPem: string;     // ECDSA P-256 private key (decrypted)
   certPem: string;           // X.509 certificate (decrypted)
 
+  // Tax numbers (required by Quebec WEB-SRM)
+  gstNumber?: string;        // GST/TPS number (format: 9digits+RT+4digits)
+  qstNumber?: string;        // QST/TVQ number (format: 10digits+TQ+4digits)
+
   // Metadata
   tenantId: string;
   branchId?: string;
