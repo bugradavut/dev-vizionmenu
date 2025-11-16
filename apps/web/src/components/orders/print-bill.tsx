@@ -2,7 +2,9 @@
 
 import React, { useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
 import { Printer } from 'lucide-react'
 import type { Order } from '@/services/orders.service'
 import { getTimezoneOffset } from '@/lib/timezone'
@@ -271,64 +273,66 @@ export const PrintBill: React.FC<PrintBillProps> = ({
           {language === 'fr' ? 'Imprimer la facture' : 'Print Bill'}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-xl font-semibold">
             {language === 'fr' ? 'Aperçu de la facture' : 'Bill Preview'}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="max-h-[600px] overflow-y-auto border rounded-lg p-4 bg-white">
-          <div ref={printRef} className="font-mono text-sm">
+        <ScrollArea className="flex-1 -mx-6 px-6">
+          <div className="rounded-lg border bg-white shadow-sm">
+            <div ref={printRef} className="p-6 font-mono text-sm">
             {/* SW-76: Merchant Copy Warning (Section 4.4.2) */}
             {isMerchantCopy && (
-              <div className="merchant-copy-warning">
-                *** COPIE DU COMMERÇANT ***
-                <br />
-                NE PAS REMETTRE AU CLIENT
+              <div className="bg-red-50 border-2 border-red-500 rounded-md p-4 mb-6 text-center">
+                <p className="font-bold text-red-900 text-sm">
+                  *** COPIE DU COMMERÇANT ***
+                </p>
+                <p className="text-red-700 text-xs mt-1">
+                  NE PAS REMETTRE AU CLIENT
+                </p>
               </div>
             )}
 
             {/* Bill Header - SW-76 Section 4.4.1 Prescribed Information #1 */}
-            <div className="bill-header">
-              <h1>{branchData?.name || branchName || 'Vision Menu'}</h1>
-              <p>{language === 'fr' ? 'Facture de commande' : 'Order Bill'}</p>
+            <div className="text-center pb-4 mb-4 border-b-2 border-dashed border-gray-300">
+              <h1 className="text-xl font-bold mb-2">{branchData?.name || branchName || 'Vision Menu'}</h1>
+              <p className="text-xs text-gray-600 mb-1">{language === 'fr' ? 'Facture de commande' : 'Order Bill'}</p>
               {/* SW-76: Contact information (address + phone) */}
-              {branchData?.address && <p>{branchData.address}</p>}
-              {branchData?.phone && <p>{branchData.phone}</p>}
+              {branchData?.address && <p className="text-xs text-gray-600">{branchData.address}</p>}
+              {branchData?.phone && <p className="text-xs text-gray-600">{branchData.phone}</p>}
             </div>
 
             {/* Bill Info */}
-            <div className="bill-info">
+            <div className="mb-4 pb-4 border-b border-dashed border-gray-300 space-y-2">
               {/* SW-76: Transaction date/time when user sent info (#2) */}
-              <div className="bill-info-row">
-                <span>
-                  {new Date(order.created_at).toLocaleDateString('en-CA', {
-                    timeZone: branchTimezone,
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit'
-                  })}{' '}
-                  {new Date(order.created_at).toLocaleTimeString('en-CA', {
-                    timeZone: branchTimezone,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false
-                  })}
-                </span>
+              <div className="text-xs text-gray-700">
+                {new Date(order.created_at).toLocaleDateString('en-CA', {
+                  timeZone: branchTimezone,
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit'
+                })}{' '}
+                {new Date(order.created_at).toLocaleTimeString('en-CA', {
+                  timeZone: branchTimezone,
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                  hour12: false
+                })}
               </div>
               {/* SW-76: Transaction number (#3) */}
-              <div className="bill-info-row">
-                <strong>TRANSACTION #{order.orderNumber}</strong>
+              <div className="font-bold text-sm">
+                TRANSACTION #{order.orderNumber}
               </div>
-              <div className="bill-info-row">
-                <span>{language === 'fr' ? 'Client' : 'Customer'}:</span>
-                <span>{order.customer?.name || 'N/A'}</span>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-600">{language === 'fr' ? 'Client' : 'Customer'}:</span>
+                <span className="font-medium">{order.customer?.name || 'N/A'}</span>
               </div>
-              <div className="bill-info-row">
-                <span>{language === 'fr' ? 'Type' : 'Type'}:</span>
-                <span>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-600">{language === 'fr' ? 'Type' : 'Type'}:</span>
+                <span className="font-medium">
                   {order.order_type === 'delivery'
                     ? language === 'fr' ? 'Livraison' : 'Delivery'
                     : order.order_type === 'takeaway'
@@ -339,38 +343,45 @@ export const PrintBill: React.FC<PrintBillProps> = ({
 
               {/* FO-129: Timezone Notation */}
               {showTimezoneNotation && (
-                <div className="timezone-notation">
-                  <strong>{language === 'fr' ? 'Fuseau horaire' : 'Timezone'}:</strong> {timezoneOffset}
-                  <br />
-                  <span style={{ fontSize: '9px', color: '#666' }}>
+                <div className="bg-gray-50 border border-gray-200 rounded p-2 mt-3">
+                  <div className="text-xs">
+                    <strong className="text-gray-700">{language === 'fr' ? 'Fuseau horaire' : 'Timezone'}:</strong>
+                    <span className="ml-1">{timezoneOffset}</span>
+                  </div>
+                  <p className="text-[9px] text-gray-500 mt-1">
                     {language === 'fr'
                       ? 'Les heures affichées sont dans ce fuseau horaire'
                       : 'Times shown are in this timezone'}
-                  </span>
+                  </p>
                 </div>
               )}
             </div>
 
             {/* Bill Items */}
-            <div className="bill-items">
+            <div className="mb-4 pb-4 border-b-2 border-dashed border-gray-300 space-y-3">
               {order.items?.map((item, index) => (
-                <div key={item.id || index} className="bill-item">
-                  <div className="bill-item-header">
+                <div key={item.id || index} className="space-y-1">
+                  <div className="flex justify-between items-start text-sm">
                     {/* SW-76: Item description (#4) with tax indicators (#5) */}
-                    <span>{item.quantity} {item.name}</span>
-                    <span>${((item.price || 0) * item.quantity).toFixed(2)} FP</span>
+                    <span className="font-medium flex-1">
+                      <span className="inline-block w-6">{item.quantity}</span>
+                      {item.name}
+                    </span>
+                    <span className="font-bold ml-2">
+                      ${((item.price || 0) * item.quantity).toFixed(2)} <span className="text-xs text-gray-500">FP</span>
+                    </span>
                   </div>
                   {item.variants && item.variants.length > 0 && (
-                    <div className="bill-item-details">
+                    <div className="ml-6 space-y-0.5">
                       {item.variants.map((variant, i) => (
-                        <div key={i}>
+                        <div key={i} className="text-xs text-gray-600">
                           + {variant.name} {variant.price > 0 && `($${variant.price.toFixed(2)})`}
                         </div>
                       ))}
                     </div>
                   )}
                   {item.special_instructions && (
-                    <div className="bill-item-details">
+                    <div className="ml-6 text-xs text-gray-600 italic">
                       {language === 'fr' ? 'Notes' : 'Notes'}: {item.special_instructions}
                     </div>
                   )}
@@ -379,126 +390,136 @@ export const PrintBill: React.FC<PrintBillProps> = ({
             </div>
 
             {/* Bill Totals - SW-76 Compliant */}
-            <div className="bill-totals">
+            <div className="mb-4 pb-4 border-b-2 border-dashed border-gray-300 space-y-2">
               {/* SW-76: Subtotal (#6) */}
-              <div className="bill-total-row">
-                <span>SOUS-TOTAL</span>
-                <span>${calculatedSubtotal.toFixed(2)}</span>
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">SOUS-TOTAL</span>
+                <span className="font-medium">${calculatedSubtotal.toFixed(2)}</span>
               </div>
 
               {/* SW-76: Equal divider (#11) */}
-              <div className="equal-divider"></div>
+              <Separator className="my-3" />
 
               {/* SW-76: GST Registration + Amount (#7, #12) */}
-              <div className="tax-registration">
+              <div className="text-xs text-gray-600">
                 TPS {branchData?.gst_number || '000000000RT0001'}
               </div>
-              <div className="bill-total-row">
+              <div className="flex justify-between text-sm">
                 <span>TPS :</span>
-                <span>${(order.pricing.gst || 0).toFixed(2)}</span>
+                <span className="font-medium">${(order.pricing.gst || 0).toFixed(2)}</span>
               </div>
 
               {/* SW-76: QST Registration + Amount (#8, #13) */}
-              <div className="tax-registration">
+              <div className="text-xs text-gray-600 mt-2">
                 TVQ {branchData?.qst_number || '0000000000TQ0001'}
               </div>
-              <div className="bill-total-row">
+              <div className="flex justify-between text-sm">
                 <span>TVQ :</span>
-                <span>${(order.pricing.qst || 0).toFixed(2)}</span>
+                <span className="font-medium">${(order.pricing.qst || 0).toFixed(2)}</span>
               </div>
 
               {/* SW-76: Total (#14) */}
-              <div className="bill-total-row grand-total">
+              <Separator className="my-3" />
+              <div className="flex justify-between text-lg font-bold pt-2">
                 <span>TOTAL :</span>
                 <span>${(order.pricing.total || 0).toFixed(2)}</span>
               </div>
 
               {/* SW-76: Payment method (#9) - only for closing receipts */}
               {order.payment_method && (
-                <div className="bill-total-row" style={{ marginTop: '10px', fontSize: '11px' }}>
-                  <span>
-                    {order.payment_method === 'cash' ? 'ARGENT COMPTANT' :
-                     order.payment_method === 'card' ? 'CARTE' :
-                     order.payment_method === 'counter' ? 'PAIEMENT AU COMPTOIR' :
-                     'PAIEMENT EN LIGNE'}
-                  </span>
+                <div className="text-center text-xs text-gray-600 mt-3">
+                  {order.payment_method === 'cash' ? 'ARGENT COMPTANT' :
+                   order.payment_method === 'card' ? 'CARTE' :
+                   order.payment_method === 'counter' ? 'PAIEMENT AU COMPTOIR' :
+                   'PAIEMENT EN LIGNE'}
                 </div>
               )}
 
               {/* SW-76: Payment status note (#15) */}
-              <div className="payment-note">
+              <div className="text-center font-bold text-base border border-gray-900 rounded p-3 mt-3">
                 PAIEMENT REÇU
               </div>
             </div>
 
             {/* SW-76: QR Code Section (#16) */}
             {qrCodeDataUrl && receiptData?.qr_data && (
-              <div className="qr-section">
-                <img src={qrCodeDataUrl} alt="Transaction QR Code" />
+              <div className="text-center mb-4 pb-4 border-b border-dashed border-gray-300">
+                <img
+                  src={qrCodeDataUrl}
+                  alt="Transaction QR Code"
+                  className="w-40 h-40 mx-auto rounded border border-gray-200"
+                />
                 {receiptData.print_mode === 'ELECTRONIC' && (
-                  <div className="qr-link">
-                    <a href={receiptData.qr_data} target="_blank" rel="noopener noreferrer">
-                      Consulter la transaction en ligne
-                    </a>
-                  </div>
+                  <a
+                    href={receiptData.qr_data}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline italic mt-2 block"
+                  >
+                    Consulter la transaction en ligne
+                  </a>
                 )}
               </div>
             )}
-
-            {/* SW-76: Equal divider before WEB-SRM data */}
-            <div className="equal-divider"></div>
 
             {/* SW-76: WEB-SRM Transaction Data (#17, #18, #19) */}
             {receiptData && (
-              <div className="websrm-info">
-                {/* #17: WEB-SRM processed time */}
-                {receiptData.transaction_timestamp && (
-                  <div>
-                    {new Date(receiptData.transaction_timestamp).toLocaleDateString('en-CA', {
-                      timeZone: branchTimezone,
-                      year: 'numeric',
-                      month: '2-digit',
-                      day: '2-digit'
-                    })}{' '}
-                    {new Date(receiptData.transaction_timestamp).toLocaleTimeString('en-CA', {
-                      timeZone: branchTimezone,
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      second: '2-digit',
-                      hour12: false
-                    })}
-                  </div>
-                )}
-                {/* #18: WEB-SRM transaction number */}
-                {receiptData.websrm_transaction_id && (
-                  <div>{receiptData.websrm_transaction_id}</div>
-                )}
-                {/* #19: Device unique identifier */}
-                {branchData?.device_id && (
-                  <div>{branchData.device_id}</div>
-                )}
-              </div>
+              <>
+                <Separator className="my-4" />
+                <div className="text-center text-xs text-gray-600 space-y-1 mb-4 pb-4 border-b border-dashed border-gray-300">
+                  {/* #17: WEB-SRM processed time */}
+                  {receiptData.transaction_timestamp && (
+                    <div>
+                      {new Date(receiptData.transaction_timestamp).toLocaleDateString('en-CA', {
+                        timeZone: branchTimezone,
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                      })}{' '}
+                      {new Date(receiptData.transaction_timestamp).toLocaleTimeString('en-CA', {
+                        timeZone: branchTimezone,
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                      })}
+                    </div>
+                  )}
+                  {/* #18: WEB-SRM transaction number */}
+                  {receiptData.websrm_transaction_id && (
+                    <div className="font-mono">{receiptData.websrm_transaction_id}</div>
+                  )}
+                  {/* #19: Device unique identifier */}
+                  {branchData?.device_id && (
+                    <div className="font-mono">{branchData.device_id}</div>
+                  )}
+                </div>
+              </>
             )}
 
-            {/* SW-76: Final equal divider (#20) */}
-            <div className="equal-divider"></div>
+            {/* SW-76: Final divider */}
+            <Separator className="my-4" />
 
             {/* Thank you message (optional - can be added per SW-76 note) */}
-            <div className="bill-footer">
-              <p>{language === 'fr' ? 'Merci de votre commande!' : 'Thank you for your order!'}</p>
+            <div className="text-center pt-2">
+              <p className="text-sm font-medium">{language === 'fr' ? 'Merci de votre commande!' : 'Thank you for your order!'}</p>
+              <p className="text-xs text-gray-500 mt-1">Vision Menu</p>
+            </div>
             </div>
           </div>
-        </div>
+        </ScrollArea>
 
-        <div className="flex justify-end gap-2 mt-4">
+        <Separator className="my-4" />
+
+        <DialogFooter className="flex-shrink-0">
           <Button variant="outline" onClick={() => setIsOpen(false)}>
             {language === 'fr' ? 'Annuler' : 'Cancel'}
           </Button>
-          <Button onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
+          <Button onClick={handlePrint} className="gap-2">
+            <Printer className="h-4 w-4" />
             {language === 'fr' ? 'Imprimer' : 'Print'}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
