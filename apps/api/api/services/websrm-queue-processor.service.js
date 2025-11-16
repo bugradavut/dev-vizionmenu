@@ -215,14 +215,19 @@ async function processQueueItemSimple(queueItem) {
     console.log('[WebSRM Queue Processor] 📤 Sending to Quebec API:');
     console.log('  URL:', `${baseUrl}/transaction`);
     console.log('  Headers:', JSON.stringify(result.headers, null, 2));
-    console.log('  Request Body:', result.sigs.canonical.substring(0, 500) + '...');
+
+    // IMPORTANT: Use result.payload (reqTrans wrapper) NOT result.sigs.canonical (transActu only)
+    // result.payload = { reqTrans: { transActu: {...} } } ✅
+    // result.sigs.canonical = { ...transActu } ❌ (missing reqTrans wrapper)
+    const bodyToSend = JSON.stringify(result.payload);
+    console.log('  Request Body:', bodyToSend.substring(0, 500) + '...');
     console.log('  Order GST:', order.gst_number);
     console.log('  Order QST:', order.qst_number);
 
     const response = await postToQuebec({
       baseUrl,
       path: '/transaction',
-      body: result.sigs.canonical,
+      body: bodyToSend,
       headers: result.headers,
       idempotencyKey,
       casEssai: undefined, // NEVER send CASESSAI to /transaction endpoint
@@ -442,6 +447,9 @@ async function getProfileForOrder(order, branchId) {
         createdAt: profile.created_at,
         updatedAt: profile.updated_at,
         isActive: profile.is_active,
+        // IMPORTANT: Add GST/QST tax numbers from order (required by Quebec WEB-SRM)
+        gstNumber: order.gst_number,
+        qstNumber: order.qst_number,
       };
     }
   } catch (dbError) {
