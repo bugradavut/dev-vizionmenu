@@ -471,7 +471,25 @@ async function getProfileForOrder(order, branchId) {
   }
 
   // Fallback to environment variables (for testing only)
-  console.warn('[WebSRM Queue Processor] ⚠️ Using environment variable fallback (no certificates!)');
+  console.warn('[WebSRM Queue Processor] ⚠️ Using environment variable fallback');
+
+  // Try to decrypt certificates from environment variables
+  const { decryptSecret } = getDecryptHelper();
+  let privateKeyPem = '';
+  let certPem = '';
+
+  try {
+    if (process.env.WEBSRM_ESSAI_PRIVATE_KEY_ENCRYPTED) {
+      privateKeyPem = decryptSecret(process.env.WEBSRM_ESSAI_PRIVATE_KEY_ENCRYPTED);
+      console.log(`[WebSRM Queue Processor] ✅ Private key decrypted from env (length: ${privateKeyPem.length})`);
+    }
+    if (process.env.WEBSRM_ESSAI_CERT_ENCRYPTED) {
+      certPem = decryptSecret(process.env.WEBSRM_ESSAI_CERT_ENCRYPTED);
+      console.log(`[WebSRM Queue Processor] ✅ Certificate decrypted from env (length: ${certPem.length})`);
+    }
+  } catch (decryptError) {
+    console.error('[WebSRM Queue Processor] ❌ Failed to decrypt env certificates:', decryptError.message);
+  }
 
   return {
     env,
@@ -485,13 +503,16 @@ async function getProfileForOrder(order, branchId) {
     versiParn: '1.0.0',
     casEssai: process.env.WEBSRM_CASESSAI || '500.001',
     authorizationCode: process.env.WEBSRM_ESSAI_AUTH_CODE || 'W7V7-K8W9',
-    privateKeyPem: '', // Empty - no certificates in fallback!
-    certPem: '',
+    privateKeyPem,
+    certPem,
     tenantId: branchId, // Note: Using branch_id as tenant_id for consistency
     branchId: order.branch_id,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    isActive: true
+    isActive: true,
+    // IMPORTANT: Add GST/QST tax numbers from order (required by Quebec WEB-SRM)
+    gstNumber: order.gst_number,
+    qstNumber: order.qst_number,
   };
 }
 
