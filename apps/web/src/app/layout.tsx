@@ -36,10 +36,10 @@ export default function RootLayout({
                   document.documentElement.classList.add('light');
                   document.documentElement.style.setProperty('color-scheme', 'light');
                 } else {
-                  // Dashboard pages: use stored theme preference
-                  const stored = localStorage.getItem('vizion-menu-theme') || 'system';
+                  // Dashboard pages: use stored theme preference (default to light)
+                  const stored = localStorage.getItem('vizion-menu-theme') || 'light';
                   const isValidTheme = ['dark', 'light', 'system'].includes(stored);
-                  const theme = isValidTheme ? stored : 'system';
+                  const theme = isValidTheme ? stored : 'light';
                   
                   let resolvedTheme;
                   if (theme === 'system') {
