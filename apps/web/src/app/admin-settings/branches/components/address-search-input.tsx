@@ -45,13 +45,13 @@ export function AddressSearchInput({
     const selectedAddress = suggestion.display_name
     setQuery(selectedAddress)
     setShowSuggestions(false)
-    
+
     // Extract coordinates if available (from OpenStreetMap data)
     const coordinates = suggestion.lat && suggestion.lon ? {
       lat: parseFloat(suggestion.lat),
       lng: parseFloat(suggestion.lon)
     } : undefined
-    
+
     onSelect(selectedAddress, coordinates)
   }
 
@@ -62,6 +62,12 @@ export function AddressSearchInput({
   }
 
   const handleBlur = () => {
+    // Update parent with manually typed address when user leaves the input
+    // This allows users to type their own address without selecting from suggestions
+    if (query && query !== value) {
+      onSelect(query)
+    }
+
     // Delay hiding suggestions to allow clicking
     setTimeout(() => {
       setShowSuggestions(false)
@@ -70,6 +76,13 @@ export function AddressSearchInput({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
+      setShowSuggestions(false)
+      inputRef.current?.blur()
+    } else if (e.key === 'Enter') {
+      // Accept manually typed address when user presses Enter
+      if (query && query !== value) {
+        onSelect(query)
+      }
       setShowSuggestions(false)
       inputRef.current?.blur()
     }

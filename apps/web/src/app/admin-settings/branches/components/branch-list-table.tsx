@@ -58,6 +58,7 @@ interface BranchListTableProps {
   onCreateBranch: () => void
   onEditBranch: (branch: Branch) => void
   onToggleActive: (branch: Branch) => void
+  onDeleteBranch: (branch: Branch) => void
   className?: string
 }
 
@@ -68,6 +69,7 @@ export function BranchListTable({
   onCreateBranch,
   onEditBranch,
   onToggleActive,
+  onDeleteBranch,
   className
 }: BranchListTableProps) {
   const [searchQuery, setSearchQuery] = useState('')
@@ -392,7 +394,10 @@ export function BranchListTable({
                             <Edit className="mr-2 h-4 w-4" />
                             {language === 'fr' ? 'Modifier' : 'Edit'}
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => onDeleteBranch(branch)}
+                          >
                             <Trash2 className="mr-2 h-4 w-4" />
                             {language === 'fr' ? 'Supprimer' : 'Delete'}
                           </DropdownMenuItem>

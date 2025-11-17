@@ -338,7 +338,9 @@ async function deleteBranch(branchId, adminUserId) {
     throw new Error('Branch not found');
   }
 
-  // Check for dependencies (branch_users, orders, etc.)
+  // Check for dependencies that prevent deletion
+
+  // Check for branch users
   const { data: branchUsers, error: usersError } = await supabase
     .from('branch_users')
     .select('id')
@@ -353,7 +355,22 @@ async function deleteBranch(branchId, adminUserId) {
     throw new Error('Cannot delete branch with existing users. Please remove all users first.');
   }
 
-  // Delete branch
+  // Check for commission transactions (NO ACTION constraint)
+  const { data: commissionTxns, error: commissionError } = await supabase
+    .from('commission_transactions')
+    .select('id')
+    .eq('branch_id', branchId)
+    .limit(1);
+
+  if (commissionError) {
+    throw new Error('Failed to check commission transactions');
+  }
+
+  if (commissionTxns && commissionTxns.length > 0) {
+    throw new Error('Cannot delete branch with existing commission transactions. Please contact support.');
+  }
+
+  // Delete branch (CASCADE will handle related records)
   const { error: deleteError } = await supabase
     .from('branches')
     .delete()

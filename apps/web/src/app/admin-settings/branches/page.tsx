@@ -18,14 +18,18 @@ import { chainsService, Chain } from "@/services/chains.service"
 import { BranchListTable } from "./components/branch-list-table"
 import { CreateBranchModal } from "./components/create-branch-modal"
 import { EditBranchModal } from "./components/edit-branch-modal"
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 
 export default function AdminBranchesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null)
+  const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null)
   const [branches, setBranches] = useState<Branch[]>([])
   const [chains, setChains] = useState<Chain[]>([])
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(false)
   const [totalBranches, setTotalBranches] = useState(0)
   const [activeBranches, setActiveBranches] = useState(0)
 
@@ -85,6 +89,41 @@ export default function AdminBranchesPage() {
   const handleCloseEditModal = () => {
     setShowEditModal(false)
     setSelectedBranch(null)
+  }
+
+  const handleDeleteBranch = (branch: Branch) => {
+    setBranchToDelete(branch)
+    setShowDeleteDialog(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!branchToDelete) return
+
+    try {
+      setDeleting(true)
+      await branchesService.deleteBranch(branchToDelete.id)
+
+      // Close dialog and refresh
+      setShowDeleteDialog(false)
+      setBranchToDelete(null)
+      fetchBranches()
+
+    } catch (error) {
+      console.error('Error deleting branch:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(
+        language === 'fr'
+          ? `Erreur lors de la suppression de la succursale: ${errorMessage}`
+          : `Error deleting branch: ${errorMessage}`
+      )
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handleCancelDelete = () => {
+    setShowDeleteDialog(false)
+    setBranchToDelete(null)
   }
 
   return (
@@ -166,6 +205,7 @@ export default function AdminBranchesPage() {
                     onCreateBranch={handleCreateBranch}
                     onEditBranch={handleEditBranch}
                     onToggleActive={handleToggleActive}
+                    onDeleteBranch={handleDeleteBranch}
                   />
                 </div>
               </div>
@@ -188,6 +228,24 @@ export default function AdminBranchesPage() {
         branch={selectedBranch}
         chains={chains}
         onSuccess={fetchBranches}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showDeleteDialog}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title={language === 'fr' ? 'Supprimer la Succursale' : 'Delete Branch'}
+        description={
+          branchToDelete
+            ? language === 'fr'
+              ? `Êtes-vous sûr de vouloir supprimer la succursale "${branchToDelete.name}"? Cette action est irréversible.`
+              : `Are you sure you want to delete the branch "${branchToDelete.name}"? This action cannot be undone.`
+            : ''
+        }
+        confirmText={deleting ? (language === 'fr' ? 'Suppression...' : 'Deleting...') : (language === 'fr' ? 'Supprimer' : 'Delete')}
+        cancelText={language === 'fr' ? 'Annuler' : 'Cancel'}
+        variant="destructive"
       />
     </AuthGuard>
   )

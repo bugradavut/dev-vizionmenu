@@ -55,7 +55,7 @@ export function ConfirmationDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm w-[90vw] sm:w-full p-0 gap-0 !fixed !bottom-4 !top-auto md:!top-4 md:!bottom-auto !left-1/2 !-translate-x-1/2 !translate-y-0">
+      <DialogContent className="max-w-sm w-[90vw] sm:w-full p-0 gap-0">
         <div className="p-4">
           {/* Header with icon and close */}
           <div className="flex items-center justify-between mb-3">
