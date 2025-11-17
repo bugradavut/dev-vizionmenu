@@ -32,7 +32,15 @@ router.get('/connect', async (req, res) => {
 
     // Production mode: Build real Uber OAuth URL
     const clientId = process.env.UBER_EATS_CLIENT_ID;
-    const redirectUri = `${process.env.API_BASE_URL || 'https://dev-vizionmenu-web.vercel.app'}/api/v1/uber-eats/auth/callback`;
+    // Use environment variable for API URL (required in production)
+    const apiBaseUrl = process.env.API_BASE_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001');
+    if (!apiBaseUrl && process.env.NODE_ENV === 'production') {
+      return res.status(500).json({
+        error: 'Configuration error',
+        message: 'API_BASE_URL must be set in production environment'
+      });
+    }
+    const redirectUri = `${apiBaseUrl}/api/v1/uber-eats/auth/callback`;
 
     if (!clientId) {
       return res.status(500).json({
@@ -103,7 +111,9 @@ router.get('/callback', async (req, res) => {
       // Production mode: Exchange code for real tokens
       const clientId = process.env.UBER_EATS_CLIENT_ID;
       const clientSecret = process.env.UBER_EATS_CLIENT_SECRET;
-      const redirectUri = `${process.env.API_BASE_URL || 'https://dev-vizionmenu-web.vercel.app'}/api/v1/uber-eats/auth/callback`;
+      // Use environment variable for API URL (required in production)
+      const apiBaseUrl = process.env.API_BASE_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001');
+      const redirectUri = `${apiBaseUrl}/api/v1/uber-eats/auth/callback`;
 
       if (!clientId || !clientSecret) {
         return res.status(500).json({
@@ -191,14 +201,14 @@ router.get('/callback', async (req, res) => {
     console.log(`   Token expires: ${tokenExpiresAt.toISOString()}`);
 
     // Redirect to frontend success page
-    const frontendUrl = process.env.FRONTEND_URL || 'https://dev-vizionmenu.vercel.app';
+    const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
     res.redirect(`${frontendUrl}/settings/branch/integrations?uber_eats=connected&store_id=${storeId}`);
 
   } catch (error) {
     console.error('OAuth callback error:', error);
 
     // Redirect to frontend error page
-    const frontendUrl = process.env.FRONTEND_URL || 'https://dev-vizionmenu.vercel.app';
+    const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
     res.redirect(`${frontendUrl}/settings/branch/integrations?uber_eats=error&message=${encodeURIComponent(error.message)}`);
   }
 });

@@ -1164,7 +1164,7 @@ async function handleOrderForWebSrm(order, profile, options = { persist: "files"
     },
     base
   );
-  const qrBaseUrl = process.env.QR_BASE_URL || "https://dev-vizionmenu.vercel.app/verify";
+  const qrBaseUrl = process.env.QR_BASE_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:3000/verify");
   const qr = buildOfficialQr(
     {
       idTrans: reqTransInternal.idTrans,
@@ -1257,7 +1257,7 @@ async function handleClosingForWebSrm(closing, profile, options = { persist: "no
     },
     base
   );
-  const qrBaseUrl = process.env.QR_BASE_URL || "https://dev-vizionmenu.vercel.app/verify";
+  const qrBaseUrl = process.env.QR_BASE_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:3000/verify");
   const qr = buildOfficialQr(payload, sigs.actu, { baseUrl: qrBaseUrl });
   return {
     headers,

@@ -317,7 +317,8 @@ export async function handleOrderForWebSrm(
 
   // 4) QR code generation (use reqTransInternal for QR - has idTrans, dtTrans, montTot)
   // SW-76: Use frontend URL for QR code (customer transaction verification)
-  const qrBaseUrl = process.env.QR_BASE_URL || 'https://dev-vizionmenu.vercel.app/verify';
+  // IMPORTANT: QR_BASE_URL must be set in production (e.g., https://vizionmenu.app/verify)
+  const qrBaseUrl = process.env.QR_BASE_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000/verify');
   const qr = buildOfficialQr(
     {
       idTrans: reqTransInternal.idTrans,
@@ -435,7 +436,8 @@ export async function handleClosingForWebSrm(
 
   // 4) QR code generation (FER doesn't need QR, but keep for consistency)
   // SW-76: Use frontend URL for QR code (customer transaction verification)
-  const qrBaseUrl = process.env.QR_BASE_URL || 'https://dev-vizionmenu.vercel.app/verify';
+  // IMPORTANT: QR_BASE_URL must be set in production (e.g., https://vizionmenu.app/verify)
+  const qrBaseUrl = process.env.QR_BASE_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000/verify');
   const qr = buildOfficialQr(payload, sigs.actu, { baseUrl: qrBaseUrl });
 
   // 5) Persist is typically 'none' for FER (no receipts table for closings)

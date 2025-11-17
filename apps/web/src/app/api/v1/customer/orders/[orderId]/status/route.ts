@@ -2,21 +2,30 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Get backend API URL - fallback to local development
 const getApiBaseUrl = () => {
-  // For production/dev environments
+  // Priority 1: Explicit API_BASE_URL from environment
   if (process.env.API_BASE_URL) {
     return process.env.API_BASE_URL;
   }
-  
-  // For Vercel deployments, check if we're on the frontend deployment
+
+  // Priority 2: For Vercel deployments, derive backend URL from frontend URL
   if (process.env.VERCEL_URL && process.env.NODE_ENV === 'production') {
-    // If we're on dev-vizionmenu.vercel.app (frontend), use backend URL
-    if (process.env.VERCEL_URL.includes('dev-vizionmenu.vercel.app')) {
+    const frontendUrl = process.env.VERCEL_URL;
+
+    // If on dev-vizionmenu.vercel.app → use dev-vizionmenu-web.vercel.app
+    if (frontendUrl.includes('dev-vizionmenu.vercel.app')) {
       return 'https://dev-vizionmenu-web.vercel.app';
     }
-    return `https://${process.env.VERCEL_URL}`;
+
+    // If on vizionmenu.app → use api.vizionmenu.app
+    if (frontendUrl.includes('vizionmenu.app')) {
+      return 'https://api.vizionmenu.app';
+    }
+
+    // For preview deployments, use same URL
+    return `https://${frontendUrl}`;
   }
-  
-  // Local development fallback
+
+  // Priority 3: Local development fallback
   return 'http://localhost:3001';
 };
 
