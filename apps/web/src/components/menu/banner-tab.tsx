@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Upload, X, Image as ImageIcon, Loader2, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Upload, X, Image as ImageIcon, Loader2, RefreshCw, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -30,12 +30,15 @@ export function BannerTab() {
   const [isUploading, setIsUploading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showUploadDialog, setShowUploadDialog] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const currentBanner = user?.branch_theme_config?.bannerImage
   const currentLayout = user?.branch_theme_config?.layout || 'template-1'
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file || !branchId) return
 
@@ -55,11 +58,27 @@ export function BannerTab() {
       return
     }
 
+    // Create preview URL
+    const objectUrl = URL.createObjectURL(file)
+    setPreviewUrl(objectUrl)
+    setSelectedFile(file)
+    setShowUploadDialog(true)
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const handleUploadConfirm = async () => {
+    if (!selectedFile || !branchId) return
+
     try {
       setIsUploading(true)
+      setShowUploadDialog(false)
 
       // Optimize banner - convert to WebP only, preserve original dimensions
-      const optimizedBanner = await optimizePhoto(file, {
+      const optimizedBanner = await optimizePhoto(selectedFile, {
         maxWidth: 3840, // Very high limit, won't resize unless extremely large
         maxHeight: 2160,
         quality: 0.85,
@@ -93,10 +112,23 @@ export function BannerTab() {
         : 'Failed to upload banner')
     } finally {
       setIsUploading(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
+      // Clean up preview
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
       }
+      setPreviewUrl(null)
+      setSelectedFile(null)
     }
+  }
+
+  const handleUploadCancel = () => {
+    setShowUploadDialog(false)
+    // Clean up preview
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+    }
+    setPreviewUrl(null)
+    setSelectedFile(null)
   }
 
   const handleDeleteClick = () => {
@@ -288,6 +320,48 @@ export function BannerTab() {
             >
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {language === 'fr' ? 'Supprimer' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Upload Confirmation Dialog */}
+      <AlertDialog open={showUploadDialog} onOpenChange={handleUploadCancel}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-primary" />
+              {language === 'fr' ? 'Confirmer le téléchargement' : 'Confirm Upload'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {language === 'fr'
+                ? 'Prévisualisation de votre nouvelle bannière. Cliquez sur "Appliquer les modifications" pour confirmer.'
+                : 'Preview of your new banner. Click "Apply Changes" to confirm.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {/* Preview */}
+          {previewUrl && (
+            <div className="rounded-lg border overflow-hidden bg-gray-50">
+              <img
+                src={previewUrl}
+                alt="Banner Preview"
+                className="w-full h-auto object-contain"
+                style={{ maxHeight: '400px' }}
+              />
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleUploadCancel}>
+              {language === 'fr' ? 'Annuler' : 'Cancel'}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleUploadConfirm}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              {language === 'fr' ? 'Appliquer les modifications' : 'Apply Changes'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
