@@ -227,16 +227,17 @@ const updateMenuItem = async (req, res) => {
     const parsedDietaryInfo = dietary_info ? 
       (Array.isArray(dietary_info) ? dietary_info : JSON.parse(dietary_info)) : undefined;
 
-    const updateData = { 
-      name, 
-      description, 
-      price: price !== undefined ? parseFloat(price) : undefined, 
-      category_id, 
-      allergens: parsedAllergens, 
-      dietary_info: parsedDietaryInfo, 
+    const updateData = {
+      name,
+      description,
+      price: price !== undefined ? parseFloat(price) : undefined,
+      category_id,
+      allergens: parsedAllergens,
+      dietary_info: parsedDietaryInfo,
       preparation_time,
       display_order,
-      is_available
+      is_available,
+      image_url: req.body.image_url  // Accept image_url from frontend (Supabase direct upload)
     };
 
     // Fetch 'before' data BEFORE update operation for audit log

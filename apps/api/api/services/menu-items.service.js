@@ -425,16 +425,17 @@ async function createMenuItem(itemData, branchId, photo = null) {
  * @returns {Object} Updated item
  */
 async function updateMenuItem(itemId, updateData, branchId, photo = null) {
-  const { 
-    name, 
-    description, 
-    price, 
-    category_id, 
-    allergens, 
-    dietary_info, 
+  const {
+    name,
+    description,
+    price,
+    category_id,
+    allergens,
+    dietary_info,
     preparation_time,
     display_order,
-    is_available
+    is_available,
+    image_url
   } = updateData;
   
   // Validation
@@ -478,7 +479,8 @@ async function updateMenuItem(itemId, updateData, branchId, photo = null) {
   }
 
   // Handle photo upload if provided
-  let imageUrl = undefined; // undefined means don't update
+  // Use frontend-provided image_url if available (Supabase direct upload)
+  let imageUrl = image_url !== undefined ? image_url : undefined; // undefined means don't update
   if (photo && photo.buffer && photo.mimetype) {
     try {
       // Delete old image if exists
