@@ -72,7 +72,7 @@ export function ItemModal({ item, isOpen, onClose }: ItemModalProps) {
                 src={item.image_url}
                 alt={item.name}
                 fill
-                className="object-cover"
+                className="object-contain"
                 sizes="(max-width: 768px) 100vw, 400px"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';

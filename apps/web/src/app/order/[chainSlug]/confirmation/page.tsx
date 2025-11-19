@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense, useCallback } from 'react';
+import { useEffect, useState, Suspense, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { orderService } from '@/services/order-service';
 import { useLanguage } from '@/contexts/language-context';
@@ -195,6 +195,7 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const statusSectionRef = useRef<HTMLDivElement>(null);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -414,6 +415,13 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
     setRefreshing(true);
     await fetchOrderStatus();
     setRefreshing(false);
+
+    // Scroll to status section on mobile after refresh
+    if (statusSectionRef.current && window.innerWidth < 768) {
+      setTimeout(() => {
+        statusSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }
   };
 
   // Declare variables at the top before any return statements
@@ -716,9 +724,9 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
 
 
             {/* Progress Timeline - Vertical on Mobile, Horizontal on Desktop */}
-            <div className="pt-6 bg-gray-50 rounded-2xl mt-6">
+            <div ref={statusSectionRef} className="pt-6 bg-gray-50 rounded-2xl mt-6">
               <div className="relative p-6">
-                
+
                 {/* Mobile Layout - Vertical */}
                 <div className="md:hidden">
                   {progressSteps.map((step, index) => {
@@ -729,8 +737,8 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                         <div className="flex items-center gap-4">
                           {/* Circle */}
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 bg-white transition-colors flex-shrink-0 ${
-                            step.completed 
-                              ? 'border-primary text-primary' 
+                            step.completed
+                              ? 'border-primary text-primary'
                               : 'border-gray-300 text-gray-400'
                           }`}>
                             {step.completed ? (
@@ -739,7 +747,7 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                               <Icon className="w-4 h-4" />
                             )}
                           </div>
-                          
+
                           {/* Content */}
                           <div className="flex-1">
                             <p className={`text-sm font-medium ${
@@ -747,11 +755,6 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                             }`}>
                               {step.label}
                             </p>
-                            {step.time && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                {step.time}
-                              </p>
-                            )}
                           </div>
                         </div>
                         
@@ -771,22 +774,22 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                   <div className="flex justify-between items-start relative px-12">
                     {/* Progress Line */}
                     <div className="absolute top-6 left-[calc(12%+24px)] right-[calc(12%+24px)] h-0.5 bg-gray-200">
-                      <div 
+                      <div
                         className="bg-primary h-full transition-all duration-500"
-                        style={{ 
-                          width: `${(progressSteps.filter(s => s.completed).length - 1) / (progressSteps.length - 1) * 100}%` 
+                        style={{
+                          width: `${(progressSteps.filter(s => s.completed).length - 1) / (progressSteps.length - 1) * 100}%`
                         }}
                       />
                     </div>
-                    
+
                     {/* Progress Steps */}
                     {progressSteps.map((step) => {
                       const Icon = step.icon;
                       return (
                         <div key={step.key} className="flex flex-col items-center relative z-10">
                           <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 bg-white transition-colors ${
-                            step.completed 
-                              ? 'border-primary text-primary' 
+                            step.completed
+                              ? 'border-primary text-primary'
                               : 'border-gray-300 text-gray-400'
                           }`}>
                             {step.completed ? (
@@ -795,18 +798,13 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                               <Icon className="w-5 h-5" />
                             )}
                           </div>
-                          
+
                           <div className="mt-3 text-center">
                             <p className={`text-xs font-medium whitespace-nowrap ${
                               step.completed ? 'text-gray-900' : 'text-gray-400'
                             }`}>
                               {step.label}
                             </p>
-                            {step.time && (
-                              <p className="text-xs text-gray-500 mt-1 whitespace-nowrap">
-                                {step.time}
-                              </p>
-                            )}
                           </div>
                         </div>
                       );
