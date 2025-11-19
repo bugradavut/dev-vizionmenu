@@ -46,9 +46,21 @@
     "websrm:validate": "tsx scripts/websrm-validate-config.ts",
     "websrm:sw77": "tsx scripts/websrm-dev-sw77-runner.ts",
     "websrm:sw77:case-500": "tsx scripts/sw77/case-500.ts",
+    "websrm:sw77:case-500:pdfs": "tsx scripts/sw77/generate-case-500-pdfs.ts",
     "websrm:sw77:case-001": "tsx scripts/sw77/case-001.ts",
+    "websrm:sw77:case-001:step08": "tsx scripts/sw77/case-001-step08.ts",
+    "websrm:sw77:case-002:step01": "tsx scripts/sw77/case-002-step01.ts",
+    "websrm:sw77:case-002:step02": "tsx scripts/sw77/case-002-step02.ts",
+    "websrm:sw77:case-002:step03": "tsx scripts/sw77/case-002-step03.ts",
+    "websrm:sw77:case-002:step04": "tsx scripts/sw77/case-002-step04.ts",
     "websrm:sw77:case-501": "tsx scripts/sw77/case-501.ts",
+    "websrm:sw77:case-501:step07": "tsx scripts/sw77/case-501-step07-only.ts",
+    "websrm:sw77:master": "tsx scripts/sw77/master-runner.ts",
+    "websrm:sw77:master2": "tsx scripts/sw77/master2-runner.ts",
+    "websrm:essai:501-007": "tsx scripts/websrm-essai-501-007-test.ts",
     "websrm:sw77:case-502": "tsx scripts/sw77/case-502.ts",
+    "websrm:sw77:case-502:step07": "tsx scripts/sw77/case-502-step07.ts",
+    "websrm:sw77:case-003:step01": "tsx scripts/sw77/case-003-step01.ts",
     "websrm:sw77:case-570": "tsx scripts/sw77/case-570.ts",
     "websrm:utilisateur": "tsx scripts/websrm-utilisateur-test.ts",
     "websrm:utilisateur:mtls": "tsx scripts/websrm-utilisateur-mtls-test.ts",
@@ -75,9 +87,11 @@
   "dependencies": {
     "@peculiar/webcrypto": "^1.5.0",
     "@peculiar/x509": "^1.14.0",
+    "@types/pdfkit": "^0.17.3",
     "adm-zip": "^0.5.16",
     "archiver": "^7.0.1",
     "minimatch": "^10.0.3",
+    "pdfkit": "^0.17.2",
     "qrcode": "^1.5.4"
   }
 }

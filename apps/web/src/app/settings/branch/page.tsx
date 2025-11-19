@@ -471,26 +471,40 @@ export default function BranchSettingsPage() {
     if (!migratedHours) return;
 
     if (currentMode === 'simple') {
-      // Switch to advanced: copy simple settings to all enabled days
-      const advancedSchedule: { [key: string]: { enabled: boolean; openTime: string; closeTime: string } } = {};
-      const allDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+      // Check if advancedSchedule already has settings (user configured in modal)
+      const hasAdvancedSettings = migratedHours.advancedSchedule &&
+        Object.keys(migratedHours.advancedSchedule).length > 0;
 
-      allDays.forEach(day => {
-        const isEnabled = selectedWorkingDays.includes(day);
-        advancedSchedule[day] = {
-          enabled: isEnabled,
-          openTime: migratedHours.simpleSchedule.defaultHours.openTime,
-          closeTime: migratedHours.simpleSchedule.defaultHours.closeTime
-        };
-      });
+      if (hasAdvancedSettings) {
+        // User already configured advanced settings in modal, just switch mode
+        updateSettings({
+          restaurantHours: {
+            ...migratedHours,
+            mode: 'advanced'
+          }
+        });
+      } else {
+        // First time switching to advanced: copy simple settings to all enabled days
+        const advancedSchedule: { [key: string]: { enabled: boolean; openTime: string; closeTime: string } } = {};
+        const allDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
-      updateSettings({
-        restaurantHours: {
-          ...migratedHours,
-          mode: 'advanced',
-          advancedSchedule
-        }
-      });
+        allDays.forEach(day => {
+          const isEnabled = selectedWorkingDays.includes(day);
+          advancedSchedule[day] = {
+            enabled: isEnabled,
+            openTime: migratedHours.simpleSchedule.defaultHours.openTime,
+            closeTime: migratedHours.simpleSchedule.defaultHours.closeTime
+          };
+        });
+
+        updateSettings({
+          restaurantHours: {
+            ...migratedHours,
+            mode: 'advanced',
+            advancedSchedule
+          }
+        });
+      }
     } else {
       // Switch to simple: find most common hours or use first enabled day
       const enabledDays = Object.entries(migratedHours.advancedSchedule)

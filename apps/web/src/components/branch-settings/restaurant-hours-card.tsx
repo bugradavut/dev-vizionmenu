@@ -293,35 +293,57 @@ export function RestaurantHoursCard({
             <div className="hidden lg:block w-px bg-border self-stretch mx-6"></div>
             <Separator orientation="horizontal" className="block lg:hidden" />
             <div className="flex-1 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {translations.defaultHoursLabel}
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {translations.defaultHoursLabel}
+                </p>
+                {currentMode === 'advanced' && (
+                  <span className="text-xs text-purple-600 font-medium">
+                    <Lock className="inline-block h-3 w-3 mr-1" />
+                    {language === 'fr' ? 'Mode avancé actif' : 'Advanced mode active'}
+                  </span>
+                )}
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="restaurant-hours-open" className="text-xs font-medium">
+                  <Label htmlFor="restaurant-hours-open" className={cn(
+                    "text-xs font-medium",
+                    currentMode === 'advanced' && "text-muted-foreground"
+                  )}>
                     {translations.openLabel}
                   </Label>
                   <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Clock className={cn(
+                      "absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2",
+                      currentMode === 'advanced' ? "text-muted-foreground/50" : "text-muted-foreground"
+                    )} />
                     <CustomTimePicker
                       id="restaurant-hours-open"
                       value={openTime}
                       onChange={onOpenTimeChange}
                       placeholder="Select time"
+                      disabled={currentMode === 'advanced'}
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="restaurant-hours-close" className="text-xs font-medium">
+                  <Label htmlFor="restaurant-hours-close" className={cn(
+                    "text-xs font-medium",
+                    currentMode === 'advanced' && "text-muted-foreground"
+                  )}>
                     {translations.closeLabel}
                   </Label>
                   <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Clock className={cn(
+                      "absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2",
+                      currentMode === 'advanced' ? "text-muted-foreground/50" : "text-muted-foreground"
+                    )} />
                     <CustomTimePicker
                       id="restaurant-hours-close"
                       value={closeTime}
                       onChange={onCloseTimeChange}
                       placeholder="Select time"
+                      disabled={currentMode === 'advanced'}
                     />
                   </div>
                 </div>
