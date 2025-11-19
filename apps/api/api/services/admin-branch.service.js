@@ -242,10 +242,10 @@ async function updateBranch(branchId, updateData, adminUserId) {
     throw new Error('Branch ID is required');
   }
 
-  // Check if branch exists
+  // Check if branch exists (include theme_config to preserve bannerImage and other settings)
   const { data: existingBranch, error: fetchError } = await supabase
     .from('branches')
-    .select('id, slug, chain_id')
+    .select('id, slug, chain_id, theme_config')
     .eq('id', branchId)
     .single();
 
@@ -287,7 +287,20 @@ async function updateBranch(branchId, updateData, adminUserId) {
   if (updateData.phone !== undefined) branchUpdateData.phone = updateData.phone?.trim() || null;
   if (updateData.email !== undefined) branchUpdateData.email = updateData.email?.trim() || null;
   if (updateData.settings !== undefined) branchUpdateData.settings = updateData.settings;
-  if (updateData.theme_config !== undefined) branchUpdateData.theme_config = updateData.theme_config;
+
+  // Merge theme_config to preserve bannerImage and other existing settings
+  if (updateData.theme_config !== undefined) {
+    branchUpdateData.theme_config = {
+      ...(existingBranch.theme_config || {}),
+      ...updateData.theme_config,
+      // Deep merge nested objects like colors
+      colors: {
+        ...(existingBranch.theme_config?.colors || {}),
+        ...(updateData.theme_config?.colors || {})
+      }
+    };
+  }
+
   if (updateData.is_active !== undefined) branchUpdateData.is_active = updateData.is_active;
 
   // Update coordinates if provided
