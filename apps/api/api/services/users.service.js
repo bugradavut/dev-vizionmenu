@@ -518,20 +518,41 @@ async function deleteUser(userId, branchId, currentUserId) {
     throw new Error('User not found in this branch');
   }
 
-  // Get current user's role
-  const { data: currentUser, error: currentUserError } = await supabase
-    .from('branch_users')
-    .select('role')
+  // Get current user's role (check both chain owners and branch users)
+  let currentUserRole = null;
+
+  // First check if user is chain owner or platform admin
+  const { data: currentUserProfile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('role, is_platform_admin, chain_id')
     .eq('user_id', currentUserId)
-    .eq('branch_id', branchId)
     .single();
 
-  if (currentUserError || !currentUser) {
-    throw new Error('You do not have permission to perform this action');
+  if (profileError || !currentUserProfile) {
+    throw new Error('Current user profile not found');
+  }
+
+  if (currentUserProfile.is_platform_admin) {
+    currentUserRole = 'platform_admin';
+  } else if (currentUserProfile.role === 'chain_owner') {
+    currentUserRole = 'chain_owner';
+  } else {
+    // Check branch users table
+    const { data: currentBranchUser, error: branchUserError } = await supabase
+      .from('branch_users')
+      .select('role')
+      .eq('user_id', currentUserId)
+      .eq('branch_id', branchId)
+      .single();
+
+    if (branchUserError || !currentBranchUser) {
+      throw new Error('You do not have permission to perform this action');
+    }
+    currentUserRole = currentBranchUser.role;
   }
 
   // Check role hierarchy - current user must have equal or higher role level than target user
-  if (!canEditUser(currentUser.role, existingUser.role)) {
+  if (!canEditUser(currentUserRole, existingUser.role)) {
     throw new Error(`Cannot delete user with role '${existingUser.role}'. Insufficient permissions.`);
   }
 

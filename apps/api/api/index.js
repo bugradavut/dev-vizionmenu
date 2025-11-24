@@ -87,6 +87,7 @@ const websrmQueueRoutes = require('./routes/websrm-queue.routes');
 const websrmCertificateRoutes = require('../routes/websrm-certificate.routes');
 const dailyClosingRoutes = require('./routes/daily-closing.routes');
 const dataExportRoutes = require('./routes/data-export.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
 
 // Global Supabase client initialization
 const { createClient } = require('@supabase/supabase-js');
@@ -130,6 +131,9 @@ app.use('/api/v1/chain-users', chainUsersRoutes);
 
 // Use orders routes
 app.use('/api/v1/orders', ordersRoutes);
+
+// Use dashboard routes
+app.use('/api/v1/dashboard', dashboardRoutes);
 
 // Use branch settings routes (priority for delivery zones - protected auth required)
 app.use('/api/v1/branch', branchSettingsRoutes);

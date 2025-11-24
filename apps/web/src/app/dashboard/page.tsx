@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { AuthGuard } from "@/components/auth-guard"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -10,20 +11,29 @@ import {
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
 import { useLanguage } from "@/contexts/language-context"
-import { translations } from "@/lib/translations"
 import { useEnhancedAuth } from "@/hooks/use-enhanced-auth"
+import { useDashboardStats } from "@/hooks/use-dashboard-stats"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Building2, MapPin, Shield, Activity } from "lucide-react"
 import Link from "next/link"
+import {
+  StatCardSkeleton,
+  TodaysSalesCard,
+  NewOrdersCard,
+  ActiveCouponsCard,
+  MenuItemsCard,
+  SalesOverviewChart,
+  TeamMembersCard,
+  RecentOrdersCard,
+  PopularItemsCard,
+  OrderHistoryCard
+} from "@/components/dashboard"
 
-export default function Page() {
+// Platform Admin Dashboard - separate component
+function PlatformAdminDashboard() {
   const { language } = useLanguage()
-  const enhancedAuth = useEnhancedAuth()
-  const { isPlatformAdmin } = enhancedAuth
-  const t = translations[language] || translations.en
 
-  // Platform Admin Dashboard
-  const PlatformAdminDashboard = () => (
+  return (
     <div className="flex flex-1 flex-col gap-6 py-4 px-4 md:px-8 lg:px-12 pt-8">
       <div className="max-w-6xl">
         <div className="mb-8">
@@ -41,7 +51,7 @@ export default function Page() {
           </p>
         </div>
       </div>
-      
+
       {/* Platform Stats */}
       <div className="grid gap-4 md:grid-cols-3 max-w-6xl">
         <Card>
@@ -58,7 +68,7 @@ export default function Page() {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -73,7 +83,7 @@ export default function Page() {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -91,7 +101,7 @@ export default function Page() {
           </CardContent>
         </Card>
       </div>
-      
+
       {/* Quick Actions */}
       <Card className="max-w-6xl">
         <CardHeader>
@@ -99,7 +109,7 @@ export default function Page() {
             {language === 'fr' ? 'Actions Rapides' : 'Quick Actions'}
           </CardTitle>
           <CardDescription>
-            {language === 'fr' 
+            {language === 'fr'
               ? 'Commencez par créer votre première chaîne de restaurants'
               : 'Get started by creating your first restaurant chain'
             }
@@ -126,7 +136,7 @@ export default function Page() {
               </CardContent>
             </Card>
           </Link>
-          
+
           <Card className="opacity-60">
             <CardHeader className="pb-3">
               <div className="flex items-center space-x-2">
@@ -145,7 +155,7 @@ export default function Page() {
               </CardDescription>
             </CardContent>
           </Card>
-          
+
           <Card className="opacity-60">
             <CardHeader className="pb-3">
               <div className="flex items-center space-x-2">
@@ -168,27 +178,100 @@ export default function Page() {
       </Card>
     </div>
   )
+}
 
-  // Branch User Dashboard (original)
-  const BranchUserDashboard = () => (
-    <div className="flex flex-1 flex-col gap-6 py-4 px-4 md:px-8 lg:px-12 pt-8">
-      <div className="max-w-6xl">
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold tracking-tight">{t.dashboard.title}</h2>
-          <p className="text-muted-foreground mt-2">
-            {t.dashboard.subtitle}
-          </p>
+// Branch User Dashboard - separate component
+function BranchUserDashboard() {
+  const { language } = useLanguage()
+  const { stats, loading, refetch } = useDashboardStats()
+  const [refreshing, setRefreshing] = useState(false)
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await refetch()
+    setRefreshing(false)
+  }
+
+  return (
+    <div className="flex flex-1 flex-col gap-6 p-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {language === 'fr' ? 'Tableau de Bord' : 'Dashboard'}
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          {language === 'fr'
+            ? 'Aperçu de votre succursale'
+            : 'Overview of your branch performance'
+          }
+        </p>
+      </div>
+
+      {/* Stat Cards Grid */}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+        {loading ? (
+          <>
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </>
+        ) : (
+          <>
+            <TodaysSalesCard
+              total={stats?.todaySales.total ?? 0}
+              changePercent={stats?.todaySales.changePercent ?? 0}
+              sparkline={stats?.todaySales.sparkline ?? []}
+            />
+            <NewOrdersCard
+              count={stats?.newOrders.count ?? 0}
+              changePercent={stats?.newOrders.changePercent ?? 0}
+              pendingCount={stats?.newOrders.pendingCount ?? 0}
+              sparkline={stats?.newOrders.sparkline ?? []}
+            />
+            <MenuItemsCard
+              total={stats?.menuItems.total ?? 0}
+              unavailable={stats?.menuItems.unavailable ?? 0}
+            />
+            <ActiveCouponsCard
+              count={stats?.activeCoupons.count ?? 0}
+              expiringCount={stats?.activeCoupons.expiringCount ?? 0}
+            />
+          </>
+        )}
+      </div>
+
+      {/* Data Row - 3 Equal Cards */}
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+        <RecentOrdersCard />
+        <OrderHistoryCard />
+        <PopularItemsCard
+          items={stats?.popularItems ?? []}
+          loading={false}
+        />
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <SalesOverviewChart
+            data={stats?.salesChart?.data ?? []}
+            totalSales={stats?.salesChart?.weekTotal ?? 0}
+            changePercent={stats?.salesChart?.changePercent ?? 0}
+            loading={loading}
+            onRefresh={handleRefresh}
+            refreshing={refreshing}
+          />
         </div>
+        <TeamMembersCard />
       </div>
-      
-      <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-        <div className="aspect-video rounded-xl bg-muted/50" />
-        <div className="aspect-video rounded-xl bg-muted/50" />
-        <div className="aspect-video rounded-xl bg-muted/50" />
-      </div>
-      <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min" />
     </div>
   )
+}
+
+export default function Page() {
+  const enhancedAuth = useEnhancedAuth()
+  const { isPlatformAdmin } = enhancedAuth
 
   return (
     <AuthGuard requireAuth={true} requireRememberOrRecent={true} redirectTo="/login">

@@ -433,23 +433,36 @@ async function updateOrderStatus(orderId, updateData, userBranch) {
     throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
   }
 
-  // Handle both UUID and short order number formats
+  // Handle multiple order ID formats:
+  // 1. Pure UUID: 4bbe8278-c2b3-4404-bb04-e957be34ca9b
+  // 2. ORDER- prefix with UUID: ORDER-4bbe8278-c2b3-4404-bb04-e957be34ca9b
+  // 3. Short order number: ORDER-4BBE8278
   let actualOrderId = orderId;
   let existingOrder;
   let findError;
 
-  // First try as UUID
-  if (orderId.length === 36 && orderId.includes('-')) {
+  // Strip ORDER- prefix if present to get clean ID
+  let cleanOrderId = orderId;
+  if (orderId.toUpperCase().startsWith('ORDER-')) {
+    cleanOrderId = orderId.substring(6); // Remove 'ORDER-' prefix
+  }
+
+  // Check if cleanOrderId is a valid UUID (36 chars with dashes)
+  const isUUID = cleanOrderId.length === 36 && cleanOrderId.includes('-');
+
+  if (isUUID) {
+    // Try as UUID
     const { data, error } = await supabase
       .from('orders')
       .select('id, order_status, branch_id')
-      .eq('id', orderId)
+      .eq('id', cleanOrderId)
       .eq('branch_id', userBranch.branch_id)
       .single();
     existingOrder = data;
     findError = error;
+    actualOrderId = cleanOrderId;
   } else {
-    // Try as short order number (ORDER-XXXXX format)
+    // Try as short order number (8-char ID)
     const { data: orders, error } = await supabase
       .from('orders')
       .select('id, order_status, branch_id')
@@ -459,8 +472,7 @@ async function updateOrderStatus(orderId, updateData, userBranch) {
       // Find order by short ID pattern matching
       const matchingOrder = orders.find(order => {
         const shortId = order.id.substring(0, 8).toUpperCase();
-        const orderNumber = `ORDER-${shortId}`;
-        return orderNumber === orderId.toUpperCase();
+        return shortId === cleanOrderId.toUpperCase();
       });
 
       if (matchingOrder) {
