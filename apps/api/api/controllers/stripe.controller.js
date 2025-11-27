@@ -363,10 +363,21 @@ async function createPaymentIntent(req, res) {
     }
 
     let paymentIntent;
-    
+
+    // Log connected account status for debugging
+    console.log('🔍 Connected account status:', {
+      found: !!stripeAccount,
+      accountId: stripeAccount?.stripe_account_id || 'none',
+      chargesEnabled: stripeAccount?.charges_enabled || false,
+      payoutsEnabled: stripeAccount?.payouts_enabled || false
+    });
+
     if (stripeAccount?.charges_enabled && stripeAccount?.payouts_enabled) {
-      // Use commission split payment if restaurant account is ready
-      console.log('💳 Creating payment intent with commission split...');
+      // ✅ DIRECT CHARGE: Connected account pays Stripe fees, platform gets application fee
+      console.log('💳 Creating DIRECT CHARGE payment intent with on_behalf_of...');
+      console.log('   → Connected account will pay Stripe fees');
+      console.log('   → Platform will receive application fee: $' + commission);
+
       paymentIntent = await stripeService.createPaymentIntentWithSplit({
         amount: parseFloat(amount),
         commissionAmount: parseFloat(commission),
@@ -377,12 +388,22 @@ async function createPaymentIntent(req, res) {
           branchId,
           customerEmail,
           orderSource,
-          commission: commission.toString()
+          commission: commission.toString(),
+          charge_type: 'direct_charge'
         }
       });
     } else {
-      // Fall back to basic payment intent if restaurant account not ready
-      console.log('💳 Creating basic payment intent (restaurant account not ready)...');
+      // ⚠️ FALLBACK: Platform pays Stripe fees (Destination Charge)
+      const reason = !stripeAccount
+        ? 'no_connected_account'
+        : !stripeAccount.charges_enabled
+          ? 'charges_not_enabled'
+          : 'payouts_not_enabled';
+
+      console.log('⚠️  Fallback to DESTINATION CHARGE (platform pays Stripe fees)');
+      console.log('   → Reason:', reason);
+      console.log('   → Platform will pay Stripe fees (lower profit margin)');
+
       paymentIntent = await stripeService.createBasicPaymentIntent({
         amount: parseFloat(amount),
         orderId: orderId,
@@ -392,7 +413,8 @@ async function createPaymentIntent(req, res) {
           customerEmail,
           orderSource,
           commission: commission.toString(),
-          fallback_reason: 'restaurant_account_not_ready'
+          fallback_reason: reason,
+          charge_type: 'destination_charge_fallback'
         }
       });
     }
@@ -403,7 +425,8 @@ async function createPaymentIntent(req, res) {
       paymentIntentId: paymentIntent.id || paymentIntent.payment_intent_id,
       amount: parseFloat(amount),
       commissionAmount: parseFloat(commission),
-      netAmount: parseFloat(amount) - parseFloat(commission)
+      netAmount: parseFloat(amount) - parseFloat(commission),
+      connectedAccountId: stripeAccount?.stripe_account_id || null  // ✅ For frontend Direct Charge confirmation
     };
 
     // Add commission split info if available

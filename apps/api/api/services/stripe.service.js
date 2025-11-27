@@ -57,19 +57,19 @@ class StripeService {
         throw new Error('Either restaurant_chain_id or branch_id must be provided');
       }
 
-      // Create Express Account with Canadian settings
+      // Create Standard Account with Canadian settings
+      // Using Standard (not Express) to enable controller.fees.payer configuration
+      // Standard accounts allow connected account to pay Stripe processing fees
       const account = await stripe.accounts.create({
-        type: 'express',
+        type: 'standard',
         country: 'CA',
-        business_type: businessType,
         capabilities: {
           card_payments: { requested: true },
           transfers: { requested: true }
         },
         business_profile: {
           mcc: '5812', // Restaurant MCC code
-          url: businessUrl || '',
-          ...businessProfile
+          url: businessUrl || ''
         },
         settings: {
           payouts: {
@@ -87,7 +87,7 @@ class StripeService {
           restaurant_chain_id: restaurantChainId || null,
           branch_id: branchId || null,
           stripe_account_id: account.id,
-          account_type: 'express',
+          account_type: 'standard',
           onboarding_status: 'pending',
           verification_status: 'unverified',
           capabilities: account.capabilities,
@@ -250,14 +250,22 @@ class StripeService {
       const amountCents = Math.round(amount * 100);
       const commissionCents = Math.round(commissionAmount * 100);
 
+      console.log('🔧 Creating DIRECT CHARGE Payment Intent (Stripe-Account header):', {
+        amount: `$${amount} CAD`,
+        amountCents: `${amountCents} cents`,
+        applicationFee: `$${commissionAmount} CAD`,
+        applicationFeeCents: `${commissionCents} cents`,
+        connectedAccount: stripeAccountId,
+        orderId: orderId.substring(0, 20) + '...',
+        chargeType: 'DIRECT_CHARGE (connected account pays Stripe fees)'
+      });
+
+      // DIRECT CHARGE: Use Stripe-Account header to create payment intent ON connected account
+      // This ensures connected account pays Stripe processing fees (based on controller.fees.payer)
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amountCents,
         currency: 'cad',
-        application_fee_amount: commissionCents,
-        on_behalf_of: stripeAccountId,
-        transfer_data: {
-          destination: stripeAccountId
-        },
+        application_fee_amount: commissionCents, // Platform commission
         metadata: {
           order_id: orderId,
           commission_amount: commissionAmount.toString(),
@@ -266,6 +274,17 @@ class StripeService {
         automatic_payment_methods: {
           enabled: true
         }
+      }, {
+        stripeAccount: stripeAccountId  // ✅ HEADER: Creates payment intent on connected account
+      });
+
+      console.log('✅ Direct Charge Payment Intent created successfully:', {
+        id: paymentIntent.id,
+        status: paymentIntent.status,
+        amount: `${paymentIntent.amount / 100} CAD`,
+        applicationFee: `${paymentIntent.application_fee_amount / 100} CAD`,
+        createdOnAccount: stripeAccountId,
+        chargeType: 'DIRECT_CHARGE'
       });
 
       // Store transaction record

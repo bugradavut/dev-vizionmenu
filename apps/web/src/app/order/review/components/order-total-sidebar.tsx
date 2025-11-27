@@ -98,6 +98,7 @@ export function OrderTotalSidebar({
   const [paymentError, setPaymentError] = useState<string | null>(null)
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [connectedAccountId, setConnectedAccountId] = useState<string | null>(null)  // ✅ For Direct Charge
   const [lastValidatedFormData, setLastValidatedFormData] = useState<CustomerFormData | null>(null)
 
   // SW-78 FO-104: Network status for offline mode
@@ -708,6 +709,7 @@ export function OrderTotalSidebar({
           })
 
           setClientSecret(paymentIntent.clientSecret)
+          setConnectedAccountId(paymentIntent.connectedAccountId || null)  // ✅ Store for Direct Charge
           setPaymentStatus('idle')
           setIsSubmitting(false)
           setShowPaymentForm(true)
@@ -930,6 +932,7 @@ export function OrderTotalSidebar({
                 onPaymentSuccess={handlePaymentSuccess}
                 onPaymentError={handlePaymentError}
                 isProcessing={paymentStatus === 'processing'}
+                connectedAccountId={connectedAccountId || undefined}  // ✅ Pass for Direct Charge
                 customerEmail={formData?.customerInfo?.email}
                 language={language as "en" | "fr"}
               />

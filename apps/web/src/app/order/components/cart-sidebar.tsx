@@ -475,18 +475,9 @@ export function CartSidebar() {
             {/* Order Summary */}
             <Card className={`${responsiveClasses.padding.card} bg-muted`}>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
+              <div className="flex justify-between font-semibold text-base">
                 <span>{t.orderPage.pricing.subtotal}</span>
                 <span>{language === 'fr' ? `${subtotal.toFixed(2)} $` : `$${subtotal.toFixed(2)}`}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>{t.orderPage.pricing.tax}</span>
-                <span>{language === 'fr' ? `${tax.toFixed(2)} $` : `$${tax.toFixed(2)}`}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between font-semibold text-base">
-                <span>{t.orderPage.pricing.total}</span>
-                <span>{language === 'fr' ? `${total.toFixed(2)} $` : `$${total.toFixed(2)}`}</span>
               </div>
             </div>
           </Card>
@@ -511,7 +502,7 @@ export function CartSidebar() {
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   Loading...
                 </>
-              : (language === 'fr' ? `${t.orderPage.checkout.checkout} - ${total.toFixed(2)} $` : `${t.orderPage.checkout.checkout} - $${total.toFixed(2)}`)
+              : (language === 'fr' ? `${t.orderPage.checkout.checkout} - ${subtotal.toFixed(2)} $` : `${t.orderPage.checkout.checkout} - $${subtotal.toFixed(2)}`)
           }
         </Button>
       </div>

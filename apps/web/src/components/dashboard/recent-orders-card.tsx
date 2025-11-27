@@ -18,8 +18,6 @@ interface RecentOrder {
   total_amount?: number
   totalAmount?: number
   pricing?: { total: number }
-  payment_status?: string
-  paymentStatus?: string
   order_status?: string
   status?: string
   created_at?: string
@@ -42,25 +40,27 @@ const formatCurrency = (value: number): string => {
 
 const getStatusColor = (status: string): string => {
   switch (status.toLowerCase()) {
-    case 'paid':
-    case 'succeeded':
-      return 'border-green-200 text-green-700 bg-green-50 dark:border-green-700 dark:text-green-300 dark:bg-green-900/20'
-    case 'pending':
-      return 'border-yellow-200 text-yellow-700 bg-yellow-50 dark:border-yellow-700 dark:text-yellow-300 dark:bg-yellow-900/20'
-    case 'failed':
+    case 'preparing':
+      return 'text-blue-700 border-blue-300 bg-blue-100'
+    case 'scheduled':
+      return 'text-yellow-800 border-yellow-300 bg-yellow-100'
+    case 'completed':
+      return 'text-gray-600 border-gray-200 bg-gray-50'
+    case 'rejected':
+      return 'text-red-700 border-red-300 bg-red-100'
     case 'cancelled':
-      return 'border-red-200 text-red-700 bg-red-50 dark:border-red-700 dark:text-red-300 dark:bg-red-900/20'
+      return 'text-red-700 border-red-300 bg-red-100'
     default:
-      return 'border-gray-200 text-gray-700 bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:bg-gray-900/20'
+      return 'border-gray-200 text-gray-700 bg-gray-50'
   }
 }
 
 const getStatusLabel = (status: string, language: string): string => {
   const labels: Record<string, { en: string; fr: string }> = {
-    paid: { en: 'Paid', fr: 'Payé' },
-    succeeded: { en: 'Paid', fr: 'Payé' },
-    pending: { en: 'Pending', fr: 'En attente' },
-    failed: { en: 'Failed', fr: 'Échoué' },
+    preparing: { en: 'Preparing', fr: 'En préparation' },
+    scheduled: { en: 'Scheduled', fr: 'Programmé' },
+    completed: { en: 'Completed', fr: 'Complété' },
+    rejected: { en: 'Rejected', fr: 'Rejeté' },
     cancelled: { en: 'Cancelled', fr: 'Annulé' }
   }
 
@@ -168,7 +168,7 @@ export function RecentOrdersCard() {
               {orders.map((order) => {
                 const customerDisplay = order.customerName || order.customer?.name || order.customer?.email || 'Guest'
                 const totalAmount = order.total_amount || order.totalAmount || order.pricing?.total || 0
-                const paymentStatus = order.payment_status || order.paymentStatus || 'pending'
+                const orderStatus = order.order_status || order.status || 'preparing'
                 const createdAt = order.created_at || order.createdAt || new Date().toISOString()
 
                 const timeAgo = formatDistanceToNow(new Date(createdAt), {
@@ -184,8 +184,8 @@ export function RecentOrdersCard() {
                     {/* Row 1: Order ID + Status */}
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">#{formatOrderNumber(order.id)}</span>
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${getStatusColor(paymentStatus)}`}>
-                        {getStatusLabel(paymentStatus, language)}
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${getStatusColor(orderStatus)}`}>
+                        {getStatusLabel(orderStatus, language)}
                       </span>
                     </div>
 

@@ -70,7 +70,15 @@ interface CartContextProviderProps {
   children: ReactNode
 }
 
-const TAX_RATE = 0.13 // 13% HST (Canadian tax)
+// Quebec tax rates (as of 2025)
+// GST (Federal): 5% - Goods and Services Tax
+// QST (Provincial): 9.975% - Quebec Sales Tax
+// Total: 14.975%
+// Source: https://www.revenuquebec.ca/en/businesses/consumption-taxes/gsthst-and-qst/
+const GST_RATE = 0.05 // 5% GST (Federal)
+const QST_RATE = 0.09975 // 9.975% QST (Provincial)
+const TAX_RATE = GST_RATE + QST_RATE // Total: 14.975%
+
 const CART_STORAGE_KEY = 'vizion-menu-cart'
 const PRE_ORDER_STORAGE_KEY = 'vizion-menu-pre-order'
 const REMOVED_ITEMS_STORAGE_KEY = 'vizion-menu-removed-items' // SW-78 FO-114

@@ -15,7 +15,7 @@ interface MobileCartProps {
 }
 
 export function MobileCart({ showWaiterButton = false, waiterButtonSlot }: MobileCartProps) {
-  const { itemCount, total } = useCart()
+  const { itemCount, subtotal } = useCart()
   const { language } = useLanguage()
   const t = translations[language] || translations.en
   const [isOpen, setIsOpen] = useState(false)
@@ -61,7 +61,7 @@ export function MobileCart({ showWaiterButton = false, waiterButtonSlot }: Mobil
 
                 {/* Right: Price */}
                 <div className="flex flex-col items-end">
-                  <span className="text-gray-900 text-xl font-bold">{language === 'fr' ? `${total.toFixed(2)} $` : `$${total.toFixed(2)}`}</span>
+                  <span className="text-gray-900 text-xl font-bold">{language === 'fr' ? `${subtotal.toFixed(2)} $` : `$${subtotal.toFixed(2)}`}</span>
                   <span className="text-orange-500 text-sm font-medium">{language === 'fr' ? 'Appuyer pour réviser' : 'Tap to review'}</span>
                 </div>
               </div>

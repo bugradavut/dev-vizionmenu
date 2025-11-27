@@ -13,10 +13,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, CreditCard, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useLanguage } from '@/contexts/language-context'
 
-// Initialize Stripe with locale
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!, {
-  locale: 'en' // Force English for all Stripe UI elements
-})
+// Note: stripePromise will be created dynamically in the component
+// to support connected account context for Direct Charges
 
 // Enhanced payment error handling with retry suggestions
 function getPaymentErrorInfo(error: { code?: string; message?: string }, language: string, retryCount: number) {
@@ -84,6 +82,7 @@ interface PaymentFormProps {
   isProcessing?: boolean
   customerEmail?: string
   language?: 'en' | 'fr'
+  connectedAccountId?: string  // ✅ For Direct Charge confirmation
 }
 
 interface CheckoutFormProps {
@@ -347,6 +346,19 @@ function CheckoutForm({
 }
 
 export function StripePaymentForm(props: PaymentFormProps) {
+  // Initialize Stripe with connected account context for Direct Charges
+  const stripePromise = React.useMemo(() => {
+    const options: any = { locale: 'en' }
+
+    // If connected account ID provided, use it for Direct Charge confirmation
+    if (props.connectedAccountId) {
+      options.stripeAccount = props.connectedAccountId
+      console.log('✅ Initializing Stripe with connected account:', props.connectedAccountId)
+    }
+
+    return loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!, options)
+  }, [props.connectedAccountId])
+
   return (
     <Elements stripe={stripePromise}>
       <CheckoutForm {...props} />
