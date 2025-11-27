@@ -244,6 +244,14 @@ class PaymentMethodChangeService {
           }
 
           try {
+            // Get stripe transaction details first to get connected account ID
+            const { data: stripeTransaction } = await supabase
+              .from('stripe_transactions')
+              .select('id, stripe_account_id')
+              .eq('payment_intent_id', order.payment_intent_id)
+              .single();
+
+            // Create refund with connected account context (Direct Charge)
             const refundResult = await stripeService.createPaymentMethodChangeRefund(
               order.payment_intent_id,
               parseFloat(order.total_amount),
@@ -254,18 +262,12 @@ class PaymentMethodChangeService {
                 original_payment_method: order.payment_method,
                 new_payment_method: newPaymentMethod,
                 change_record_id: changeRecord.id
-              }
+              },
+              stripeTransaction?.stripe_account_id || null // ✅ Pass connected account ID for Direct Charge
             );
 
             stripeRefundId = refundResult.refundId;
             console.log(`✅ Stripe refund processed: ${stripeRefundId} - Status: ${refundResult.status}`);
-
-            // Get stripe transaction details for refund record
-            const { data: stripeTransaction } = await supabase
-              .from('stripe_transactions')
-              .select('id, stripe_account_id')
-              .eq('payment_intent_id', order.payment_intent_id)
-              .single();
 
             // Record refund in stripe_refunds table
             const { error: refundRecordError } = await supabase

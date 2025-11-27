@@ -648,12 +648,34 @@ export default function OrderHistoryPage() {
                     <TableCell className="text-base text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <span>${order.pricing.total.toFixed(2)}</span>
-                        {(order.total_refunded ?? 0) > 0 && (
-                          <Badge variant="outline" className="text-xs px-2 py-0.5 bg-amber-50 text-amber-700 border-amber-300">
-                            <CornerUpLeft className="h-3 w-3 mr-1" />
-                            Partial Refund
-                          </Badge>
-                        )}
+                        {(order.total_refunded ?? 0) > 0 && (() => {
+                          const totalRefunded = order.total_refunded ?? 0;
+                          const totalAmount = order.pricing.total;
+                          const isFullRefund = totalRefunded >= (totalAmount - 0.01);
+
+                          // Debug logging
+                          console.log('Refund Badge Debug:', {
+                            orderNumber: order.orderNumber,
+                            totalAmount,
+                            totalRefunded,
+                            difference: totalAmount - totalRefunded,
+                            isFullRefund
+                          });
+
+                          return (
+                            <Badge
+                              variant="outline"
+                              className={`text-xs px-2 py-0.5 ${
+                                isFullRefund
+                                  ? 'bg-red-50 text-red-700 border-red-300'
+                                  : 'bg-amber-50 text-amber-700 border-amber-300'
+                              }`}
+                            >
+                              <CornerUpLeft className="h-3 w-3 mr-1" />
+                              {isFullRefund ? 'Full Refund' : 'Partial Refund'}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell className="text-base text-muted-foreground">
@@ -776,12 +798,34 @@ export default function OrderHistoryPage() {
                       <div className="text-xl font-bold text-foreground">
                         ${order.pricing.total.toFixed(2)}
                       </div>
-                      {(order.total_refunded ?? 0) > 0 && (
-                        <Badge variant="outline" className="text-xs px-2 py-0.5 bg-amber-50 text-amber-700 border-amber-300 w-fit">
-                          <CornerUpLeft className="h-3 w-3 mr-1" />
-                          Partial Refund
-                        </Badge>
-                      )}
+                      {(order.total_refunded ?? 0) > 0 && (() => {
+                        const totalRefunded = order.total_refunded ?? 0;
+                        const totalAmount = order.pricing.total;
+                        const isFullRefund = totalRefunded >= (totalAmount - 0.01);
+
+                        // Debug logging
+                        console.log('Refund Badge Debug (Card):', {
+                          orderNumber: order.orderNumber,
+                          totalAmount,
+                          totalRefunded,
+                          difference: totalAmount - totalRefunded,
+                          isFullRefund
+                        });
+
+                        return (
+                          <Badge
+                            variant="outline"
+                            className={`text-xs px-2 py-0.5 w-fit ${
+                              isFullRefund
+                                ? 'bg-red-50 text-red-700 border-red-300'
+                                : 'bg-amber-50 text-amber-700 border-amber-300'
+                            }`}
+                          >
+                            <CornerUpLeft className="h-3 w-3 mr-1" />
+                            {isFullRefund ? 'Full Refund' : 'Partial Refund'}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                     <Link href={`/orders/${order.orderNumber}?context=history`}>
                       <button className="px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors text-base font-medium text-gray-700">

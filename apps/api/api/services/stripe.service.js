@@ -881,15 +881,20 @@ class StripeService {
 
     // If refund succeeded and we have order_id, update order totals
     if (refund.status === 'succeeded' && refundRecord?.order_id) {
-      const { data: order } = await supabase
-        .from('orders')
-        .select('total_refunded, refund_count')
-        .eq('id', refundRecord.order_id)
-        .single();
+      // ✅ FIX: Calculate total_refunded from stripe_refunds table (source of truth)
+      // This prevents double-counting when both API and webhook update the total
+      const { data: allRefunds } = await supabase
+        .from('stripe_refunds')
+        .select('amount')
+        .eq('order_id', refundRecord.order_id)
+        .eq('status', 'succeeded');
 
-      if (order) {
-        const newTotalRefunded = (order.total_refunded || 0) + refundRecord.amount;
-        const newRefundCount = (order.refund_count || 0) + 1;
+      if (allRefunds) {
+        // Calculate totals from all successful refunds
+        const newTotalRefunded = parseFloat(
+          allRefunds.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0).toFixed(2)
+        );
+        const newRefundCount = allRefunds.length;
 
         await supabase
           .from('orders')
@@ -900,7 +905,7 @@ class StripeService {
           })
           .eq('id', refundRecord.order_id);
 
-        console.log(`✅ Order ${refundRecord.order_id} totals updated: $${newTotalRefunded} refunded (${newRefundCount} refunds)`);
+        console.log(`✅ Order ${refundRecord.order_id} totals recalculated from ${newRefundCount} refunds: $${newTotalRefunded} total refunded`);
       }
     }
 
@@ -1079,36 +1084,45 @@ class StripeService {
    * @param {Object} metadata - Additional metadata
    * @returns {Promise<Object>} Refund result
    */
-  async createPaymentMethodChangeRefund(paymentIntentId, amount, reason = 'payment_method_change', metadata = {}) {
+  async createPaymentMethodChangeRefund(paymentIntentId, amount, reason = 'payment_method_change', metadata = {}, stripeAccountId = null) {
     if (!stripe) {
       throw new Error('Stripe not initialized - check STRIPE_SECRET_KEY environment variable');
     }
 
     try {
-      console.log(`💸 Creating Stripe Connect refund for payment method change:`, {
+      console.log(`💸 Creating Stripe refund for payment method change:`, {
         paymentIntentId: paymentIntentId.substring(0, 20) + '...',
         amount: `$${amount} CAD`,
         reason,
-        reverseTransfer: true,
-        refundApplicationFee: true
+        stripeAccountId: stripeAccountId || 'platform',
+        directCharge: !!stripeAccountId
       });
 
       // Convert to cents for Stripe
       const amountCents = Math.round(amount * 100);
 
-      // Create refund with Stripe Connect parameters
-      const refund = await stripe.refunds.create({
+      // Create refund - Direct Charge if connected account, otherwise platform
+      const refundOptions = {
         payment_intent: paymentIntentId,
         amount: amountCents,
         reason: 'requested_by_customer',
-        reverse_transfer: true,           // Reverse transfer from connected account
-        refund_application_fee: true,     // Refund platform commission too
         metadata: {
           refund_reason: reason,
           refund_type: 'payment_method_change',
           ...metadata
         }
-      });
+      };
+
+      let refund;
+      if (stripeAccountId) {
+        // Direct Charge: Create refund on connected account
+        refund = await stripe.refunds.create(refundOptions, {
+          stripeAccount: stripeAccountId // ✅ HEADER: Access payment intent on connected account
+        });
+      } else {
+        // Fallback: Platform refund (for old orders)
+        refund = await stripe.refunds.create(refundOptions);
+      }
 
       console.log(`✅ Stripe Connect refund created: ${refund.id} - Status: ${refund.status}`);
       console.log(`   💰 Amount refunded: $${refund.amount / 100} CAD`);

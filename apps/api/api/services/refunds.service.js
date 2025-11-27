@@ -217,21 +217,23 @@ class RefundsService {
           }
         };
 
-        // Always refund from platform account (where payment was created)
-        // If connected account exists, use reverse_transfer to pull money back from restaurant
+        // Direct Charge: Refund from connected account (where payment was created)
+        // The payment intent exists on the connected account, so we must create refund there
         if (stripeAccountId) {
-          console.log('✅ Using reverse_transfer to refund from connected account');
-          refundOptions.reverse_transfer = true; // Take money back from restaurant
-          refundOptions.refund_application_fee = true; // Refund commission to platform
+          console.log('✅ Creating refund on connected account (Direct Charge)');
+          // For Direct Charge, we create refund on the connected account
+          // The commission will be automatically refunded to the restaurant
+          stripeRefund = await stripe.refunds.create(refundOptions, {
+            stripeAccount: stripeAccountId, // ✅ HEADER: Access payment intent on connected account
+            idempotencyKey: idempotencyKey
+          });
         } else {
           console.log('⚠️ No connected account - direct platform refund');
+          // Fallback for old orders or platform payments
+          stripeRefund = await stripe.refunds.create(refundOptions, {
+            idempotencyKey: idempotencyKey
+          });
         }
-
-        // Always create refund on platform account (not connected account)
-        // Use idempotency key to prevent duplicate refunds on retry
-        stripeRefund = await stripe.refunds.create(refundOptions, {
-          idempotencyKey: idempotencyKey
-        });
 
         console.log('Stripe refund created:', stripeRefund.id);
       } catch (stripeError) {
