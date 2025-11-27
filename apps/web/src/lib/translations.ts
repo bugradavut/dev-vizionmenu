@@ -22,7 +22,7 @@ export const translations = {
     // Navigation
     navigation: {
       dashboard: "Dashboard",
-      orders: "Orders", 
+      orders: "Orders",
       liveOrders: "Live Orders",
       orderHistory: "Order History",
       kitchenDisplay: "Kitchen Display",
@@ -30,9 +30,15 @@ export const translations = {
       campaigns: "Campaigns",
       settings: "Settings",
       generalSettings: "General Settings",
-      branchSettings: "Branch Settings", 
+      branchSettings: "Branch Settings",
       userManagement: "User Management",
       paymentSettings: "Payment Settings",
+      paymentMethods: "Payment Methods",
+      deliverySettings: "Delivery Settings",
+      notifications: "Notifications",
+      integrations: "Integrations",
+      taxRegistration: "Tax Registration",
+      websrmCertificate: "WEB-SRM Certificate",
       branch: "Branch",
       adminSettings: "Admin Settings",
       restaurantChains: "Restaurant Chains",
@@ -40,7 +46,7 @@ export const translations = {
       platformAdmins: "Platform Administrators",
       reports: "Reports",
       activityLogs: "Activity Logs",
-      
+
       // Sub-navigation items
       overview: "Overview",
       analytics: "Analytics",
@@ -189,7 +195,7 @@ export const translations = {
       // Payment Summary
       paymentSummary: "Payment Summary",
       subtotal: "Subtotal",
-      tax: "Tax (HST)",
+      tax: "Tax (GST + QST)",
       serviceFee: "Service Fee",
       deliveryFee: "Delivery Fee",
       total: "Total",
@@ -1023,7 +1029,7 @@ export const translations = {
       // Misc
       total: "Total",
       subtotal: "Subtotal",
-      tax: "Tax (13%)",
+      tax: "Tax (GST + QST)",
       dailySpecial: "Daily Special",
       limitedTime: "Limited Time",
       
@@ -1059,7 +1065,7 @@ export const translations = {
       // Pricing Section
       pricing: {
         subtotal: "Subtotal",
-        tax: "Tax (13%)",
+        tax: "Tax (GST + QST)",
         total: "Total",
         orderTotal: "Order Total"
       },
@@ -1417,9 +1423,15 @@ export const translations = {
       campaigns: "Campagnes",
       settings: "Paramètres",
       generalSettings: "Paramètres généraux",
-      branchSettings: "Paramètres de succursale", 
+      branchSettings: "Paramètres de succursale",
       userManagement: "Gestion des utilisateurs",
       paymentSettings: "Paramètres de paiement",
+      paymentMethods: "Modes de Paiement",
+      deliverySettings: "Paramètres de Livraison",
+      notifications: "Notifications",
+      integrations: "Intégrations",
+      taxRegistration: "Enregistrement Fiscal",
+      websrmCertificate: "Certificat WEB-SRM",
       branch: "Succursale",
       adminSettings: "Paramètres administrateur",
       restaurantChains: "Chaînes de restaurants",
@@ -1427,11 +1439,11 @@ export const translations = {
       platformAdmins: "Administrateurs Plateforme",
       reports: "Rapports",
       activityLogs: "Journaux d'activité",
-      
+
       // Sub-navigation items
       overview: "Aperçu",
       analytics: "Analyses",
-      categories: "Catégories", 
+      categories: "Catégories",
       items: "Articles",
       pricing: "Tarification",
       menu: "Menu",
@@ -1576,7 +1588,7 @@ export const translations = {
       // Payment Summary
       paymentSummary: "Résumé du paiement",
       subtotal: "Sous-total",
-      tax: "Taxe (TVH)",
+      tax: "Taxe (TPS + TVQ)",
       serviceFee: "Frais de service",
       deliveryFee: "Frais de livraison",
       total: "Total",
@@ -2410,7 +2422,7 @@ export const translations = {
       // Misc - Canadian French formatting
       total: "Total",
       subtotal: "Sous-total",
-      tax: "Taxe (TVH)",              // Canadian French: "Taxe (TVH)" NOT "Taxe (TPS/TVQ)"
+      tax: "Taxe (TPS + TVQ)",        // Quebec: TPS (GST) 5% + TVQ (QST) 9.975%
       dailySpecial: "Spécial du jour",
       limitedTime: "Temps limité",
       
@@ -2446,7 +2458,7 @@ export const translations = {
       // Pricing Section - Canadian French with proper currency format
       pricing: {
         subtotal: "Sous-total",
-        tax: "Taxe (TVH)",  // Canadian French: "Taxe (TVH)" NOT "Taxe (TPS/TVQ)"
+        tax: "Taxe (TPS + TVQ)",  // Quebec: TPS (GST) 5% + TVQ (QST) 9.975%
         total: "Total",
         orderTotal: "Total de la commande"
       },

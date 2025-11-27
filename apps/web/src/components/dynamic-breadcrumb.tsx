@@ -48,8 +48,38 @@ const breadcrumbConfig = {
   },
   '/settings/branch': {
     title: 'navigation.branchSettings',
-    href: '/settings/branch', 
+    href: '/settings/branch',
     parent: '/settings'
+  },
+  '/settings/branch/payment-methods': {
+    title: 'navigation.paymentMethods',
+    href: '/settings/branch/payment-methods',
+    parent: '/settings/branch'
+  },
+  '/settings/branch/delivery': {
+    title: 'navigation.deliverySettings',
+    href: '/settings/branch/delivery',
+    parent: '/settings/branch'
+  },
+  '/settings/branch/notifications': {
+    title: 'navigation.notifications',
+    href: '/settings/branch/notifications',
+    parent: '/settings/branch'
+  },
+  '/settings/branch/integrations': {
+    title: 'navigation.integrations',
+    href: '/settings/branch/integrations',
+    parent: '/settings/branch'
+  },
+  '/settings/branch/tax-registration': {
+    title: 'navigation.taxRegistration',
+    href: '/settings/branch/tax-registration',
+    parent: '/settings/branch'
+  },
+  '/settings/branch/websrm-certificate': {
+    title: 'navigation.websrmCertificate',
+    href: '/settings/branch/websrm-certificate',
+    parent: '/settings/branch'
   },
   '/settings/users': {
     title: 'navigation.userManagement',

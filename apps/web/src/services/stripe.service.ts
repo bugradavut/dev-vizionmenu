@@ -18,6 +18,7 @@ export interface PaymentIntentResponse {
   amount: number;
   commissionAmount: number;
   netAmount: number;
+  connectedAccountId?: string;
   commissionSplit?: {
     enabled: boolean;
     platformCommission?: number;

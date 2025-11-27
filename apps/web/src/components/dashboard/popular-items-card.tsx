@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
-import { ArrowRight, TrendingUp } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -101,8 +101,8 @@ export function PopularItemsCard({ items, loading }: PopularItemsCardProps) {
                         className="object-cover"
                       />
                     ) : (
-                      <div className="h-full w-full flex items-center justify-center text-2xl">
-                        🍔
+                      <div className="h-full w-full flex items-center justify-center text-xs font-medium text-muted-foreground">
+                        No Image
                       </div>
                     )}
                   </div>
