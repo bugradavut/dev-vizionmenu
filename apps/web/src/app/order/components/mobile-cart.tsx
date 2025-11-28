@@ -41,14 +41,14 @@ export function MobileCart({ showWaiterButton = false, waiterButtonSlot }: Mobil
         {/* Cart Button - Takes most space */}
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
-            <div className="flex-1 bg-white rounded-xl shadow-lg border-2 border-gray-200 p-4 transition-all duration-200 hover:shadow-xl hover:border-orange-200 active:scale-[0.98]">
+            <div className="flex-1 bg-white rounded-xl shadow-lg border-2 border-gray-200 p-4 transition-all duration-200 hover:shadow-xl hover:border-primary/20 active:scale-[0.98]">
               <div className="flex items-center justify-between">
                 {/* Left: Icon + Cart Info */}
                 <div className="flex items-center gap-3">
-                  <div className="relative p-2 bg-orange-50 rounded-lg">
-                    <ShoppingCart className="w-5 h-5 text-orange-500" />
+                  <div className="relative p-2 bg-primary/10 rounded-lg">
+                    <ShoppingCart className="w-5 h-5 text-primary" />
                     <Badge
-                      className="rounded-full absolute -top-1 -right-1 w-4 h-4 p-2 flex items-center justify-center bg-orange-500 text-white text-xs font-bold border-2 border-white"
+                      className="rounded-full absolute -top-1 -right-1 w-4 h-4 p-2 flex items-center justify-center bg-primary text-white text-xs font-bold border-2 border-white"
                     >
                       {itemCount}
                     </Badge>
@@ -62,7 +62,7 @@ export function MobileCart({ showWaiterButton = false, waiterButtonSlot }: Mobil
                 {/* Right: Price */}
                 <div className="flex flex-col items-end">
                   <span className="text-gray-900 text-xl font-bold">{language === 'fr' ? `${subtotal.toFixed(2)} $` : `$${subtotal.toFixed(2)}`}</span>
-                  <span className="text-orange-500 text-sm font-medium">{language === 'fr' ? 'Appuyer pour réviser' : 'Tap to review'}</span>
+                  <span className="text-primary text-sm font-medium">{language === 'fr' ? 'Appuyer pour réviser' : 'Tap to review'}</span>
                 </div>
               </div>
             </div>

@@ -78,6 +78,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 title: language === 'fr' ? 'Rapports de Commission' : 'Commission Reports',
                 url: "/admin-settings/commission-reports",
               },
+              {
+                title: language === 'fr' ? 'Mode Maintenance' : 'Maintenance Mode',
+                url: "/admin-settings/maintenance",
+              },
             ],
           },
         ],
@@ -236,6 +240,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {
               title: language === 'fr' ? 'Rapports de Commission' : 'Commission Reports',
               url: "/admin-settings/commission-reports",
+            },
+            {
+              title: language === 'fr' ? 'Mode Maintenance' : 'Maintenance Mode',
+              url: "/admin-settings/maintenance",
             },
           ],
         }] : []),

@@ -4,7 +4,9 @@ import { use, useState, useEffect } from 'react'
 import { notFound } from 'next/navigation'
 import { customerChainsService } from '@/services/customer-chains.service'
 import { customerMenuService, type CustomerMenu } from '@/services/customer-menu.service'
+import { platformSettingsService } from '@/services/platform-settings.service'
 import { SmartBranchSelectionModal } from './components/smart-branch-selection-modal'
+import { MaintenanceModal } from '@/components/maintenance'
 import { getThemeLayout } from './themes/theme-registry'
 import { OrderContext } from './types/order-flow.types'
 import { Chain, Branch } from '@/services/customer-chains.service'
@@ -32,6 +34,9 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
   const [showBranchModal, setShowBranchModal] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [maintenanceMode, setMaintenanceMode] = useState<{ is_enabled: boolean } | null>(null)
+  const [maintenanceModeLoading, setMaintenanceModeLoading] = useState(true)
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false)
 
   // Language context
   const { language } = useLanguage()
@@ -163,6 +168,42 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
     loadMenu()
   }, [selectedBranch, customerMenu, orderContext.chainSlug, orderContext.isQROrder])
 
+  // Check maintenance mode when branch is selected
+  useEffect(() => {
+    const checkMaintenanceMode = async () => {
+      // Only check when branch is selected (menu page)
+      if (!selectedBranch) {
+        setMaintenanceModeLoading(false)
+        return
+      }
+
+      try {
+        setMaintenanceModeLoading(true)
+        const mode = await platformSettingsService.getMaintenanceMode()
+        setMaintenanceMode(mode)
+      } catch (error) {
+        console.error('Failed to check maintenance mode:', error)
+        // Fail-safe: assume not in maintenance
+        setMaintenanceMode({ is_enabled: false })
+      } finally {
+        setMaintenanceModeLoading(false)
+      }
+    }
+
+    checkMaintenanceMode()
+  }, [selectedBranch?.id])
+
+  // Show maintenance modal after theme is loaded (prevent color flash)
+  useEffect(() => {
+    if (customerMenu && !maintenanceModeLoading && maintenanceMode?.is_enabled && selectedBranch) {
+      // Wait for theme CSS variables to apply
+      const timer = setTimeout(() => setShowMaintenanceModal(true), 150)
+      return () => clearTimeout(timer)
+    } else {
+      setShowMaintenanceModal(false)
+    }
+  }, [customerMenu, maintenanceModeLoading, maintenanceMode?.is_enabled, selectedBranch])
+
   // Branch selection handlers
   const handleBranchSelect = (branch: Branch) => {
     setSelectedBranch(branch)
@@ -220,14 +261,21 @@ export default function ChainOrderPage({ params, searchParams }: ChainOrderPageP
     const ThemeLayout = getThemeLayout(themeConfig.layout)
 
     return (
-      <ThemeLayout
-        chain={chain}
-        branch={selectedBranch}
-        customerMenu={customerMenu}
-        orderContext={orderContext}
-        availableBranches={branches}
-        onBranchChange={handleBranchChange}
-      />
+      <>
+        <ThemeLayout
+          chain={chain}
+          branch={selectedBranch}
+          customerMenu={customerMenu}
+          orderContext={orderContext}
+          availableBranches={branches}
+          onBranchChange={handleBranchChange}
+        />
+
+        {/* Maintenance Modal - Show on top of menu when enabled */}
+        {showMaintenanceModal && (
+          <MaintenanceModal branchPhone={selectedBranch.phone} />
+        )}
+      </>
     )
   }
 
