@@ -10,23 +10,17 @@ interface TipSectionProps {
 }
 
 export function TipSection({ subtotal, onTipChange }: TipSectionProps) {
-  const [selectedTip, setSelectedTip] = useState<'none' | '10' | '15' | '18' | 'custom_percent' | 'fixed_amount'>('none')
+  const [selectedTip, setSelectedTip] = useState<'15' | '18' | '20' | 'custom_percent' | 'fixed_amount'>('15')
   const [customTip, setCustomTip] = useState('')
 
   // 🔧 FIX: Recalculate tip when subtotal changes
   useEffect(() => {
-    if (selectedTip === 'none') return
-    
     // Recalculate tip based on current subtotal and selected option
     let tipAmount = 0
     const tipType: 'percentage' | 'fixed' = selectedTip === 'fixed_amount' ? 'fixed' : 'percentage'
     let tipValue = 0
 
     switch (selectedTip) {
-      case '10':
-        tipAmount = parseFloat(calculateTip(10))
-        tipValue = 10
-        break
       case '15':
         tipAmount = parseFloat(calculateTip(15))
         tipValue = 15
@@ -34,6 +28,10 @@ export function TipSection({ subtotal, onTipChange }: TipSectionProps) {
       case '18':
         tipAmount = parseFloat(calculateTip(18))
         tipValue = 18
+        break
+      case '20':
+        tipAmount = parseFloat(calculateTip(20))
+        tipValue = 20
         break
       case 'custom_percent':
         if (customTip) {
@@ -79,20 +77,13 @@ export function TipSection({ subtotal, onTipChange }: TipSectionProps) {
   const handleTipSelection = (tipId: typeof selectedTip) => {
     setSelectedTip(tipId)
     setCustomTip('')
-    
+
     // Calculate tip amount for callback
     let tipAmount = 0
     const tipType: 'percentage' | 'fixed' = 'percentage'
     let tipValue = 0
 
     switch (tipId) {
-      case 'none':
-        tipAmount = 0
-        break
-      case '10':
-        tipAmount = parseFloat(calculateTip(10))
-        tipValue = 10
-        break
       case '15':
         tipAmount = parseFloat(calculateTip(15))
         tipValue = 15
@@ -100,6 +91,10 @@ export function TipSection({ subtotal, onTipChange }: TipSectionProps) {
       case '18':
         tipAmount = parseFloat(calculateTip(18))
         tipValue = 18
+        break
+      case '20':
+        tipAmount = parseFloat(calculateTip(20))
+        tipValue = 20
         break
     }
 
@@ -132,10 +127,9 @@ export function TipSection({ subtotal, onTipChange }: TipSectionProps) {
   }
 
   const tipOptions = [
-    { id: 'none', label: 'None', amount: '0.00' },
-    { id: '10', label: '10%', amount: calculateTip(10) },
     { id: '15', label: '15%', amount: calculateTip(15) },
     { id: '18', label: '18%', amount: calculateTip(18) },
+    { id: '20', label: '20%', amount: calculateTip(20) },
   ]
 
   const customOptions = [
@@ -150,13 +144,13 @@ export function TipSection({ subtotal, onTipChange }: TipSectionProps) {
       </h3>
       
       {/* All tip options in one row - responsive */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3 mb-4">
+      <div className="grid grid-cols-6 sm:grid-cols-5 gap-2 sm:gap-3 mb-4">
         {tipOptions.map((option) => (
           <Button
             key={option.id}
             variant={selectedTip === option.id ? 'default' : 'outline'}
             onClick={() => handleTipSelection(option.id as typeof selectedTip)}
-            className={`flex flex-col h-auto py-2 sm:py-3 rounded-lg text-xs sm:text-sm ${
+            className={`col-span-2 sm:col-span-1 flex flex-col h-auto py-2 sm:py-3 rounded-lg text-xs sm:text-sm ${
               selectedTip === option.id
                 ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922]'
                 : 'bg-white text-gray-700 border-gray-300'
@@ -171,7 +165,7 @@ export function TipSection({ subtotal, onTipChange }: TipSectionProps) {
             key={option.id}
             variant={selectedTip === option.id ? 'default' : 'outline'}
             onClick={() => handleTipSelection(option.id as typeof selectedTip)}
-            className={`flex flex-col h-auto py-2 sm:py-3 rounded-lg text-xs sm:text-sm ${
+            className={`col-span-3 sm:col-span-1 flex flex-col h-auto py-2 sm:py-3 rounded-lg text-xs sm:text-sm ${
               selectedTip === option.id
                 ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922]'
                 : 'bg-white text-gray-700 border-gray-300'

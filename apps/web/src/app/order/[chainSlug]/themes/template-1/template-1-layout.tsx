@@ -1115,9 +1115,9 @@ export default function Template1Layout(props: ThemeLayoutProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      <RestaurantClosedModal isOpen={logic.showRestaurantClosedModal} onClose={logic.handleRestaurantClosedModalClose} onScheduleOrder={logic.allowSchedulingWhenClosed ? logic.handleScheduleOrder : undefined} restaurantHours={logic.settings.restaurantHours ? logic.migrateRestaurantHours(logic.settings.restaurantHours as any) : undefined} isBusy={logic.settings.restaurantHours ? logic.isRestaurantMarkedAsBusy(logic.settings.restaurantHours as any) : false} />
+      <RestaurantClosedModal isOpen={logic.showRestaurantClosedModal} onClose={logic.handleRestaurantClosedModalClose} onScheduleOrder={logic.allowSchedulingWhenClosed ? logic.handleScheduleOrder : undefined} restaurantHours={logic.migratedRestaurantHours ?? undefined} isBusy={logic.migratedRestaurantHours ? logic.isRestaurantMarkedAsBusy(logic.migratedRestaurantHours) : false} />
 
-      <PreOrderModal isOpen={logic.showPreOrderModal} onClose={logic.handlePreOrderClose} onConfirm={logic.handlePreOrderConfirm} currentSchedule={logic.preOrder.isPreOrder ? { date: logic.preOrder.scheduledDate || '', time: logic.preOrder.scheduledTime || '' } : undefined} />
+      <PreOrderModal isOpen={logic.showPreOrderModal} onClose={logic.handlePreOrderClose} onConfirm={logic.handlePreOrderConfirm} currentSchedule={logic.preOrder.isPreOrder ? { date: logic.preOrder.scheduledDate || '', time: logic.preOrder.scheduledTime || '' } : undefined} restaurantHours={logic.migratedRestaurantHours} />
 
       {/* Item Detail Modal */}
       <ItemModal

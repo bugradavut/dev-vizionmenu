@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useOrderContext } from '../contexts/order-context'
 import { useCart } from '../contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
@@ -10,12 +10,13 @@ import { MapPin, Store, Search, X, Globe, Clock } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { PreOrderModal } from './pre-order-modal'
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import { migrateRestaurantHours, type RestaurantHours } from '@/utils/restaurant-hours'
 
 interface OrderHeaderProps {
   branchName?: string
@@ -34,7 +35,7 @@ export function OrderHeader({ branchName, branchId, onSearch, onPreOrderConfirm,
   const [searchQuery, setSearchQuery] = useState('')
   const [isPreOrderModalOpen, setIsPreOrderModalOpen] = useState(false)
   const t = translations[language] || translations.en
-  
+
   // Fetch branch settings (only for web users)
   const { settings, loading: isSettingsLoading } = useCustomerBranchSettings({
     branchId,
@@ -43,11 +44,13 @@ export function OrderHeader({ branchName, branchId, onSearch, onPreOrderConfirm,
 
   const minimumOrderAmount = settings.minimumOrderAmount
   const isMinimumOrderLoading = isSettingsLoading
-  
-  // DEBUG: Console log for debugging (remove in production)
-  // console.log('OrderHeader Debug:', { source, branchId, minimumOrderAmount, isMinimumOrderLoading })
 
-  // Remove this useEffect block - forcePreOrderOpen is not defined
+  // Migrate restaurant hours for PreOrderModal
+  const migratedRestaurantHours = useMemo(() => {
+    return settings.restaurantHours
+      ? migrateRestaurantHours(settings.restaurantHours as unknown as RestaurantHours)
+      : null
+  }, [settings.restaurantHours])
 
   const handleSearch = (value: string) => {
     setSearchQuery(value)
@@ -225,6 +228,7 @@ export function OrderHeader({ branchName, branchId, onSearch, onPreOrderConfirm,
             date: preOrder.scheduledDate!,
             time: preOrder.scheduledTime!
           } : undefined}
+          restaurantHours={migratedRestaurantHours}
         />
       </>
     )
@@ -368,6 +372,7 @@ export function OrderHeader({ branchName, branchId, onSearch, onPreOrderConfirm,
           date: preOrder.scheduledDate!,
           time: preOrder.scheduledTime!
         } : undefined}
+        restaurantHours={migratedRestaurantHours}
       />
     </div>
   )

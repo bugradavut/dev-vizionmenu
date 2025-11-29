@@ -33,8 +33,9 @@ interface OrderContext {
 export function OrderReviewContainer({ orderContext }: { orderContext: OrderContext }) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const pathname = window.location.pathname
   // SW-78 FO-114: Add updateQuantity and removeItem for Quebec SRS compliance
-  const { items, updateQuantity, removeItem } = useCart()
+  const { items, updateQuantity, removeItem, clearCart } = useCart()
   const { language } = useLanguage()
   const t = translations[language] || translations.en
   // SW-78 FO-104: Network status for offline mode indicator
@@ -174,6 +175,14 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
     return null
   }
 
+  // Handle clearing cart and navigating back to menu
+  const handleClearCart = () => {
+    // Clear the cart
+    clearCart()
+    // Simply go back to previous page (branch menu)
+    router.back()
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -234,6 +243,7 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
               language={language}
               onUpdateQuantity={updateQuantity}
               onRemoveItem={removeItem}
+              onClearCart={handleClearCart}
             />
             <PriceDetailsSection 
               items={items} 

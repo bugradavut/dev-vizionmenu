@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Calendar, Clock, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { addDays, format, isToday, isTomorrow, parseISO } from 'date-fns'
 import { enCA, fr } from 'date-fns/locale'
+import { generateTimeSlotsForDate, isDateWorkingDay } from '@/utils/scheduled-order-utils'
+import type { RestaurantHours } from '@/utils/restaurant-hours'
 
 interface PreOrderModalProps {
   isOpen: boolean
@@ -18,16 +20,17 @@ interface PreOrderModalProps {
     date: string
     time: string
   }
+  restaurantHours?: RestaurantHours | null
   scheduleConfig?: unknown
 }
 
 type ModalStep = 'date' | 'time'
 
-export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: PreOrderModalProps) {
+export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule, restaurantHours }: PreOrderModalProps) {
   const { language } = useLanguage()
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const t = translations[language] || translations.en
-  
+
   const [currentStep, setCurrentStep] = useState<ModalStep>('date')
   const [selectedDate, setSelectedDate] = useState<Date | undefined>()
   const [selectedTime, setSelectedTime] = useState<string>(currentSchedule?.time || '')
@@ -56,34 +59,17 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
   }
 
 
-  // Generate time slots (15-minute intervals from 11:00 AM to 10:00 PM)
-  const generateTimeSlots = () => {
-    const slots = []
-    const start = 11 // 11 AM
-    const end = 22 // 10 PM
-    
-    for (let hour = start; hour <= end; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        const time = new Date()
-        time.setHours(hour, minute, 0, 0)
-        
-        const timeString = time.toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        })
-        
-        slots.push({
-          value: timeString,
-          label: timeString
-        })
-      }
-    }
-    
-    return slots
-  }
-
-  const timeSlots = generateTimeSlots()
+  // Generate time slots dynamically based on restaurant hours
+  const timeSlots = useMemo(() => {
+    if (!selectedDate) return []
+    return generateTimeSlotsForDate(
+      selectedDate,
+      restaurantHours,
+      15, // 15-minute intervals
+      30, // 30-minute buffer before closing
+      language
+    )
+  }, [selectedDate, restaurantHours, language])
 
   // Initialize modal state based on current schedule when modal opens
   useEffect(() => {
@@ -208,12 +194,19 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
-    const monthName = format(currentMonth, 'MMMM yyyy', { 
-      locale: language === 'fr' ? fr : enCA 
+    const monthName = format(currentMonth, 'MMMM yyyy', {
+      locale: language === 'fr' ? fr : enCA
     })
 
-    const isDateDisabled = (date: Date) => date < today
-    const isDateSelected = (date: Date) => 
+    const isDateDisabled = (date: Date) => {
+      // Disable past dates
+      if (date < today) return true
+
+      // Disable non-working days based on restaurant hours
+      return !isDateWorkingDay(date, restaurantHours)
+    }
+
+    const isDateSelected = (date: Date) =>
       selectedDate && format(date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
     const isDateToday = (date: Date) => isToday(date)
     const isCurrentMonth = (date: Date) => date.getMonth() === currentMonth.getMonth() && date.getFullYear() === currentMonth.getFullYear()
@@ -275,8 +268,10 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
                       className={`
                         h-10 w-full p-0 text-sm font-medium transition-colors rounded-lg
                         focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary
-                        hover:bg-accent hover:text-accent-foreground
-                        disabled:hover:bg-transparent disabled:opacity-30 disabled:cursor-not-allowed
+                        ${disabled
+                          ? 'opacity-30 cursor-not-allowed bg-muted/30'
+                          : 'hover:bg-accent hover:text-accent-foreground'
+                        }
                         ${!currentMonth ? 'text-muted-foreground/40' : ''}
                         ${todayDate && !selected ? 'bg-accent text-accent-foreground font-bold ring-2 ring-primary/20' : ''}
                         ${selected ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}
@@ -396,8 +391,13 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
                   {timeSlots.map((slot) => (
                     <button
                       key={slot.value}
-                      onClick={() => setSelectedTime(slot.value)}
-                      className={`p-3 text-center rounded-lg border-2 transition-all hover:shadow-md ${
+                      onClick={() => !slot.disabled && setSelectedTime(slot.value)}
+                      disabled={slot.disabled}
+                      className={`p-3 text-center rounded-lg border-2 transition-all ${
+                        slot.disabled
+                          ? 'opacity-40 cursor-not-allowed border-border bg-muted'
+                          : 'hover:shadow-md'
+                      } ${
                         selectedTime === slot.value
                           ? 'border-primary bg-primary/10 text-primary shadow-lg font-semibold'
                           : 'border-border hover:border-primary/30'
@@ -408,6 +408,26 @@ export function PreOrderModal({ isOpen, onClose, onConfirm, currentSchedule }: P
                   ))}
                 </div>
               </ScrollArea>
+
+              {/* Empty state if no time slots available */}
+              {timeSlots.length === 0 && (
+                <div className="h-64 flex items-center justify-center text-center p-6">
+                  <div className="space-y-2">
+                    <p className="text-muted-foreground">
+                      {language === 'fr'
+                        ? 'Aucun créneau horaire disponible pour cette date'
+                        : 'No time slots available for this date'
+                      }
+                    </p>
+                    <p className="text-sm text-muted-foreground/70">
+                      {language === 'fr'
+                        ? 'Veuillez sélectionner une autre date'
+                        : 'Please select another date'
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Time Step Actions */}
               <div className="flex gap-3 pt-4">

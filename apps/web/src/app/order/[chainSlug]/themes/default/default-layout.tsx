@@ -453,8 +453,8 @@ export default function DefaultLayout(props: ThemeLayoutProps) {
         isOpen={logic.showRestaurantClosedModal}
         onClose={logic.handleRestaurantClosedModalClose}
         onScheduleOrder={logic.allowSchedulingWhenClosed ? logic.handleScheduleOrder : undefined}
-        restaurantHours={logic.settings.restaurantHours ? logic.migrateRestaurantHours(logic.settings.restaurantHours as any) : undefined}
-        isBusy={logic.settings.restaurantHours ? logic.isRestaurantMarkedAsBusy(logic.settings.restaurantHours as any) : false}
+        restaurantHours={logic.migratedRestaurantHours ?? undefined}
+        isBusy={logic.migratedRestaurantHours ? logic.isRestaurantMarkedAsBusy(logic.migratedRestaurantHours) : false}
       />
 
       {/* Pre-Order Modal */}
@@ -466,6 +466,7 @@ export default function DefaultLayout(props: ThemeLayoutProps) {
           date: logic.preOrder.scheduledDate || '',
           time: logic.preOrder.scheduledTime || ''
         } : undefined}
+        restaurantHours={logic.migratedRestaurantHours}
       />
     </OrderContextProvider>
   )

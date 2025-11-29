@@ -186,10 +186,15 @@ function BranchUserDashboard() {
   const { stats, loading, refetch } = useDashboardStats()
   const [refreshing, setRefreshing] = useState(false)
 
-  const handleRefresh = async () => {
+  // Global refresh handler - refreshes ALL dashboard data
+  const handleGlobalRefresh = async () => {
     setRefreshing(true)
-    await refetch()
-    setRefreshing(false)
+    try {
+      // Refetch global stats (Today's Sales, New Orders, Sales Overview, Popular Items)
+      await refetch()
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   return (
@@ -243,8 +248,14 @@ function BranchUserDashboard() {
 
       {/* Data Row - 3 Equal Cards */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
-        <RecentOrdersCard />
-        <OrderHistoryCard />
+        <RecentOrdersCard
+          onRefresh={handleGlobalRefresh}
+          refreshing={refreshing}
+        />
+        <OrderHistoryCard
+          onRefresh={handleGlobalRefresh}
+          refreshing={refreshing}
+        />
         <PopularItemsCard
           items={stats?.popularItems ?? []}
           loading={false}
@@ -259,7 +270,7 @@ function BranchUserDashboard() {
             totalSales={stats?.salesChart?.weekTotal ?? 0}
             changePercent={stats?.salesChart?.changePercent ?? 0}
             loading={loading}
-            onRefresh={handleRefresh}
+            onRefresh={handleGlobalRefresh}
             refreshing={refreshing}
           />
         </div>
