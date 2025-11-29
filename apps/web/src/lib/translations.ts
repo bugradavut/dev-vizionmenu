@@ -46,6 +46,9 @@ export const translations = {
       platformAdmins: "Platform Administrators",
       reports: "Reports",
       activityLogs: "Activity Logs",
+      dailyClosing: "Daily Closing",
+      offlineSessions: "Offline Sessions",
+      dataExport: "Data Export",
 
       // Sub-navigation items
       overview: "Overview",
@@ -1439,6 +1442,9 @@ export const translations = {
       platformAdmins: "Administrateurs Plateforme",
       reports: "Rapports",
       activityLogs: "Journaux d'activité",
+      dailyClosing: "Clôture Journalière",
+      offlineSessions: "Sessions Hors Ligne",
+      dataExport: "Exportation de Données",
 
       // Sub-navigation items
       overview: "Aperçu",

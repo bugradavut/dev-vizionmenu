@@ -3,14 +3,7 @@
 import { useState } from 'react';
 import { AuthGuard } from '@/components/auth-guard';
 import { AppSidebar } from '@/components/app-sidebar';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+import { DynamicBreadcrumb } from '@/components/dynamic-breadcrumb';
 import { Separator } from '@/components/ui/separator';
 import {
   SidebarInset,
@@ -78,27 +71,7 @@ export default function DataExportPage() {
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="/dashboard">
-                      {isEnglish ? 'Dashboard' : 'Tableau de bord'}
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="/settings">
-                      {isEnglish ? 'Settings' : 'Paramètres'}
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>
-                      {isEnglish ? 'Data Export' : 'Exportation de Données'}
-                    </BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
+              <DynamicBreadcrumb />
             </div>
           </header>
 

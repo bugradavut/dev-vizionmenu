@@ -24,18 +24,15 @@ const breadcrumbConfig = {
   },
   '/orders/live': {
     title: 'navigation.liveOrders',
-    href: '/orders/live',
-    parent: '/orders'
+    href: '/orders/live'
   },
   '/orders/history': {
-    title: 'navigation.orderHistory', 
-    href: '/orders/history',
-    parent: '/orders'
+    title: 'navigation.orderHistory',
+    href: '/orders/history'
   },
   '/orders/kitchen': {
     title: 'navigation.kitchenDisplay',
-    href: '/orders/kitchen',
-    parent: '/orders'
+    href: '/orders/kitchen'
   },
   '/settings': {
     title: 'navigation.settings',
@@ -43,13 +40,11 @@ const breadcrumbConfig = {
   },
   '/settings/general': {
     title: 'navigation.generalSettings',
-    href: '/settings/general',
-    parent: '/settings'
+    href: '/settings/general'
   },
   '/settings/branch': {
     title: 'navigation.branchSettings',
-    href: '/settings/branch',
-    parent: '/settings'
+    href: '/settings/branch'
   },
   '/settings/branch/payment-methods': {
     title: 'navigation.paymentMethods',
@@ -83,8 +78,7 @@ const breadcrumbConfig = {
   },
   '/settings/users': {
     title: 'navigation.userManagement',
-    href: '/settings/users',
-    parent: '/settings'
+    href: '/settings/users'
   },
   '/admin-settings': {
     title: 'navigation.adminSettings',
@@ -116,8 +110,23 @@ const breadcrumbConfig = {
   },
   '/reports/analytics': {
     title: 'navigation.analytics',
-    href: '/reports/analytics',
-    parent: '/reports'
+    href: '/reports/analytics'
+  },
+  '/reports/daily-closing': {
+    title: 'navigation.dailyClosing',
+    href: '/reports/daily-closing'
+  },
+  '/reports/offline-sessions': {
+    title: 'navigation.offlineSessions',
+    href: '/reports/offline-sessions'
+  },
+  '/campaigns/create': {
+    title: 'navigation.campaigns',
+    href: '/campaigns/create'
+  },
+  '/settings/data-export': {
+    title: 'navigation.dataExport',
+    href: '/settings/data-export'
   }
 } as const
 

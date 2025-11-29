@@ -48,12 +48,6 @@ export default function MenuManagementPage() {
               <Separator orientation="vertical" className="mr-2 h-4" />
               <Breadcrumb>
                 <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="/dashboard">
-                      {t.navigation.dashboard}
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
                   <BreadcrumbItem>
                     <BreadcrumbPage>{t.navigation.menu}</BreadcrumbPage>
                   </BreadcrumbItem>
