@@ -83,10 +83,14 @@ export function MenuExperience({
 
   const allowSchedulingWhenClosed = true // Enable scheduling when restaurant is closed
 
+  // Local state for migrated restaurant hours to pass to PreOrderModal
+  const [migratedRestaurantHours, setMigratedRestaurantHours] = useState<RestaurantHours | null>(null)
+
   // Update cart context with restaurant hours
   useEffect(() => {
     if (!settingsLoading) {
       const migratedHours = settings.restaurantHours ? migrateRestaurantHours(settings.restaurantHours as unknown as RestaurantHours) : null;
+      setMigratedRestaurantHours(migratedHours)
       setRestaurantHours(migratedHours);
     }
   }, [settings.restaurantHours, settingsLoading, setRestaurantHours])
@@ -593,6 +597,7 @@ export function MenuExperience({
           date: preOrder.scheduledDate || '',
           time: preOrder.scheduledTime || ''
         } : undefined}
+        restaurantHours={migratedRestaurantHours}
       />
     </OrderContextProvider>
   )

@@ -4,7 +4,7 @@
  * This ensures DRY principle - logic written once, used everywhere
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useCart } from '@/app/order/contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
 import { useCustomerBranchSettings } from '@/hooks/use-customer-branch-settings'
@@ -55,13 +55,19 @@ export function useMenuLogic({
 
   const allowSchedulingWhenClosed = true
 
+  // Migrate restaurant hours with useMemo for performance
+  const migratedRestaurantHours = useMemo(() => {
+    return settings.restaurantHours
+      ? migrateRestaurantHours(settings.restaurantHours as unknown as RestaurantHours)
+      : null
+  }, [settings.restaurantHours])
+
   // Update cart context with restaurant hours
   useEffect(() => {
-    if (!settingsLoading) {
-      const migratedHours = settings.restaurantHours ? migrateRestaurantHours(settings.restaurantHours as unknown as RestaurantHours) : null
-      setRestaurantHours(migratedHours)
+    if (!settingsLoading && migratedRestaurantHours) {
+      setRestaurantHours(migratedRestaurantHours)
     }
-  }, [settings.restaurantHours, settingsLoading, setRestaurantHours])
+  }, [migratedRestaurantHours, settingsLoading, setRestaurantHours])
 
   // Show/hide restaurant closed modal
   useEffect(() => {
@@ -164,6 +170,7 @@ export function useMenuLogic({
     settings,
     settingsLoading,
     allowSchedulingWhenClosed,
+    migratedRestaurantHours,
 
     // Language
     language,
