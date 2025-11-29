@@ -398,11 +398,19 @@ export function RestaurantHoursCard({
             <div className="flex-1 overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-2">
                 {workingDayOrder.map((day) => {
-                  const daySchedule = migratedHours?.advancedSchedule?.[day] || {
-                    enabled: selectedWorkingDays.includes(day),
-                    openTime: '09:00',
-                    closeTime: '22:00'
-                  };
+                  // If in simple mode, always use default hours (ignore existing advanced schedule)
+                  // If in advanced mode, preserve existing schedule or use default as fallback
+                  const daySchedule = currentMode === 'simple'
+                    ? {
+                        enabled: selectedWorkingDays.includes(day),
+                        openTime: migratedHours?.simpleSchedule?.defaultHours?.openTime || '09:00',
+                        closeTime: migratedHours?.simpleSchedule?.defaultHours?.closeTime || '22:00'
+                      }
+                    : migratedHours?.advancedSchedule?.[day] || {
+                        enabled: selectedWorkingDays.includes(day),
+                        openTime: migratedHours?.simpleSchedule?.defaultHours?.openTime || '09:00',
+                        closeTime: migratedHours?.simpleSchedule?.defaultHours?.closeTime || '22:00'
+                      };
 
                   const handleDayToggle = () => {
                     if (!migratedHours) return;
