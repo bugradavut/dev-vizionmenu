@@ -23,15 +23,29 @@ const getDashboardStats = async (req, res) => {
       });
     }
 
-    const [stats, salesChartData, recentOrders, popularItems] = await Promise.all([
+    const [stats, salesChartData, previousWeekTotal, recentOrders, popularItems] = await Promise.all([
       dashboardService.getBranchDashboardStats(userBranch.branch_id),
       dashboardService.getSalesChartData(userBranch.branch_id),
+      dashboardService.getPreviousWeekSalesTotal(userBranch.branch_id),
       dashboardService.getRecentOrders(userBranch.branch_id),
       dashboardService.getPopularItems(userBranch.branch_id)
     ]);
 
-    // Calculate week total and change percent for chart
+    // Calculate week total (last 7 days)
     const weekTotal = salesChartData.reduce((sum, day) => sum + day.sales, 0);
+
+    // Calculate week-over-week change percent
+    // Compare: Last 7 days vs Previous 7 days (days 8-14 ago)
+    let weekChangePercent = 0;
+    if (previousWeekTotal > 0) {
+      weekChangePercent = ((weekTotal - previousWeekTotal) / previousWeekTotal) * 100;
+    } else if (weekTotal > 0) {
+      // Previous week had no sales, current week has sales = 100% increase
+      weekChangePercent = 100;
+    } else {
+      // Both weeks have no sales = 0% change
+      weekChangePercent = 0;
+    }
 
     res.json({
       success: true,
@@ -40,7 +54,7 @@ const getDashboardStats = async (req, res) => {
         salesChart: {
           data: salesChartData,
           weekTotal,
-          changePercent: stats.todaySales.changePercent
+          changePercent: weekChangePercent
         },
         recentOrders,
         popularItems

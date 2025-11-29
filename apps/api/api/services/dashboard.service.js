@@ -226,6 +226,36 @@ const getSalesChartData = async (branchId) => {
 };
 
 /**
+ * Get previous week sales total (days 8-14 ago) for week-over-week comparison
+ * @param {string} branchId - Branch ID
+ * @returns {Promise<number>} Previous week total sales
+ */
+const getPreviousWeekSalesTotal = async (branchId) => {
+  const today = new Date();
+  let total = 0;
+
+  // Calculate sales for days 8-14 ago (previous week)
+  for (let i = 13; i >= 7; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+
+    const { data } = await supabase
+      .from('orders')
+      .select('total_amount')
+      .eq('branch_id', branchId)
+      .gte('created_at', `${dateStr}T00:00:00`)
+      .lte('created_at', `${dateStr}T23:59:59`)
+      .in('payment_status', ['paid', 'succeeded', 'pending']);
+
+    const dayTotal = data?.reduce((sum, order) => sum + Number(order.total_amount || 0), 0) || 0;
+    total += dayTotal;
+  }
+
+  return total;
+};
+
+/**
  * Get orders sparkline data for last N days
  * @param {string} branchId - Branch ID
  * @param {string[]} dates - Array of date strings
@@ -457,6 +487,7 @@ module.exports = {
   getSalesSparkline,
   getOrdersSparkline,
   getSalesChartData,
+  getPreviousWeekSalesTotal,
   getOrderSourcesData,
   getTeamMembers,
   getRecentOrders,

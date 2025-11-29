@@ -63,16 +63,23 @@ const getOrderStatusLabel = (status: string, language: string): string => {
   return language === 'fr' ? label.fr : label.en
 }
 
-export function OrderHistoryCard() {
+interface OrderHistoryCardProps {
+  onRefresh?: () => Promise<void>
+  refreshing?: boolean
+}
+
+export function OrderHistoryCard({ onRefresh, refreshing: externalRefreshing }: OrderHistoryCardProps = {}) {
   const { language } = useLanguage()
   const locale = language === 'fr' ? fr : enUS
   const [orders, setOrders] = useState<HistoryOrder[]>([])
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
+  const [internalRefreshing, setInternalRefreshing] = useState(false)
+
+  const refreshing = externalRefreshing ?? internalRefreshing
 
   const fetchOrders = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
-      setRefreshing(true)
+      setInternalRefreshing(true)
     } else {
       setLoading(true)
     }
@@ -96,7 +103,7 @@ export function OrderHistoryCard() {
       console.error('[Order History] Failed to fetch:', error)
     } finally {
       setLoading(false)
-      setRefreshing(false)
+      setInternalRefreshing(false)
     }
   }, [])
 
@@ -104,8 +111,16 @@ export function OrderHistoryCard() {
     fetchOrders()
   }, [fetchOrders])
 
-  const handleRefresh = () => {
-    fetchOrders(true)
+  const handleRefresh = async () => {
+    if (onRefresh) {
+      // Use global refresh handler
+      await onRefresh()
+      // Also refresh local data
+      await fetchOrders(true)
+    } else {
+      // Fallback to local refresh only
+      fetchOrders(true)
+    }
   }
 
   if (loading) {
