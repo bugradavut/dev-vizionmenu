@@ -65,20 +65,20 @@ export function PriceDetailsSection({
   // Add delivery fee for delivery orders only (using calculated delivery fee)
   const applicableDeliveryFee = selectedOrderType === 'delivery' ? deliveryFee : 0
   const subtotalWithDelivery = subtotalAfterDiscount + applicableDeliveryFee
-  
-  // ✅ NEW CANADA TAX RULES: Tip is now calculated BEFORE taxes and IS taxable
+
+  // ✅ CANADA TAX FIX: Tips are NOT taxable - calculate taxes WITHOUT tip
   // Quebec taxes: GST (5%) + QST (9.975%) = ~15%
   // GST = Goods and Services Tax (Federal tax - 5%)
   // QST = Quebec Sales Tax (Provincial tax - 9.975%)
   const tipAmount = selectedTip?.amount || 0
-  const subtotalWithDeliveryAndTip = subtotalWithDelivery + tipAmount
-  
+
   const gstRate = 0.05
   const qstRate = 0.09975
-  const gst = subtotalWithDeliveryAndTip * gstRate
-  const qst = subtotalWithDeliveryAndTip * qstRate
-  
-  const finalTotal = subtotalWithDeliveryAndTip + gst + qst
+  const gst = subtotalWithDelivery * gstRate
+  const qst = subtotalWithDelivery * qstRate
+
+  // Final total: subtotal + taxes + tip (tip added AFTER taxes)
+  const finalTotal = subtotalWithDelivery + gst + qst + tipAmount
 
   return (
     <div className="bg-card rounded-lg border border-border p-6">
@@ -108,25 +108,7 @@ export function PriceDetailsSection({
             </span>
           </div>
         )}
-        
-        {/* ✅ NEW: Tip shown AFTER items but BEFORE subtotal (new Canada tax rules) */}
-        {selectedTip && tipAmount > 0 && (
-          <div className="flex justify-between items-center">
-            <span className="text-foreground flex items-center gap-1">
-              {language === 'fr' ? 'Pourboire' : 'Tip'}
-              <span className="text-xs text-muted-foreground">
-                ({selectedTip.type === 'percentage' 
-                  ? `${selectedTip.value}%` 
-                  : language === 'fr' ? 'fixe' : 'fixed'
-                })
-              </span>
-            </span>
-            <span className="text-foreground">
-              {language === 'fr' ? `${tipAmount.toFixed(2)} $` : `$${tipAmount.toFixed(2)}`}
-            </span>
-          </div>
-        )}
-        
+
         {/* Delivery Fee */}
         {selectedOrderType === 'delivery' && (
           <div className="flex justify-between items-center">
@@ -156,7 +138,7 @@ export function PriceDetailsSection({
           <div className="flex justify-between items-center mb-2">
             <span className="text-muted-foreground">Subtotal</span>
             <span className="text-foreground">
-              {language === 'fr' ? `${subtotalWithDeliveryAndTip.toFixed(2)} $` : `$${subtotalWithDeliveryAndTip.toFixed(2)}`}
+              {language === 'fr' ? `${subtotalWithDelivery.toFixed(2)} $` : `$${subtotalWithDelivery.toFixed(2)}`}
             </span>
           </div>
           
@@ -173,8 +155,26 @@ export function PriceDetailsSection({
               {language === 'fr' ? `${qst.toFixed(2)} $` : `$${qst.toFixed(2)}`}
             </span>
           </div>
+
+          {/* ✅ CANADA TAX FIX: Tip shown AFTER taxes (tip is NOT taxable) */}
+          {selectedTip && tipAmount > 0 && (
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-foreground flex items-center gap-1">
+                {language === 'fr' ? 'Pourboire' : 'Tip'}
+                <span className="text-xs text-muted-foreground">
+                  ({selectedTip.type === 'percentage'
+                    ? `${selectedTip.value}%`
+                    : language === 'fr' ? 'fixe' : 'fixed'
+                  })
+                </span>
+              </span>
+              <span className="text-foreground">
+                {language === 'fr' ? `${tipAmount.toFixed(2)} $` : `$${tipAmount.toFixed(2)}`}
+              </span>
+            </div>
+          )}
         </div>
-        
+
         <div className="border-t border-border pt-3">
           <div className="flex justify-between items-center">
             <span className="text-lg font-semibold text-foreground">Total</span>
@@ -203,7 +203,7 @@ export function PriceDetailsSection({
           )}
           
           {/* Minimum Order Warning for Delivery Orders */}
-          {selectedOrderType === 'delivery' && !isMinimumOrderLoading && minimumOrderAmount && minimumOrderAmount > 0 && !isMinimumOrderMet && (
+          {selectedOrderType === 'delivery' && !isMinimumOrderLoading && (minimumOrderAmount ?? 0) > 0 && !isMinimumOrderMet && (
             <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
@@ -215,15 +215,15 @@ export function PriceDetailsSection({
                     }
                   </p>
                   <p className="text-red-700 mt-1">
-                    {language === 'fr' 
-                      ? `Articles alimentaires: ${subtotalAfterDiscount.toFixed(2)} $ / ${minimumOrderAmount.toFixed(2)} $ requis`
-                      : `Food subtotal: $${subtotalAfterDiscount.toFixed(2)} / $${minimumOrderAmount.toFixed(2)} required`
+                    {language === 'fr'
+                      ? `Articles alimentaires: ${subtotalAfterDiscount.toFixed(2)} $ / ${(minimumOrderAmount ?? 0).toFixed(2)} $ requis`
+                      : `Food subtotal: $${subtotalAfterDiscount.toFixed(2)} / $${(minimumOrderAmount ?? 0).toFixed(2)} required`
                     }
                   </p>
                   <p className="text-red-700 mt-1">
-                    {language === 'fr' 
-                      ? `Ajoutez ${(minimumOrderAmount - subtotalAfterDiscount).toFixed(2)} $ d'articles alimentaires pour qualifier pour la livraison`
-                      : `Add $${(minimumOrderAmount - subtotalAfterDiscount).toFixed(2)} in food items to qualify for delivery`
+                    {language === 'fr'
+                      ? `Ajoutez ${((minimumOrderAmount ?? 0) - subtotalAfterDiscount).toFixed(2)} $ d'articles alimentaires pour qualifier pour la livraison`
+                      : `Add $${((minimumOrderAmount ?? 0) - subtotalAfterDiscount).toFixed(2)} in food items to qualify for delivery`
                     }
                   </p>
                   <p className="text-red-600 text-xs mt-2 opacity-80">

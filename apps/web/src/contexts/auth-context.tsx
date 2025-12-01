@@ -241,7 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   } = useInactivityTimeout({
     timeout: 30 * 60 * 1000, // 30 minutes inactivity threshold (SW-78 default)
     warningTime: 30 * 1000, // 30 seconds warning
-    enabled: !!user && !loading, // Only active when user is logged in
+    enabled: false, // 🔴 DISABLED: Sleep mode temporarily disabled
     onTimeout: async () => {
       // Auto logout on inactivity
       await signOut();

@@ -269,18 +269,21 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
   const subtotalAfterDiscount = itemsTotal - discountAmount
   const deliveryFee = sessionData?.deliveryFee || 0
   const subtotalWithDelivery = subtotalAfterDiscount + deliveryFee
-  
-  // ✅ NEW CANADA TAX RULES: Tip amount added BEFORE taxes
+
+  // ✅ CANADA TAX FIX: Tips are NOT taxable - calculate taxes WITHOUT tip
+  // Quebec taxes: GST (5%) + QST (9.975%) = ~15%
+  // GST = Goods and Services Tax (Federal tax - 5%)
+  // QST = Quebec Sales Tax (Provincial tax - 9.975%)
   const tipAmount = sessionData?.tipDetails?.amount || 0
-  const subtotalWithDeliveryAndTip = subtotalWithDelivery + tipAmount
-  
-  // Tax breakdown: Use sessionStorage GST/QST if available, otherwise calculate on subtotal + tip
-  const gst = sessionData?.pricing?.gst || (apiTax > 0 ? apiTax * 0.333 : subtotalWithDeliveryAndTip * 0.05) // Estimate GST as 1/3 of total tax if from API
-  const qst = sessionData?.pricing?.qst || (apiTax > 0 ? apiTax * 0.667 : subtotalWithDeliveryAndTip * 0.09975) // Estimate QST as 2/3 of total tax if from API
+
+  const gstRate = 0.05
+  const qstRate = 0.09975
+  const gst = sessionData?.pricing?.gst || (subtotalWithDelivery * gstRate)
+  const qst = sessionData?.pricing?.qst || (subtotalWithDelivery * qstRate)
   const totalTax = gst + qst
-  
-  // Final calculations with fallbacks
-  const total = apiTotal || sessionData?.pricing?.total || (subtotalWithDeliveryAndTip + totalTax)
+
+  // Final calculations with fallbacks - tip added AFTER taxes
+  const total = apiTotal || sessionData?.pricing?.total || (subtotalWithDelivery + totalTax + tipAmount)
   
   // Extract customer info from sessionStorage with fallbacks
   const customerName = sessionData?.customerName || 'Customer';
@@ -901,28 +904,7 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                       </span>
                     </div>
                   )}
-                  
-                  {/* ✅ NEW: Tip shown AFTER items but BEFORE delivery fee (new Canada tax rules) */}
-                  {sessionData?.tipDetails && tipAmount > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 flex items-center gap-1">
-                        {language === 'fr' ? 'Pourboire' : 'Tip'}
-                        <span className="text-xs text-gray-500">
-                          ({sessionData.tipDetails.type === 'percentage' 
-                            ? `${sessionData.tipDetails.value}%` 
-                            : language === 'fr' ? 'fixe' : 'fixed'
-                          })
-                        </span>
-                      </span>
-                      <span className="font-medium text-gray-900">
-                        {language === 'fr' ? 
-                          `${tipAmount.toFixed(2).replace('.', ',')} $` : 
-                          `$${tipAmount.toFixed(2)}`
-                        }
-                      </span>
-                    </div>
-                  )}
-                  
+
                   {/* Delivery Fee - Enhanced with Free Delivery Support */}
                   {(deliveryFee > 0 || sessionData?.deliveryInfo?.isFree) && (
                     <div className="flex justify-between">
@@ -953,15 +935,15 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                     </div>
                   )}
                   
-                  {/* Subtotal (including tip before taxes) */}
+                  {/* Subtotal (excluding tip per Canada tax rules) */}
                   <div className="flex justify-between border-t border-gray-200 pt-2">
                     <span className="text-gray-600">
                       {language === 'fr' ? 'Sous-total' : 'Subtotal'}
                     </span>
                     <span className="font-medium text-gray-900">
-                      {language === 'fr' ? 
-                        `${subtotalWithDeliveryAndTip.toFixed(2).replace('.', ',')} $` : 
-                        `$${subtotalWithDeliveryAndTip.toFixed(2)}`
+                      {language === 'fr' ?
+                        `${subtotalWithDelivery.toFixed(2).replace('.', ',')} $` :
+                        `$${subtotalWithDelivery.toFixed(2)}`
                       }
                     </span>
                   </div>
@@ -981,14 +963,35 @@ function OrderConfirmationContent({ chainSlug }: { chainSlug: string }) {
                   <div className="flex justify-between">
                     <span className="text-gray-600">QST</span>
                     <span className="font-medium text-gray-900">
-                      {language === 'fr' ? 
-                        `${qst.toFixed(2).replace('.', ',')} $` : 
+                      {language === 'fr' ?
+                        `${qst.toFixed(2).replace('.', ',')} $` :
                         `$${qst.toFixed(2)}`
                       }
                     </span>
                   </div>
+
+                  {/* ✅ CANADA TAX FIX: Tip shown AFTER taxes (tip is NOT taxable) */}
+                  {sessionData?.tipDetails && tipAmount > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 flex items-center gap-1">
+                        {language === 'fr' ? 'Pourboire' : 'Tip'}
+                        <span className="text-xs text-gray-500">
+                          ({sessionData.tipDetails.type === 'percentage'
+                            ? `${sessionData.tipDetails.value}%`
+                            : language === 'fr' ? 'fixe' : 'fixed'
+                          })
+                        </span>
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        {language === 'fr' ?
+                          `${tipAmount.toFixed(2).replace('.', ',')} $` :
+                          `$${tipAmount.toFixed(2)}`
+                        }
+                      </span>
+                    </div>
+                  )}
                 </div>
-                
+
                 <div className="border-t border-gray-200 pt-3 mt-3">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-gray-900">

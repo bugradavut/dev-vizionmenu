@@ -66,6 +66,7 @@ const customerBranchRoutes = require('./routes/customer-branch.routes');
 const adminBranchRoutes = require('./routes/admin-branch.routes');
 const chainUsersRoutes = require('./routes/chain-users.routes');
 const platformAdminRoutes = require('./routes/platform-admin.routes');
+const platformSettingsRoutes = require('./routes/platform-settings.routes');
 const customerChainsRoutes = require('./routes/customer-chains.routes');
 const commissionRoutes = require('./routes/commission');
 const stripeRoutes = require('./routes/stripe');
@@ -240,6 +241,9 @@ app.use('/api/v1/users/chain', chainUsersRoutes);
 
 // Use platform admin routes (platform admin management)
 app.use('/api/v1/admin', platformAdminRoutes);
+
+// Use platform settings routes (maintenance mode - mixed auth: GET public, PUT admin only)
+app.use('/api/v1/platform-settings', platformSettingsRoutes);
 
 // Use commission routes (protected)
 app.use('/api/v1/commission', commissionRoutes);

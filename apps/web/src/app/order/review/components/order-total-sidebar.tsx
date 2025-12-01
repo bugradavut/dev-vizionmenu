@@ -26,7 +26,6 @@ interface OrderTotals {
   itemsTotal: number
   subtotalAfterDiscount: number
   subtotalWithDelivery: number
-  subtotalWithDeliveryAndTip: number
   tipAmount: number
   gst: number
   qst: number
@@ -634,12 +633,12 @@ export function OrderTotalSidebar({
     try {
       const sourceType = orderContext.source === 'qr' ? 'qr' : 'website'
       // ✅ FIX: Calculate commission on tax-excluded amount (Quebec compliance)
-      // Commission should only apply to items subtotal, excluding:
-      // - Tips (not part of restaurant revenue)
-      // - Delivery fees (operational cost, not product sale)
+      // Commission base: Items + Delivery (both are taxable sales/services)
+      // Excluded from commission:
+      // - Tips (gratuity, not part of sales revenue)
       // - Taxes (GST/QST - collected for government, not restaurant revenue)
       const commissionData = await commissionService.calculateCommission(
-        orderTotals.subtotalAfterDiscount,
+        orderTotals.subtotalWithDelivery,
         orderContext.branchId,
         sourceType
       )
