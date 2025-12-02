@@ -67,8 +67,8 @@ export function RestaurantClosedModal({
                     ? 'Nous ne acceptons pas de nouvelles commandes pour le moment.'
                     : 'We are not accepting new orders at this time.')
                   : (language === 'fr'
-                    ? 'Le service de livraison n\'est pas disponible pour le moment.'
-                    : 'Delivery service is currently not available.')
+                    ? 'Les jours et heures de livraison sont:'
+                    : 'Delivery days and hours are:')
                 }
               </p>
             </div>
