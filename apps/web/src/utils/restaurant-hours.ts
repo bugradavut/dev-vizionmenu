@@ -187,8 +187,10 @@ function timeToMinutes(timeString: string): number {
 
 /**
  * Format time string for display (12-hour format)
+ * @param timeString - Time in HH:MM format (24-hour)
+ * @returns Formatted time string in 12-hour format (e.g., "9:00 AM", "10:30 PM")
  */
-function formatTime(timeString: string): string {
+export function formatTime(timeString: string): string {
   const [hours, minutes] = timeString.split(':').map(Number);
   const period = hours >= 12 ? 'PM' : 'AM';
   const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
@@ -440,4 +442,66 @@ export function getWorkingDaysText(workingDays: string[], language: 'en' | 'fr' 
   }
 
   return `${dayNames.slice(0, -1).join(', ')}${language === 'fr' ? ' et ' : ' & '}${dayNames[dayNames.length - 1]}`;
+}
+
+/**
+ * Get current day key considering Canada Eastern timezone
+ * @returns Current day key (mon, tue, wed, thu, fri, sat, sun)
+ */
+export function getCurrentDay(): string {
+  const now = getCurrentCanadaEasternTime();
+  const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  return days[now.getDay()];
+}
+
+/**
+ * Get localized day label
+ * @param day - Day key (mon, tue, wed, etc.)
+ * @param language - Language code ('en' or 'fr')
+ * @param format - Label format: 'full', 'short', or 'initial'
+ * @returns Localized day name
+ */
+export function getDayLabel(
+  day: string,
+  language: 'en' | 'fr',
+  format: 'full' | 'short' | 'initial' = 'full'
+): string {
+  const labels = {
+    en: {
+      full: { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' },
+      short: { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' },
+      initial: { mon: 'M', tue: 'T', wed: 'W', thu: 'T', fri: 'F', sat: 'S', sun: 'S' }
+    },
+    fr: {
+      full: { mon: 'Lundi', tue: 'Mardi', wed: 'Mercredi', thu: 'Jeudi', fri: 'Vendredi', sat: 'Samedi', sun: 'Dimanche' },
+      short: { mon: 'Lun', tue: 'Mar', wed: 'Mer', thu: 'Jeu', fri: 'Ven', sat: 'Sam', sun: 'Dim' },
+      initial: { mon: 'L', tue: 'M', wed: 'M', thu: 'J', fri: 'V', sat: 'S', sun: 'D' }
+    }
+  };
+
+  return labels[language][format][day as keyof typeof labels.en.full] || day;
+}
+
+/**
+ * Get full weekly schedule for display
+ * Returns all 7 days with their hours or closed status
+ * @param restaurantHours - Restaurant hours configuration
+ * @returns Array of daily schedules with day name, open status, and hours
+ */
+export function getWeeklySchedule(restaurantHours: RestaurantHours): Array<{
+  day: string;
+  isOpen: boolean;
+  hours: { openTime: string; closeTime: string } | null;
+}> {
+  const migrated = migrateRestaurantHours(restaurantHours);
+  const dayOrder = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+  return dayOrder.map(day => {
+    const dayHours = getRestaurantHoursForDay(migrated, day);
+    return {
+      day,
+      isOpen: dayHours !== null,
+      hours: dayHours
+    };
+  });
 }

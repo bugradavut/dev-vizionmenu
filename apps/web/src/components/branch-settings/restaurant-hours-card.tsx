@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -204,6 +204,34 @@ export function RestaurantHoursCard({
 }: RestaurantHoursCardProps) {
   const workingDayOrder: RestaurantHoursDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
+  // Auto-sync advanced schedule with simple mode when opening modal
+  useEffect(() => {
+    if (showCustomSchedule && currentMode === 'simple' && migratedHours) {
+      // Always sync advanced schedule with simple mode settings
+      // This ensures modal always shows current default hours and working days
+      const newSchedule: Record<string, { enabled: boolean; openTime: string; closeTime: string }> = {}
+
+      workingDayOrder.forEach(day => {
+        newSchedule[day] = {
+          enabled: selectedWorkingDays.includes(day),
+          openTime: migratedHours.simpleSchedule?.defaultHours?.openTime || '09:00',
+          closeTime: migratedHours.simpleSchedule?.defaultHours?.closeTime || '22:00'
+        }
+      })
+
+      // Update the schedule
+      onUpdateSettings({
+        restaurantHours: {
+          ...migratedHours,
+          advancedSchedule: newSchedule
+        }
+      })
+    }
+    // Only run when modal opens or mode changes, not when migratedHours updates
+    // (to prevent infinite loop)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCustomSchedule, currentMode])
+
   return (
     <>
       <Card className="h-full border border-purple-100 shadow-sm">
@@ -398,19 +426,13 @@ export function RestaurantHoursCard({
             <div className="flex-1 overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-2">
                 {workingDayOrder.map((day) => {
-                  // If in simple mode, always use default hours (ignore existing advanced schedule)
-                  // If in advanced mode, preserve existing schedule or use default as fallback
-                  const daySchedule = currentMode === 'simple'
-                    ? {
-                        enabled: selectedWorkingDays.includes(day),
-                        openTime: migratedHours?.simpleSchedule?.defaultHours?.openTime || '09:00',
-                        closeTime: migratedHours?.simpleSchedule?.defaultHours?.closeTime || '22:00'
-                      }
-                    : migratedHours?.advancedSchedule?.[day] || {
-                        enabled: selectedWorkingDays.includes(day),
-                        openTime: migratedHours?.simpleSchedule?.defaultHours?.openTime || '09:00',
-                        closeTime: migratedHours?.simpleSchedule?.defaultHours?.closeTime || '22:00'
-                      };
+                  // Always read from advanced schedule (or use defaults as fallback)
+                  // This allows editing times even in simple mode before switching to advanced
+                  const daySchedule = migratedHours?.advancedSchedule?.[day] || {
+                    enabled: selectedWorkingDays.includes(day),
+                    openTime: migratedHours?.simpleSchedule?.defaultHours?.openTime || '09:00',
+                    closeTime: migratedHours?.simpleSchedule?.defaultHours?.closeTime || '22:00'
+                  };
 
                   const handleDayToggle = () => {
                     if (!migratedHours) return;
