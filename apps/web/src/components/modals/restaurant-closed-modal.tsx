@@ -39,10 +39,26 @@ export function RestaurantClosedModal({
             </div>
 
             <div className="flex-1 text-left">
+              {/*
+                ⚠️ TEMPORARY FIX - NEEDS PROPER IMPLEMENTATION ⚠️
+                TODO: Implement separate delivery and pickup hour validation
+                This is a temporary workaround until we implement independent
+                delivery/pickup scheduling. The proper solution should:
+                1. Check delivery hours separately from restaurant hours
+                2. Check pickup hours separately from restaurant hours
+                3. Show appropriate message based on which service is available
+                4. Allow customers to place pickup orders even when delivery is closed
+
+                Customer feedback: "Restaurant appears closed when only delivery is unavailable,
+                but pickup is still available. Example: Chef Taouk opens at 11:00 for pickup
+                but delivery only starts at 16:00."
+
+                REMINDER: Replace this temporary fix with proper delivery/pickup hour validation
+              */}
               <DialogTitle className="text-xl font-semibold text-foreground mb-1 text-left">
                 {isBusy
                   ? (language === 'fr' ? 'Temporairement indisponible' : 'Temporarily Unavailable')
-                  : (language === 'fr' ? 'Restaurant fermé' : 'Restaurant Closed')
+                  : (language === 'fr' ? 'Livraison non disponible' : 'Delivery Not Available')
                 }
               </DialogTitle>
               <p className="text-muted-foreground text-sm">
@@ -51,8 +67,8 @@ export function RestaurantClosedModal({
                     ? 'Nous ne acceptons pas de nouvelles commandes pour le moment.'
                     : 'We are not accepting new orders at this time.')
                   : (language === 'fr'
-                    ? 'Les commandes ne sont pas disponibles pour le moment.'
-                    : 'Ordering is currently unavailable.')
+                    ? 'Le service de livraison n\'est pas disponible pour le moment.'
+                    : 'Delivery service is currently not available.')
                 }
               </p>
             </div>
