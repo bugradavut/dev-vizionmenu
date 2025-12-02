@@ -691,7 +691,11 @@ export function OrderTotalSidebar({
         commission: {
           orderSource: sourceType,
           commissionRate: commissionData.rate,
-          commissionAmount: commissionData.commissionAmount,
+          commissionAmount: commissionData.commissionAmount,              // Total with tax
+          commissionBeforeTax: commissionData.commissionBeforeTax,        // Base commission
+          commissionGST: commissionData.commissionGST,                    // GST 5%
+          commissionQST: commissionData.commissionQST,                    // QST 9.975%
+          commissionTaxTotal: commissionData.commissionTaxTotal,          // Total tax
           netAmount: commissionData.netAmount
         },
         // SW-78 FO-114: Quebec SRS compliance - include removed items
@@ -705,7 +709,7 @@ export function OrderTotalSidebar({
 
           const paymentIntent = await stripePaymentService.createPaymentIntent({
             amount: orderTotals.finalTotal,
-            commissionAmount: commissionData.commissionAmount,
+            commissionData: commissionData,      // Full commission object with tax breakdown
             orderId: `temp_${Date.now()}`,
             branchId: orderContext.branchId,
             customerEmail: currentFormData.customerInfo.email,

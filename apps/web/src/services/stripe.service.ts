@@ -5,7 +5,16 @@
 
 export interface StripePaymentData {
   amount: number; // Total amount in CAD dollars
-  commissionAmount: number; // Commission amount in CAD dollars
+  commissionAmount?: number; // Commission amount in CAD dollars (deprecated - use commissionData)
+  commissionData?: {
+    rate: number;
+    commissionAmount: number;           // Total with tax
+    commissionBeforeTax: number;        // Base commission
+    commissionGST: number;              // GST 5%
+    commissionQST: number;              // QST 9.975%
+    commissionTaxTotal: number;         // Total tax
+    netAmount: number;
+  };
   orderId: string;
   branchId: string;
   customerEmail?: string;
@@ -55,7 +64,7 @@ class StripePaymentService {
         },
         body: JSON.stringify({
           amount: paymentData.amount,
-          commission: paymentData.commissionAmount,
+          commission: paymentData.commissionData || { commissionAmount: paymentData.commissionAmount },
           orderId: paymentData.orderId,
           branchId: paymentData.branchId,
           customerEmail: paymentData.customerEmail,

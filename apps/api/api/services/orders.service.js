@@ -1109,6 +1109,10 @@ async function createOrderWithCommission(orderData, branchId) {
     order_source,
     commission_rate,
     commission_amount,
+    commission_before_tax,       // NEW: Base commission before taxes
+    commission_gst,              // NEW: GST 5% on commission
+    commission_qst,              // NEW: QST 9.975% on commission
+    commission_tax_total,        // NEW: Total tax on commission
     net_amount,
     commission_status,
     // Payment tracking
@@ -1240,7 +1244,11 @@ async function createOrderWithCommission(orderData, branchId) {
       // Commission fields
       order_source: order_source,
       commission_rate: commission_rate,
-      commission_amount: commission_amount,
+      commission_amount: commission_amount,              // Total with tax
+      commission_before_tax: commission_before_tax,      // Base commission (new)
+      commission_gst: commission_gst,                    // GST 5% (new)
+      commission_qst: commission_qst,                    // QST 9.975% (new)
+      commission_tax_total: commission_tax_total,        // Total tax (new)
       net_amount: net_amount,
       commission_status: commission_status || 'pending',
       // Payment tracking - Link to Stripe payment

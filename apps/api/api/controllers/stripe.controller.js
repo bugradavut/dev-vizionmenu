@@ -327,8 +327,15 @@ async function createPaymentIntent(req, res) {
       metadata = {}
     } = req.body;
 
+    // Handle commission as either number (old) or object (new with tax breakdown)
+    const commissionData = typeof commission === 'object'
+      ? commission
+      : { commissionAmount: commission };
+
+    const commissionAmount = commissionData.commissionAmount || commission;
+
     // Validation
-    if (!amount || !commission || !orderId || !branchId) {
+    if (!amount || !commissionAmount || !orderId || !branchId) {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields: amount, commission, orderId, branchId'
@@ -376,11 +383,12 @@ async function createPaymentIntent(req, res) {
       // ✅ DIRECT CHARGE: Connected account pays Stripe fees, platform gets application fee
       console.log('💳 Creating DIRECT CHARGE payment intent with on_behalf_of...');
       console.log('   → Connected account will pay Stripe fees');
-      console.log('   → Platform will receive application fee: $' + commission);
+      console.log('   → Platform will receive application fee: $' + commissionAmount);
 
       paymentIntent = await stripeService.createPaymentIntentWithSplit({
         amount: parseFloat(amount),
-        commissionAmount: parseFloat(commission),
+        commissionAmount: parseFloat(commissionAmount),
+        commissionData: commissionData,
         stripeAccountId: stripeAccount.stripe_account_id,
         orderId: orderId,
         metadata: {
@@ -388,7 +396,7 @@ async function createPaymentIntent(req, res) {
           branchId,
           customerEmail,
           orderSource,
-          commission: commission.toString(),
+          commission: commissionAmount.toString(),
           charge_type: 'direct_charge'
         }
       });
@@ -412,7 +420,7 @@ async function createPaymentIntent(req, res) {
           branchId,
           customerEmail,
           orderSource,
-          commission: commission.toString(),
+          commission: commissionAmount.toString(),
           fallback_reason: reason,
           charge_type: 'destination_charge_fallback'
         }
@@ -424,8 +432,8 @@ async function createPaymentIntent(req, res) {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id || paymentIntent.payment_intent_id,
       amount: parseFloat(amount),
-      commissionAmount: parseFloat(commission),
-      netAmount: parseFloat(amount) - parseFloat(commission),
+      commissionAmount: parseFloat(commissionAmount),
+      netAmount: parseFloat(amount) - parseFloat(commissionAmount),
       connectedAccountId: stripeAccount?.stripe_account_id || null  // ✅ For frontend Direct Charge confirmation
     };
 

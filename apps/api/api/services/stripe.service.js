@@ -240,15 +240,19 @@ class StripeService {
     try {
       const {
         amount,
-        commissionAmount,
+        commissionAmount,      // For backward compatibility
+        commissionData,        // New: Full commission object with tax breakdown
         stripeAccountId,
         orderId,
         metadata = {}
       } = paymentData;
 
+      // Use commissionData if available (new), otherwise fall back to commissionAmount (old)
+      const commission = commissionData || { commissionAmount };
+
       // Convert to cents for Stripe
       const amountCents = Math.round(amount * 100);
-      const commissionCents = Math.round(commissionAmount * 100);
+      const commissionCents = Math.round(commission.commissionAmount * 100);
 
       console.log('🔧 Creating DIRECT CHARGE Payment Intent (Stripe-Account header):', {
         amount: `$${amount} CAD`,
@@ -265,10 +269,16 @@ class StripeService {
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amountCents,
         currency: 'cad',
-        application_fee_amount: commissionCents, // Platform commission
+        application_fee_amount: commissionCents, // Platform commission (includes GST + QST taxes)
         metadata: {
           order_id: orderId,
-          commission_amount: commissionAmount.toString(),
+          commission_amount: commission.commissionAmount.toString(),           // Total with tax
+          ...(commission.commissionBeforeTax && {
+            commission_before_tax: commission.commissionBeforeTax.toString(),  // Base commission
+            commission_gst: commission.commissionGST.toString(),                // GST 5%
+            commission_qst: commission.commissionQST.toString(),                // QST 9.975%
+            commission_tax_total: commission.commissionTaxTotal.toString()      // Tax total
+          }),
           ...metadata
         },
         automatic_payment_methods: {

@@ -264,10 +264,15 @@ class CommissionService {
 
   /**
    * Calculate commission for an order
+   * Returns commission with Quebec tax breakdown (GST + QST)
    */
   async calculateCommission(orderTotal: number, branchId: string, sourceType: string): Promise<{
     rate: number;
-    commissionAmount: number;
+    commissionAmount: number;           // Total with tax
+    commissionBeforeTax: number;        // Base commission
+    commissionGST: number;              // GST 5%
+    commissionQST: number;              // QST 9.975%
+    commissionTaxTotal: number;         // Total tax
     netAmount: number;
   }> {
     try {
@@ -280,6 +285,10 @@ class CommissionService {
       return response.data as {
         rate: number;
         commissionAmount: number;
+        commissionBeforeTax: number;
+        commissionGST: number;
+        commissionQST: number;
+        commissionTaxTotal: number;
         netAmount: number;
       };
     } catch (error) {

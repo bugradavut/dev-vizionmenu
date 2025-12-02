@@ -86,15 +86,38 @@ const commissionService = {
   async calculateCommission(orderTotal, branchId, sourceType) {
     try {
       const rate = await this.getCommissionRate(branchId, sourceType);
-      const commissionAmount = (orderTotal * rate) / 100;
+
+      // Calculate commission before tax
+      const commissionBeforeTax = (orderTotal * rate) / 100;
+
+      // Quebec tax rates (hardcoded - legally fixed rates)
+      // GST (Goods and Services Tax) - Federal: 5%
+      // QST (Quebec Sales Tax) - Provincial: 9.975%
+      const GST_RATE = 0.05;      // 5% Federal GST
+      const QST_RATE = 0.09975;   // 9.975% Provincial QST
+
+      // Calculate taxes on commission itself (commission is a taxable service)
+      const commissionGST = commissionBeforeTax * GST_RATE;
+      const commissionQST = commissionBeforeTax * QST_RATE;
+      const commissionTaxTotal = commissionGST + commissionQST;
+
+      // Total commission including taxes (charged to restaurant)
+      // Restaurant can claim back taxes via ITC/RTI (Input Tax Credit)
+      const commissionAmount = commissionBeforeTax + commissionTaxTotal;
+
+      // Net amount restaurant receives (unchanged logic)
       const netAmount = orderTotal - commissionAmount;
-      
+
       return {
         rate: parseFloat(rate.toFixed(2)),
-        commissionAmount: parseFloat(commissionAmount.toFixed(2)),
+        commissionAmount: parseFloat(commissionAmount.toFixed(2)),          // Total with tax
+        commissionBeforeTax: parseFloat(commissionBeforeTax.toFixed(2)),    // Base commission
+        commissionGST: parseFloat(commissionGST.toFixed(2)),                // GST on commission
+        commissionQST: parseFloat(commissionQST.toFixed(2)),                // QST on commission
+        commissionTaxTotal: parseFloat(commissionTaxTotal.toFixed(2)),      // Total tax
         netAmount: parseFloat(netAmount.toFixed(2))
       };
-      
+
     } catch (error) {
       console.error('Error calculating commission:', error);
       throw new Error(`Commission calculation failed: ${error.message}`);
@@ -111,7 +134,11 @@ const commissionService = {
           branch_id: orderData.branchId,
           commission_rate: orderData.commissionRate,
           order_total: orderData.orderTotal,
-          commission_amount: orderData.commissionAmount,
+          commission_amount: orderData.commissionAmount,              // Total with tax
+          commission_before_tax: orderData.commissionBeforeTax,       // Base commission
+          commission_gst: orderData.commissionGST,                    // GST on commission
+          commission_qst: orderData.commissionQST,                    // QST on commission
+          commission_tax_total: orderData.commissionTaxTotal,         // Total tax
           net_amount: orderData.netAmount,
           source_type: orderData.sourceType
         })
