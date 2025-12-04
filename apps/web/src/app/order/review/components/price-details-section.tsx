@@ -143,14 +143,14 @@ export function PriceDetailsSection({
           </div>
           
           <div className="flex justify-between items-center mb-2">
-            <span className="text-muted-foreground">GST</span>
+            <span className="text-muted-foreground">{language === 'fr' ? 'TPS' : 'GST'}</span>
             <span className="text-foreground">
               {language === 'fr' ? `${gst.toFixed(2)} $` : `$${gst.toFixed(2)}`}
             </span>
           </div>
-          
+
           <div className="flex justify-between items-center mb-2">
-            <span className="text-muted-foreground">QST</span>
+            <span className="text-muted-foreground">{language === 'fr' ? 'TVQ' : 'QST'}</span>
             <span className="text-foreground">
               {language === 'fr' ? `${qst.toFixed(2)} $` : `$${qst.toFixed(2)}`}
             </span>

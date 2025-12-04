@@ -173,49 +173,51 @@ export function OrderHeader({ branchName, branchId, onSearch, onPreOrderConfirm,
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Pre-Order Buttons */}
-          {preOrder.isPreOrder ? (
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {/* Scheduled Button with Primary Color */}
-              <div 
-                className="flex items-center h-8 rounded-md text-white text-sm font-medium overflow-hidden"
-                style={{ backgroundColor: 'var(--primary)' }}
-              >
-                {/* Main button area */}
-                <button
-                  onClick={() => setIsPreOrderModalOpen(true)}
-                  className="flex items-center gap-2 px-3 py-1 hover:opacity-90 transition-opacity"
+          {/* Pre-Order Buttons - Only show for web users, not QR users */}
+          {source !== 'qr' && (
+            preOrder.isPreOrder ? (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Scheduled Button with Primary Color */}
+                <div
+                  className="flex items-center h-8 rounded-md text-white text-sm font-medium overflow-hidden"
+                  style={{ backgroundColor: 'var(--primary)' }}
                 >
-                  <Clock className="w-4 h-4" />
-                  <span className="hidden sm:inline">
-                    {language === 'fr' ? 'Programmé' : 'Scheduled'}
-                  </span>
-                </button>
-                
-                {/* X button with white background */}
-                <div className="bg-white rounded-md ml-1 mr-1">
+                  {/* Main button area */}
                   <button
-                    onClick={clearPreOrder}
-                    className="flex items-center justify-center w-6 h-6 text-red-500 hover:bg-gray-50 rounded-md transition-colors"
-                    title={language === 'fr' ? 'Annuler la programmation' : 'Cancel scheduling'}
+                    onClick={() => setIsPreOrderModalOpen(true)}
+                    className="flex items-center gap-2 px-3 py-1 hover:opacity-90 transition-opacity"
                   >
-                    <X className="w-3 h-3" />
+                    <Clock className="w-4 h-4" />
+                    <span className="hidden sm:inline">
+                      {language === 'fr' ? 'Programmé' : 'Scheduled'}
+                    </span>
                   </button>
+
+                  {/* X button with white background */}
+                  <div className="bg-white rounded-md ml-1 mr-1">
+                    <button
+                      onClick={clearPreOrder}
+                      className="flex items-center justify-center w-6 h-6 text-red-500 hover:bg-gray-50 rounded-md transition-colors"
+                      title={language === 'fr' ? 'Annuler la programmation' : 'Cancel scheduling'}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <Button 
-              variant="outline"
-              size="sm" 
-              className="h-9 gap-2 flex-shrink-0" 
-              onClick={() => setIsPreOrderModalOpen(true)}
-            >
-              <Clock className="w-4 h-4" />
-              <span className="hidden sm:inline">
-                {language === 'fr' ? 'Programmer' : 'Schedule'}
-              </span>
-            </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-2 flex-shrink-0"
+                onClick={() => setIsPreOrderModalOpen(true)}
+              >
+                <Clock className="w-4 h-4" />
+                <span className="hidden sm:inline">
+                  {language === 'fr' ? 'Programmer' : 'Schedule'}
+                </span>
+              </Button>
+            )
           )}
         </div>
 

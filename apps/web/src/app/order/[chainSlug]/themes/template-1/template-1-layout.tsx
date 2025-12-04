@@ -1115,7 +1115,14 @@ export default function Template1Layout(props: ThemeLayoutProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      <RestaurantClosedModal isOpen={logic.showRestaurantClosedModal} onClose={logic.handleRestaurantClosedModalClose} onScheduleOrder={logic.allowSchedulingWhenClosed ? logic.handleScheduleOrder : undefined} restaurantHours={logic.migratedRestaurantHours ?? undefined} isBusy={logic.migratedRestaurantHours ? logic.isRestaurantMarkedAsBusy(logic.migratedRestaurantHours) : false} />
+      <RestaurantClosedModal
+        isOpen={logic.showRestaurantClosedModal}
+        onClose={logic.handleRestaurantClosedModalClose}
+        onScheduleOrder={logic.allowSchedulingWhenClosed ? logic.handleScheduleOrder : undefined}
+        restaurantHours={logic.migratedRestaurantHours ?? undefined}
+        isBusy={logic.migratedRestaurantHours ? logic.isRestaurantMarkedAsBusy(logic.migratedRestaurantHours) : false}
+        source={orderContext.source}
+      />
 
       <PreOrderModal isOpen={logic.showPreOrderModal} onClose={logic.handlePreOrderClose} onConfirm={logic.handlePreOrderConfirm} currentSchedule={logic.preOrder.isPreOrder ? { date: logic.preOrder.scheduledDate || '', time: logic.preOrder.scheduledTime || '' } : undefined} restaurantHours={logic.migratedRestaurantHours} />
 

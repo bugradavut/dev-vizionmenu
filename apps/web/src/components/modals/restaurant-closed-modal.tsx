@@ -18,6 +18,7 @@ interface RestaurantClosedModalProps {
   onScheduleOrder?: () => void
   restaurantHours?: RestaurantHours
   isBusy?: boolean
+  source?: 'web' | 'qr' // Order source to determine if schedule option should be shown
 }
 
 export function RestaurantClosedModal({
@@ -25,7 +26,8 @@ export function RestaurantClosedModal({
   onClose,
   onScheduleOrder,
   restaurantHours,
-  isBusy = false
+  isBusy = false,
+  source = 'web'
 }: RestaurantClosedModalProps) {
   const { language } = useLanguage()
 
@@ -51,8 +53,8 @@ export function RestaurantClosedModal({
                     ? 'Nous ne acceptons pas de nouvelles commandes pour le moment.'
                     : 'We are not accepting new orders at this time.')
                   : (language === 'fr'
-                    ? 'Nos heures d\'ouverture sont:'
-                    : 'Our opening hours are:')
+                    ? 'Nos heures d\'ouverture:'
+                    : 'Our operating hours:')
                 }
               </p>
             </div>
@@ -86,7 +88,8 @@ export function RestaurantClosedModal({
           )}
 
           <div className="space-y-3">
-            {onScheduleOrder && (
+            {/* Only show Schedule Order button for web users (not QR users) */}
+            {onScheduleOrder && source !== 'qr' && (
               <Button
                 onClick={onScheduleOrder}
                 className="w-full h-11 bg-orange-500 text-white hover:bg-orange-600"
@@ -99,7 +102,7 @@ export function RestaurantClosedModal({
             <Button
               onClick={onClose}
               variant="outline"
-              className="w-full h-11 border-gray-300 text-gray-700 hover:bg-gray-50"
+              className="w-full h-11 border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors"
               size="lg"
             >
               {language === 'fr' ? 'Parcourir le menu' : 'Browse Menu'}

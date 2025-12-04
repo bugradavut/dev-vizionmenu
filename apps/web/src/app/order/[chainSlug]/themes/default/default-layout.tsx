@@ -455,6 +455,7 @@ export default function DefaultLayout(props: ThemeLayoutProps) {
         onScheduleOrder={logic.allowSchedulingWhenClosed ? logic.handleScheduleOrder : undefined}
         restaurantHours={logic.migratedRestaurantHours ?? undefined}
         isBusy={logic.migratedRestaurantHours ? logic.isRestaurantMarkedAsBusy(logic.migratedRestaurantHours) : false}
+        source={orderContext.source}
       />
 
       {/* Pre-Order Modal */}

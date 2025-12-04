@@ -11,7 +11,7 @@ import { AddressAutocomplete } from '@/components/address-autocomplete'
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 import { useCart } from '../../contexts/cart-context'
-import { shouldBlockOrdersByType } from '@/utils/restaurant-hours'
+import { shouldBlockOrdersByTypeAtTime } from '@/utils/restaurant-hours'
 
 // Canadian postal code utilities
 function formatCanadianPostalCode(input: string): string {
@@ -126,8 +126,8 @@ const CustomerInformationSectionComponent = forwardRef<CustomerInformationSectio
   const currentLanguage = language || contextLanguage
   const { toast } = useToast()
 
-  // Get restaurant hours from cart context for service availability checks
-  const { deliveryHours, pickupHours, restaurantHours } = useCart()
+  // Get restaurant hours and preOrder from cart context for service availability checks
+  const { deliveryHours, pickupHours, restaurantHours, preOrder } = useCart()
 
   // Get translations based on language
   const getOrderTypeText = (type: string) => {
@@ -148,19 +148,27 @@ const CustomerInformationSectionComponent = forwardRef<CustomerInformationSectio
     }
   }
 
-  // Check if delivery or pickup services are currently blocked
-  const isDeliveryBlocked = shouldBlockOrdersByType(
+  // Check if delivery or pickup services are blocked
+  // For scheduled orders: check scheduled time against service hours
+  // For immediate orders: check current time (default behavior)
+  const targetTime = preOrder.isPreOrder && preOrder.scheduledDateTime
+    ? preOrder.scheduledDateTime
+    : undefined; // undefined = current time
+
+  const isDeliveryBlocked = shouldBlockOrdersByTypeAtTime(
     'delivery',
     deliveryHours || undefined,
     pickupHours || undefined,
-    restaurantHours || undefined
+    restaurantHours || undefined,
+    targetTime
   )
 
-  const isPickupBlocked = shouldBlockOrdersByType(
+  const isPickupBlocked = shouldBlockOrdersByTypeAtTime(
     'pickup',
     deliveryHours || undefined,
     pickupHours || undefined,
-    restaurantHours || undefined
+    restaurantHours || undefined,
+    targetTime
   )
 
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({

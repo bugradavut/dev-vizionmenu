@@ -586,6 +586,7 @@ export function MenuExperience({
         onScheduleOrder={allowSchedulingWhenClosed ? handleScheduleOrder : undefined}
         restaurantHours={settings.restaurantHours ? migrateRestaurantHours(settings.restaurantHours as unknown as RestaurantHours) : undefined}
         isBusy={settings.restaurantHours ? isRestaurantMarkedAsBusy(settings.restaurantHours as unknown as RestaurantHours) : false}
+        source={orderContext.source}
       />
 
       {/* Pre-Order Modal */}
