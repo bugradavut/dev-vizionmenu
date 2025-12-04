@@ -14,6 +14,7 @@ import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
 import { useResponsiveClasses } from '@/hooks/use-responsive'
 import { useCustomerBranchSettings } from '@/hooks/use-customer-branch-settings'
+import { shouldBlockOrdersByTypeAtTime } from '@/utils/restaurant-hours'
 import type { TimingSettings } from '@/services/customer-branch-settings.service'
 
 
@@ -28,7 +29,12 @@ export function CartSidebar() {
     total,
     preOrder,
     canAddToCart,
-    isRestaurantOpen
+    isRestaurantOpen,
+    deliveryHours,
+    pickupHours,
+    setRestaurantHours,
+    setDeliveryHours,
+    setPickupHours
   } = useCart()
   
   const { isQROrder, tableNumber, zone, source, branchId, chainSlug } = useOrderContext()
@@ -40,9 +46,7 @@ export function CartSidebar() {
   
   const [isNavigating, setIsNavigating] = useState(false)
   const [showOrderTypeModal, setShowOrderTypeModal] = useState(false)
-  const [selectedOrderType, setSelectedOrderType] = useState<'dine_in' | 'takeaway' | 'delivery'>(
-    isQROrder ? 'dine_in' : 'takeaway'
-  )
+  const [selectedOrderType, setSelectedOrderType] = useState<'dine_in' | 'takeaway' | 'delivery' | null>(null)
   const [timingSettings, setTimingSettings] = useState<TimingSettings | null>(null)
   
   // Fetch branch settings for delivery fee and other settings
@@ -60,6 +64,55 @@ export function CartSidebar() {
       setTimingSettings(settings.timingSettings)
     }
   }, [settings.timingSettings, settingsLoading])
+
+  // Load restaurant hours into cart context when settings are fetched
+  useEffect(() => {
+    // Type guard: only set if it's a modern RestaurantHours object (has 'mode' property)
+    if (settings.restaurantHours && 'mode' in settings.restaurantHours) {
+      setRestaurantHours(settings.restaurantHours)
+    }
+    if (settings.deliveryHours && 'mode' in settings.deliveryHours) {
+      setDeliveryHours(settings.deliveryHours)
+    }
+    if (settings.pickupHours && 'mode' in settings.pickupHours) {
+      setPickupHours(settings.pickupHours)
+    }
+  }, [settings.restaurantHours, settings.deliveryHours, settings.pickupHours, setRestaurantHours, setDeliveryHours, setPickupHours])
+
+  // Helper to check if hours object is modern format (has 'mode' property)
+  const isModernHours = (hours: any): hours is import('@/utils/restaurant-hours').RestaurantHours => {
+    return hours && typeof hours === 'object' && 'mode' in hours
+  }
+
+  // Check if delivery and pickup are blocked
+  // For scheduled orders: check scheduled time against service hours
+  // For immediate orders: check current time (default behavior)
+  const targetTime = preOrder.isPreOrder && preOrder.scheduledDateTime
+    ? preOrder.scheduledDateTime
+    : undefined; // undefined = current time
+
+  const isDeliveryBlocked = shouldBlockOrdersByTypeAtTime(
+    'delivery',
+    isModernHours(settings.deliveryHours) ? settings.deliveryHours : undefined,
+    isModernHours(settings.pickupHours) ? settings.pickupHours : undefined,
+    isModernHours(settings.restaurantHours) ? settings.restaurantHours : undefined,
+    targetTime
+  )
+
+  const isPickupBlocked = shouldBlockOrdersByTypeAtTime(
+    'pickup',
+    isModernHours(settings.deliveryHours) ? settings.deliveryHours : undefined,
+    isModernHours(settings.pickupHours) ? settings.pickupHours : undefined,
+    isModernHours(settings.restaurantHours) ? settings.restaurantHours : undefined,
+    targetTime
+  )
+
+  // Helper function to get unavailable message based on order context
+  const getUnavailableMessage = () => {
+    return preOrder.isPreOrder
+      ? t.orderPage.orderTypeModal.unavailableScheduled
+      : t.orderPage.orderTypeModal.unavailableImmediate
+  }
 
   // Calculate order ready time
   const calculateOrderReadyTime = (orderType: 'dine_in' | 'takeaway' | 'delivery') => {
@@ -108,12 +161,20 @@ export function CartSidebar() {
     if (items.length === 0) {
       return
     }
-    
-    // Open order type selection modal
+
+    // Set default selection based on order source
+    // QR orders: default to 'dine_in'
+    // Web orders: null (user must choose)
+    setSelectedOrderType(isQROrder ? 'dine_in' : null)
     setShowOrderTypeModal(true)
   }
 
   const handleOrderTypeConfirm = async () => {
+    // Guard clause: Don't proceed if no order type is selected
+    if (!selectedOrderType) {
+      return
+    }
+
     try {
       // Set loading state
       setIsNavigating(true)
@@ -255,6 +316,7 @@ export function CartSidebar() {
             }
 
             // Default behavior - show estimated ready time
+            if (!selectedOrderType) return null
             const readyTimeInfo = calculateOrderReadyTime(selectedOrderType)
             if (!readyTimeInfo) return null
             
@@ -563,32 +625,37 @@ export function CartSidebar() {
                 </button>
                 
                 <button
-                  onClick={() => setSelectedOrderType('takeaway')}
+                  onClick={() => !isPickupBlocked && setSelectedOrderType('takeaway')}
+                  disabled={isPickupBlocked}
                   className={`w-full p-4 rounded-lg border-2 transition-all ${
-                    selectedOrderType === 'takeaway'
-                      ? 'border-orange-500 bg-orange-50'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
+                    isPickupBlocked
+                      ? 'border-gray-200 bg-gray-100 opacity-60 cursor-not-allowed'
+                      : selectedOrderType === 'takeaway'
+                        ? 'border-orange-500 bg-orange-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      <ShoppingBag className="w-5 h-5 text-green-600" />
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      isPickupBlocked ? 'bg-gray-200' : 'bg-green-100'
+                    }`}>
+                      <ShoppingBag className={`w-5 h-5 ${isPickupBlocked ? 'text-gray-400' : 'text-green-600'}`} />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium text-gray-900">
+                      <div className={`font-medium ${isPickupBlocked ? 'text-gray-500' : 'text-gray-900'}`}>
                         {language === 'fr' ? 'À emporter' : 'Takeaway'}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {language === 'fr' 
-                          ? 'Récupérer au comptoir' 
-                          : 'Pick up at counter'
+                        {isPickupBlocked
+                          ? getUnavailableMessage()
+                          : (language === 'fr' ? 'Récupérer au comptoir' : 'Pick up at counter')
                         }
                       </div>
                     </div>
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      selectedOrderType === 'takeaway' ? 'border-orange-500' : 'border-gray-300'
+                      selectedOrderType === 'takeaway' && !isPickupBlocked ? 'border-orange-500' : 'border-gray-300'
                     }`}>
-                      {selectedOrderType === 'takeaway' && (
+                      {selectedOrderType === 'takeaway' && !isPickupBlocked && (
                         <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                       )}
                     </div>
@@ -599,32 +666,37 @@ export function CartSidebar() {
               /* Web Users: Takeaway + Delivery */
               <>
                 <button
-                  onClick={() => setSelectedOrderType('takeaway')}
+                  onClick={() => !isPickupBlocked && setSelectedOrderType('takeaway')}
+                  disabled={isPickupBlocked}
                   className={`w-full p-4 rounded-lg border-2 transition-all ${
-                    selectedOrderType === 'takeaway'
-                      ? 'border-orange-500 bg-orange-50'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
+                    isPickupBlocked
+                      ? 'border-gray-200 bg-gray-100 opacity-60 cursor-not-allowed'
+                      : selectedOrderType === 'takeaway'
+                        ? 'border-orange-500 bg-orange-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      <ShoppingBag className="w-5 h-5 text-green-600" />
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      isPickupBlocked ? 'bg-gray-200' : 'bg-green-100'
+                    }`}>
+                      <ShoppingBag className={`w-5 h-5 ${isPickupBlocked ? 'text-gray-400' : 'text-green-600'}`} />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium text-gray-900">
+                      <div className={`font-medium ${isPickupBlocked ? 'text-gray-500' : 'text-gray-900'}`}>
                         {language === 'fr' ? 'À emporter' : 'Takeaway'}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {language === 'fr' 
-                          ? 'Récupérer au restaurant' 
-                          : 'Pick up at restaurant'
+                        {isPickupBlocked
+                          ? getUnavailableMessage()
+                          : (language === 'fr' ? 'Récupérer au restaurant' : 'Pick up at restaurant')
                         }
                       </div>
                     </div>
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      selectedOrderType === 'takeaway' ? 'border-orange-500' : 'border-gray-300'
+                      selectedOrderType === 'takeaway' && !isPickupBlocked ? 'border-orange-500' : 'border-gray-300'
                     }`}>
-                      {selectedOrderType === 'takeaway' && (
+                      {selectedOrderType === 'takeaway' && !isPickupBlocked && (
                         <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                       )}
                     </div>
@@ -632,32 +704,37 @@ export function CartSidebar() {
                 </button>
                 
                 <button
-                  onClick={() => setSelectedOrderType('delivery')}
+                  onClick={() => !isDeliveryBlocked && setSelectedOrderType('delivery')}
+                  disabled={isDeliveryBlocked}
                   className={`w-full p-4 rounded-lg border-2 transition-all ${
-                    selectedOrderType === 'delivery'
-                      ? 'border-orange-500 bg-orange-50'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
+                    isDeliveryBlocked
+                      ? 'border-gray-200 bg-gray-100 opacity-60 cursor-not-allowed'
+                      : selectedOrderType === 'delivery'
+                        ? 'border-orange-500 bg-orange-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                      <Bike className="w-5 h-5 text-purple-600" />
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      isDeliveryBlocked ? 'bg-gray-200' : 'bg-purple-100'
+                    }`}>
+                      <Bike className={`w-5 h-5 ${isDeliveryBlocked ? 'text-gray-400' : 'text-purple-600'}`} />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium text-gray-900">
+                      <div className={`font-medium ${isDeliveryBlocked ? 'text-gray-500' : 'text-gray-900'}`}>
                         {language === 'fr' ? 'Livraison' : 'Delivery'}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {language === 'fr' 
-                          ? 'Livrer à votre adresse' 
-                          : 'Deliver to your address'
+                        {isDeliveryBlocked
+                          ? getUnavailableMessage()
+                          : (language === 'fr' ? 'Livrer à votre adresse' : 'Deliver to your address')
                         }
                       </div>
                     </div>
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      selectedOrderType === 'delivery' ? 'border-orange-500' : 'border-gray-300'
+                      selectedOrderType === 'delivery' && !isDeliveryBlocked ? 'border-orange-500' : 'border-gray-300'
                     }`}>
-                      {selectedOrderType === 'delivery' && (
+                      {selectedOrderType === 'delivery' && !isDeliveryBlocked && (
                         <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                       )}
                     </div>
@@ -670,7 +747,7 @@ export function CartSidebar() {
           <div className="pt-4 space-y-2">
             <Button
               onClick={handleOrderTypeConfirm}
-              disabled={isNavigating}
+              disabled={isNavigating || selectedOrderType === null}
               className="w-full h-12"
               size="lg"
             >
@@ -688,7 +765,8 @@ export function CartSidebar() {
               variant="outline"
               onClick={() => setShowOrderTypeModal(false)}
               disabled={isNavigating}
-              className="w-full"
+              className="w-full h-12"
+              size="lg"
             >
               {language === 'fr' ? 'Annuler' : 'Cancel'}
             </Button>

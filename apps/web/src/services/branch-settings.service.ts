@@ -60,6 +60,8 @@ export interface BranchSettings {
   paymentSettings: PaymentSettings;
   notificationSettings?: NotificationSettings;
   restaurantHours: RestaurantHours;
+  deliveryHours?: RestaurantHours; // Independent delivery operating hours
+  pickupHours?: RestaurantHours; // Independent pickup/takeaway operating hours
   minimumOrderAmount?: number;
   deliveryFee?: number;
   freeDeliveryThreshold?: number;
@@ -144,6 +146,8 @@ export const updateBranchSettings = async (
       paymentSettings: settings.paymentSettings,
       notificationSettings: settings.notificationSettings,
       restaurantHours: settings.restaurantHours,
+      deliveryHours: settings.deliveryHours,
+      pickupHours: settings.pickupHours,
       minimumOrderAmount: settings.minimumOrderAmount,
       deliveryFee: settings.deliveryFee,
       freeDeliveryThreshold: settings.freeDeliveryThreshold,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCart } from '../../contexts/cart-context'
 import { useLanguage } from '@/contexts/language-context'
@@ -35,7 +35,15 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   const searchParams = useSearchParams()
   const pathname = window.location.pathname
   // SW-78 FO-114: Add updateQuantity and removeItem for Quebec SRS compliance
-  const { items, updateQuantity, removeItem, clearCart } = useCart()
+  const {
+    items,
+    updateQuantity,
+    removeItem,
+    clearCart,
+    setRestaurantHours,
+    setDeliveryHours,
+    setPickupHours
+  } = useCart()
   const { language } = useLanguage()
   const t = translations[language] || translations.en
   // SW-78 FO-104: Network status for offline mode indicator
@@ -76,6 +84,20 @@ export function OrderReviewContainer({ orderContext }: { orderContext: OrderCont
   const deliveryFee = settings.deliveryFee
   const freeDeliveryThreshold = settings.freeDeliveryThreshold
   const isMinimumOrderLoading = isSettingsLoading
+
+  // Load restaurant hours into cart context when settings are fetched
+  useEffect(() => {
+    // Type guard: only set if it's a modern RestaurantHours object (has 'mode' property)
+    if (settings.restaurantHours && 'mode' in settings.restaurantHours) {
+      setRestaurantHours(settings.restaurantHours)
+    }
+    if (settings.deliveryHours && 'mode' in settings.deliveryHours) {
+      setDeliveryHours(settings.deliveryHours)
+    }
+    if (settings.pickupHours && 'mode' in settings.pickupHours) {
+      setPickupHours(settings.pickupHours)
+    }
+  }, [settings.restaurantHours, settings.deliveryHours, settings.pickupHours, setRestaurantHours, setDeliveryHours, setPickupHours])
   
   const handleValidationChange = (result: { isValid: boolean; formData: CustomerFormData }) => {
     setIsFormValid(result.isValid)

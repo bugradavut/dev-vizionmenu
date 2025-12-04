@@ -632,6 +632,70 @@ export const translations = {
         }
       },
 
+      // Delivery Hours
+      deliveryHours: {
+        title: "Delivery Hours",
+        subtitle: "Configure when delivery is available",
+        statusClosed: "Closed",
+        statusOpen: "Available",
+        closedToggleAria: "Toggle delivery availability",
+        closedNotice: "Delivery is marked as closed. Customers will not be able to place delivery orders.",
+        workingDaysLabel: "Delivery Days",
+        defaultHoursLabel: "Default Hours",
+        openLabel: "Open",
+        closeLabel: "Close",
+        dayLabels: {
+          mon: "Monday",
+          tue: "Tuesday",
+          wed: "Wednesday",
+          thu: "Thursday",
+          fri: "Friday",
+          sat: "Saturday",
+          sun: "Sunday"
+        },
+        dayInitials: {
+          mon: "M",
+          tue: "T",
+          wed: "W",
+          thu: "T",
+          fri: "F",
+          sat: "S",
+          sun: "S"
+        }
+      },
+
+      // Pickup Hours
+      pickupHours: {
+        title: "Pickup Hours",
+        subtitle: "Configure when pickup is available",
+        statusClosed: "Closed",
+        statusOpen: "Available",
+        closedToggleAria: "Toggle pickup availability",
+        closedNotice: "Pickup is marked as closed. Customers will not be able to place pickup orders.",
+        workingDaysLabel: "Pickup Days",
+        defaultHoursLabel: "Default Hours",
+        openLabel: "Open",
+        closeLabel: "Close",
+        dayLabels: {
+          mon: "Monday",
+          tue: "Tuesday",
+          wed: "Wednesday",
+          thu: "Thursday",
+          fri: "Friday",
+          sat: "Saturday",
+          sun: "Sunday"
+        },
+        dayInitials: {
+          mon: "M",
+          tue: "T",
+          wed: "W",
+          thu: "T",
+          fri: "F",
+          sat: "S",
+          sun: "S"
+        }
+      },
+
       // Notification Sounds
       notificationSounds: {
         title: "Notification Sounds",
@@ -1063,6 +1127,12 @@ export const translations = {
         each: "each",
         note: "Note",
         viewCart: "View Cart"
+      },
+
+      // Order Type Modal Section
+      orderTypeModal: {
+        unavailableScheduled: "Not available at selected time",
+        unavailableImmediate: "Currently unavailable"
       },
       
       // Pricing Section
@@ -2028,6 +2098,70 @@ export const translations = {
         }
       },
 
+      // Delivery Hours - Canadian French
+      deliveryHours: {
+        title: "Heures de livraison",
+        subtitle: "Configurez quand la livraison est disponible",
+        statusClosed: "Fermé",
+        statusOpen: "Disponible",
+        closedToggleAria: "Basculer la disponibilité de livraison",
+        closedNotice: "La livraison est indiquée comme fermée. Les clients ne pourront pas passer de commandes de livraison.",
+        workingDaysLabel: "Jours de livraison",
+        defaultHoursLabel: "Heures par défaut",
+        openLabel: "Ouverture",
+        closeLabel: "Fermeture",
+        dayLabels: {
+          mon: "Lundi",
+          tue: "Mardi",
+          wed: "Mercredi",
+          thu: "Jeudi",
+          fri: "Vendredi",
+          sat: "Samedi",
+          sun: "Dimanche"
+        },
+        dayInitials: {
+          mon: "L",
+          tue: "M",
+          wed: "M",
+          thu: "J",
+          fri: "V",
+          sat: "S",
+          sun: "D"
+        }
+      },
+
+      // Pickup Hours - Canadian French
+      pickupHours: {
+        title: "Heures de ramassage",
+        subtitle: "Configurez quand le ramassage est disponible",
+        statusClosed: "Fermé",
+        statusOpen: "Disponible",
+        closedToggleAria: "Basculer la disponibilité de ramassage",
+        closedNotice: "Le ramassage est indiqué comme fermé. Les clients ne pourront pas passer de commandes de ramassage.",
+        workingDaysLabel: "Jours de ramassage",
+        defaultHoursLabel: "Heures par défaut",
+        openLabel: "Ouverture",
+        closeLabel: "Fermeture",
+        dayLabels: {
+          mon: "Lundi",
+          tue: "Mardi",
+          wed: "Mercredi",
+          thu: "Jeudi",
+          fri: "Vendredi",
+          sat: "Samedi",
+          sun: "Dimanche"
+        },
+        dayInitials: {
+          mon: "L",
+          tue: "M",
+          wed: "M",
+          thu: "J",
+          fri: "V",
+          sat: "S",
+          sun: "D"
+        }
+      },
+
       // Notification Sounds - Canadian French
       notificationSounds: {
         title: "Sons de notification",
@@ -2459,6 +2593,12 @@ export const translations = {
         each: "chacun",
         note: "Note",
         viewCart: "Voir le panier"
+      },
+
+      // Order Type Modal Section - Canadian French
+      orderTypeModal: {
+        unavailableScheduled: "Indisponible à l'heure sélectionnée",
+        unavailableImmediate: "Actuellement indisponible"
       },
       
       // Pricing Section - Canadian French with proper currency format

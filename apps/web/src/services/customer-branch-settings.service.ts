@@ -40,6 +40,8 @@ export interface BranchSettings {
   timingSettings: TimingSettings;
   paymentSettings: PaymentSettings;
   restaurantHours: RestaurantHours | LegacyRestaurantHours; // Support both formats
+  deliveryHours?: RestaurantHours | LegacyRestaurantHours; // Optional delivery-specific hours
+  pickupHours?: RestaurantHours | LegacyRestaurantHours; // Optional pickup-specific hours
   minimumOrderAmount: number;
   deliveryFee: number;
   freeDeliveryThreshold: number;

@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react'
-import { shouldBlockOrders } from '@/utils/restaurant-hours'
+import { shouldBlockOrders, shouldBlockOrdersByType } from '@/utils/restaurant-hours'
 import type { RestaurantHours } from '@/utils/restaurant-hours'
 
 export interface CartItem {
@@ -59,6 +59,14 @@ export interface CartContextType {
   canAddToCart: boolean
   setRestaurantHours: (hours: RestaurantHours | null) => void
   clearCartIfClosed: () => void
+  // Order type and service-specific hours
+  orderType: 'delivery' | 'pickup' | 'dinein'
+  setOrderType: (orderType: 'delivery' | 'pickup' | 'dinein') => void
+  restaurantHours: RestaurantHours | null
+  deliveryHours: RestaurantHours | null
+  pickupHours: RestaurantHours | null
+  setDeliveryHours: (hours: RestaurantHours | null) => void
+  setPickupHours: (hours: RestaurantHours | null) => void
   // SW-78 FO-114: Removed items tracking for Quebec SRS compliance
   removedItems: RemovedCartItem[]
   clearRemovedItems: () => void
@@ -175,6 +183,9 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [isRestaurantOpen, setIsRestaurantOpen] = useState(true) // Default to open for safety
   const [restaurantHours, setRestaurantHours] = useState<RestaurantHours | null>(null)
+  const [orderType, setOrderType] = useState<'delivery' | 'pickup' | 'dinein'>('delivery')
+  const [deliveryHours, setDeliveryHours] = useState<RestaurantHours | null>(null)
+  const [pickupHours, setPickupHours] = useState<RestaurantHours | null>(null)
 
   // SW-78 FO-114: Track processed removals to prevent duplicates
   const processedRemovalsRef = useRef<Set<string>>(new Set())
@@ -218,6 +229,7 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
       return
     }
 
+    // Only check if RESTAURANT is open (not order type specific)
     const isCurrentlyBlocked = shouldBlockOrders(restaurantHours)
     setIsRestaurantOpen(!isCurrentlyBlocked)
   }, [restaurantHours])
@@ -427,6 +439,18 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
     setRestaurantHours(hours)
   }, [])
 
+  const setDeliveryHoursCallback = useCallback((hours: RestaurantHours | null) => {
+    setDeliveryHours(hours)
+  }, [])
+
+  const setPickupHoursCallback = useCallback((hours: RestaurantHours | null) => {
+    setPickupHours(hours)
+  }, [])
+
+  const setOrderTypeCallback = useCallback((type: 'delivery' | 'pickup' | 'dinein') => {
+    setOrderType(type)
+  }, [])
+
   const clearCartIfClosed = useCallback(() => {
     // Only clear cart if restaurant is closed AND no pre-order is active
     if (!isRestaurantOpen && !preOrder.isPreOrder && items.length > 0) {
@@ -482,6 +506,14 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
     canAddToCart,
     setRestaurantHours: setRestaurantHoursCallback,
     clearCartIfClosed,
+    // Order type and service-specific hours
+    orderType,
+    setOrderType: setOrderTypeCallback,
+    restaurantHours,
+    deliveryHours,
+    pickupHours,
+    setDeliveryHours: setDeliveryHoursCallback,
+    setPickupHours: setPickupHoursCallback,
     // SW-78 FO-114: Removed items tracking for Quebec SRS compliance
     removedItems,
     clearRemovedItems

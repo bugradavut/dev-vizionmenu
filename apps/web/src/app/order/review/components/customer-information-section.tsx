@@ -10,6 +10,8 @@ import { Home, Building, Building2, MapPin, Utensils, ShoppingBag, Bike } from '
 import { AddressAutocomplete } from '@/components/address-autocomplete'
 import { useLanguage } from '@/contexts/language-context'
 import { translations } from '@/lib/translations'
+import { useCart } from '../../contexts/cart-context'
+import { shouldBlockOrdersByType } from '@/utils/restaurant-hours'
 
 // Canadian postal code utilities
 function formatCanadianPostalCode(input: string): string {
@@ -124,6 +126,8 @@ const CustomerInformationSectionComponent = forwardRef<CustomerInformationSectio
   const currentLanguage = language || contextLanguage
   const { toast } = useToast()
 
+  // Get restaurant hours from cart context for service availability checks
+  const { deliveryHours, pickupHours, restaurantHours } = useCart()
 
   // Get translations based on language
   const getOrderTypeText = (type: string) => {
@@ -143,6 +147,22 @@ const CustomerInformationSectionComponent = forwardRef<CustomerInformationSectio
       }
     }
   }
+
+  // Check if delivery or pickup services are currently blocked
+  const isDeliveryBlocked = shouldBlockOrdersByType(
+    'delivery',
+    deliveryHours || undefined,
+    pickupHours || undefined,
+    restaurantHours || undefined
+  )
+
+  const isPickupBlocked = shouldBlockOrdersByType(
+    'pickup',
+    deliveryHours || undefined,
+    pickupHours || undefined,
+    restaurantHours || undefined
+  )
+
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: '',
     phone: '',
@@ -581,32 +601,35 @@ const addressTypes = [
             <div className="grid grid-cols-2 gap-3">
               <Button
                 variant={customerInfo.orderType === 'takeaway' ? 'default' : 'outline'}
-                onClick={() => handleCustomerChange('orderType', 'takeaway')}
+                onClick={() => !isPickupBlocked && handleCustomerChange('orderType', 'takeaway')}
+                disabled={isPickupBlocked}
                 className={`flex items-center justify-center gap-2 h-11 rounded-lg transition-all ${
-                  customerInfo.orderType === 'takeaway' 
-                    ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922] hover:bg-orange-100' 
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  isPickupBlocked
+                    ? 'bg-gray-100 text-gray-400 border-gray-200 opacity-60 cursor-not-allowed'
+                    : customerInfo.orderType === 'takeaway'
+                      ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922] hover:bg-orange-100'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                 }`}
               >
                 <ShoppingBag className="h-4 w-4" />
                 <span className="font-medium">{getOrderTypeText('takeaway')}</span>
               </Button>
-              
-              <div className="relative">
-                <Button
-                  variant={customerInfo.orderType === 'delivery' ? 'default' : 'outline'}
-                  onClick={() => handleCustomerChange('orderType', 'delivery')}
-                  className={`flex items-center justify-center gap-2 h-11 rounded-lg transition-all w-full ${
-                    customerInfo.orderType === 'delivery'
+
+              <Button
+                variant={customerInfo.orderType === 'delivery' ? 'default' : 'outline'}
+                onClick={() => !isDeliveryBlocked && handleCustomerChange('orderType', 'delivery')}
+                disabled={isDeliveryBlocked}
+                className={`flex items-center justify-center gap-2 h-11 rounded-lg transition-all ${
+                  isDeliveryBlocked
+                    ? 'bg-gray-100 text-gray-400 border-gray-200 opacity-60 cursor-not-allowed'
+                    : customerInfo.orderType === 'delivery'
                       ? 'bg-orange-50 text-[#FF6922] border-2 border-[#FF6922] hover:bg-orange-100'
                       : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <Bike className="h-4 w-4" />
-                  <span className="font-medium">{getOrderTypeText('delivery')}</span>
-                </Button>
-
-              </div>
+                }`}
+              >
+                <Bike className="h-4 w-4" />
+                <span className="font-medium">{getOrderTypeText('delivery')}</span>
+              </Button>
             </div>
           </div>
         )}

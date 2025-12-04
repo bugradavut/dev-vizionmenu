@@ -839,11 +839,11 @@ export default function BranchSettingsPage() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
-                          <span>{language === 'fr' ? 'Zones de livraison' : 'Delivery zones'}</span>
+                          <span>{language === 'fr' ? 'Heures de livraison' : 'Delivery hours'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
-                          <span>{language === 'fr' ? 'Frais de livraison' : 'Delivery fees'}</span>
+                          <span>{language === 'fr' ? 'Frais et zones de livraison' : 'Delivery fees, delivery zones'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>

@@ -68,6 +68,8 @@ async function getBranchSettings(branchId) {
         soundEnabled: settings.notificationSettings?.soundEnabled ?? true,
       },
       restaurantHours: buildRestaurantHours(settings.restaurantHours),
+      deliveryHours: buildRestaurantHours(settings.deliveryHours),
+      pickupHours: buildRestaurantHours(settings.pickupHours),
       minimumOrderAmount: settings.minimumOrderAmount || 0,
       deliveryFee: settings.deliveryFee || 0,
       freeDeliveryThreshold: settings.freeDeliveryThreshold || 0,
@@ -112,6 +114,8 @@ async function updateBranchSettings(branchId, settingsData) {
       paymentSettings,
       notificationSettings,
       restaurantHours,
+      deliveryHours,
+      pickupHours,
       minimumOrderAmount = 0,
       deliveryFee = 0,
       freeDeliveryThreshold = 0,
@@ -139,6 +143,16 @@ async function updateBranchSettings(branchId, settingsData) {
     // Validate restaurant hours if provided
     if (restaurantHours) {
       validateRestaurantHours(restaurantHours);
+    }
+
+    // Validate delivery hours if provided
+    if (deliveryHours) {
+      validateRestaurantHours(deliveryHours);
+    }
+
+    // Validate pickup hours if provided
+    if (pickupHours) {
+      validateRestaurantHours(pickupHours);
     }
 
     // Validate delivery zones if provided
@@ -175,6 +189,8 @@ async function updateBranchSettings(branchId, settingsData) {
         soundEnabled: true,
       },
       restaurantHours: restaurantHours ? sanitizeRestaurantHours(restaurantHours) : undefined,
+      deliveryHours: deliveryHours ? sanitizeRestaurantHours(deliveryHours) : undefined,
+      pickupHours: pickupHours ? sanitizeRestaurantHours(pickupHours) : undefined,
       deliveryZones: deliveryZones ? sanitizeDeliveryZones(deliveryZones) : undefined,
       // Include order amounts in settings JSON
       minimumOrderAmount: minimumOrderAmount || 0,
@@ -219,6 +235,8 @@ async function updateBranchSettings(branchId, settingsData) {
       settings: {
         ...settingsJson,
         restaurantHours: buildRestaurantHours(updatedBranch.settings?.restaurantHours),
+        deliveryHours: buildRestaurantHours(updatedBranch.settings?.deliveryHours),
+        pickupHours: buildRestaurantHours(updatedBranch.settings?.pickupHours),
         minimumOrderAmount: updatedBranch.settings?.minimumOrderAmount || 0,
         deliveryFee: updatedBranch.settings?.deliveryFee || 0,
         freeDeliveryThreshold: updatedBranch.settings?.freeDeliveryThreshold || 0,

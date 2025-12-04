@@ -505,3 +505,184 @@ export function getWeeklySchedule(restaurantHours: RestaurantHours): Array<{
     };
   });
 }
+
+/**
+ * Check if delivery is currently available
+ * Falls back to restaurant hours if deliveryHours is not set
+ * @param deliveryHours - Optional delivery-specific hours
+ * @param restaurantHours - General restaurant hours (fallback)
+ * @returns True if delivery is available now
+ */
+export function isDeliveryCurrentlyAvailable(
+  deliveryHours?: RestaurantHours,
+  restaurantHours?: RestaurantHours
+): boolean {
+  // Use delivery hours if available, otherwise fallback to restaurant hours
+  const hoursToCheck = deliveryHours || restaurantHours;
+  return isRestaurantCurrentlyOpen(hoursToCheck);
+}
+
+/**
+ * Check if pickup/takeaway is currently available
+ * Falls back to restaurant hours if pickupHours is not set
+ * @param pickupHours - Optional pickup-specific hours
+ * @param restaurantHours - General restaurant hours (fallback)
+ * @returns True if pickup is available now
+ */
+export function isPickupCurrentlyAvailable(
+  pickupHours?: RestaurantHours,
+  restaurantHours?: RestaurantHours
+): boolean {
+  // Use pickup hours if available, otherwise fallback to restaurant hours
+  const hoursToCheck = pickupHours || restaurantHours;
+  return isRestaurantCurrentlyOpen(hoursToCheck);
+}
+
+/**
+ * Check if orders should be blocked based on order type
+ * @param orderType - Type of order: 'delivery', 'pickup', or 'dinein'
+ * @param deliveryHours - Optional delivery-specific hours
+ * @param pickupHours - Optional pickup-specific hours
+ * @param restaurantHours - General restaurant hours
+ * @returns True if orders of this type should be blocked
+ */
+export function shouldBlockOrdersByType(
+  orderType: 'delivery' | 'pickup' | 'dinein',
+  deliveryHours?: RestaurantHours,
+  pickupHours?: RestaurantHours,
+  restaurantHours?: RestaurantHours
+): boolean {
+  switch (orderType) {
+    case 'delivery':
+      return !isDeliveryCurrentlyAvailable(deliveryHours, restaurantHours);
+    case 'pickup':
+      return !isPickupCurrentlyAvailable(pickupHours, restaurantHours);
+    case 'dinein':
+      // Dine-in always uses restaurant hours
+      return !isRestaurantCurrentlyOpen(restaurantHours);
+    default:
+      // Default to blocking if order type is unknown
+      return true;
+  }
+}
+
+/**
+ * Check if restaurant is open at a specific date/time
+ * @param restaurantHours - Restaurant hours configuration
+ * @param targetDateTime - Specific date/time to check (defaults to current time)
+ * @returns True if restaurant is open at the target time
+ */
+export function isRestaurantOpenAtTime(
+  restaurantHours: RestaurantHours | undefined,
+  targetDateTime?: Date
+): boolean {
+  // If no restaurant hours data, assume closed for safety
+  if (!restaurantHours) {
+    return false;
+  }
+
+  // If restaurant is manually marked as closed
+  if (!restaurantHours.isOpen) {
+    return false;
+  }
+
+  // Use target time or current time
+  const checkTime = targetDateTime || getCurrentCanadaEasternTime();
+  const currentDay = getDayOfWeek(checkTime);
+  const currentTime = getTimeString(checkTime);
+
+  // Get hours for this specific day
+  const dayHours = getRestaurantHoursForDay(restaurantHours, currentDay);
+
+  // No hours means closed
+  if (!dayHours) {
+    return false;
+  }
+
+  // Check if current time is within operating hours
+  return isTimeWithinRange(currentTime, dayHours.openTime, dayHours.closeTime);
+}
+
+/**
+ * Check if orders should be blocked based on order type and specific time
+ * @param orderType - Type of order: 'delivery', 'pickup', or 'dinein'
+ * @param deliveryHours - Optional delivery-specific hours
+ * @param pickupHours - Optional pickup-specific hours
+ * @param restaurantHours - General restaurant hours
+ * @param targetDateTime - Specific date/time to check (defaults to current time)
+ * @returns True if orders of this type should be blocked at target time
+ */
+export function shouldBlockOrdersByTypeAtTime(
+  orderType: 'delivery' | 'pickup' | 'dinein',
+  deliveryHours?: RestaurantHours,
+  pickupHours?: RestaurantHours,
+  restaurantHours?: RestaurantHours,
+  targetDateTime?: Date
+): boolean {
+  switch (orderType) {
+    case 'delivery':
+      const deliveryToCheck = deliveryHours || restaurantHours;
+      return !isRestaurantOpenAtTime(deliveryToCheck, targetDateTime);
+    case 'pickup':
+      const pickupToCheck = pickupHours || restaurantHours;
+      return !isRestaurantOpenAtTime(pickupToCheck, targetDateTime);
+    case 'dinein':
+      return !isRestaurantOpenAtTime(restaurantHours, targetDateTime);
+    default:
+      return true;
+  }
+}
+
+/**
+ * Get availability status for a specific service type
+ * @param orderType - Type of service: 'delivery', 'pickup', or 'dinein'
+ * @param deliveryHours - Optional delivery-specific hours
+ * @param pickupHours - Optional pickup-specific hours
+ * @param restaurantHours - General restaurant hours
+ * @param language - Language for status messages
+ * @returns Service availability status with message
+ */
+export function getServiceAvailabilityStatus(
+  orderType: 'delivery' | 'pickup' | 'dinein',
+  deliveryHours?: RestaurantHours,
+  pickupHours?: RestaurantHours,
+  restaurantHours?: RestaurantHours,
+  language: 'en' | 'fr' = 'en'
+) {
+  let hoursToCheck: RestaurantHours | undefined;
+  let serviceLabel: string;
+
+  switch (orderType) {
+    case 'delivery':
+      hoursToCheck = deliveryHours || restaurantHours;
+      serviceLabel = language === 'fr' ? 'Livraison' : 'Delivery';
+      break;
+    case 'pickup':
+      hoursToCheck = pickupHours || restaurantHours;
+      serviceLabel = language === 'fr' ? 'Ramassage' : 'Pickup';
+      break;
+    case 'dinein':
+      hoursToCheck = restaurantHours;
+      serviceLabel = language === 'fr' ? 'Sur place' : 'Dine-in';
+      break;
+    default:
+      serviceLabel = language === 'fr' ? 'Service' : 'Service';
+      return {
+        isAvailable: false,
+        status: 'unknown',
+        message: language === 'fr' ? 'Service inconnu' : 'Unknown service',
+        serviceLabel
+      };
+  }
+
+  const isAvailable = isRestaurantCurrentlyOpen(hoursToCheck);
+  const statusInfo = getRestaurantStatus(hoursToCheck);
+
+  return {
+    isAvailable,
+    status: statusInfo.status,
+    message: statusInfo.message,
+    serviceLabel,
+    hours: hoursToCheck
+  };
+}

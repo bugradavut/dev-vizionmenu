@@ -19,6 +19,9 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { DeliveryZonesCardCompact } from "@/components/delivery-zones"
 import { DeliveryFeeCard } from "@/components/branch-settings/delivery-fee-card"
 import { UberDirectCardCompact } from "@/components/branch-settings/uber-direct-card-compact"
+import { DeliveryHoursCard } from "@/components/branch-settings/delivery-hours-card"
+import { PickupHoursCard } from "@/components/branch-settings/pickup-hours-card"
+import { migrateRestaurantHours, getAllWorkingDays, type RestaurantHours } from "@/utils/restaurant-hours"
 import Link from "next/link"
 
 export default function BranchDeliverySettingsPage() {
@@ -50,11 +53,31 @@ export default function BranchDeliverySettingsPage() {
   const [uberDirectHasCredentials, setUberDirectHasCredentials] = React.useState(false)
   const [uberDirectLoading, setUberDirectLoading] = React.useState(true)
 
+  // Delivery Hours state
+  const [migratedDeliveryHours, setMigratedDeliveryHours] = React.useState<RestaurantHours | null>(null)
+
+  // Pickup Hours state
+  const [migratedPickupHours, setMigratedPickupHours] = React.useState<RestaurantHours | null>(null)
+
   // Update input fields when settings load
   React.useEffect(() => {
     setDeliveryFeeInput(String(settings.deliveryFee || 0))
     setFreeDeliveryThresholdInput(String(settings.freeDeliveryThreshold || 0))
   }, [settings.deliveryFee, settings.freeDeliveryThreshold])
+
+  // Migrate delivery hours when settings load
+  React.useEffect(() => {
+    if (settings.deliveryHours) {
+      setMigratedDeliveryHours(migrateRestaurantHours(settings.deliveryHours))
+    }
+  }, [settings.deliveryHours])
+
+  // Migrate pickup hours when settings load
+  React.useEffect(() => {
+    if (settings.pickupHours) {
+      setMigratedPickupHours(migrateRestaurantHours(settings.pickupHours))
+    }
+  }, [settings.pickupHours])
 
   // Load Uber Direct settings
   React.useEffect(() => {
@@ -122,6 +145,30 @@ export default function BranchDeliverySettingsPage() {
     const numValue = value === "" ? 0 : Number(value)
     if (!isNaN(numValue) && numValue >= 0) {
       updateSettings({ freeDeliveryThreshold: numValue })
+    }
+  }
+
+  // Delivery Hours handlers
+  const handleDeliveryHoursClosedToggle = (closed: boolean) => {
+    if (migratedDeliveryHours) {
+      updateSettings({
+        deliveryHours: {
+          ...migratedDeliveryHours,
+          isOpen: !closed
+        }
+      })
+    }
+  }
+
+  // Pickup Hours handlers
+  const handlePickupHoursClosedToggle = (closed: boolean) => {
+    if (migratedPickupHours) {
+      updateSettings({
+        pickupHours: {
+          ...migratedPickupHours,
+          isOpen: !closed
+        }
+      })
     }
   }
 
@@ -205,8 +252,8 @@ export default function BranchDeliverySettingsPage() {
                   </h1>
                   <p className="text-muted-foreground mt-2 text-lg">
                     {language === 'fr'
-                      ? 'Gérez les zones de livraison, les frais et les intégrations de livraison'
-                      : 'Manage delivery zones, fees, and delivery integrations'}
+                      ? 'Gérez les heures de livraison, les zones de livraison, les frais et les intégrations de livraison'
+                      : 'Manage delivery hours,zones, fees, and delivery integrations'}
                   </p>
                 </div>
                 <div className="lg:col-span-4 flex items-center justify-end gap-3">
@@ -240,7 +287,133 @@ export default function BranchDeliverySettingsPage() {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6">
+            <div className="flex-1 px-2 py-8 sm:px-4 lg:px-6 space-y-6">
+              {/* Row 1: Delivery and Pickup Hours */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Delivery Hours Card */}
+                {migratedDeliveryHours && (
+                  <DeliveryHoursCard
+                    migratedHours={migratedDeliveryHours}
+                    deliveryClosed={!migratedDeliveryHours.isOpen}
+                    selectedWorkingDays={getAllWorkingDays(migratedDeliveryHours)}
+                    openTime={migratedDeliveryHours.simpleSchedule?.defaultHours?.openTime || '09:00'}
+                    closeTime={migratedDeliveryHours.simpleSchedule?.defaultHours?.closeTime || '22:00'}
+                    language={language}
+                    translations={t.settingsBranch.deliveryHours}
+                    onDeliveryClosedToggle={handleDeliveryHoursClosedToggle}
+                    onWorkingDayToggle={(day) => {
+                      if (!migratedDeliveryHours) return
+                      const currentDays = getAllWorkingDays(migratedDeliveryHours)
+                      const newDays = currentDays.includes(day)
+                        ? currentDays.filter(d => d !== day)
+                        : [...currentDays, day]
+
+                      updateSettings({
+                        deliveryHours: {
+                          ...migratedDeliveryHours,
+                          simpleSchedule: {
+                            ...migratedDeliveryHours.simpleSchedule,
+                            workingDays: newDays
+                          }
+                        }
+                      })
+                    }}
+                    onOpenTimeChange={(time) => {
+                      if (!migratedDeliveryHours) return
+                      updateSettings({
+                        deliveryHours: {
+                          ...migratedDeliveryHours,
+                          simpleSchedule: {
+                            ...migratedDeliveryHours.simpleSchedule,
+                            defaultHours: {
+                              ...migratedDeliveryHours.simpleSchedule.defaultHours,
+                              openTime: time
+                            }
+                          }
+                        }
+                      })
+                    }}
+                    onCloseTimeChange={(time) => {
+                      if (!migratedDeliveryHours) return
+                      updateSettings({
+                        deliveryHours: {
+                          ...migratedDeliveryHours,
+                          simpleSchedule: {
+                            ...migratedDeliveryHours.simpleSchedule,
+                            defaultHours: {
+                              ...migratedDeliveryHours.simpleSchedule.defaultHours,
+                              closeTime: time
+                            }
+                          }
+                        }
+                      })
+                    }}
+                  />
+                )}
+
+                {/* Pickup Hours Card */}
+                {migratedPickupHours && (
+                  <PickupHoursCard
+                    migratedHours={migratedPickupHours}
+                    pickupClosed={!migratedPickupHours.isOpen}
+                    selectedWorkingDays={getAllWorkingDays(migratedPickupHours)}
+                    openTime={migratedPickupHours.simpleSchedule?.defaultHours?.openTime || '09:00'}
+                    closeTime={migratedPickupHours.simpleSchedule?.defaultHours?.closeTime || '22:00'}
+                    language={language}
+                    translations={t.settingsBranch.pickupHours}
+                    onPickupClosedToggle={handlePickupHoursClosedToggle}
+                    onWorkingDayToggle={(day) => {
+                      if (!migratedPickupHours) return
+                      const currentDays = getAllWorkingDays(migratedPickupHours)
+                      const newDays = currentDays.includes(day)
+                        ? currentDays.filter(d => d !== day)
+                        : [...currentDays, day]
+
+                      updateSettings({
+                        pickupHours: {
+                          ...migratedPickupHours,
+                          simpleSchedule: {
+                            ...migratedPickupHours.simpleSchedule,
+                            workingDays: newDays
+                          }
+                        }
+                      })
+                    }}
+                    onOpenTimeChange={(time) => {
+                      if (!migratedPickupHours) return
+                      updateSettings({
+                        pickupHours: {
+                          ...migratedPickupHours,
+                          simpleSchedule: {
+                            ...migratedPickupHours.simpleSchedule,
+                            defaultHours: {
+                              ...migratedPickupHours.simpleSchedule.defaultHours,
+                              openTime: time
+                            }
+                          }
+                        }
+                      })
+                    }}
+                    onCloseTimeChange={(time) => {
+                      if (!migratedPickupHours) return
+                      updateSettings({
+                        pickupHours: {
+                          ...migratedPickupHours,
+                          simpleSchedule: {
+                            ...migratedPickupHours.simpleSchedule,
+                            defaultHours: {
+                              ...migratedPickupHours.simpleSchedule.defaultHours,
+                              closeTime: time
+                            }
+                          }
+                        }
+                      })
+                    }}
+                  />
+                )}
+              </div>
+
+              {/* Row 2: Delivery Zones, Fee, and Uber Direct */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Delivery Zones Card - Compact */}
                 <DeliveryZonesCardCompact
