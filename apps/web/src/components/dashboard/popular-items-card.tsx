@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, ChefHat } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -138,7 +138,9 @@ export function PopularItemsCard({ items, loading }: PopularItemsCardProps) {
         ) : (
           <>
             <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <div className="text-4xl mb-2">📊</div>
+              <div className="mb-3">
+                <ChefHat className="w-12 h-12 text-muted-foreground/40" strokeWidth={1.5} />
+              </div>
               <p className="text-sm text-muted-foreground">
                 {language === 'fr'
                   ? 'Aucune donnée disponible'

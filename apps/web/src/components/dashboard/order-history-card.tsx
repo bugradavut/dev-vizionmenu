@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
-import { ArrowRight, Clock, RefreshCw } from "lucide-react"
+import { ArrowRight, Clock, RefreshCw, History } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import { enUS, fr } from "date-fns/locale"
@@ -238,7 +238,9 @@ export function OrderHistoryCard({ onRefresh, refreshing: externalRefreshing }: 
         ) : (
           <>
             <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <div className="text-4xl mb-2">📋</div>
+              <div className="mb-3">
+                <History className="w-12 h-12 text-muted-foreground/40" strokeWidth={1.5} />
+              </div>
               <p className="text-sm text-muted-foreground">
                 {language === 'fr'
                   ? 'Aucun historique'
